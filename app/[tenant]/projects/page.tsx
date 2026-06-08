@@ -28,6 +28,7 @@ type Project = {
 };
 
 const STATUS: Record<string, { label: string; cls: string }> = {
+  'sans-soumission': { label: 'Sans soumission', cls: 'bg-slate-100 text-slate-600' },
   soumission: { label: 'Soumission', cls: 'bg-amber-100 text-amber-700' },
   vente: { label: 'Vente', cls: 'bg-violet-100 text-violet-700' },
   'en-cours': { label: 'En cours', cls: 'bg-blue-100 text-blue-700' },
@@ -36,7 +37,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 const emptyForm = {
   project_number: '', title: '', client_name: '', location: '',
-  status: 'soumission', project_type: 'budgetaire',
+  status: 'sans-soumission', project_type: 'budgetaire',
   po_amount: '', date_submission: '', date_work_start: '',
   primary_seller_id: '',
 };
@@ -64,6 +65,11 @@ export default function ProjectsPage() {
   const clientRef = useRef<HTMLDivElement>(null);
   // Vendeurs (personnel) pour l'attribution de commission
   const [sellers, setSellers] = useState<{ id: string; name: string; email: string }[]>([]);
+  // Cascade Site -> Département (Administration) pour le PRÉFIXE du numéro auto (comme la soumission).
+  const [sitesTree, setSitesTree] = useState<any[]>([]);
+  const [companyLetter, setCompanyLetter] = useState('X'); // 1re lettre du tenant
+  const [selSiteId, setSelSiteId] = useState('');
+  const [selDeptId, setSelDeptId] = useState('');
 
   useEffect(() => {
     supabase.from('clients').select('id,name,contact_name,contact_phone,email,address,city,province').eq('tenant_id', tenant).eq('active', true).order('name')
@@ -71,6 +77,40 @@ export default function ProjectsPage() {
     supabase.from('planner_personnel').select('id,name,email').eq('tenant_id', tenant).order('name')
       .then(({ data }) => setSellers((data || []).filter((p: any) => p.name)));
   }, [tenant]);
+
+  // Préfixe de numérotation = 1re lettre du tenant + 1re lettre du site (+ département). Source = Administration.
+  const firstAlpha = (s: string) => (String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')[0] || '').toUpperCase();
+  useEffect(() => {
+    (async () => {
+      let cName = tenant;
+      try { const { data: cs } = await supabase.from('company_settings').select('legal_name').eq('tenant_id', tenant).maybeSingle(); if (cs?.legal_name) cName = cs.legal_name; } catch { /* défaut */ }
+      setCompanyLetter(firstAlpha(cName) || firstAlpha(tenant) || 'X');
+      try {
+        const { data: sucs } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name');
+        const list = sucs || []; setSitesTree(list);
+        const s0 = list.find((x: any) => !x.parent_id); if (s0) setSelSiteId(s0.id); // 1er site par défaut
+      } catch { /* admin indisponible */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant]);
+
+  const siteNameOf = (id: string) => sitesTree.find((x: any) => x.id === id)?.name || '';
+  const sitesOnly = sitesTree.filter((x: any) => !x.parent_id);
+  const deptsOf = (siteId: string) => sitesTree.filter((x: any) => x.parent_id === siteId);
+  const projPrefix = (companyLetter + firstAlpha(siteNameOf(selSiteId)) + (selDeptId ? firstAlpha(siteNameOf(selDeptId)) : '')) || companyLetter || 'XX';
+
+  // Génère/régénère le numéro auto du projet (préfixe + année + séquence + P).
+  const regenNumero = async (px: string) => {
+    try { const { genProjetNumero } = await import('@/lib/soumissions'); const n = await genProjetNumero(tenant, px); setForm(f => ({ ...f, project_number: n })); }
+    catch { /* hors-ligne : on laisse le champ éditable */ }
+  };
+  // À l'ouverture du formulaire : auto-génère un numéro si vide.
+  const openNewProject = async () => {
+    setForm({ ...emptyForm });
+    setClientQuery('');
+    setShowForm(true);
+    await regenNumero(projPrefix);
+  };
 
   const filteredClients = useMemo(() => {
     const q = clientQuery.trim().toLowerCase();
@@ -225,7 +265,7 @@ export default function ProjectsPage() {
               {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />} Exporter PDF
             </button>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={openNewProject}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-blue-700"
             >
               <Plus size={18} /> Nouveau projet
@@ -291,7 +331,7 @@ export default function ProjectsPage() {
               Crée ton premier projet — il génère un numéro qui circulera vers le planificateur, l'AST, les feuilles de temps et la facturation.
             </p>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={openNewProject}
               className="mt-1 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
             >
               <Plus size={18} /> Nouveau projet
@@ -334,8 +374,11 @@ export default function ProjectsPage() {
             </div>
             <form onSubmit={handleCreate} className="space-y-4 px-5 py-5">
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Numéro de projet *">
-                  <input required value={form.project_number} onChange={e => setForm(f => ({ ...f, project_number: e.target.value }))} className="inp" placeholder="PRJ-2026-001" />
+                <Field label="Numéro de projet (auto)">
+                  <div className="flex gap-1.5">
+                    <input required value={form.project_number} onChange={e => setForm(f => ({ ...f, project_number: e.target.value }))} className="inp" placeholder="auto…" />
+                    <button type="button" title="Régénérer le numéro" onClick={() => regenNumero(projPrefix)} className="shrink-0 rounded-lg border border-slate-200 px-2 text-slate-500 hover:bg-slate-50">↻</button>
+                  </div>
                 </Field>
                 <Field label="Titre">
                   <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="inp" placeholder="Inspection transfo…" />
@@ -370,12 +413,27 @@ export default function ProjectsPage() {
                 </Field>
                 <Field label="Statut">
                   <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="inp">
+                    <option value="sans-soumission">Sans soumission</option>
                     <option value="soumission">Soumission</option>
                     <option value="vente">Vente</option>
                     <option value="en-cours">En cours</option>
                     <option value="facture">Facturé</option>
                   </select>
                 </Field>
+                <Field label="Site (préfixe #)">
+                  <select value={selSiteId} onChange={e => { const v = e.target.value; setSelSiteId(v); setSelDeptId(''); const px = (companyLetter + firstAlpha(siteNameOf(v))) || companyLetter || 'XX'; regenNumero(px); }} className="inp">
+                    {sitesOnly.length === 0 && <option value="">—</option>}
+                    {sitesOnly.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </Field>
+                {deptsOf(selSiteId).length > 0 && (
+                  <Field label="Département (préfixe #)">
+                    <select value={selDeptId} onChange={e => { const v = e.target.value; setSelDeptId(v); const px = (companyLetter + firstAlpha(siteNameOf(selSiteId)) + (v ? firstAlpha(siteNameOf(v)) : '')) || companyLetter || 'XX'; regenNumero(px); }} className="inp">
+                      <option value="">— Aucun —</option>
+                      {deptsOf(selSiteId).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </Field>
+                )}
                 <Field label="Vendeur (commission)">
                   <select value={form.primary_seller_id} onChange={e => setForm(f => ({ ...f, primary_seller_id: e.target.value }))} className="inp">
                     <option value="">— Aucun —</option>

@@ -141,6 +141,20 @@ export function JobModal({
     const [tabMenuOpen, setTabMenuOpen] = useState(false); // menu hamburger des onglets sous 1024px
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(''); // message d'erreur visible DANS le modal (toasts cachés derrière)
+    // Liste déroulante « # Projet » : projets existants (filtrés par le client choisi si présent).
+    const [allProjects, setAllProjects] = useState([]);
+    const [projOpen, setProjOpen] = useState(false);
+    useEffect(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const t = window.location.pathname.split('/')[1] || 'cerdia';
+          const { data } = await supabase.from('projects').select('id, project_number, title, client_name, end_client_id, location, status').eq('tenant_id', t).order('project_number', { ascending: false }).limit(500);
+          if (alive && Array.isArray(data)) setAllProjects(data.filter(p => p.project_number));
+        } catch { /* ignore */ }
+      })();
+      return () => { alive = false; };
+    }, []);
     // S4 : pré-montage du Gantt depuis une soumission transférée en projet
     const [projectSearch, setProjectSearch] = useState('');
     const [prefilling, setPrefilling] = useState(false);
@@ -3182,16 +3196,66 @@ export function JobModal({
                                 <div className="space-y-6">
                                     {/* En-tete du mandat : ordre demande -> # projet / nom du client / nom du mandat / lieu des travaux */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* 1. # projet */}
-                                        <div>
+                                        {/* 1. # projet — liste déroulante des projets existants (filtrés par le client choisi) */}
+                                        <div className="relative">
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('# Projet', '# Project')}</label>
                                             <input
                                                 type="text"
                                                 value={formData.numeroJob}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, numeroJob: e.target.value }))}
+                                                onFocus={() => setProjOpen(true)}
+                                                onBlur={() => setTimeout(() => setProjOpen(false), 200)}
                                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder={L('Ex: CS26001P / G25-0101', 'E.g.: CS26001P / G25-0101')}
+                                                placeholder={L('Choisir ou taper un # projet…', 'Pick or type a project #…')}
+                                                autoComplete="off"
                                             />
+                                            {projOpen && (() => {
+                                                const q = (formData.numeroJob || '').toLowerCase();
+                                                const cid = formData.clientId;
+                                                const cname = (formData.client || '').toLowerCase();
+                                                // Projets du client sélectionné en priorité ; sinon tous.
+                                                let list = allProjects;
+                                                let scoped = false;
+                                                if (cid || cname) {
+                                                    const mine = allProjects.filter(p =>
+                                                        (cid && p.end_client_id === cid) ||
+                                                        (cname && (p.client_name || '').toLowerCase() === cname));
+                                                    if (mine.length) { list = mine; scoped = true; }
+                                                }
+                                                if (q) list = list.filter(p =>
+                                                    (p.project_number || '').toLowerCase().includes(q) ||
+                                                    (p.title || '').toLowerCase().includes(q) ||
+                                                    (p.client_name || '').toLowerCase().includes(q));
+                                                list = list.slice(0, 30);
+                                                if (!list.length) return null;
+                                                return (
+                                                    <div className="absolute z-30 mt-1 w-full max-h-72 overflow-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                                                        {scoped && (
+                                                            <div className="px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 sticky top-0">
+                                                                {L('Projets associés au client', 'Projects linked to client')}
+                                                            </div>
+                                                        )}
+                                                        {list.map(p => (
+                                                            <button
+                                                                key={p.id}
+                                                                type="button"
+                                                                onMouseDown={(e) => { e.preventDefault(); setFormData(prev => ({
+                                                                    ...prev,
+                                                                    numeroJob: p.project_number,
+                                                                    projectId: p.id,
+                                                                    client: p.client_name || prev.client,
+                                                                    clientId: p.end_client_id || prev.clientId,
+                                                                    lieu: p.location || prev.lieu,
+                                                                })); setProjOpen(false); }}
+                                                                className="w-full text-left px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                                                            >
+                                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.project_number}{p.title ? ` — ${p.title}` : ''}</div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400">{p.client_name || ''}{p.status ? ` · ${p.status}` : ''}</div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
 
                                         {/* 2. Nom du client (autocomplete clients + projets) */}

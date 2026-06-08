@@ -123,45 +123,47 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     const firstAlpha = (s: string) => (String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')[0] || '').toUpperCase();
     let companyName = tenant;
     try { const { data: cs } = await supabase.from('company_settings').select('legal_name, logo_url').eq('tenant_id', tenant).maybeSingle(); if (cs?.legal_name) { companyName = cs.legal_name; setCompanyName(cs.legal_name); } if (cs?.logo_url) setLogoUrl(cs.logo_url); } catch { /* defaut */ }
+    // 1re lettre du TENANT — toujours disponible (ne depend PAS de l'authentification).
+    const tLetter = firstAlpha(companyName) || firstAlpha(tenant) || 'X';
+    setCompanyLetter(tLetter);
+    // Arbre des sites (Administration) — charge TOUJOURS pour que la cascade Site->Departement soit dispo,
+    // meme sans session/poste resolu (sinon le prefixe restait fige a « XX »).
+    let siteList: any[] = [];
+    try { const { data: sucs } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'); siteList = sucs || []; setSitesTree(siteList); } catch { /* admin indisponible */ }
+    const byId = new Map(siteList.map((x: any) => [x.id, x]));
+    const norm = (v: string) => String(v || '').trim().toLowerCase();
+    let siteName = '', deptName = '', gotSel = false;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
         const { data: p } = await supabase.from('planner_personnel').select('id, succursale, current_grid_id').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
         if (p?.id) { setSellerId(p.id); setMeId(p.id); }
-        const tLetter = firstAlpha(companyName);
-        setCompanyLetter(tLetter);
-        // Hierarchie des sites (Administration) : on resout le SITE et le DEPARTEMENT du poste de l'utilisateur.
-        let siteName = '', deptName = '';
-        try {
-          const { data: sucs } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name');
-          const list = sucs || [];
-          setSitesTree(list); // alimente le selecteur cascade Site -> Departement
-          const byId = new Map(list.map((x: any) => [x.id, x]));
-          const norm = (v: string) => String(v || '').trim().toLowerCase();
-          const mine = list.find((x: any) => norm(x.name) === norm(p?.succursale || '')) // correspondance exacte
-            || list.find((x: any) => p?.succursale && norm(p.succursale).includes(norm(x.name)) && x.parent_id); // dept inclus dans la chaine
-          if (mine) {
-            if (mine.parent_id && byId.get(mine.parent_id)) { siteName = byId.get(mine.parent_id).name; deptName = mine.name; setSelSiteId(mine.parent_id); setSelDeptId(mine.id); }
-            else { siteName = mine.name; setSelSiteId(mine.id); } // c'est un site sans departement
-          }
-        } catch { /* admin indisponible */ }
-        // Repli : si rien via l'admin, on decoupe la chaine succursale (« Sherbrooke Bourque »).
-        if (!siteName) { const w = String(p?.succursale || '').normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean); siteName = w[0] || tenant; deptName = w[1] || ''; }
-        const px = (tLetter + firstAlpha(siteName) + (deptName ? firstAlpha(deptName) : ''));
-        setSitePrefix(px || 'XX'); // pas de longueur max
+        // Resout le SITE et le DEPARTEMENT du poste de l'utilisateur dans l'arbre Administration.
+        const mine = siteList.find((x: any) => norm(x.name) === norm(p?.succursale || '')) // correspondance exacte
+          || siteList.find((x: any) => p?.succursale && norm(p.succursale).includes(norm(x.name)) && x.parent_id); // dept inclus dans la chaine
+        if (mine) {
+          if (mine.parent_id && byId.get(mine.parent_id)) { siteName = (byId.get(mine.parent_id) as any).name; deptName = mine.name; setSelSiteId(mine.parent_id); setSelDeptId(mine.id); gotSel = true; }
+          else { siteName = mine.name; setSelSiteId(mine.id); gotSel = true; } // site sans departement
+        }
+        if (!siteName && p?.succursale) { const w = String(p.succursale).normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean); siteName = w[0] || ''; deptName = w[1] || ''; }
         // Montant max que CE poste peut approuver (colonne approval_max_amount sur la grille — facultative).
         if (p?.current_grid_id) {
           try { const { data: g } = await supabase.from('poste_salary_grids').select('approval_max_amount').eq('id', p.current_grid_id).maybeSingle(); if (g && (g as any).approval_max_amount != null) setMeApprovalMax(Number((g as any).approval_max_amount) || 0); } catch { /* colonne absente */ }
         }
       }
-    } catch { /* defaut XX */ }
+    } catch { /* pas de session : on garde au moins le prefixe tenant */ }
+    // Repli : aucun site resolu via le poste -> 1er site de l'arbre (la cascade reste modifiable a la creation).
+    if (!gotSel) { const s0 = siteList.find((x: any) => !x.parent_id); if (s0) { setSelSiteId(s0.id); siteName = siteName || s0.name; } }
+    const px = (tLetter + firstAlpha(siteName) + (deptName ? firstAlpha(deptName) : ''));
+    setSitePrefix(px || tLetter || 'XX'); // jamais « XX » des qu'on a la lettre du tenant ; pas de longueur max
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
   useEffect(() => { if (sub === 'stats') getSoumissionStats(tenant).then(setStats).catch(() => setStats(null)); }, [sub, tenant]);
 
   async function newSoumission() {
-    const numero = await genSoumissionNumero(tenant, sitePrefix);
+    const px = (selSiteId ? prefixFromSel(selSiteId, selDeptId) : sitePrefix) || sitePrefix || companyLetter || 'XX';
+    const numero = await genSoumissionNumero(tenant, px);
     const def = catalogues.find(c => c.preferred) || catalogues[0] || null;
     setHdr({ ...blankHdr(), numero, seller_id: sellerId, catalogue_id: def?.id || null }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
   }
