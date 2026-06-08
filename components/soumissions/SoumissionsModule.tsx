@@ -7,6 +7,7 @@ import {
   getCatalogues, saveCatalogue, deleteCatalogue, setPreferredCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
   reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, deleteSoumission,
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
+  computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo,
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats,
 } from '@/lib/soumissions';
@@ -194,7 +195,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
   const STATUS: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Envoyée', 'Sent'), accepted: tr('Acceptée', 'Accepted'), archived: tr('Archivée', 'Archived') };
   const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', accepted: 'bg-emerald-100 text-emerald-700', archived: 'bg-amber-100 text-amber-700' };
-  const totals = computeSoumissionTotal(items, cat);
+  const rawTotal = computeSoumissionTotal(items, cat);
+  const totals = applyMarkup(rawTotal, hdr.markup_pct); // total final (majoration + arrondi)
+  const editHours = computeSoumissionHours(items);      // heures MO totales (live)
+  const editAppr = approvalForAmount(cat, totals);      // niveau d'approbation requis (catalogue)
   const subTabs: [SubTab, string][] = [['liste', tr('Soumissions', 'Quotes')], ['catalogue', tr('Catalogue de taux', 'Rate catalogue')], ['stats', tr('Tableau de bord', 'Dashboard')]];
 
   return (
@@ -534,12 +538,20 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 )}
               </label>
               <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={hdr.year || nowYear} onChange={e => setHdr(h => ({ ...h, year: Number(e.target.value) }))} className={`mt-1 w-full ${inputCls}`} /></label>
-              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Catalogue de taux', 'Rate catalogue')}
+              <label className="text-xs font-semibold text-gray-500">{tr('Catalogue de taux', 'Rate catalogue')}
                 <select value={hdr.catalogue_id || ''} onChange={e => setHdr(h => ({ ...h, catalogue_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
                   {catalogues.length === 0 && <option value="">{tr('— Aucun catalogue —', '— No catalogue —')}</option>}
                   {catalogues.map(c => (
                     <option key={c.id} value={c.id}>{c.preferred ? '★ ' : ''}{c.name} · {c.year} rév.{c.revision}</option>
                   ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Statut de suivi', 'Tracking status')}
+                <select value={hdr.status || 'draft'} onChange={e => setHdr(h => ({ ...h, status: e.target.value as any }))} className={`mt-1 w-full ${inputCls}`}>
+                  <option value="draft">{tr('Brouillon', 'Draft')}</option>
+                  <option value="sent">{tr('Transmise au client (relance 30 j)', 'Sent to client (30-day follow-up)')}</option>
+                  <option value="accepted">{tr('Acceptée → Projet', 'Accepted → Project')}</option>
+                  <option value="archived">{tr('Fermée / archivée', 'Closed / archived')}</option>
                 </select>
               </label>
             </div>
@@ -649,9 +661,29 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             </div>
           ))}
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {canEdit && <button onClick={addItem} className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-blue-600 dark:border-gray-700">+ {tr('Ajouter un item', 'Add item')}</button>}
-            <div className="text-lg font-bold">{tr('Total', 'Total')} : {mny(totals)}</div>
+          {canEdit && <button onClick={addItem} className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-blue-600 dark:border-gray-700">+ {tr('Ajouter un item', 'Add item')}</button>}
+
+          {/* Mini-dashboard + Majoration / arrondi du prix */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-bold text-blue-700 dark:text-blue-300">{editHours || 0}</div><div className="text-[10px] text-blue-600/80">{tr('heures MO', 'labor hours')}</div></div>
+              <div className="rounded-lg bg-slate-50 p-2 text-center dark:bg-slate-900/30"><div className="text-sm font-bold text-slate-700 dark:text-slate-200">{mny(rawTotal)}</div><div className="text-[10px] text-slate-500">{tr('sous-total', 'subtotal')}</div></div>
+              <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{mny(totals)}</div><div className="text-[10px] text-emerald-600/80">{tr('total final', 'final total')}</div></div>
+              <div className="rounded-lg p-2 text-center" style={{ background: editAppr ? (editAppr.color || '#64748b') + '18' : undefined }}>
+                <div className="text-sm font-bold" style={{ color: editAppr?.color || '#64748b' }}>{editAppr ? editAppr.level_name : '—'}</div>
+                <div className="text-[10px] text-gray-400">{tr('approbation', 'approval')}{editAppr?.approver_label ? ` · ${editAppr.approver_label}` : ''}</div>
+              </div>
+            </div>
+            {canEdit && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <span className="text-xs font-semibold text-gray-500">{tr('Majoration / arrondi', 'Markup / rounding')} :</span>
+                <input type="number" step="0.5" value={hdr.markup_pct ?? 0} onChange={e => setHdr(h => ({ ...h, markup_pct: Number(e.target.value) || 0 }))} className={`w-20 text-right ${inputCls}`} />
+                <span className="text-xs text-gray-400">%</span>
+                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 10 }))} className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+10 %</button>
+                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 0 }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700">0 %</button>
+                <span className="ml-auto text-[11px] text-gray-400">{tr('Total arrondi au dollar', 'Total rounded to the dollar')}</span>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Retour', 'Back')}</button>
@@ -672,31 +704,64 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {soumissions.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune soumission.', 'No quote yet.')}</div>
           ) : (
-            <div className={listView === 'gallery' ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3'}>
-              {soumissions.map(s => (
-                <div key={s.id} className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 ${listView === 'gallery' ? 'p-4' : 'p-3'}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="font-mono text-xs text-gray-400">{s.numero}{s.revision > 1 ? ` · rév. ${s.revision}` : ''}</div>
-                      <div className="truncate font-bold text-gray-900 dark:text-white">{s.client_snapshot?.name || '—'}</div>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[s.status]}`}>{STATUS[s.status]}</span>
+            <div className={listView === 'gallery' ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'space-y-2'}>
+              {soumissions.map(s => {
+                const sc = catalogues.find(c => c.id === s.catalogue_id) || cat;
+                const appr = approvalForAmount(sc, Number(s.total) || 0);
+                const ri = relanceInfo(s);
+                const hours = Number(s.total_hours) || 0;
+                const statusBadge = <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[s.status]}`}>{STATUS[s.status]}</span>;
+                const relanceBadge = ri.needsRelance ? <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300">⏰ {tr('Relance requise', 'Follow-up due')} ({ri.sinceSentDays} j)</span> : null;
+                const apprBadge = appr ? <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: (appr.color || '#64748b') + '22', color: appr.color || '#64748b' }} title={tr('Niveau d\'approbation', 'Approval level')}>✓ {appr.level_name}</span> : null;
+                const actions = canEdit && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <button onClick={() => editSoumission(s)} className="font-semibold text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                    {s.status !== 'archived' && <button onClick={() => revise(s)} className="text-indigo-600 hover:underline">{tr('Réviser', 'Revise')}</button>}
+                    {s.status !== 'accepted' && s.status !== 'archived' && <button onClick={() => accept(s)} className="text-emerald-600 hover:underline">{tr('Accepter → Projet', 'Accept → Project')}</button>}
+                    {s.status === 'accepted' && <button onClick={() => facturer(s)} className="text-violet-600 hover:underline">{tr('Facturer', 'Invoice')}</button>}
+                    <button onClick={() => remove(s)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
                   </div>
-                  <div className={`mt-2 flex items-baseline justify-between ${listView === 'gallery' ? '' : 'text-sm'}`}>
-                    <span className="text-xs text-gray-400">{s.year || '—'}</span>
-                    <span className={`font-extrabold text-gray-900 dark:text-white ${listView === 'gallery' ? 'text-2xl' : 'text-lg'}`}>{mny(s.total)}</span>
-                  </div>
-                  {canEdit && (
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-xs dark:border-gray-700">
-                      <button onClick={() => editSoumission(s)} className="font-semibold text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
-                      {s.status !== 'archived' && <button onClick={() => revise(s)} className="text-indigo-600 hover:underline">{tr('Réviser', 'Revise')}</button>}
-                      {s.status !== 'accepted' && s.status !== 'archived' && <button onClick={() => accept(s)} className="text-emerald-600 hover:underline">{tr('Accepter → Projet', 'Accept → Project')}</button>}
-                      {s.status === 'accepted' && <button onClick={() => facturer(s)} className="text-violet-600 hover:underline">{tr('Facturer', 'Invoice')}</button>}
-                      <button onClick={() => remove(s)} className="ml-auto text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
+                );
+
+                if (listView === 'grid') {
+                  // GRILLE = une LIGNE COMPLÈTE par soumission, avec mini-dashboard inline.
+                  return (
+                    <div key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800">
+                      <div className="min-w-[160px] flex-1">
+                        <div className="font-mono text-[11px] text-gray-400">{s.numero}{s.revision > 1 ? ` · rév. ${s.revision}` : ''}</div>
+                        <div className="truncate font-bold text-gray-900 dark:text-white">{s.client_snapshot?.name || '—'}</div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span title={tr('Heures MO', 'Labor hours')}><b className="text-gray-800 dark:text-gray-200">{hours || '—'}</b> h</span>
+                        <span title={tr('Soumissionné depuis', 'Quoted since')}>{ri.ageDays != null ? `${ri.ageDays} j` : '—'}</span>
+                        {statusBadge}{relanceBadge}{apprBadge}
+                      </div>
+                      <div className="ml-auto text-lg font-extrabold text-gray-900 dark:text-white">{mny(s.total)}</div>
+                      {actions}
                     </div>
-                  )}
-                </div>
-              ))}
+                  );
+                }
+
+                // GALERIE = carte + mini-dashboard.
+                return (
+                  <div key={s.id} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs text-gray-400">{s.numero}{s.revision > 1 ? ` · rév. ${s.revision}` : ''}</div>
+                        <div className="truncate font-bold text-gray-900 dark:text-white">{s.client_snapshot?.name || '—'}</div>
+                      </div>
+                      {statusBadge}
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/20"><div className="text-lg font-bold text-blue-700 dark:text-blue-300">{hours || '—'}</div><div className="text-[10px] text-blue-600/80">{tr('heures', 'hours')}</div></div>
+                      <div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-900/30"><div className="text-lg font-bold text-slate-700 dark:text-slate-200">{ri.ageDays != null ? ri.ageDays : '—'}</div><div className="text-[10px] text-slate-500">{tr('jours', 'days')}</div></div>
+                      <div className="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-900/20"><div className="text-lg font-extrabold text-emerald-700 dark:text-emerald-300">{mny(s.total)}</div><div className="text-[10px] text-emerald-600/80">{tr('total', 'total')}</div></div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">{relanceBadge}{apprBadge}</div>
+                    {canEdit && <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-700">{actions}</div>}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

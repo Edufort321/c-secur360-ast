@@ -50,6 +50,8 @@ export type Soumission = {
   client_id?: string | null; client_snapshot?: any; project_id?: string | null; catalogue_id?: string | null;
   seller_id?: string | null; // vendeur = createur de la soumission (planner_personnel.id) -> commission au transfert
   status: 'draft' | 'sent' | 'accepted' | 'archived'; total: number; notes?: string | null;
+  // Suivi (migration 138) : transmission (début relance), heures totales, majoration appliquée.
+  sent_at?: string | null; total_hours?: number; markup_pct?: number; created_at?: string;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -81,6 +83,42 @@ export const computeItemTotal = (item: SoumissionItem, cat?: CatalogueTaux | nul
   r2((item.lignes || []).reduce((s, l) => s + computeLigneMontant(l, cat), 0));
 export const computeSoumissionTotal = (items: SoumissionItem[], cat?: CatalogueTaux | null) =>
   r2((items || []).reduce((s, it) => s + computeItemTotal(it, cat), 0));
+
+/** Nombre d'HEURES de main-d'œuvre total (tech × (rég+supp+maj)) sur toute la soumission. */
+export function computeSoumissionHours(items: SoumissionItem[]): number {
+  let h = 0;
+  for (const it of items || []) for (const l of it.lignes || []) {
+    if (l.categorie === 'mo_bureau' || l.categorie === 'mo_chantier') {
+      h += (Number(l.tech) || 1) * ((Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0));
+    }
+  }
+  return r2(h);
+}
+
+/** Applique la MAJORATION (%) au total et ARRONDIT au dollar (prix de soumission « propre »). */
+export function applyMarkup(total: number, markupPct?: number): number {
+  const m = Number(markupPct) || 0;
+  return Math.round((Number(total) || 0) * (1 + m / 100));
+}
+
+/** Niveau d'approbation requis selon le montant (catalogue.approval_levels). */
+export function approvalForAmount(cat: CatalogueTaux | null | undefined, amount: number): CatApproval | null {
+  const levels = (cat?.approval_levels || []).slice().sort((a, b) => (a.max_amount || 0) - (b.max_amount || 0));
+  if (!levels.length) return null;
+  for (const lv of levels) if ((Number(amount) || 0) <= (Number(lv.max_amount) || 0)) return lv;
+  return levels[levels.length - 1]; // au-delà du dernier seuil -> niveau le plus élevé
+}
+
+/** Suivi/relance d'une soumission : âge, jours depuis transmission, relance requise (≥30 j transmis non accepté). */
+export function relanceInfo(s: Soumission): { ageDays: number | null; sinceSentDays: number | null; needsRelance: boolean } {
+  const now = Date.now();
+  const created = s.created_at ? new Date(s.created_at).getTime() : null;
+  const sent = s.sent_at ? new Date(s.sent_at).getTime() : null;
+  const ageDays = created != null ? Math.floor((now - created) / 86400000) : null;
+  const sinceSentDays = sent != null ? Math.floor((now - sent) / 86400000) : null;
+  const needsRelance = s.status === 'sent' && sinceSentDays != null && sinceSentDays >= 30;
+  return { ageDays, sinceSentDays, needsRelance };
+}
 
 // ── Catalogue ─────────────────────────────────────────────────────────────────
 // Un seul MODÈLE de catalogue, plusieurs enregistrés. Le « préféré » est proposé en
@@ -247,16 +285,30 @@ export async function getSoumissionFull(tenant: string, id: string): Promise<{ s
 
 /** Enregistre une soumission complète : upsert en-tête, puis remplace items + lignes (recalcul des montants). */
 export async function saveSoumissionFull(tenant: string, header: Soumission, items: SoumissionItem[], cat?: CatalogueTaux | null): Promise<string> {
-  const total = computeSoumissionTotal(items, cat);
+  const rawTotal = computeSoumissionTotal(items, cat);
+  const total = applyMarkup(rawTotal, header.markup_pct); // majoration + arrondi -> prix final
+  // Transmission : on pose sent_at la 1re fois que le statut passe à « sent » (début du décompte relance).
+  const sentAt = header.status === 'sent' ? (header.sent_at || new Date().toISOString()) : (header.sent_at ?? null);
   const hPayload: any = {
     tenant_id: tenant, numero: header.numero, revision: header.revision ?? 1, parent_soumission_id: header.parent_soumission_id ?? null,
     year: header.year ?? null, client_id: header.client_id ?? null, client_snapshot: header.client_snapshot ?? null,
     project_id: header.project_id ?? null, catalogue_id: header.catalogue_id ?? null, seller_id: header.seller_id ?? null,
     status: header.status || 'draft', total, notes: header.notes ?? null, updated_at: new Date().toISOString(),
+    // Suivi (migration 138) — retirés automatiquement si les colonnes n'existent pas encore.
+    sent_at: sentAt, total_hours: computeSoumissionHours(items), markup_pct: Number(header.markup_pct) || 0,
   };
   let id = header.id;
-  if (id) { const { error } = await supabase.from('soumissions').update(hPayload).eq('id', id); if (error) throw error; }
-  else { const { data, error } = await supabase.from('soumissions').insert(hPayload).select('id').single(); if (error) throw error; id = data.id; }
+  // Upsert résilient : si une colonne de suivi manque (migration 138 non passée), on la retire et on réessaie.
+  const attempt = (p: any) => id ? supabase.from('soumissions').update(p).eq('id', id).select('id').single() : supabase.from('soumissions').insert(p).select('id').single();
+  let res: any = await attempt(hPayload); let guard = 0;
+  while (res.error && guard < 6) {
+    const m = String(res.error.message || '').match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+    const col = m ? (m[1] || m[2] || m[3]) : null;
+    if (col && col in hPayload && !['numero', 'tenant_id', 'status', 'total'].includes(col)) { delete hPayload[col]; res = await attempt(hPayload); guard++; }
+    else break;
+  }
+  if (res.error) throw res.error;
+  if (!id) id = res.data.id;
 
   // Remplacer items + lignes (cascade delete sur items supprime leurs lignes)
   // Securite : filtrer par tenant_id pour eviter toute suppression cross-tenant.
