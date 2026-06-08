@@ -57,6 +57,7 @@ import {
   Share,
   Mail,
   ClipboardCheck,
+  ClipboardList,
   ScanLine,
   RefreshCw,
   Zap
@@ -1519,6 +1520,9 @@ function AppContent() {
   const [departments, setDepartments] = useState([]);
   const [categories, setCategories] = useState([]);
   const [storageUnits, setStorageUnits] = useState([]);
+  // Raison OBLIGATOIRE des mouvements : projet (avec n° soumission), ou code interne défini en admin.
+  const [reasonCodes, setReasonCodes] = useState([]); // [{ id, code, label }] (snapshot inventory_state)
+  const [projectsList, setProjectsList] = useState([]); // projets du tenant (projet/soumission) pour la raison
   const [defaultMargin, setDefaultMargin] = useState(0);
   const [baseEbitda, setBaseEbitda] = useState(20);
   const [targetEbitda, setTargetEbitda] = useState(35);
@@ -1764,6 +1768,7 @@ function AppContent() {
           // comme les succursales avant). On charge ce qui est dans le nuage, meme vide.
           if (Array.isArray(s.categories)) setCategories(s.categories);
           if (Array.isArray(s.storageUnits)) setStorageUnits(s.storageUnits);
+          if (Array.isArray(s.reasonCodes)) setReasonCodes(s.reasonCodes);
           if (s.baseEbitda != null) setBaseEbitda(Number(s.baseEbitda));
           if (s.targetEbitda != null) setTargetEbitda(Number(s.targetEbitda));
           // Miroir local
@@ -1888,7 +1893,7 @@ function AppContent() {
         const { error } = await supabase.from('inventory_state').upsert({
           tenant_id: tenantId,
           // NB: `departments` n'est PLUS persisté ici — source unique = Administration (planner_succursales).
-          data: { items, movements, categories, storageUnits, baseEbitda, targetEbitda },
+          data: { items, movements, categories, storageUnits, reasonCodes, baseEbitda, targetEbitda },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'tenant_id' });
         if (error) { console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message); setSaveError(error.message || 'Erreur inconnue'); }
@@ -1899,7 +1904,19 @@ function AppContent() {
       }
     }, 800);
     return () => { if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current); };
-  }, [items, movements, departments, categories, storageUnits, baseEbitda, targetEbitda, tenantId]);
+  }, [items, movements, departments, categories, storageUnits, reasonCodes, baseEbitda, targetEbitda, tenantId]);
+
+  // Projets du tenant (numéro + n° soumission) -> proposés comme RAISON de mouvement.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase.from('projects').select('project_number, title, submission_number, status').eq('tenant_id', tenantId).order('project_number', { ascending: false });
+        if (alive && Array.isArray(data)) setProjectsList(data.filter(p => p.project_number));
+      } catch { /* table absente */ }
+    })();
+    return () => { alive = false; };
+  }, [tenantId]);
 
   // #58 — Règle globale : toute case éditable s'écrase au clic (sélection du contenu au focus).
   // Permet de remplacer directement un 0/une valeur sans devoir effacer, et facilite la saisie
@@ -2530,6 +2547,13 @@ function AppContent() {
   const deleteDepartment = (deptId) => {
     askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setDepartments(prev => { const next = prev.filter(dept => dept.id !== deptId); saveLS('c-secur360-departments', next); return next; }) });
   };
+
+  // Gestion des CODES INTERNES (raisons de mouvement sans projet) — persistés dans le snapshot.
+  const addReasonCode = (code, label) => {
+    const c = String(code || '').trim().toUpperCase(); if (!c) return;
+    setReasonCodes(prev => prev.some(x => x.code === c) ? prev : [...prev, { id: Date.now().toString(36), code: c, label: String(label || '').trim() }]);
+  };
+  const deleteReasonCode = (id) => setReasonCodes(prev => prev.filter(x => x.id !== id));
 
   // Gestion des catégories
   const addCategory = (catData) => {
@@ -3591,8 +3615,9 @@ function AppContent() {
     const [scannerMode, setScannerMode] = useState('movement'); // 'movement' ou 'inventory'
     const [adjustmentQuantity, setAdjustmentQuantity] = useState(0);
     const [physicalCount, setPhysicalCount] = useState(''); // Pour le mode inventaire
-    const [projectCode, setProjectCode] = useState(''); // Numéro de projet
-    const [withdrawalType, setWithdrawalType] = useState('project'); // 'project' ou 'internal'
+    const [projectCode, setProjectCode] = useState(''); // Numéro de projet sélectionné (raison projet)
+    const [reasonCodeSel, setReasonCodeSel] = useState(''); // code interne sélectionné (raison interne)
+    const [withdrawalType, setWithdrawalType] = useState('project'); // source de la raison : 'project' ou 'internal'
     const [scannerUser, setScannerUser] = useState(hostUserName || currentUser?.username || ''); // Identité par défaut = utilisateur connecté à l'app
     // Si le nom de l'utilisateur connecté arrive après le montage, on remplit le champ (sans écraser une saisie).
     useEffect(() => { if (hostUserName && !scannerUser) setScannerUser(hostUserName); }, [hostUserName]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -3925,30 +3950,27 @@ function AppContent() {
         return;
       }
 
-      // Si c'est un retrait
-      if (adjustmentQuantity < 0) {
-        // Pour les retraits de type "projet", le numéro de projet est OBLIGATOIRE
-        if (withdrawalType === 'project') {
-          if (!projectCode || projectCode.trim() === '') {
-            notify(language === 'fr' ? 'Numéro de projet obligatoire pour les retraits de type projet' : 'Project number required for project withdrawals', 'error');
-            return;
-          }
+      // RAISON OBLIGATOIRE pour TOUT mouvement (entrée ET sortie) : projet OU code interne.
+      if (withdrawalType === 'project') {
+        if (!projectCode || projectCode.trim() === '') {
+          notify(language === 'fr' ? 'Sélectionne un projet (raison obligatoire)' : 'Select a project (reason required)', 'error');
+          return;
+        }
+      } else {
+        if (!reasonCodeSel) {
+          notify(language === 'fr' ? 'Sélectionne un code interne (raison obligatoire)' : 'Select an internal code (reason required)', 'error');
+          return;
         }
       }
 
       const movementType = adjustmentQuantity < 0 ? 'exit' : 'entry';
+      const action = adjustmentQuantity < 0 ? (language === 'fr' ? 'Retrait' : 'Out') : (language === 'fr' ? 'Ajout' : 'In');
       let reason = '';
-
-      if (adjustmentQuantity < 0) {
-        // Retrait
-        if (withdrawalType === 'project') {
-          reason = `Retrait projet: ${projectCode}`;
-        } else {
-          reason = 'Consommation interne';
-        }
+      if (withdrawalType === 'project') {
+        reason = `${action} — Projet ${projectCode}`;
       } else {
-        // Ajout
-        reason = projectCode ? `Ajout - Projet: ${projectCode}` : 'Ajout via scanner';
+        const rc = reasonCodes.find(x => x.code === reasonCodeSel);
+        reason = `${action} — Code ${reasonCodeSel}${rc?.label ? ` (${rc.label})` : ''}`;
       }
 
       const result = updateQuantity(
@@ -4341,64 +4363,42 @@ function AppContent() {
                     </div>
 
                     {/* Type de retrait et Numéro de projet - OBLIGATOIRE pour les retraits */}
-                    {adjustmentQuantity < 0 && (
-                      <div className="space-y-4">
-                        {/* Sélection du type de retrait */}
+                    {/* RAISON OBLIGATOIRE pour TOUT mouvement (entrée ET sortie) : Projet ou Code interne. */}
+                    {adjustmentQuantity !== 0 && (
+                      <div className="space-y-3">
                         <div className="bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-400 dark:border-purple-600 rounded-lg p-4">
                           <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                            {t('scanner.withdrawalType')} <span className="text-red-600">*</span>
+                            {language === 'fr' ? 'Raison du mouvement' : 'Movement reason'} <span className="text-red-600">*</span>
                           </label>
                           <select
                             value={withdrawalType}
-                            onChange={(e) => setWithdrawalType(e.target.value)}
+                            onChange={(e) => { setWithdrawalType(e.target.value); setProjectCode(''); setReasonCodeSel(''); }}
                             className="w-full px-4 py-3 border-2 border-purple-400 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-semibold text-lg focus:outline-none focus:border-purple-600"
                           >
-                            <option value="project">{t('scanner.withdrawalForProject')}</option>
-                            <option value="internal">{t('scanner.internalConsumption')}</option>
+                            <option value="project">{language === 'fr' ? 'Projet / soumission' : 'Project / quote'}</option>
+                            <option value="internal">{language === 'fr' ? 'Code interne' : 'Internal code'}</option>
                           </select>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {t('scanner.selectWithdrawalReason')}
-                          </p>
                         </div>
 
-                        {/* Numéro de projet - obligatoire seulement pour les retraits de type "projet" */}
-                        {withdrawalType === 'project' && (
+                        {withdrawalType === 'project' ? (
                           <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg p-4">
-                            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                              {t('scanner.projectNumber')} <span className="text-red-600">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={projectCode}
-                              onChange={(e) => setProjectCode(e.target.value.toUpperCase())}
-                              className="w-full px-4 py-2 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-lg focus:outline-none focus:border-yellow-600"
-                              placeholder="Ex: G25-1115"
-                              required
-                            />
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                              {t('scanner.requiredForProjectWithdrawals')}
-                            </p>
+                            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">{language === 'fr' ? 'Projet (n° + soumission)' : 'Project (# + quote)'} <span className="text-red-600">*</span></label>
+                            <select value={projectCode} onChange={(e) => setProjectCode(e.target.value)} className="w-full px-4 py-2 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:outline-none focus:border-yellow-600">
+                              <option value="">{language === 'fr' ? '— Choisir un projet —' : '— Select a project —'}</option>
+                              {projectsList.map(p => <option key={p.project_number} value={p.project_number}>{p.project_number}{p.title ? ` — ${p.title}` : ''}{p.submission_number ? ` (soum. ${p.submission_number})` : ''}</option>)}
+                            </select>
+                            {projectsList.length === 0 && <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{language === 'fr' ? 'Aucun projet — crée un projet, ou utilise un code interne.' : 'No project — create one, or use an internal code.'}</p>}
+                          </div>
+                        ) : (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400 dark:border-blue-600 rounded-lg p-4">
+                            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">{language === 'fr' ? 'Code interne' : 'Internal code'} <span className="text-red-600">*</span></label>
+                            <select value={reasonCodeSel} onChange={(e) => setReasonCodeSel(e.target.value)} className="w-full px-4 py-2 border-2 border-blue-400 dark:border-blue-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:outline-none focus:border-blue-600">
+                              <option value="">{language === 'fr' ? '— Choisir un code —' : '— Select a code —'}</option>
+                              {reasonCodes.map(c => <option key={c.id} value={c.code}>{c.code}{c.label ? ` — ${c.label}` : ''}</option>)}
+                            </select>
+                            {reasonCodes.length === 0 && <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{language === 'fr' ? 'Aucun code interne — crée-en dans Administration → Codes internes.' : 'No internal code — create one in Administration → Internal codes.'}</p>}
                           </div>
                         )}
-                      </div>
-                    )}
-
-                    {/* Champ Numéro de projet - OPTIONNEL pour les ajouts */}
-                    {adjustmentQuantity > 0 && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-lg p-4">
-                        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                          {t('scanner.projectNumberOptional')}
-                        </label>
-                        <input
-                          type="text"
-                          value={projectCode}
-                          onChange={(e) => setProjectCode(e.target.value.toUpperCase())}
-                          className="w-full px-4 py-2 border-2 border-green-200 dark:border-green-800 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-lg focus:outline-none focus:border-green-600"
-                          placeholder="Ex: G25-1115"
-                        />
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          {t('scanner.leaveBlankForGeneral')}
-                        </p>
                       </div>
                     )}
 
@@ -5785,10 +5785,13 @@ function AppContent() {
     // activeAdminTab est maintenant géré par AppContent pour persister entre les re-renders
     const [currency, setCurrency] = useState('CAD ($)');
     const [dateFormat, setDateFormat] = useState('DD/MM/YYYY');
+    const [newRcCode, setNewRcCode] = useState('');
+    const [newRcLabel, setNewRcLabel] = useState('');
 
     const adminTabs = [
       { id: 'departments', label: t('administration.tabs.departmentsPersonnel'), icon: Building },
       { id: 'categories', label: t('administration.tabs.categories'), icon: Tag },
+      { id: 'reason-codes', label: language === 'fr' ? 'Codes internes' : 'Internal codes', icon: ClipboardList },
       { id: 'inventory-mode', label: t('administration.tabs.inventoryMode'), icon: ClipboardCheck },
       { id: 'import-export', label: t('administration.tabs.importExport'), icon: FileSpreadsheet },
       { id: 'settings', label: t('administration.tabs.settings'), icon: Settings }
@@ -6165,6 +6168,40 @@ function AppContent() {
           </div>
         </div>
       </div>
+          </div>
+        )}
+
+        {/* Onglet Codes internes — raisons de mouvement sans projet (ex. RÉPARATION, PERTE, ÉCHANTILLON) */}
+        {activeAdminTab === 'reason-codes' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{language === 'fr' ? 'Codes internes' : 'Internal codes'}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{language === 'fr' ? 'Raisons de mouvement quand il n’y a pas de projet/soumission (ex. RÉPARATION, PERTE, ÉCHANTILLON, RETOUR FOURNISSEUR). Obligatoire au scanner si « Code interne ».' : 'Movement reasons when there is no project/quote (e.g. REPAIR, LOSS, SAMPLE). Required at the scanner when "Internal code".'}</p>
+            <div className="flex flex-wrap items-end gap-2 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">{language === 'fr' ? 'Code *' : 'Code *'}</label>
+                <input value={newRcCode} onChange={e => setNewRcCode(e.target.value.toUpperCase())} placeholder="RÉPARATION" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-sm font-mono uppercase" />
+              </div>
+              <div className="flex-1 min-w-[160px]">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">{language === 'fr' ? 'Libellé (optionnel)' : 'Label (optional)'}</label>
+                <input value={newRcLabel} onChange={e => setNewRcLabel(e.target.value)} placeholder={language === 'fr' ? 'Description' : 'Description'} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-sm" />
+              </div>
+              <button onClick={() => { if (newRcCode.trim()) { addReasonCode(newRcCode, newRcLabel); setNewRcCode(''); setNewRcLabel(''); } }} className="inline-flex items-center gap-1 rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus size={15} /> {language === 'fr' ? 'Ajouter' : 'Add'}</button>
+            </div>
+            {reasonCodes.length === 0 ? (
+              <p className="text-sm text-gray-400">{language === 'fr' ? 'Aucun code interne.' : 'No internal code.'}</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {reasonCodes.map(c => (
+                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-bold truncate">{c.code}</div>
+                      {c.label && <div className="text-xs text-gray-500 truncate">{c.label}</div>}
+                    </div>
+                    <button onClick={() => deleteReasonCode(c.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
