@@ -1583,6 +1583,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [fixMsg,setFixMsg]=useState(null);
   const [savedFlash,setSavedFlash]=useState(false);
   const [paleExport,setPaleExport]=useState(false); // export "à compléter à la main" (valeurs en pâle)
+  const [updatesExport,setUpdatesExport]=useState(false); // export "mises à jour seulement"
   const [showLink,setShowLink]=useState(false);   // panneau "Lier au projet / événement"
   const [showSoum,setShowSoum]=useState(false);   // constructeur de soumission depuis anomalies/recos
   const [showTools,setShowTools]=useState(false); // menu "⋯" (actions repliées sur mobile)
@@ -1792,6 +1793,14 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     setPaleExport(true);
     setTimeout(()=>{ printWithName(); setTimeout(()=>setPaleExport(false),600); },250);
   }
+  const updatedCount = (r.blocks||[]).filter(b=>b.updated).length;
+  // Export « mises à jour seulement » : n'imprime que les blocs marqués 🔁 (addendum/révision).
+  function doExportUpdates(){
+    if(updatedCount===0){ alert(LANG==="en"?"No block marked as updated (use the 🔁 button on a block).":"Aucun bloc marqué comme mis à jour (bouton 🔁 sur un bloc)."); return; }
+    if(!dossierName()){ alert(LANG==="en"?"A file/dossier number is required before export.":"Un numéro de dossier est obligatoire avant l'export."); return; }
+    setUpdatesExport(true);
+    setTimeout(()=>{ printWithName(); setTimeout(()=>setUpdatesExport(false),600); },250);
+  }
   // Lien vers un PROJET (hub) et un ÉVÉNEMENT du planner. Stocké dans r.link ; les colonnes
   // project_id / planner_job_id sont renseignées côté serveur (le statut du rapport remonte
   // alors au projet et à la facturation, et le rapport suit l'événement).
@@ -1825,6 +1834,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"dup", label:t("duplicate"), on:()=>onDuplicate(r.id,false) },
             { key:"ver", label:t("newVersion"), on:()=>onDuplicate(r.id,true) },
             { key:"hw", label:`🖊 ${LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}`, on:doExportHandwrite, title:LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main" },
+            updatedCount>0 && { key:"upd", label:`🔁 ${LANG==="en"?"Export updates":"Export MAJ"} (${updatedCount})`, on:doExportUpdates, style:{borderColor:"#e0a96d",color:"#b45309"}, title:LANG==="en"?"Export only the blocks marked as updated":"Exporter uniquement les blocs marqués comme mis à jour" },
           ].filter(Boolean);
           if(narrow){
             return (
@@ -2041,6 +2051,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
                   {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>convertToInspect(b.id)} title={t("convertInspect")}>☑</button>}
                   {b.type==="section" && <button style={{...S.miniBtn,...(b.newPage?{color:"#2a6f97",borderColor:"#2a6f97",background:"#eef5fa"}:{})}} onClick={()=>updBlock(b.id,{newPage:!b.newPage})} title={LANG==="en"?"Start this section on a new page":"Commencer cette section sur une nouvelle page"}>📄</button>}
                   {b.type==="inspect" && <button style={{...S.miniBtn,color:"#1e293b",borderColor:"#a9cddc"}} onClick={()=>convertToSection(b.id)} title={t("convertSection")}>§</button>}
+                  <button style={{...S.miniBtn,...(b.updated?{color:"#b45309",borderColor:"#e0a96d",background:"#fff7ed"}:{})}} onClick={()=>updBlock(b.id,{updated:!b.updated})} title={LANG==="en"?"Mark as updated (for the 'updates only' export)":"Marquer comme mis à jour (pour l'export « MAJ seulement »)"}>🔁</button>
                   <button style={S.miniBtnDel} onClick={()=>removeBlock(b.id)}>✕</button>
                 </> : <>
                   <button style={S.miniBtn} onClick={()=>setOpenMenuId(openMenuId===b.id?null:b.id)} title={t("blockActions")}>⋯</button>
@@ -2053,6 +2064,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
                       {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{convertToInspect(b.id);setOpenMenuId(null);}}>☑ {t("convertInspect")}</button>}
                       {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{newPage:!b.newPage});setOpenMenuId(null);}}>📄 {b.newPage?(LANG==="en"?"No page break":"Sans saut de page"):(LANG==="en"?"Page break before":"Saut de page avant")}</button>}
                       {b.type==="inspect" && <button style={S.blockMenuItem} onClick={()=>{convertToSection(b.id);setOpenMenuId(null);}}>§ {t("convertSection")}</button>}
+                      <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{updated:!b.updated});setOpenMenuId(null);}}>🔁 {b.updated?(LANG==="en"?"Unmark updated":"Retirer « mis à jour »"):(LANG==="en"?"Mark updated":"Marquer mis à jour")}</button>
                       <button style={{...S.blockMenuItem,color:"#9d0208"}} onClick={()=>{removeBlock(b.id);setOpenMenuId(null);}}>✕ {t("removeBlock")}</button>
                     </div>
                   )}
@@ -2162,7 +2174,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {lightbox && <div style={S.overlay} className="screen-only" onClick={()=>setLightbox(null)}><img src={lightbox} alt="" style={{maxWidth:"92vw",maxHeight:"92vh",borderRadius:8}}/></div>}
 
       {/* RAPPORT IMPRIMABLE */}
-      <PrintDoc report={r} logo={logo} pale={paleExport} qr={qr&&qr.data} qrMap={qrMap}/>
+      <PrintDoc report={r} logo={logo} pale={paleExport} qr={qr&&qr.data} qrMap={qrMap} updatesOnly={updatesExport}/>
     </div>
   );
 }
@@ -2966,14 +2978,16 @@ function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
 // ============================================================
 //  RAPPORT IMPRIMABLE
 // ============================================================
-function PrintDoc({ report, logo, pale, qr, qrMap }){
+function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
   const r=report; const today=new Date().toISOString().slice(0,10);
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
+  // Export « mises à jour seulement » : ne garder que les blocs marqués 🔁 (addendum).
+  const printBlocks = updatesOnly ? (r.blocks||[]).filter(b=>b.updated) : (r.blocks||[]);
   return (
     <div className={"print-only"+(pale?" pale":"")+(r.condensed?" cond":"")+(r.sectionPerPage?" secpage":"")} style={DP.wrap}>
       {/* LETTRE DE PRÉSENTATION (optionnelle) — tout en première page. Champs vides repliés sur
           les infos déjà enregistrées du rapport. */}
-      {(r.letter&&r.letter.show) && (()=>{
+      {!updatesOnly && (r.letter&&r.letter.show) && (()=>{
         const L=r.letter||{};
         const company=L.company||r.client||"";
         const subject=L.subject||r.title||"";
@@ -3032,7 +3046,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
         );
       })()}
       {/* PAGE COUVERTURE (optionnelle) — hors du tableau d'en-tête/pied répété */}
-      {(r.cover||{}).show!==false && (()=>{
+      {!updatesOnly && (r.cover||{}).show!==false && (()=>{
         const cv=r.cover||{};
         const bg=cv.bg; // image de fond optionnelle
         return (
@@ -3057,7 +3071,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
       })()}
 
       {/* TABLE DES MATIÈRES (optionnelle) — sa propre page, hors table en-tête/pied */}
-      {r.toc && (r.blocks||[]).length>0 && (
+      {!updatesOnly && r.toc && (r.blocks||[]).length>0 && (
         <div className="toc-page-print" style={DP.tocPage}>
           <h2 style={DP.tocTitle}>{t("tocTitle")}</h2>
           <div>
@@ -3109,7 +3123,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
       </tbody></table>
 
       {/* RÉCAP GLOBAL DES ANOMALIES D'INSPECTION (toutes grilles, trié par gravité) */}
-      {r.anomRecap!==false && (()=>{
+      {!updatesOnly && r.anomRecap!==false && (()=>{
         const collected=[];
         (r.blocks||[]).forEach(b=>{ if(b.type==="inspect"){ (b.items||[]).forEach(it=>{ if(it.state==="anomaly"){ collected.push({ section:b.title||"", label:it.label||"", note:it.note||"", severity:it.severity||"minor" }); } }); } });
         if(collected.length===0) return null;
@@ -3183,7 +3197,12 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
         </>);
       })()}
 
-      {(()=>{ const firstSecIdx=r.blocks.findIndex(x=>x.type==="section"); return r.blocks.map((b,bi)=>{
+      {updatesOnly && (
+        <div style={{background:"#fff7ed",border:"1.5px solid #e0a96d",color:"#9a3412",borderRadius:8,padding:"8px 14px",margin:"10px 0",fontFamily:"'Archivo'",fontWeight:800,fontSize:13}}>
+          🔁 {LANG==="en"?"UPDATE / ADDENDUM":"MISE À JOUR / ADDENDA"} — {today}
+        </div>
+      )}
+      {(()=>{ const firstSecIdx=printBlocks.findIndex(x=>x.type==="section"); return printBlocks.map((b,bi)=>{
         const isSection=b.type==="section";
         const isZone=b.type==="zone";
         // Saut de page avant cette section/zone : demande explicite (b.newPage) ou option globale.
