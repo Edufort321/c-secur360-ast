@@ -363,8 +363,10 @@ Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
  "projectNo": "numéro de dossier/projet/P.O./Sample No si présent",
  "suggestedTemplate": "inspection | testing | quote | generic (le plus proche)",
  "blocks": [
+   {"type":"zone","title":"GRANDE division (ex: Bâtiment Nord, Poste 12, Secteur A) — regroupe ce qui suit"},
    {"type":"section","title":"titre exact de section","fields":[{"label":"libellé exact","value":"valeur exacte"}]},
    {"type":"table","title":"titre exact du tableau","columns":["Colonne 1","Colonne 2","..."],"rows":[["cellule","cellule","..."]]},
+   {"type":"inspect","title":"titre de la liste de vérification / checklist","items":[{"label":"point vérifié","state":"good|anomaly|na","note":"observation exacte","severity":"minor|major|critical"}]},
    {"type":"text","value":"texte recopié intégralement, mot pour mot"},
    {"type":"photos","title":"titre/légende de la zone (ex: Imagerie thermique, Photos)","count":2,"layout":"2col"}
  ]
@@ -374,10 +376,16 @@ RÈGLES STRICTES DE FIDÉLITÉ :
 - N'OMETS AUCUNE SECTION. Capture TOUT : Reference, Equipment, DGA, OIL QUALITY, ADDITIONAL TESTS, Comments, conditions, prix, etc. Si le document a une section "Oil Quality" / "Qualité d'huile" avec humidité, tension interfaciale, acidité, facteur de puissance, densité, inhibiteur d'oxydation, PCB, furanes — TU DOIS TOUTES LES INCLURE.
 - TABLEAUX MULTI-COLONNES (TRÈS IMPORTANT) : si un tableau a PLUSIEURS colonnes de valeurs (ex: deux dates 2025-08-22 et 2025-12-09 côte à côte), tu DOIS utiliser le type "table" et GARDER TOUTES LES COLONNES. NE choisis JAMAIS une seule colonne. Mets les en-têtes exacts dans "columns" (incluant les dates) et chaque ligne complète dans "rows". Recopie les valeurs dans le bon ordre de colonnes.
 - Conserve la numérotation et les libellés d'origine (ex: "2.1", "B.7a", "D.15", codes de méthode comme "D 1533-20").
-- Une "section" = champs à UNE seule valeur. Un "table" = données à PLUSIEURS colonnes. Un "text" = paragraphe ou liste.
-- ZONES PHOTO (IMPORTANT) : quand une page contient des PHOTOS, des IMAGES, des IMAGERIES THERMIQUES ou des SCHÉMAS, ajoute un bloc {"type":"photos"} À CET ENDROIT dans l'ordre du document, avec "count" = le NOMBRE d'images sur la page (ex: une page d'imagerie thermique avec image thermique + photo réelle = count:2), "layout":"2col" si 2 images côte à côte, "1col" si une seule, "grid" si 4+. Donne un "title" décrivant la zone (ex: "Imagerie thermique - ASC A1"). NE mets PAS les images elles-mêmes (on placera les photos manuellement), mets seulement le bon nombre de cases vides au bon endroit.
+INTERPRÉTATION D'ASSEMBLAGE (CLASSEMENT CORRECT — choisis le BON type de bloc) :
+- "zone"  = GRANDE division qui REGROUPE plusieurs sections/équipements (un bâtiment, un poste, un secteur, un étage, une ligne). Mets-en une AVANT le groupe qu'elle coiffe. Respecte la hiérarchie : Zone > (sections/équipements) > détails.
+- "section" = paires libellé→VALEUR UNIQUE (identité d'équipement, références, en-tête de fiche).
+- "table" = données à PLUSIEURS colonnes (mesures par date, listes de prix, relevés).
+- "inspect" = LISTE DE VÉRIFICATION / checklist / points d'inspection AVEC un état : chaque point = un item ; "state" = good (conforme/OK/bon), anomaly (défaut/non-conforme/à corriger/NOK), na (N/A ou non vérifié). Mets l'observation dans "note" et, pour une anomalie, estime "severity" (minor/major/critical).
+- "text" = paragraphe libre, conclusion, recommandation, notes.
+- Respecte STRICTEMENT l'ORDRE de lecture du document. Sépare l'en-tête/pied de page récurrent (logo, n° de page, mentions légales) du CONTENU réel — ne le répète pas à chaque section.
+- ZONES PHOTO : quand une page contient des PHOTOS/IMAGES/IMAGERIES THERMIQUES/SCHÉMAS, ajoute {"type":"photos"} À CET ENDROIT avec "count" = NOMBRE d'images, "layout" ("1col"/"2col"/"grid"), "title" décrivant la zone. NE mets PAS les images (cases vides à remplir manuellement).
 - NE PAS inventer de valeurs absentes (mettre '' ou '—'). Garder la langue d'origine.
-Objectif : quelqu'un qui lit les blocs doit avoir EXACTEMENT le même contenu que le PDF, AVEC toutes les colonnes, toutes les sections, et des zones photo au bon endroit, sans aucune perte.`;
+Objectif : reproduire EXACTEMENT le contenu du document, BIEN CLASSÉ (zones/sections/tableaux/inspections au bon type et au bon endroit), avec toutes les colonnes et toutes les sections, sans aucune perte.`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:[
@@ -390,7 +398,7 @@ Objectif : quelqu'un qui lit les blocs doit avoir EXACTEMENT le même contenu qu
   const m=clean.match(/\{[\s\S]*\}/);
   // Avertir si la réponse a probablement été tronquée (limite de tokens atteinte)
   const truncated = data.stop_reason==="max_tokens";
-  const parsed = JSON.parse(m?m[0]:clean);
+  const parsed = repairJsonParse(m?m[0]:clean);
   parsed.__truncated = truncated;
   return parsed;
 }
@@ -564,9 +572,12 @@ RÈGLES : conserve EXACTEMENT les mêmes sections, libellés et colonnes que le 
 // Normalise les blocs extraits vers le format interne (avec ids)
 function normalizeBlocks(blocks){
   if(!Array.isArray(blocks)) return [];
+  const ST=["good","normal","anomaly","na"]; // états d'inspection valides
   return blocks.map(b=>{
+    if(b.type==="zone") return { type:"zone", id:bid(), title:b.title||"", newPage:b.newPage!==false };
     if(b.type==="section") return { type:"section", id:bid(), title:b.title||"", fields:(b.fields||[]).map(f=>({id:bid(),label:f.label||"",value:f.value||"",uncertain:!!f.uncertain})) };
     if(b.type==="table") return { type:"table", id:bid(), title:b.title||"", columns:(b.columns||[]).slice(), rows:(b.rows||[]).map(r=>Array.isArray(r)?r.slice():[String(r)]), uncertainCells:(b.uncertainCells||[]).map(c=>c.slice()) };
+    if(b.type==="inspect") return { type:"inspect", id:bid(), title:b.title||t("inspectTitle"), items:(b.items||[]).map(it=>({ id:bid(), label:it.label||"", state:ST.includes(it.state)?it.state:"good", note:it.note||"", severity:["minor","major","critical"].includes(it.severity)?it.severity:"minor", uncertain:!!it.uncertain })) };
     if(b.type==="photos"){
       const n=Math.max(1,Math.min(8, b.count||2));
       const layout = b.layout==="1col"||b.layout==="grid"?b.layout:"2col";
@@ -651,7 +662,7 @@ Rapport : ${JSON.stringify(payload)}`;
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
   const clean=txt.replace(/```json|```/g,"").trim();
   const m=clean.match(/\{[\s\S]*\}/);
-  const fixed=JSON.parse(m?m[0]:clean);
+  const fixed=repairJsonParse(m?m[0]:clean);
   // Réintégrer les corrections dans les blocs existants (par id), sans toucher aux photos
   const byId={}; (fixed.blocks||[]).forEach(b=>{ byId[b.id]=b; });
   const newBlocks=report.blocks.map(b=>{
@@ -692,7 +703,7 @@ Rapport : ${JSON.stringify(payload)}`;
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
   const clean=txt.replace(/```json|```/g,"").trim();
   const m=clean.match(/\{[\s\S]*\}/);
-  const tr=JSON.parse(m?m[0]:clean);
+  const tr=repairJsonParse(m?m[0]:clean);
   const byId={}; (tr.blocks||[]).forEach(b=>{ byId[b.id]=b; });
   const annById={}; (tr.annotations||[]).forEach(a=>{ annById[a.id]=a; });
   const newBlocks=report.blocks.map(b=>{
@@ -835,12 +846,14 @@ async function extractDocFromText(key, textChunk, isFirst){
 Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
 {${isFirst?'\n "title": "titre exact", "client": "client si présent", "location": "lieu si présent", "projectNo": "n° projet/dossier si présent", "suggestedTemplate": "inspection|testing|quote|generic",':''}
  "blocks": [
+   {"type":"zone","title":"grande division (bâtiment/poste/secteur) qui regroupe ce qui suit"},
    {"type":"section","title":"titre exact","fields":[{"label":"libellé","value":"valeur"}]},
    {"type":"table","title":"titre","columns":["C1","C2"],"rows":[["a","b"]]},
+   {"type":"inspect","title":"liste de vérification","items":[{"label":"point","state":"good|anomaly|na","note":"obs","severity":"minor|major|critical"}]},
    {"type":"text","value":"texte recopié mot pour mot"}
  ]
 }
-RÈGLES : recopie VERBATIM, n'omets aucune section, garde TOUTES les colonnes des tableaux, conserve numérotation/codes. Ne pas inventer (mettre '' ou '—'). Voici le texte à structurer :
+RÈGLES : recopie VERBATIM, n'omets aucune section, garde TOUTES les colonnes des tableaux, conserve numérotation/codes. CLASSEMENT : "zone"=grande division qui regroupe ; "section"=paires libellé→valeur unique ; "table"=plusieurs colonnes ; "inspect"=checklist avec état (good/anomaly/na) ; "text"=paragraphe. Respecte l'ordre. Ne pas inventer (mettre '' ou '—'). Voici le texte à structurer :
 ${textChunk}`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
