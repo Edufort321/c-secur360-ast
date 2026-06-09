@@ -1,7 +1,7 @@
 "use client";
 // __rpt_storage_shim : data layer base sur localStorage (la version HTML avait window.storage).
 if (typeof window !== "undefined" && !window.storage) { window.storage = { get: async (k)=>{ try{ const v=localStorage.getItem(k); return v==null?null:{value:v}; }catch{ return null; } }, set: async (k,v)=>{ try{ localStorage.setItem(k,v); }catch{} }, delete: async (k)=>{ try{ localStorage.removeItem(k); }catch{} } }; }
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -197,6 +197,10 @@ function bid(){ _seq++; return "b_"+Date.now().toString(36)+"_"+_seq; }
 // Identité d'ÉQUIPEMENT stable (cible des QR de section). Contrairement à l'id de bloc, l'eqId
 // persiste à travers les éditions ; une étiquette QR collée sur un équipement reste donc valide.
 function eqid(){ _seq++; return "eq_"+Date.now().toString(36)+"_"+_seq; }
+// Présence temps réel : couleur stable par utilisateur + petit hash.
+const PRESENCE_COLORS=["#2a6f97","#9d0208","#2a9d8f","#6b4e9d","#e0a96d","#0e7490","#b45309","#4f46e5"];
+function hashInt(s){ let h=0; const str=String(s||""); for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return h; }
+function initials(name){ const p=String(name||"").trim().split(/\s+/); return ((p[0]?.[0]||"")+(p[1]?.[0]||"")).toUpperCase()||"?"; }
 // Clone profond d'un bloc avec de nouveaux ids partout (pour duplication sûre)
 function cloneBlockFresh(src){
   const copy=JSON.parse(JSON.stringify(src)); copy.id=bid();
@@ -1641,11 +1645,46 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     }catch(e){ if(on){ setQr(null); setQrMap({}); } }
   })(); return ()=>{on=false;}; },[report.id, sectionIds]);
 
+  // PRÉSENCE TEMPS RÉEL (Supabase Realtime) : qui est sur ce rapport + quelle section il édite.
+  const presenceChan=useRef(null);
+  const myInfo=useRef(null);
+  const editTimer=useRef(null);
+  const [peers,setPeers]=useState([]);
+  useEffect(()=>{ let cancelled=false;
+    (async()=>{
+      let me={ id:"u_"+Math.random().toString(36).slice(2,9), name:LANG==="en"?"Collaborator":"Collaborateur" };
+      try{ const res=await fetch("/api/auth/me",{credentials:"include"}); if(res.ok){ const j=await res.json(); if(j.user){ me={ id:j.user.id||me.id, name:j.user.name||j.user.email||me.name }; } } }catch{}
+      me.color=PRESENCE_COLORS[hashInt(me.id)%PRESENCE_COLORS.length];
+      myInfo.current=me;
+      if(cancelled) return;
+      let chan;
+      try{
+        chan=supabase.channel("rapport:"+report.id,{ config:{ presence:{ key:me.id } } });
+        chan.on("presence",{event:"sync"},()=>{
+          const st=chan.presenceState(); const list=[];
+          Object.keys(st||{}).forEach(k=>{ const m=(st[k]&&st[k][0])||{}; if(m.id && m.id!==me.id) list.push(m); });
+          setPeers(list);
+        });
+        chan.subscribe(async(status)=>{ if(status==="SUBSCRIBED" && !cancelled){ try{ await chan.track({ ...me, blockId:null, at:Date.now() }); }catch{} } });
+        presenceChan.current=chan;
+      }catch{}
+    })();
+    return ()=>{ cancelled=true; try{ presenceChan.current && supabase.removeChannel(presenceChan.current); }catch{} presenceChan.current=null; setPeers([]); };
+  // eslint-disable-next-line
+  },[report.id]);
+  // Diffuse la section en cours d'édition (verrou souple : les autres voient « X édite »).
+  function broadcastEditing(blockId){
+    const ch=presenceChan.current, me=myInfo.current; if(!ch||!me) return;
+    try{ ch.track({ ...me, blockId, at:Date.now() }); }catch{}
+    clearTimeout(editTimer.current);
+    editTimer.current=setTimeout(()=>{ try{ ch.track({ ...me, blockId:null, at:Date.now() }); }catch{} },4000);
+  }
+
   function commit(next){ setR(next); onUpdate(next); setSavedFlash(true); }
   useEffect(()=>{ if(!savedFlash) return; const id=setTimeout(()=>setSavedFlash(false),1200); return ()=>clearTimeout(id); },[savedFlash]);
   function setField(k,v){ commit({...r,[k]:v}); }
   function setBlocks(blocks){ commit({...r,blocks}); }
-  function updBlock(id,patch){ setBlocks(r.blocks.map(b=>b.id===id?{...b,...patch}:b)); }
+  function updBlock(id,patch){ broadcastEditing(id); setBlocks(r.blocks.map(b=>b.id===id?{...b,...patch}:b)); }
   function removeBlock(id){ setBlocks(r.blocks.filter(b=>b.id!==id)); }
   function moveBlock(id,dir){ const i=r.blocks.findIndex(b=>b.id===id); const j=i+dir; if(j<0||j>=r.blocks.length)return; const a=[...r.blocks]; [a[i],a[j]]=[a[j],a[i]]; setBlocks(a); }
   function duplicateBlock(id){
@@ -1818,6 +1857,13 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           ))}
           <span style={{fontSize:12,color:"#64748b"}}>{t("version")}{r.version}{r.createdFrom?` · ${t("createdFrom")} ${r.createdFrom}`:""}</span>
           <span style={{...S.savedBadge, opacity:savedFlash?1:0}}>{t("savedTag")}</span>
+          {peers.length>0 && (
+            <span style={{display:"inline-flex",alignItems:"center",gap:3}} title={(LANG==="en"?"Also here: ":"Aussi présent : ")+peers.map(p=>p.name).join(", ")}>
+              {peers.slice(0,4).map((p,i)=>(<span key={p.id||i} style={{width:24,height:24,borderRadius:"50%",background:p.color||"#577590",color:"#fff",fontSize:10,fontWeight:800,fontFamily:"'Archivo'",display:"inline-flex",alignItems:"center",justifyContent:"center",border:"2px solid #fff",marginLeft:i?-8:0,boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}>{initials(p.name)}</span>))}
+              {peers.length>4 && <span style={{fontSize:11,color:"#64748b",marginLeft:2}}>+{peers.length-4}</span>}
+              <span style={{fontSize:11,color:"#2a9d8f",fontWeight:700,marginLeft:4}}>● {LANG==="en"?"live":"en direct"}</span>
+            </span>
+          )}
         </div>
         {(()=>{
           // Actions de l'éditeur. Sur écran étroit (mobile), elles se replient dans un menu « ⋯ ».
@@ -2041,7 +2087,13 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             onDrop={(e)=>{ e.preventDefault(); if(dragId) reorderBlocks(dragId,b.id); setDragId(null); setOverId(null); }}
             style={{...S.blockCard, ...(dragId===b.id?{opacity:.4}:{}), ...(overId===b.id&&dragId&&dragId!==b.id?{borderTop:"3px solid #1e293b"}:{})}}>
             <div style={S.blockToolbar}>
-              <span style={S.blockType}><span style={S.dragHandle} title={t("dragHint")}>⠿</span> {icon} {label||fallback}</span>
+              <span style={S.blockType}><span style={S.dragHandle} title={t("dragHint")}>⠿</span> {icon} {label||fallback}
+                {(()=>{ const on=peers.filter(p=>p.blockId===b.id); return on.length>0 ? (
+                  <span style={{marginLeft:8,display:"inline-flex",alignItems:"center",gap:4,fontSize:10.5,fontWeight:800,fontFamily:"'Archivo'",color:on[0].color||"#9d0208",background:"#fff",border:`1.5px solid ${on[0].color||"#9d0208"}`,borderRadius:20,padding:"1px 8px"}} title={on.map(p=>p.name).join(", ")}>
+                    🔒 {on.map(p=>p.name.split(" ")[0]).join(", ")} {LANG==="en"?"editing":"édite"}
+                  </span>
+                ) : null; })()}
+              </span>
               <span style={{display:"flex",gap:6,position:"relative"}}>
                 {!narrow ? <>
                   <button style={S.miniBtn} onClick={()=>moveBlock(b.id,-1)} disabled={idx===0}>↑</button>
