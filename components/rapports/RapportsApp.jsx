@@ -1110,7 +1110,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
   return (
     <div>
       {/* Bandeau de statistiques (présentation pro, comme les autres modules) */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12,marginBottom:18}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,110px),1fr))",gap:10,marginBottom:18}}>
         {[["all",t("filterAll"),counts.all,"#1e293b"], ...STATUSES.map(s=>[s.id,t(s.key),counts[s.id],s.color])].map(([k,lbl,c,col])=>(
           <button key={k} onClick={()=>setStatusFilter(k)} style={{textAlign:"left",cursor:"pointer",background:"#fff",border:statusFilter===k?`2px solid ${col}`:"1px solid #e2e8f0",borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 2px rgba(0,0,0,.04)"}}>
             <div style={{fontSize:26,fontWeight:800,color:col,fontFamily:"'Archivo'",lineHeight:1}}>{c}</div>
@@ -1450,6 +1450,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [paleExport,setPaleExport]=useState(false); // export "à compléter à la main" (valeurs en pâle)
   const [showLink,setShowLink]=useState(false);   // panneau "Lier au projet / événement"
   const [showSoum,setShowSoum]=useState(false);   // constructeur de soumission depuis anomalies/recos
+  const [showTools,setShowTools]=useState(false); // menu "⋯" (actions repliées sur mobile)
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
   const [insertAt,setInsertAt]=useState(null);
@@ -1619,19 +1620,44 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           <span style={{fontSize:12,color:"#64748b"}}>{t("version")}{r.version}{r.createdFrom?` · ${t("createdFrom")} ${r.createdFrom}`:""}</span>
           <span style={{...S.savedBadge, opacity:savedFlash?1:0}}>{t("savedTag")}</span>
         </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button style={{...S.btnGhost,...((r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{})}} onClick={()=>setShowLink(true)} title={LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement"}>🔗 {(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}</button>
-          <button style={S.btnGhost} onClick={()=>setShowAnn(true)}>💬 {t("annotations")} {annotations.length>0?`(${annotations.length})`:""}</button>
-          {priceItems.length>0 && <button style={{...S.btnGhost,borderColor:"#2a6f97",color:"#2a6f97"}} onClick={()=>setShowSoum(true)} title={LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer"}>💲 {LANG==="en"?"Quote":"Soumission"} ({priceItems.length})</button>}
-          {r.sourceText && <button style={S.btnGhost} onClick={()=>setShowCompare(true)}>{t("compareView")}</button>}
-          <button style={S.btnGhost} onClick={()=>setShowInsert(true)}>{t("insertPage")}</button>
-          <button style={S.btnGhost} onClick={doFix} disabled={fixing}>{fixing?t("fixing"):t("fixReport")}</button>
-          <button style={S.btnGhost} onClick={doTranslate} disabled={fixing}>{t("translateReport")}</button>
-          <button style={S.btnGhost} onClick={()=>onDuplicate(r.id,false)}>{t("duplicate")}</button>
-          <button style={S.btnGhost} onClick={()=>onDuplicate(r.id,true)}>{t("newVersion")}</button>
-          <button style={S.btnGhost} onClick={doExportHandwrite} title={LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main"}>🖊 {LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}</button>
-          <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
-        </div>
+        {(()=>{
+          // Actions de l'éditeur. Sur écran étroit (mobile), elles se replient dans un menu « ⋯ ».
+          const actions=[
+            { key:"link", label:`🔗 ${(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}`, on:()=>setShowLink(true), style:(r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement" },
+            { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
+            priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
+            r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
+            { key:"ins", label:t("insertPage"), on:()=>setShowInsert(true) },
+            { key:"fix", label:fixing?t("fixing"):t("fixReport"), on:doFix, disabled:fixing },
+            { key:"tr", label:t("translateReport"), on:doTranslate, disabled:fixing },
+            { key:"dup", label:t("duplicate"), on:()=>onDuplicate(r.id,false) },
+            { key:"ver", label:t("newVersion"), on:()=>onDuplicate(r.id,true) },
+            { key:"hw", label:`🖊 ${LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}`, on:doExportHandwrite, title:LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main" },
+          ].filter(Boolean);
+          if(narrow){
+            return (
+              <div style={{display:"flex",gap:8,position:"relative"}}>
+                <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
+                <button style={{...S.btnGhost,padding:"9px 14px"}} onClick={()=>setShowTools(v=>!v)} title={LANG==="en"?"More actions":"Plus d'actions"}>⋯</button>
+                {showTools && (
+                  <div style={{position:"absolute",right:0,top:"110%",zIndex:60,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.22)",padding:6,minWidth:230,maxHeight:"60vh",overflowY:"auto"}} onMouseLeave={()=>setShowTools(false)}>
+                    {actions.map(a=>(
+                      <button key={a.key} disabled={a.disabled} onClick={()=>{ setShowTools(false); a.on(); }} title={a.title||""} style={{...S.blockMenuItem,...(a.style||{}),opacity:a.disabled?0.5:1,fontWeight:700}}>{a.label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return (
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {actions.map(a=>(
+                <button key={a.key} style={{...S.btnGhost,...(a.style||{})}} disabled={a.disabled} onClick={a.on} title={a.title||""}>{a.label}</button>
+              ))}
+              <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
+            </div>
+          );
+        })()}
       </div>
       {fixMsg && <div style={{...S.card,padding:"10px 16px",color:fixMsg.includes("✓")?"#2a9d8f":"#c1121f",fontWeight:600,fontSize:13}} className="screen-only">{fixMsg}</div>}
 
@@ -1685,7 +1711,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
         </div>
       )}
       <div style={S.card} className="screen-only">
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
+        <div style={{display:"grid",gridTemplateColumns:narrow?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:10}}>
           <div style={{gridColumn:"1 / 3"}}><label style={S.label}>{t("title")}</label><input style={S.input} value={r.title} onChange={e=>setField("title",e.target.value)}/></div>
           <div><label style={S.label}>{t("date")}</label><input type="date" style={S.input} value={r.date} onChange={e=>setField("date",e.target.value)}/></div>
           <div><label style={S.label}>{t("projectNo")}</label><input style={S.input} value={r.projectNo} onChange={e=>setField("projectNo",e.target.value)}/></div>
@@ -2168,7 +2194,7 @@ function LinkPanel({ report, onSet, onClose }){
         )}
 
         {loading ? <div style={{textAlign:"center",color:"#64748b",padding:"20px 0"}}>…</div> : (
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,220px),1fr))",gap:14}}>
           <div>
             <label style={S.label}>📁 {LANG==="en"?"Project":"Projet"}</label>
             <input style={S.input} placeholder={LANG==="en"?"Search…":"Rechercher…"} value={qp} onChange={e=>setQp(e.target.value)}/>
@@ -2618,7 +2644,7 @@ const S = {
   gearBtn:{ fontSize:18, width:40, height:38, borderRadius:8, border:"1.5px solid #cbd5e1", background:"#fff", cursor:"pointer", color:"#475569", lineHeight:1 },
   overlay:{ position:"fixed", inset:0, background:"rgba(43,33,24,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 },
   modal:{ background:"#ffffff", borderRadius:14, padding:24, maxWidth:440, width:"100%", boxShadow:"0 12px 48px rgba(0,0,0,.3)" },
-  grid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 },
+  grid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,260px),1fr))", gap:14 },
   cardTitle:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:16, lineHeight:1.2 },
   cardMeta:{ fontSize:12, color:"#64748b", marginTop:4 },
   cardFoot:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:14, fontSize:11, color:"#64748b", flexWrap:"wrap", gap:8 },
@@ -2672,7 +2698,7 @@ const S = {
   blockMenu:{ position:"absolute", right:0, top:"110%", zIndex:40, background:"#fff", border:"1px solid #e2e8f0", borderRadius:8, boxShadow:"0 6px 20px rgba(0,0,0,.22)", padding:5, minWidth:210 },
   blockMenuItem:{ display:"block", width:"100%", textAlign:"left", border:"none", background:"transparent", cursor:"pointer", padding:"9px 10px", fontSize:13, color:"#1e293b", borderRadius:6, fontFamily:"'Spline Sans'" },
   addBtnSm:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:12, padding:"5px 12px", borderRadius:6, border:"1.5px dashed #cbd5e1", background:"#fff", color:"#475569", cursor:"pointer" },
-  photoGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:10 },
+  photoGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,140px),1fr))", gap:10 },
   photoThumb:{ borderRadius:10, overflow:"hidden", border:"1px solid #e2e8f0", background:"#f8fafc" },
   photoImg:{ width:"100%", height:110, objectFit:"cover", cursor:"pointer", display:"block" },
   photoDel:{ position:"relative", float:"right", marginTop:-104, marginRight:4, width:22, height:22, borderRadius:"50%", background:"rgba(157,2,8,.9)", color:"#fff", border:"2px solid #fff", cursor:"pointer", fontSize:13, lineHeight:1, padding:0 },
