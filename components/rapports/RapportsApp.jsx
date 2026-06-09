@@ -1183,20 +1183,43 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
 // ============================================================
 function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore, hiddenCount }){
   const [preview,setPreview]=useState(null); // {kind:'default'|'custom', id}
+  const [tView,setTView]=useState("gallery"); // galerie (cartes) | grille (lignes)
+  // Ligne compacte (mode grille) — réutilisée pour custom et défauts.
+  const Row=({ id, name, count, onName, onDel })=>(
+    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"8px 14px"}}>
+      <div style={{minWidth:160,flex:1,cursor:"pointer",fontWeight:700,color:"#0f172a"}} onClick={onName}>{name}</div>
+      <span style={{fontSize:12,color:"#64748b"}}>{count} {LANG==="en"?"blocks":"blocs"}</span>
+      <span style={{display:"flex",gap:8,marginLeft:"auto"}}>
+        <button style={{...S.btnPrimary,fontSize:12,padding:"5px 12px"}} onClick={()=>onUse(id)}>{t("tplUse")}</button>
+        <button style={S.miniBtnDel} onClick={onDel}>{t("del")}</button>
+      </span>
+    </div>
+  );
   function blocksOf(p){ return p.kind==="custom" ? (custom.find(c=>c.id===p.id)||{}).blocks||[] : tplBlocks(p.id); }
   function nameOf(p){ return p.kind==="custom" ? (custom.find(c=>c.id===p.id)||{}).name||"" : t((TEMPLATES.find(x=>x.id===p.id)||{}).key); }
   return (
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:8}}>
         <h2 style={{...S.h2,margin:0}}>{t("tplManage")}</h2>
-        <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>{t("tplImportPdf")}
-          <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImportPdf(f); e.target.value=""; }}/>
-        </label>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"flex",border:"1px solid #e2e8f0",borderRadius:8,overflow:"hidden",background:"#fff"}}>
+            {[["gallery","▦"],["grid","≣"]].map(([v,ic])=>(
+              <button key={v} onClick={()=>setTView(v)} style={{border:"none",background:tView===v?"#1e293b":"transparent",color:tView===v?"#fff":"#64748b",padding:"7px 12px",cursor:"pointer",fontSize:15,lineHeight:1}}>{ic}</button>
+            ))}
+          </div>
+          <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>{t("tplImportPdf")}
+            <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImportPdf(f); e.target.value=""; }}/>
+          </label>
+        </div>
       </div>
       <p style={{...S.hint,marginBottom:16}}>{LANG==="en"?"Import a PDF to turn its structure into a reusable empty template.":"Importe un PDF pour transformer sa structure en gabarit réutilisable vierge."}</p>
 
       <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:8}}>{t("tplCustom")}</div>
-      {custom.length===0 ? <div style={{color:"#64748b",fontSize:13,marginBottom:18}}>{t("tplNoCustom")}</div> : (
+      {custom.length===0 ? <div style={{color:"#64748b",fontSize:13,marginBottom:18}}>{t("tplNoCustom")}</div> : tView==="grid" ? (
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+          {custom.map(c=>(<Row key={c.id} id={c.id} name={c.name||"(gabarit)"} count={(c.blocks||[]).length} onName={()=>setPreview({kind:"custom",id:c.id})} onDel={()=>onDelete(c.id)}/>))}
+        </div>
+      ) : (
         <div style={{...S.grid,marginBottom:20}}>
           {custom.map(c=>(
             <div key={c.id} style={S.card}>
@@ -1218,6 +1241,11 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore
         <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569"}}>{t("tplDefaults")}</div>
         {hiddenCount>0 && <button style={{...S.miniBtn}} onClick={onRestore}>↺ {LANG==="en"?`Restore defaults (${hiddenCount})`:`Restaurer les défauts (${hiddenCount})`}</button>}
       </div>
+      {tView==="grid" ? (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {visTpls().map(tp=>(<Row key={tp.id} id={tp.id} name={t(tp.key)} count={tplBlocks(tp.id).length} onName={()=>setPreview({kind:"default",id:tp.id})} onDel={()=>{ if(confirm(LANG==="en"?"Hide this default template?":"Masquer ce gabarit par défaut ?")) onHide(tp.id); }}/>))}
+        </div>
+      ) : (
       <div style={S.grid}>
         {visTpls().map(tp=>{
           const blocks=tplBlocks(tp.id);
@@ -1236,6 +1264,7 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore
           );
         })}
       </div>
+      )}
 
       {preview && (()=>{ const blocks=blocksOf(preview); return (
         <div style={S.overlay} onClick={()=>setPreview(null)}>
