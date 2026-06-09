@@ -1627,6 +1627,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showCover,setShowCover]=useState(false);
   const [showLetter,setShowLetter]=useState(false); // éditeur de lettre de présentation
   const [showDga,setShowDga]=useState(false);       // sélecteur d'analyse DGA à insérer
+  const [showAssemble,setShowAssemble]=useState(false); // assemblage mixte (fusion de pages manuscrites)
+  const [assembleBusy,setAssembleBusy]=useState(false);
+  const [assembleResult,setAssembleResult]=useState(null);
   const [insertAt,setInsertAt]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
@@ -1910,6 +1913,48 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   // Items chiffrables = anomalies + recommandations du rapport (pour « Faire une soumission »).
   const priceItems = (annotations||[]).filter(a=>a.kind==="anomaly"||a.kind==="reco");
 
+  // ASSEMBLAGE MIXTE : fusionne des blocs extraits de pages MANUSCRITES dans le rapport courant.
+  // Une section manuscrite est replacée AU BON ENDROIT (même titre de section) et remplit ses champs
+  // (par libellé) ; sinon elle est ajoutée à la fin. Les blocs touchés sont marqués « mis à jour » 🔁.
+  function mergeHandwritten(incoming){
+    const norm=s=>String(s||"").toLowerCase().trim().replace(/\s+/g," ");
+    const blocks=[...r.blocks];
+    let mergedSections=0, filledFields=0, addedBlocks=0;
+    (incoming||[]).forEach(inB=>{
+      if(inB.type==="section" && norm(inB.title)){
+        const idx=blocks.findIndex(b=>b.type==="section" && norm(b.title)===norm(inB.title));
+        if(idx>=0){
+          const sec={...blocks[idx], fields:[...(blocks[idx].fields||[])]};
+          (inB.fields||[]).forEach(inF=>{
+            const v=String(inF.value||"").trim(); if(!v) return;
+            const fi=sec.fields.findIndex(f=>norm(f.label) && norm(f.label)===norm(inF.label));
+            if(fi>=0){ sec.fields[fi]={...sec.fields[fi], value:inF.value, uncertain:!!inF.uncertain, validated:false}; }
+            else { sec.fields.push({id:bid(), label:inF.label||"", value:inF.value||"", uncertain:!!inF.uncertain}); }
+            filledFields++;
+          });
+          sec.updated=true; blocks[idx]=sec; mergedSections++;
+          return;
+        }
+      }
+      // Pas de section correspondante (ou table/inspection/texte) -> on ajoute à la fin, marqué MAJ.
+      const nb=normalizeBlocks([inB])[0]; if(nb){ nb.updated=true; blocks.push(nb); addedBlocks++; }
+    });
+    setBlocks(blocks);
+    return { mergedSections, filledFields, addedBlocks };
+  }
+  async function doAssemble(files){
+    const arr=[...(files||[])]; if(!arr.length) return;
+    setAssembleBusy(true); setAssembleResult(null);
+    try{
+      const images=[];
+      for(const f of arr){ const d=await compressImage(f,1500,0.72); images.push({ base64:d.split(",")[1], mediaType:(d.match(/^data:(.*?);/)||[])[1]||"image/jpeg" }); }
+      const out=await extractMultiPhotoWithApi(images);
+      const res=mergeHandwritten(out.blocks||[]);
+      setAssembleResult({ ...res, truncated:out.__truncated });
+    }catch(e){ setAssembleResult({ error:e.message }); }
+    setAssembleBusy(false);
+  }
+
   return (
     <div>
       {/* BARRE D'OUTILS */}
@@ -1934,6 +1979,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"link", label:`🔗 ${(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}`, on:()=>setShowLink(true), style:(r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement" },
             { key:"qr", label:`🔳 ${LANG==="en"?"QR / page":"QR / page"}`, on:()=>setShowQr(true), title:LANG==="en"?"Page QR code — scan to open & edit this report":"QR code de page — scanner pour ouvrir et éditer ce rapport" },
             { key:"share", label:`📤 ${LANG==="en"?"Share":"Partager"}`, on:()=>setShowShare(true), title:LANG==="en"?"Share a read/review link with a verifier":"Partager un lien lecture/révision à un vérificateur" },
+            { key:"assemble", label:`🤝 ${LANG==="en"?"Merge handwritten":"Assembler manuscrit"}`, on:()=>{ setAssembleResult(null); setShowAssemble(true); }, title:LANG==="en"?"Scan handwritten pages — the AI places them at the right spot in this report":"Scanner des pages manuscrites — l'IA les replace au bon endroit dans ce rapport" },
             { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
             priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
@@ -2128,6 +2174,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* SÉLECTEUR D'ANALYSE DGA À INSÉRER */}
       {showDga && <DgaPicker onPick={insertDgaBlock} onClose={()=>setShowDga(false)}/>}
+
+      {/* ASSEMBLAGE MIXTE : fusion de pages manuscrites au bon endroit */}
+      {showAssemble && <AssembleModal busy={assembleBusy} result={assembleResult} onFiles={doAssemble} onClose={()=>{ setShowAssemble(false); setAssembleResult(null); }}/>}
 
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
@@ -2607,6 +2656,39 @@ function LinkPanel({ report, onSet, onClose }){
         </div>
         )}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Modale ASSEMBLAGE MIXTE : on scanne/importe des pages MANUSCRITES ; l'IA les extrait et l'app les
+// fusionne au bon endroit du rapport (mêmes sections), sinon les ajoute à la fin.
+function AssembleModal({ busy, result, onFiles, onClose }){
+  return (
+    <div style={S.overlay} onClick={()=>{ if(!busy) onClose(); }}>
+      <div style={{...S.modal,maxWidth:480}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>🤝 {LANG==="en"?"Merge handwritten pages":"Assembler des pages manuscrites"}</h2>
+          {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
+        </div>
+        <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Photograph the handwritten pages of this report. The AI reads them and places each section at the right spot (matching titles), filling the values. Unmatched pages are appended.":"Photographiez les pages manuscrites de ce rapport. L'IA les lit et replace chaque section au bon endroit (mêmes titres) en remplissant les valeurs. Les pages non reconnues sont ajoutées à la fin."}</p>
+        {!result && (
+          <label style={{...S.btnPrimary,display:"inline-flex",alignItems:"center",cursor:busy?"default":"pointer",opacity:busy?0.6:1}}>
+            {busy ? (LANG==="en"?"Reading…":"Lecture en cours…") : (LANG==="en"?"📷 Choose pages":"📷 Choisir les pages")}
+            <input type="file" accept="image/*" multiple disabled={busy} style={{display:"none"}} onChange={e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(fs.length) onFiles(fs); }}/>
+          </label>
+        )}
+        {result && result.error && <div style={{fontSize:13,color:"#9d0208",background:"#fdf0ee",border:"1px solid #e3a0a0",borderRadius:8,padding:"10px 12px"}}>{LANG==="en"?"Error":"Erreur"} : {result.error}</div>}
+        {result && !result.error && (
+          <div>
+            <div style={{fontSize:13,background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              ✓ {LANG==="en"?"Assembled":"Assemblé"} : <b>{result.mergedSections}</b> {LANG==="en"?"section(s) merged":"section(s) fusionnée(s)"}, <b>{result.filledFields}</b> {LANG==="en"?"value(s) filled":"valeur(s) remplie(s)"}, <b>{result.addedBlocks}</b> {LANG==="en"?"page(s) added":"page(s) ajoutée(s)"}.
+              {result.truncated && <div style={{color:"#b45309",marginTop:4,fontSize:12}}>⚠ {LANG==="en"?"AI answer was truncated — check the result.":"Réponse IA tronquée — vérifiez le résultat."}</div>}
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>{LANG==="en"?"Merged/added blocks are marked 🔁 (updated).":"Les blocs fusionnés/ajoutés sont marqués 🔁 (mis à jour)."}</div>
+            <div style={{display:"flex",justifyContent:"flex-end"}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+          </div>
+        )}
       </div>
     </div>
   );
