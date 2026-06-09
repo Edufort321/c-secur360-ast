@@ -160,12 +160,10 @@ export default function TimesheetDetailPage() {
         // affichées comme cases à cocher par jour, EN PLUS des avantages globaux du tenant.
         let gridConds: Allowance[] = [];
         try {
-          const { data: pers } = await supabase.from('planner_personnel').select('current_grid_id').eq('tenant_id', tenant).eq('id', sh.employee_id).maybeSingle();
-          if (pers?.current_grid_id) {
-            const { data: grid } = await supabase.from('poste_salary_grids').select('discretionary_bonuses').eq('id', pers.current_grid_id).maybeSingle();
-            const db = Array.isArray(grid?.discretionary_bonuses) ? grid!.discretionary_bonuses : [];
-            gridConds = db.map((b: any, i: number) => ({ id: `grid_${i}`, name: b.label || `Prime ${i + 1}`, amount: b.unit === 'fixed' ? (Number(b.amount) || 0) : 0, is_taxable: true }));
-          }
+          // Conditions de grille via la route SERVEUR (grille salariale fermée à l'anon).
+          const gc = await fetch(`/api/hr/salary-grid?gridConditions=${sh.employee_id}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+          const db = Array.isArray((gc as any)?.bonuses) ? (gc as any).bonuses : [];
+          gridConds = db.map((b: any, i: number) => ({ id: `grid_${i}`, name: b.label || `Prime ${i + 1}`, amount: b.unit === 'fixed' ? (Number(b.amount) || 0) : 0, is_taxable: true }));
         } catch { /* grille absente */ }
         // Fusion : conditions de la grille d'abord, puis avantages globaux (sans doublon de nom).
         const globals = (allws || []) as Allowance[];

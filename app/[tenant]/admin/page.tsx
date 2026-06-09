@@ -2913,11 +2913,12 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
       // Trouver le poste de l'employé
       const { data: posteRow } = await supabase.from('planner_postes').select('id').eq('tenant_id', tenant).eq('name', employee.role || '').maybeSingle();
       if (posteRow?.id) {
-        const { data: g } = await supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', posteRow.id).maybeSingle();
+        // Grille salariale via la route SERVEUR protégée (table fermée à l'anon).
+        const sg = await fetch(`/api/hr/salary-grid?posteId=${posteRow.id}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+        const g = (sg as any).grid;
         if (g) {
           setGrid(g);
-          const { data: ts } = await supabase.from('poste_salary_tiers').select('*').eq('grid_id', g.id).order('tier_level');
-          setTiers(ts || []);
+          setTiers((sg as any).tiers || []);
           if (g.cola_pct) setColaPct(String(g.cola_pct));
         }
         // Charger les notes de l'employé (nouveau format skill_scores, ou ancien acquired_skills)
@@ -4311,10 +4312,10 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [{ data: g }, { data: t }] = await Promise.all([
-        supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', poste.id!).maybeSingle(),
-        supabase.from('poste_salary_tiers').select('*').eq('tenant_id', tenant).order('tier_level'),
-      ]);
+      // Grille salariale via la route SERVEUR protégée (données sensibles fermées à l'anon).
+      const sg = await fetch(`/api/hr/salary-grid?posteId=${poste.id}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+      const g = (sg as any).grid;
+      const gridTiers = (sg as any).tiers || [];
       const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, use_skill_grid: true, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null, discretionary_bonuses: [], skill_form: { types: [] } };
       // Normalise le formulaire (poids de compétence par défaut pour les anciennes données)
       const normForm = (sf: any): SkillForm => (sf && Array.isArray(sf.types))
@@ -4322,7 +4323,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
         : { types: [] };
       if (g) {
         setGrid({ ...defaultGrid, ...g, use_skill_grid: (g as any).use_skill_grid !== false, discretionary_bonuses: (g as any).discretionary_bonuses || [], skill_form: normForm((g as any).skill_form) });
-        const ts = (t || []).filter((x: any) => x.grid_id === g.id).map((x: any) => ({ ...x, required_skills: x.required_skills || [] }));
+        const ts = (gridTiers || []).map((x: any) => ({ ...x, required_skills: x.required_skills || [] }));
         setTiers(ts.length ? ts : computeTiers({ ...defaultGrid, ...g }));
       } else {
         setGrid(defaultGrid);
@@ -4336,9 +4337,10 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   // Copie la grille + compétences d'un autre poste (applique au poste courant, sans enregistrer).
   async function copyFromPoste(srcId: string) {
     if (!srcId) return;
-    const { data: g } = await supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', srcId).maybeSingle();
+    const sg = await fetch(`/api/hr/salary-grid?posteId=${srcId}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    const g = (sg as any).grid;
     if (!g) { setNotice(tr('Ce poste n\'a pas encore de grille.', 'This position has no grid yet.')); return; }
-    const { data: ts } = await supabase.from('poste_salary_tiers').select('*').eq('grid_id', (g as any).id).order('tier_level');
+    const ts = (sg as any).tiers || [];
     const sf = (g as any).skill_form;
     setGrid(cur => cur ? {
       ...cur, // conserve id / poste_id / name du poste COURANT
@@ -4419,34 +4421,12 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
     if (!grid) return;
     setSaving(true); setNotice(null);
     try {
-      const gridPayload: any = { tenant_id: tenant, poste_id: poste.id, name: grid.name, mode: grid.mode, base_salary: grid.base_salary, annual_increase_pct: grid.annual_increase_pct, annual_increase_fixed: grid.annual_increase_fixed, years_plan: grid.years_plan, cola_pct: grid.cola_pct, hours_per_year: grid.hours_per_year, use_skill_grid: grid.use_skill_grid !== false, commission_enabled: !!grid.commission_enabled, commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross', commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null, discretionary_bonuses: grid.discretionary_bonuses || [], skill_form: grid.skill_form || { types: [] }, notes: grid.notes || null, updated_at: new Date().toISOString() };
-      let gridId = grid.id;
-      // Sauvegarde tolérante : si une colonne récente (discretionary_bonuses /
-      // skill_form / use_skill_grid, migrations 074-076) n'existe pas encore, on réessaie sans.
-      const isMissingCol = (e: any) => /discretionary_bonuses|skill_form|use_skill_grid/i.test(e?.message || '') || e?.code === 'PGRST204';
-      const stripNew = (p: any) => { const { discretionary_bonuses, skill_form, use_skill_grid, ...rest } = p; return rest; };
-      if (grid.id) {
-        let { error } = await supabase.from('poste_salary_grids').update(gridPayload).eq('id', grid.id);
-        if (error && isMissingCol(error)) ({ error } = await supabase.from('poste_salary_grids').update(stripNew(gridPayload)).eq('id', grid.id));
-        if (error) throw error;
-      } else {
-        let { data, error } = await supabase.from('poste_salary_grids').insert(gridPayload).select('id').single();
-        if (error && isMissingCol(error)) ({ data, error } = await supabase.from('poste_salary_grids').insert(stripNew(gridPayload)).select('id').single());
-        if (error) throw error;
-        if (!data) throw new Error('Insertion de la grille échouée');
-        gridId = data.id;
-        setGrid(g => g ? { ...g, id: gridId } : g);
-      }
-      // Tiers : delete all then re-insert (avec fallback si min_score absent)
-      await supabase.from('poste_salary_tiers').delete().eq('grid_id', gridId);
-      let skipMinScore = false;
-      for (const t of tiers) {
-        const base: any = { tenant_id: tenant, grid_id: gridId, tier_level: t.tier_level, tier_name: t.tier_name, annual_salary: t.annual_salary, hourly_rate: t.hourly_rate, required_skills: t.required_skills, min_months_experience: t.min_months_experience, commission_pct: t.commission_pct ?? null, sort_order: t.tier_level, notes: t.notes || null };
-        const payload = skipMinScore ? base : { ...base, min_score: t.min_score ?? 0 };
-        let { error } = await supabase.from('poste_salary_tiers').insert(payload);
-        if (error && /min_score/i.test(error.message || '')) { skipMinScore = true; ({ error } = await supabase.from('poste_salary_tiers').insert(base)); }
-        if (error) throw error;
-      }
+      // Enregistrement via la route SERVEUR protégée (toute la logique tolérante aux colonnes
+      // récentes est désormais côté serveur ; la table salariale est fermée à l'anon).
+      const res = await fetch('/api/hr/salary-grid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ posteId: poste.id, grid, tiers }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.error) throw new Error(j.error || 'DB');
+      if (j.gridId && !grid.id) setGrid(g => g ? { ...g, id: j.gridId } : g);
       setNotice(tr('Grille enregistrée ✓', 'Grid saved ✓'));
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
   }

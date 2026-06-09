@@ -218,11 +218,12 @@ export default function ProjectsPage() {
       if (error) throw error;
       if (data) {
         setProjects(prev => prev.map(p => (p.id === optimistic.id ? data : p)));
-        // Commission de vente : si le projet est créé directement en « vente »
+        // Commission de vente : calcul SERVEUR (grilles/feuilles de temps fermées à l'anon).
         if (data.status === 'vente' && data.primary_seller_id) {
-          const { syncProjectCommission } = await import('@/lib/commission');
-          const r = await syncProjectCommission(supabase, tenant, data);
-          if (r.ok) setNotice('✓ ' + r.msg);
+          try {
+            const r = await fetch('/api/hr/commission', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ project: data }) }).then(x => x.json()).catch(() => ({}));
+            if (r?.ok) setNotice('✓ ' + r.msg);
+          } catch { /* ignore */ }
         }
       }
     } catch {

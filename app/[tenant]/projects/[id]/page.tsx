@@ -142,10 +142,9 @@ export default function ProjectDetailPage() {
     try {
       const { error } = await supabase.from('projects').update(payload).eq('id', id).eq('tenant_id', tenant);
       if (error) throw error;
-      // Commission de vente : déclenchée quand le projet est au statut « vente »
+      // Commission de vente : calcul SERVEUR (grilles/feuilles de temps fermées à l'anon).
       if (p.status === 'vente' && p.primary_seller_id) {
-        const { syncProjectCommission } = await import('@/lib/commission');
-        const r = await syncProjectCommission(supabase, tenant, { ...p, id });
+        const r = await fetch('/api/hr/commission', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ project: { ...p, id } }) }).then(x => x.json()).catch(() => ({ ok: false, msg: 'erreur' }));
         setNotice(r.ok ? '✓ ' + r.msg : tr('Enregistré ✓ — commission : ', 'Saved ✓ — commission: ') + r.msg);
       } else {
         setNotice(tr('Enregistré ✓', 'Saved ✓'));

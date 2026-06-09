@@ -147,9 +147,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         }
         if (!siteName && p?.succursale) { const w = String(p.succursale).normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean); siteName = w[0] || ''; deptName = w[1] || ''; }
         // Montant max que CE poste peut approuver (colonne approval_max_amount sur la grille — facultative).
-        if (p?.current_grid_id) {
-          try { const { data: g } = await supabase.from('poste_salary_grids').select('approval_max_amount').eq('id', p.current_grid_id).maybeSingle(); if (g && (g as any).approval_max_amount != null) setMeApprovalMax(Number((g as any).approval_max_amount) || 0); } catch { /* colonne absente */ }
-        }
+        // Mon plafond d'approbation via la route SERVEUR (grille salariale fermée à l'anon).
+        try { const mg = await fetch('/api/hr/salary-grid?me=1', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})); if ((mg as any)?.approvalMax != null) setMeApprovalMax(Number((mg as any).approvalMax) || 0); } catch { /* ignore */ }
       }
     } catch { /* pas de session : on garde au moins le prefixe tenant */ }
     // Repli : aucun site resolu via le poste -> 1er site de l'arbre (la cascade reste modifiable a la creation).
