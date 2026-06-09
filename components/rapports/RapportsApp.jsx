@@ -1126,6 +1126,8 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
   const [rView,setRView]=useState("gallery"); // galerie (cartes) | grille (lignes compactes)
   const [order,setOrder]=useState(["client","job","location"]); // ordre des niveaux
   const [treePath,setTreePath]=useState([]); // ex: ["2025","Hydro","Poste 12"]
+  const [narrow,setNarrow]=useState(typeof window!=="undefined" && window.innerWidth<640);
+  useEffect(()=>{ const h=()=>setNarrow(window.innerWidth<640); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
   const counts={ all:all.length }; STATUSES.forEach(s=>{ counts[s.id]=all.filter(r=>r.status===s.id).length; });
 
   const levelGet=(id)=> (TREE_LEVELS.find(l=>l.id===id)||{}).get || (()=> "");
@@ -1187,21 +1189,24 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
       </div>
 
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:16}}>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
+        {/* Actions : sur mobile, rangée compacte défilante horizontalement */}
+        <div style={{display:"flex",gap:8,flexWrap:narrow?"nowrap":"wrap",overflowX:narrow?"auto":"visible",WebkitOverflowScrolling:"touch",maxWidth:"100%",paddingBottom:narrow?4:0}}>
+          {(()=>{ const ab=narrow?{padding:"8px 12px",fontSize:12,flexShrink:0,whiteSpace:"nowrap"}:{}; return (<>
+          <label style={{...S.btnDark,...ab,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
             {t("importDoc")}
             <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImport(f); e.target.value=""; }}/>
           </label>
-          <label style={{...S.btnDark,background:"#6b4e9d",cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
+          <label style={{...S.btnDark,...ab,background:"#6b4e9d",cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
             {t("handwriting")}
             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onHandwriting(f); e.target.value=""; }}/>
           </label>
-          <button style={{...S.btnDark,background:"#0e7490",cursor:"pointer"}} onClick={onPhotos}>📷 {LANG==="en"?"Photos":"Photos"}</button>
-          {anomTotal>0 && <button style={{...S.btnDark,background:"#9d0208",cursor:"pointer"}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations in one place":"Toutes les anomalies et recommandations en un endroit"}>⚠ {LANG==="en"?"Anomalies":"Anomalies"} ({anomTotal})</button>}
-          <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
+          <button style={{...S.btnDark,...ab,background:"#0e7490",cursor:"pointer"}} onClick={onPhotos}>📷 {LANG==="en"?"Photos":"Photos"}</button>
+          {anomTotal>0 && <button style={{...S.btnDark,...ab,background:"#9d0208",cursor:"pointer"}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations in one place":"Toutes les anomalies et recommandations en un endroit"}>⚠ {LANG==="en"?"Anomalies":"Anomalies"} ({anomTotal})</button>}
+          <button style={{...S.btnPrimary,...ab}} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
+          </>); })()}
         </div>
-        {/* Carte « Tous les rapports + Classement » — alignée avec les actions */}
-        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"6px 12px"}}>
+        {/* Carte « Tous les rapports + Classement » — défilante horizontalement sur mobile */}
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:narrow?"nowrap":"wrap",overflowX:narrow?"auto":"visible",WebkitOverflowScrolling:"touch",maxWidth:"100%",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"6px 12px"}}>
           <button onClick={()=>setTreePath([])} style={{display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
           <span style={{width:1,height:18,background:"#e2e8f0"}}/>
           <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569"}}>{t("treeOrder")} :</span>
@@ -3084,7 +3089,7 @@ const S = {
   page:{ fontFamily:"'Spline Sans',sans-serif", background:"linear-gradient(160deg,#f1f5f9 0%,#f1f5f9 100%)", minHeight:"100vh", width:"100%", padding:"16px clamp(10px,2vw,28px)", color:"#0f172a" },
   header:{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16, marginBottom:22, borderBottom:"3px solid #0f172a", paddingBottom:16 },
   kicker:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11, letterSpacing:3, color:"#1e293b" },
-  h1:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:30, margin:"2px 0", lineHeight:1 },
+  h1:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:"clamp(20px,5vw,30px)", margin:"2px 0", lineHeight:1 },
   h2:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:16, margin:"0 0 14px" },
   label:{ display:"block", fontSize:11, fontWeight:600, color:"#475569", marginBottom:4, fontFamily:"'Archivo'" },
   hint:{ fontSize:12, color:"#64748b", margin:"6px 0 0" },
@@ -3097,8 +3102,8 @@ const S = {
   langOpt:{ padding:"7px 10px", fontSize:12, fontFamily:"'Archivo'", fontWeight:700, color:"#64748b" },
   langOptOn:{ background:"#0f172a", color:"#fff" },
   gearBtn:{ fontSize:18, width:40, height:38, borderRadius:8, border:"1.5px solid #cbd5e1", background:"#fff", cursor:"pointer", color:"#475569", lineHeight:1 },
-  overlay:{ position:"fixed", inset:0, background:"rgba(43,33,24,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 },
-  modal:{ background:"#ffffff", borderRadius:14, padding:24, maxWidth:440, width:"100%", boxShadow:"0 12px 48px rgba(0,0,0,.3)" },
+  overlay:{ position:"fixed", inset:0, background:"rgba(43,33,24,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:"clamp(8px,2.5vw,20px)" },
+  modal:{ background:"#ffffff", borderRadius:14, padding:"clamp(14px,3vw,24px)", maxWidth:440, width:"100%", boxShadow:"0 12px 48px rgba(0,0,0,.3)" },
   grid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,260px),1fr))", gap:14 },
   cardTitle:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:16, lineHeight:1.2 },
   cardMeta:{ fontSize:12, color:"#64748b", marginTop:4 },
@@ -3115,7 +3120,7 @@ const S = {
   tabOn:{ color:"#9d0208", borderBottom:"3px solid #9d0208" },
   tplTag:{ display:"inline-block", background:"#f1f5f9", borderRadius:4, padding:"2px 6px", margin:"2px 3px 0 0", fontSize:10 },
   treeLayout:{ display:"flex", gap:18, alignItems:"flex-start", flexWrap:"wrap" },
-  treePanel:{ flex:"0 0 240px", maxWidth:280, background:"#ffffff", borderRadius:12, padding:14, boxShadow:"0 2px 10px rgba(80,60,30,.06)", position:"sticky", top:12 },
+  treePanel:{ flex:"1 1 220px", minWidth:0, maxWidth:300, background:"#ffffff", borderRadius:12, padding:14, boxShadow:"0 2px 10px rgba(80,60,30,.06)" },
   treeNode:{ display:"flex", alignItems:"center", gap:6, padding:"5px 8px", borderRadius:7, cursor:"pointer", fontSize:13, color:"#1e293b", marginTop:2 },
   treeNodeOn:{ background:"#eef2f5", color:"#1e293b", fontWeight:600 },
   treeCount:{ fontSize:10, background:"rgba(0,0,0,.08)", borderRadius:10, padding:"1px 7px", color:"#475569" },
