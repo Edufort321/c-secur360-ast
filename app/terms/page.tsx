@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { BackLink } from '@/components/BackLink';
 
 export const metadata: Metadata = {
   title: "Conditions d'utilisation",
@@ -12,6 +13,7 @@ const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'C-Secur360 (CERDIA
 export default function TermsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 text-gray-800">
+      <BackLink fallback="/" className="mb-5" />
       <h1 className="text-3xl font-bold">Conditions d'utilisation</h1>
       <p className="mt-2 text-sm text-gray-500">Dernière mise à jour : 2026-06-02</p>
 

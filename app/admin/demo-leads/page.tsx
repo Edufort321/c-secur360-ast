@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { BackLink } from '@/components/BackLink';
 
 // Vue admin des leads démo (nom + courriel des personnes ayant démarré une démo) + suivi de relance.
 // Protégée par /api/demo/leads (requireAdmin : cookie du tableau de bord admin).
@@ -60,6 +61,7 @@ export default function DemoLeadsPage() {
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-6xl">
+        <BackLink fallback="/admin" className="mb-4" />
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black">Leads démo</h1>
