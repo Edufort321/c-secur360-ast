@@ -941,14 +941,17 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
           </label>
           <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
         </div>
+        {/* Classement (ordre de l'arborescence) — déplacé près des actions */}
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+          <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569"}}>{t("treeOrder")} :</span>
+          {order.map((lvlId,i)=>(
+            <span key={lvlId} style={S.treeOrderChip} onClick={()=>{ const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]); }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</span>
+          ))}
+        </div>
       </div>
 
-      <div style={{marginBottom:12}}><input style={{...S.input,maxWidth:480}} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("search")}/></div>
-      <div style={S.filterRow}>
-        {[["all",t("filterAll"),counts.all,"#475569"], ...STATUSES.map(s=>[s.id,t(s.key),counts[s.id],s.color])].map(([k,lbl,c,col])=>(
-          <button key={k} onClick={()=>setStatusFilter(k)} style={{...S.filterTab,...(statusFilter===k?{background:col,color:"#fff",borderColor:col}:{color:col,borderColor:col})}}>{lbl} <span style={S.filterCount}>{c}</span></button>
-        ))}
-      </div>
+      {/* Recherche pleine largeur (le filtrage par statut se fait via les cartes de stats ci-dessus) */}
+      <div style={{marginBottom:16}}><input style={{...S.input,width:"100%"}} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("search")}/></div>
 
       {showTpl && (
         <div style={S.overlay} onClick={()=>setShowTpl(false)}>
@@ -966,15 +969,6 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
       {/* DISPOSITION : arbre à gauche, rapports à droite */}
       <div style={S.treeLayout}>
         <aside style={S.treePanel}>
-          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569",marginBottom:8}}>{t("treeOrder")}</div>
-          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
-            {order.map((lvlId,i)=>(
-              <span key={lvlId} style={S.treeOrderChip} onClick={()=>{
-                // rotation de l'ordre : clic déplace ce niveau en première position
-                const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]);
-              }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</span>
-            ))}
-          </div>
           <div style={{...S.treeNode, ...(treePath.length===0?S.treeNodeOn:{}), fontWeight:700}} onClick={()=>setTreePath([])}>
             <span style={{flex:1}}>📁 {t("treeAll")}</span><span style={S.treeCount}>{db.length}</span>
           </div>
@@ -2172,7 +2166,7 @@ const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@
 }`;
 
 const S = {
-  page:{ fontFamily:"'Spline Sans',sans-serif", background:"linear-gradient(160deg,#f1f5f9 0%,#f1f5f9 100%)", minHeight:"100vh", padding:"28px 24px", color:"#0f172a" },
+  page:{ fontFamily:"'Spline Sans',sans-serif", background:"linear-gradient(160deg,#f1f5f9 0%,#f1f5f9 100%)", minHeight:"100vh", width:"100%", padding:"16px clamp(10px,2vw,28px)", color:"#0f172a" },
   header:{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16, marginBottom:22, borderBottom:"3px solid #0f172a", paddingBottom:16 },
   kicker:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11, letterSpacing:3, color:"#1e293b" },
   h1:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:30, margin:"2px 0", lineHeight:1 },
