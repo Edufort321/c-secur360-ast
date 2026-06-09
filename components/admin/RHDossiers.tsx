@@ -33,6 +33,7 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   const [onb, setOnb] = useState<Onb[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [genDocs, setGenDocs] = useState<Doc[]>([]);
   const [classifying, setClassifying] = useState(false);
@@ -131,6 +132,9 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
     <div className="space-y-4">
       {/* Guide de conformité (Loi 25 + SST) — toujours accessible en tête du module RH */}
       <ComplianceGuide tr={tr} open={showGuide} setOpen={setShowGuide} />
+
+      {/* Résumé de l'audit de sécurité (2026-06-08) */}
+      <SecurityAuditSummary tr={tr} open={showAudit} setOpen={setShowAudit} />
 
       {/* Accidents / incidents — hébergés dans le module RH (lecture), source = module Accidents */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -328,6 +332,52 @@ function Section({ icon, title, onAdd, addLabel, children }: { icon: React.React
   );
 }
 function Empty({ tr }: { tr: (f: string, e: string) => string }) { return <p className="py-2 text-center text-xs text-gray-400">{tr('Aucun élément.', 'None.')}</p>; }
+
+// Résumé de l'audit de sécurité réalisé le 2026-06-08 (intégré au module RH pour la direction).
+function SecurityAuditSummary({ tr, open, setOpen }: { tr: (f: string, e: string) => string; open: boolean; setOpen: (v: boolean) => void }) {
+  const fixed = [
+    tr('Faille critique CONFIRMÉE par test d’intrusion : la clé publique (anon) permettait de lire salaires, commissions et courriels de TOUS les locataires, sans authentification.', 'Critical flaw CONFIRMED by penetration test: the public (anon) key allowed reading salaries, commissions and emails of ALL tenants, without authentication.'),
+    tr('Correctif : accès aux données sensibles déplacé vers des routes serveur (rôle de service + vérification du niveau + locataire de la session), puis fermeture de l’accès anonyme (REVOKE).', 'Fix: sensitive data access moved to server routes (service role + access-level check + session tenant), then anonymous access closed (REVOKE).'),
+    tr('Identité & sessions fermées (courriels, rôles, jetons, mots de passe d’accès).', 'Identity & sessions closed (emails, roles, tokens, access passwords).'),
+    tr('Dossiers RH (documents, certifications, intégration) : accès serveur protégé par niveau RH.', 'HR files (documents, certifications, onboarding): server access protected by HR level.'),
+    tr('Salaires, grilles et commissions : lecture/écriture serveur uniquement (niveau paie/RH).', 'Salaries, grids and commissions: server-only read/write (payroll/HR level).'),
+    tr('Élévation de privilèges fermée : le niveau d’accès d’un employé n’est plus modifiable via la clé anonyme.', 'Privilege escalation closed: an employee’s access level can no longer be changed via the anon key.'),
+    tr('Endpoints IA protégés : authentification requise, limitation de débit (anti-abus de coût), défense contre l’injection de prompt, budget IA lié au locataire de session.', 'AI endpoints protected: auth required, rate limiting (cost-abuse), prompt-injection defense, AI budget bound to session tenant.'),
+    tr('Exposition du code durcie : pas d’en-tête de techno, pas de source maps en production, aucun secret côté navigateur.', 'Code exposure hardened: no tech header, no production source maps, no secret on the browser side.'),
+  ];
+  const principles = [
+    tr('Zéro fuite inter-locataires : chaque requête serveur est limitée au locataire de la SESSION (jamais à un paramètre fourni par le client).', 'Zero cross-tenant leakage: every server request is scoped to the SESSION tenant (never a client-supplied parameter).'),
+    tr('Moindre privilège : accès aux données sensibles réservé aux niveaux paie/RH/direction.', 'Least privilege: sensitive data restricted to payroll/HR/management levels.'),
+    tr('Conformité Loi 25 : minimisation, droits des personnes en libre-service, registre des incidents.', 'Law 25 compliance: minimization, self-service individual rights, incident register.'),
+  ];
+  return (
+    <div className="overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/60 dark:border-blue-800/40 dark:bg-blue-900/10">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
+        <span className="flex items-center gap-2 font-bold text-blue-800 dark:text-blue-300">
+          <ShieldCheck size={18} /> {tr('Audit de sécurité — résumé (2026-06-08)', 'Security audit — summary (2026-06-08)')}
+        </span>
+        <ChevronDown size={18} className={`shrink-0 text-blue-700 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="space-y-3 px-4 pb-4">
+          <div className="rounded-xl border border-blue-100 bg-white p-3 dark:border-blue-900/30 dark:bg-gray-800">
+            <h4 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300"><ShieldCheck size={14} /> {tr('Failles corrigées', 'Vulnerabilities fixed')}</h4>
+            <ul className="space-y-1.5">
+              {fixed.map((it, i) => <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300"><span className="mt-0.5 text-emerald-500">✓</span><span>{it}</span></li>)}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-white p-3 dark:border-blue-900/30 dark:bg-gray-800">
+            <h4 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-blue-700 dark:text-blue-300"><BookOpen size={14} /> {tr('Principes appliqués', 'Principles applied')}</h4>
+            <ul className="space-y-1.5">
+              {principles.map((it, i) => <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300"><span className="mt-0.5 text-blue-500">•</span><span>{it}</span></li>)}
+            </ul>
+          </div>
+          <p className="flex items-start gap-1.5 text-[11px] text-blue-700/80 dark:text-blue-400/70"><Info size={12} className="mt-0.5 shrink-0" />{tr('Détails techniques et points de durcissement résiduels consignés dans la documentation interne (migrations de sécurité 143-147).', 'Technical details and residual hardening points recorded in internal documentation (security migrations 143-147).')}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Guide de conformité (Québec) intégré au module RH : SST (LSST/CNESST) + protection des
 // renseignements personnels (Loi 25). Liste de référence des documents et obligations usuels.
