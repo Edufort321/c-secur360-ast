@@ -294,7 +294,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
         }`}>
           <p className="font-medium mb-1">C-SECUR360</p>
           <p>{tenant.charAt(0).toUpperCase() + tenant.slice(1)}</p>
-          <p className="mt-2 opacity-75">© 2024 CERDIA</p>
+          <p className="mt-2 opacity-75">© {new Date().getFullYear()} Commerce CERDIA inc.</p>
         </div>
       </div>
     </div>

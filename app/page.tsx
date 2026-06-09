@@ -882,8 +882,8 @@ export default function LandingPage() {
           <div className="flex flex-col items-center gap-2">
             <p className="text-slate-500 text-xs text-center">
               {fr
-                ? '© 2025 C-Secur360. Plateforme SaaS de securite industrielle. Tous droits reserves.'
-                : '© 2025 C-Secur360. Industrial safety SaaS platform. All rights reserved.'}
+                ? `© ${new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360. Plateforme SaaS de securite industrielle. Tous droits reserves.`
+                : `© ${new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360. Industrial safety SaaS platform. All rights reserved.`}
             </p>
             <div className="flex items-center gap-4 text-xs">
               <Link href="/confidentialite" className="text-slate-400 hover:text-orange-400 transition">

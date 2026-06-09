@@ -160,7 +160,7 @@ export default function AdminDashboard() {
             vendor_id: t.vendor_id || null,
             payState: st.status, nextBilling: st.nextBilling, daysUntil: st.daysUntilBilling,
             lastActivity: (t.createdAt || '').split('T')[0] || '',
-            domain: t.domain || `${t.subdomain || t.id}.csecur360.ca`, provinces: [], currentProvince: '',
+            domain: t.domain || `www.c-secur360.ca/${t.subdomain || t.id}`, provinces: [], currentProvince: '',
           };
         }) as any);
         setStats(prev => ({ ...prev, totalClients: data.tenants.length }));
@@ -1266,7 +1266,7 @@ export default function AdminDashboard() {
           justifyContent: 'center',
           gap: '8px'
         }}>
-          © 2024 C-SECUR360 - Propulsé par
+          © {new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360 · Propulsé par
           <img 
             src="/c-secur360-logo.png" 
             alt="CERDIA" 

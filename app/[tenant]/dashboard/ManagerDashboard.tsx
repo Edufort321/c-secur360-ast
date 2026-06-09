@@ -1576,7 +1576,7 @@ export default function ManagerDashboard({
                   margin: '0 0 8px 0',
                   fontWeight: '500'
                 }}>
-                  🏛️ Conforme CNESST • CSA Z1000 • C-Secur360 © 2024
+                  🏛️ Conforme CNESST • CSA Z1000 • C-Secur360 © {new Date().getFullYear()} Commerce CERDIA inc.
                 </p>
                 <p style={{ 
                   color: '#64748b', 
@@ -1621,9 +1621,9 @@ export default function ManagerDashboard({
       </div>
 
       {/* PWA Installer Component */}
-      <PWAInstaller 
+      <PWAInstaller
         clientName={tenant.subdomain}
-        customDomain={tenant.subdomain !== 'demo' ? `${tenant.subdomain}.csecur360.ca` : undefined}
+        customDomain={undefined}
       />
     </UniversalLayout>
   )

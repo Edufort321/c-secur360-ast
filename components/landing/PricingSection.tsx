@@ -420,7 +420,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
             <span className="text-slate-700 font-semibold">C-SECUR360</span>
           </div>
           <p className="text-sm">
-            © 2024 C-SECUR360 - Propulsé par CERDIA | 
+            © {new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360 |
             Tous droits réservés | Solution québécoise de sécurité industrielle
           </p>
         </footer>

@@ -8,13 +8,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Configuration des clients avec domaines personnalisés
-const CLIENT_DOMAINS: Record<string, string> = {
-  'entrepriseabc.csecur360.ca': 'entrepriseabc',
-  'companyxyz.csecur360.ca': 'companyxyz',
-  'corpdef.csecur360.ca': 'corpdef',
-  'demo.csecur360.ca': 'demo'
-};
+// Domaines personnalisés -> tenant. Le site est en CHEMIN (www.c-secur360.ca/{tenant}), donc cette
+// map est VIDE. Pour brancher un vrai domaine/sous-domaine client, ajouter ici : 'client.exemple.com': 'slug'.
+const CLIENT_DOMAINS: Record<string, string> = {};
 
 // Protected routes configuration
 const protectedRoutes = {

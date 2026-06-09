@@ -91,7 +91,7 @@ export default function BienvenuePage() {
 
       {/* Footer */}
       <footer className="text-center py-6 text-xs text-gray-400 border-t border-gray-200">
-        © {new Date().getFullYear()} C-Secur360 · <a href="https://c-secur360.ca" className="hover:underline">c-secur360.ca</a>
+        © {new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360 · <a href="https://www.c-secur360.ca" className="hover:underline">www.c-secur360.ca</a>
       </footer>
     </div>
   );
