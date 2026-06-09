@@ -225,13 +225,26 @@ const DEFAULT_THEME = {
 let THEME = {...DEFAULT_THEME};
 async function loadTheme(){ try{ const r=await window.storage.get(THEME_KEY); return r?{...DEFAULT_THEME,...JSON.parse(r.value)}:{...DEFAULT_THEME}; }catch{ return {...DEFAULT_THEME}; } }
 async function saveTheme(th){ try{ await window.storage.set(THEME_KEY, JSON.stringify(th)); }catch(e){ console.error(e); } }
-async function loadDB(){ try{ const r=await window.storage.get(DB_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
-async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringify(list)); }catch(e){ console.error(e); } }
+// Persistance SERVEUR (Supabase via /api/rapports/data) + cache localStorage pour le hors-ligne.
+async function loadDB(){
+  try{ const r=await fetch("/api/rapports/data?kind=reports",{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ ...(x.data||{}), id:x.id, status:x.status||x.data?.status||"in_progress" })); try{ await window.storage.set(DB_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
+  try{ const c=await window.storage.get(DB_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; } // repli hors-ligne
+}
+async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringify(list)); }catch{} } // cache local (write-through)
+// Push serveur d'UN rapport (debounce par id, car l'édition déclenche à chaque frappe).
+const _rapTimers={};
+function pushReport(report){ if(!report?.id) return; clearTimeout(_rapTimers[report.id]); _rapTimers[report.id]=setTimeout(()=>{ fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report }) }).catch(()=>{}); },600); }
+function pushDelete(id){ fetch("/api/rapports/data?kind=reports&id="+id,{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
+function pushTpl(tpl){ if(!tpl?.id) return; fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"templates", item:tpl }) }).catch(()=>{}); }
+function pushTplDelete(id){ fetch("/api/rapports/data?kind=templates&id="+id,{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
 async function loadLogo(){ try{ const r=await window.storage.get(LOGO_KEY); return r?r.value:null; }catch{ return null; } }
 async function saveLogo(d){ try{ await window.storage.set(LOGO_KEY, d); }catch(e){ console.error(e); } }
 async function clearLogo(){ try{ await window.storage.delete(LOGO_KEY); }catch(e){ console.error(e); } }
-async function loadTemplates(){ try{ const r=await window.storage.get(TPL_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
-async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.stringify(list)); }catch(e){ console.error(e); } }
+async function loadTemplates(){
+  try{ const r=await fetch("/api/rapports/data?kind=templates",{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ id:x.id, name:x.name, num:x.num, blocks:x.blocks||[] })); try{ await window.storage.set(TPL_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
+  try{ const c=await window.storage.get(TPL_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; }
+}
+async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.stringify(list)); }catch{} }
 
 // Vide toutes les valeurs d'un ensemble de blocs (pour transformer un rapport en gabarit)
 function emptyBlockValues(blocks){
@@ -775,18 +788,18 @@ export default function App(){
 
   function newReport(tplId){
     const r={ id:"r_"+Date.now(), title:"", client:"", location:"", projectNo:"", date:new Date().toISOString().slice(0,10),
-      template:tplId, status:"in_progress", version:1, createdFrom:null, blocks:blocksForTemplate(tplId), annotations:[], cover:{show:true,subtitle:""}, updatedAt:Date.now() };
-    persist([r,...db]); setSelId(r.id); setView("editor");
+      template:tplId, num:tplNumOf(tplId, customTpls), status:"in_progress", version:1, createdFrom:null, blocks:blocksForTemplate(tplId), annotations:[], cover:{show:true,subtitle:""}, updatedAt:Date.now() };
+    persist([r,...db]); pushReport(r); setSelId(r.id); setView("editor");
   }
-  function updateReport(id,patch){ persist(db.map(r=>r.id===id?{...r,...patch,updatedAt:Date.now()}:r)); }
-  function deleteReport(id){ if(!confirm(t("confirmDel")))return; persist(db.filter(r=>r.id!==id)); if(selId===id){setSelId(null);setView("list");} }
+  function updateReport(id,patch){ const next=db.map(r=>r.id===id?{...r,...patch,updatedAt:Date.now()}:r); persist(next); const upd=next.find(r=>r.id===id); if(upd) pushReport(upd); }
+  function deleteReport(id){ if(!confirm(t("confirmDel")))return; persist(db.filter(r=>r.id!==id)); pushDelete(id); if(selId===id){setSelId(null);setView("list");} }
   function duplicateReport(id, asVersion){
     const src=db.find(r=>r.id===id); if(!src)return;
     const copy=JSON.parse(JSON.stringify(src));
     copy.id="r_"+Date.now(); copy.updatedAt=Date.now();
     if(asVersion){ copy.version=(src.version||1)+1; copy.createdFrom=src.title||src.id; copy.status="in_progress"; }
     else { copy.version=1; copy.createdFrom=src.title||src.id; copy.title=(src.title||"")+" (copie)"; }
-    persist([copy,...db]); setSelId(copy.id); setView("editor");
+    persist([copy,...db]); pushReport(copy); setSelId(copy.id); setView("editor");
   }
 
   async function handleImport(file){
@@ -829,8 +842,9 @@ export default function App(){
     const ip=importPreview;
     const r={ id:"r_"+Date.now(), title:ip.title, client:ip.client, location:ip.location, projectNo:ip.projectNo,
       date:new Date().toISOString().slice(0,10), template:ip.template, status:"in_progress", version:1, createdFrom:"import",
+      num:tplNumOf(ip.template, customTpls),
       blocks: ip.blocks.length?ip.blocks:tplBlocks(ip.template), annotations:[], cover:{show:true,subtitle:""}, sourceText:ip.sourceText||"", updatedAt:Date.now() };
-    persist([r,...db]); setSelId(r.id); setImportPreview(null); setView("editor");
+    persist([r,...db]); pushReport(r); setSelId(r.id); setImportPreview(null); setView("editor");
   }
 
   // Importer un PDF directement comme GABARIT (structure conservée, valeurs vidées)
@@ -851,11 +865,11 @@ export default function App(){
       const blocks=emptyBlockValues(normalizeBlocks(out.blocks));
       const name=(out.title||file.name||"Gabarit").replace(/\.pdf$/i,"");
       const tpl={ id:"ct_"+Date.now(), name, blocks, num:"GAB-"+Date.now().toString(36).slice(-5).toUpperCase() };
-      persistTpls([tpl,...customTpls]);
+      persistTpls([tpl,...customTpls]); pushTpl(tpl);
     }catch(e){ setImportErr(e.message); }
     setImporting(false);
   }
-  function deleteTemplate(id){ if(!confirm(t("tplDelete")))return; persistTpls(customTpls.filter(c=>c.id!==id)); }
+  function deleteTemplate(id){ if(!confirm(t("tplDelete")))return; persistTpls(customTpls.filter(c=>c.id!==id)); pushTplDelete(id); }
 
   // Importer un BROUILLON MANUSCRIT (image) -> rapport avec valeurs "à vérifier"
   async function handleHandwriting(file){
@@ -2199,7 +2213,7 @@ function PrintDoc({ report, logo }){
         </td></tr></thead>
         <tfoot><tr><td>
           <div className="run-foot" style={{borderTop:"1px solid "+THEME.border}}>
-            <span>{tplLabel} · {tplNumOf(r.template, customTpls)}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
+            <span>{tplLabel} · {r.num || (TEMPLATES.find(x=>x.id===r.template)||{}).num || ""}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
             <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
           </div>
         </td></tr></tfoot>
