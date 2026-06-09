@@ -919,6 +919,16 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
 
   return (
     <div>
+      {/* Bandeau de statistiques (présentation pro, comme les autres modules) */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12,marginBottom:18}}>
+        {[["all",t("filterAll"),counts.all,"#1e293b"], ...STATUSES.map(s=>[s.id,t(s.key),counts[s.id],s.color])].map(([k,lbl,c,col])=>(
+          <button key={k} onClick={()=>setStatusFilter(k)} style={{textAlign:"left",cursor:"pointer",background:"#fff",border:statusFilter===k?`2px solid ${col}`:"1px solid #e2e8f0",borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 2px rgba(0,0,0,.04)"}}>
+            <div style={{fontSize:26,fontWeight:800,color:col,fontFamily:"'Archivo'",lineHeight:1}}>{c}</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:4,textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>{lbl}</div>
+          </button>
+        ))}
+      </div>
+
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:16}}>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
