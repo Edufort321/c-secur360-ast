@@ -3517,47 +3517,45 @@ function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
                   : /^(madame|mme|mrs|ms)\b/i.test(rn) ? (LANG==="en"?"Dear Madam,":"Madame,")
                   : (LANG==="en"?"Dear Sir or Madam,":"Madame, Monsieur,");
         return (
-        <div className="letter-page-print" style={{minHeight:"245mm",display:"flex",flexDirection:"column",fontFamily:"'Spline Sans',sans-serif",fontSize:11.5,lineHeight:1.55,color:"#1a1a1a",padding:"4mm 6mm"}}>
+        <div className="letter-page-print" style={{fontFamily:"'Spline Sans',sans-serif",fontSize:11.5,lineHeight:1.45,color:"#1a1a1a",padding:"14mm 18mm"}}>
           {/* En-tête : logo dimensionné + filet de séparation */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:10}}>
-            {logo ? <img src={logo} alt="" style={{maxHeight:74,maxWidth:230,objectFit:"contain"}}/> : <span/>}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:8}}>
+            {logo ? <img src={logo} alt="" style={{maxHeight:64,maxWidth:200,objectFit:"contain"}}/> : <span/>}
           </div>
-          <div style={{borderBottom:"2px solid "+THEME.secBar,marginBottom:26}}/>
+          <div style={{borderBottom:"2px solid "+THEME.secBar,marginBottom:14}}/>
           {/* Lieu et date, alignés à droite */}
-          <div style={{textAlign:"right",marginBottom:26}}>{[L.city,dateStr].filter(Boolean).join(", ")}</div>
+          <div style={{textAlign:"right",marginBottom:12}}>{[L.city,dateStr].filter(Boolean).join(", ")}</div>
           {/* Bloc destinataire */}
-          <div style={{marginBottom:22,lineHeight:1.4}}>
+          <div style={{marginBottom:12,lineHeight:1.35}}>
             {L.recipientName && <div style={{fontWeight:700}}>{L.recipientName}</div>}
             {company && <div>{company}</div>}
             {L.addr1 && <div>{L.addr1}</div>}
             {L.addr2 && <div>{L.addr2}</div>}
           </div>
           {/* Objet (gras + souligné) */}
-          {subject && <div style={{fontWeight:700,textDecoration:"underline",marginBottom:16}}>{LANG==="en"?"Subject":"Objet"} : {subject}</div>}
+          {subject && <div style={{fontWeight:700,textDecoration:"underline",marginBottom:10}}>{LANG==="en"?"Subject":"Objet"} : {subject}</div>}
           {/* Références */}
           {(L.clientRef||L.orderRef||fileRef) && (
-            <div style={{marginBottom:20,lineHeight:1.4}}>
+            <div style={{marginBottom:12,lineHeight:1.35}}>
               {L.clientRef && <div>{LANG==="en"?"Your client":"Votre client"} : {L.clientRef}</div>}
               {L.orderRef && <div>{LANG==="en"?"Your order":"Votre commande"} : {L.orderRef}</div>}
               {fileRef && <div>{LANG==="en"?"Our file":"Notre dossier"} : {fileRef}</div>}
             </div>
           )}
           {/* Appel */}
-          <div style={{marginBottom:14}}>{civ}</div>
+          <div style={{marginBottom:8}}>{civ}</div>
           {/* Corps justifié */}
-          <div style={{whiteSpace:"pre-wrap",textAlign:"justify",marginBottom:30,flex:1}}>{L.body||""}</div>
-          {/* Signature : espace pour signature manuscrite + nom/titre */}
-          <div style={{marginTop:"auto"}}>
-            {L.signName && <>
-              <div style={{height:"16mm"}}/>
-              <div style={{fontWeight:700}}>{L.signName}</div>
-              {L.signTitle && <div style={{fontSize:11}}>{L.signTitle}</div>}
-            </>}
-            {(L.initials||attachment) && <div style={{borderTop:"1px solid #d9d9d9",marginTop:14,paddingTop:8}}>
-              {L.initials && <div style={{fontSize:10,color:"#666"}}>{L.initials}</div>}
-              {attachment && <div style={{fontSize:11,marginTop:4}}>{LANG==="en"?"Enclosure":"Pièce jointe"} : {attachment}</div>}
-            </div>}
-          </div>
+          <div style={{whiteSpace:"pre-wrap",textAlign:"justify",marginBottom:14}}>{L.body||""}</div>
+          {/* Signature : espace pour signature manuscrite + nom/titre (suit le corps, sans grand écart) */}
+          {L.signName && <div style={{marginTop:4}}>
+            <div style={{height:"14mm"}}/>
+            <div style={{fontWeight:700}}>{L.signName}</div>
+            {L.signTitle && <div style={{fontSize:11}}>{L.signTitle}</div>}
+          </div>}
+          {(L.initials||attachment) && <div style={{borderTop:"1px solid #d9d9d9",marginTop:12,paddingTop:6}}>
+            {L.initials && <div style={{fontSize:10,color:"#666"}}>{L.initials}</div>}
+            {attachment && <div style={{fontSize:11,marginTop:3}}>{LANG==="en"?"Enclosure":"Pièce jointe"} : {attachment}</div>}
+          </div>}
         </div>
         );
       })()}
