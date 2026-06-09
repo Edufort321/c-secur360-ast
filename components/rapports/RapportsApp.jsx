@@ -1533,6 +1533,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [qr,setQr]=useState(null);                // { url, data } QR du rapport (deep-link ?r=)
   const [qrMap,setQrMap]=useState({});            // { sectionId: {url,data} } QR par section/équipement
   const [showQr,setShowQr]=useState(false);
+  const [showShare,setShowShare]=useState(false); // partage au vérificateur (lien tokenisé)
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
   const [showLetter,setShowLetter]=useState(false); // éditeur de lettre de présentation
@@ -1757,6 +1758,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           const actions=[
             { key:"link", label:`🔗 ${(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}`, on:()=>setShowLink(true), style:(r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement" },
             { key:"qr", label:`🔳 ${LANG==="en"?"QR / page":"QR / page"}`, on:()=>setShowQr(true), title:LANG==="en"?"Page QR code — scan to open & edit this report":"QR code de page — scanner pour ouvrir et éditer ce rapport" },
+            { key:"share", label:`📤 ${LANG==="en"?"Share":"Partager"}`, on:()=>setShowShare(true), title:LANG==="en"?"Share a read/review link with a verifier":"Partager un lien lecture/révision à un vérificateur" },
             { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
             priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
@@ -1802,6 +1804,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* MODALE QR (un seul QR pour tout le rapport + navigation par page/section) */}
       {showQr && <QrPanel report={r} qr={qr} qrMap={qrMap} onJump={(bid)=>{ setShowQr(false); const el=document.getElementById("blk-"+bid); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.transition="box-shadow .3s"; el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } }} onClose={()=>setShowQr(false)}/>}
+
+      {/* MODALE PARTAGE AU VÉRIFICATEUR (lien lecture/révision) */}
+      {showShare && <ShareModal report={r} onClose={()=>setShowShare(false)}/>}
 
       {/* CONSTRUCTEUR DE SOUMISSION (anomalies/recommandations sélectionnées) */}
       {showSoum && <SoumissionBuilder report={r} items={priceItems} onClose={()=>setShowSoum(false)}/>}
@@ -2394,6 +2399,97 @@ function LinkPanel({ report, onSet, onClose }){
         </div>
         )}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Modale PARTAGE : génère un lien tokenisé pour un VÉRIFICATEUR externe (lecture ou révision),
+// avec expiration optionnelle. Liste les liens actifs (révocables) et les commentaires reçus.
+function ShareModal({ report, onClose }){
+  const [mode,setMode]=useState("review");
+  const [exp,setExp]=useState("0"); // jours ; 0 = sans expiration
+  const [busy,setBusy]=useState(false);
+  const [link,setLink]=useState(null);
+  const [copied,setCopied]=useState(false);
+  const [shares,setShares]=useState([]);
+  const [reviews,setReviews]=useState([]);
+  const [err,setErr]=useState(null);
+  async function load(){
+    try{ const r=await fetch(`/api/rapports/share?reportId=${encodeURIComponent(report.id)}`,{credentials:"include"});
+      if(r.ok){ const j=await r.json(); setShares(j.shares||[]); setReviews(j.reviews||[]); } }catch(e){}
+  }
+  useEffect(()=>{ load(); },[]);
+  async function create(){
+    setBusy(true); setErr(null); setLink(null);
+    try{
+      const r=await fetch("/api/rapports/share",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
+        body:JSON.stringify({ reportId:report.id, mode, expiresInDays: exp==="0"?null:Number(exp) }) });
+      const j=await r.json();
+      if(!r.ok){ setErr(j.error||(LANG==="en"?"Error (save the report first?)":"Erreur (enregistrer le rapport d'abord ?)")); }
+      else { setLink(j.url); load(); }
+    }catch(e){ setErr(LANG==="en"?"Network error":"Erreur réseau"); }
+    setBusy(false);
+  }
+  async function revoke(token){ try{ await fetch(`/api/rapports/share?token=${encodeURIComponent(token)}`,{method:"DELETE",credentials:"include"}); load(); }catch(e){} }
+  function copy(){ try{ navigator.clipboard.writeText(link||""); setCopied(true); setTimeout(()=>setCopied(false),1500); }catch(e){} }
+  const active=shares.filter(s=>!s.revoked);
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:600,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>📤 {LANG==="en"?"Share with a verifier":"Partager à un vérificateur"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Generate a private link. The verifier opens the report without an account.":"Générez un lien privé. Le vérificateur ouvre le rapport sans compte."}</p>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",marginBottom:10}}>
+          <div>
+            <label style={S.label}>{LANG==="en"?"Access":"Accès"}</label>
+            <div style={{display:"flex",gap:6}}>
+              <button style={{...S.chip,...(mode==="view"?S.chipOn:{})}} onClick={()=>setMode("view")}>👁 {LANG==="en"?"Read only":"Lecture seule"}</button>
+              <button style={{...S.chip,...(mode==="review"?S.chipOn:{})}} onClick={()=>setMode("review")}>✍ {LANG==="en"?"Review":"Révision"}</button>
+            </div>
+          </div>
+          <div>
+            <label style={S.label}>{LANG==="en"?"Expiry":"Expiration"}</label>
+            <select style={{...S.input,width:"auto"}} value={exp} onChange={e=>setExp(e.target.value)}>
+              <option value="0">{LANG==="en"?"No expiry":"Sans expiration"}</option>
+              <option value="7">7 {LANG==="en"?"days":"jours"}</option>
+              <option value="30">30 {LANG==="en"?"days":"jours"}</option>
+              <option value="90">90 {LANG==="en"?"days":"jours"}</option>
+            </select>
+          </div>
+          <button style={S.btnPrimary} onClick={create} disabled={busy}>{busy?"…":(LANG==="en"?"Create link":"Créer le lien")}</button>
+        </div>
+        {err && <div style={{fontSize:12,color:"#9d0208",marginBottom:8}}>{err}</div>}
+        {link && (
+          <div style={{background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:12}}>
+            <div style={{fontSize:11,color:"#475569",marginBottom:4}}>{LANG==="en"?"Share this link:":"Partagez ce lien :"}</div>
+            <div style={{fontSize:12,wordBreak:"break-all",color:"#0f172a"}}>{link}</div>
+            <button style={{...S.btnGhost,fontSize:12,padding:"5px 10px",marginTop:6}} onClick={copy}>{copied?(LANG==="en"?"Copied ✓":"Copié ✓"):(LANG==="en"?"Copy":"Copier")}</button>
+          </div>
+        )}
+        {active.length>0 && (
+          <div style={{marginBottom:12}}>
+            <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>{LANG==="en"?"Active links":"Liens actifs"} ({active.length})</div>
+            {active.map(s=>(
+              <div key={s.token} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,border:"1px solid #e2e8f0",borderRadius:8,padding:"7px 10px",marginBottom:6,fontSize:12}}>
+                <span>{s.mode==="review"?"✍":"👁"} {s.mode==="review"?(LANG==="en"?"Review":"Révision"):(LANG==="en"?"Read":"Lecture")} · {String(s.created_at).slice(0,10)}{s.expires_at?` · ${LANG==="en"?"exp.":"exp."} ${String(s.expires_at).slice(0,10)}`:""}</span>
+                <button style={S.miniBtnDel} onClick={()=>revoke(s.token)}>{LANG==="en"?"Revoke":"Révoquer"}</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div>
+          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>💬 {LANG==="en"?"Reviewer comments":"Commentaires de révision"} {reviews.length>0?`(${reviews.length})`:""}</div>
+          {reviews.length===0 ? <div style={{fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"None yet.":"Aucun pour le moment."}</div> :
+            reviews.map(rv=>(
+              <div key={rv.id} style={{border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px",marginBottom:6}}>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:2}}><b style={{color:"#0f172a"}}>{rv.author||(LANG==="en"?"Verifier":"Vérificateur")}</b> · {String(rv.created_at).slice(0,16).replace("T"," ")}</div>
+                <div style={{fontSize:13,whiteSpace:"pre-wrap"}}>{rv.comment}</div>
+              </div>
+            ))}
+        </div>
       </div>
     </div>
   );
