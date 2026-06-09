@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT = process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'confidentialite@cerdia.ai';
-const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'C-Secur360 (CERDIA inc.)';
+const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'Commerce CERDIA inc.';
 
 export default function TermsPage() {
   return (

@@ -4,7 +4,7 @@
 // Coordonnées configurables via variables d'environnement (valeurs par défaut sûres).
 const CONTACT = process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'confidentialite@cerdia.ai';
 const PRIVACY_OFFICER = process.env.NEXT_PUBLIC_PRIVACY_OFFICER || 'Eric Dufort';
-const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'C-Secur360 (CERDIA inc.)';
+const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'Commerce CERDIA inc.';
 
 // Sous-traitants / fournisseurs réellement utilisés par la plateforme.
 const SUBPROCESSORS: { name: string; role: string; region: string }[] = [
