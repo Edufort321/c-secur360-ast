@@ -893,6 +893,7 @@ const TREE_LEVELS = [
 
 function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onNew, onImport, onHandwriting, customTpls, onDelete, onDuplicate }){
   const [showTpl,setShowTpl]=useState(false);
+  const [rView,setRView]=useState("gallery"); // galerie (cartes) | grille (lignes compactes)
   const [order,setOrder]=useState(["client","job","location"]); // ordre des niveaux
   const [treePath,setTreePath]=useState([]); // ex: ["2025","Hydro","Poste 12"]
   const counts={ all:all.length }; STATUSES.forEach(s=>{ counts[s.id]=all.filter(r=>r.status===s.id).length; });
@@ -979,7 +980,14 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
       </div>
 
       {/* Recherche pleine largeur (le filtrage par statut se fait via les cartes de stats ci-dessus) */}
-      <div style={{marginBottom:16}}><input style={{...S.input,width:"100%"}} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("search")}/></div>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:16}}>
+        <input style={{...S.input,flex:1,minWidth:0}} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("search")}/>
+        <div style={{display:"flex",border:"1px solid #e2e8f0",borderRadius:8,overflow:"hidden",background:"#fff",flexShrink:0}}>
+          {[["gallery","▦"],["grid","≣"]].map(([v,ic])=>(
+            <button key={v} onClick={()=>setRView(v)} title={v==="gallery"?(LANG==="en"?"Gallery":"Galerie"):(LANG==="en"?"List":"Grille")} style={{border:"none",background:rView===v?"#1e293b":"transparent",color:rView===v?"#fff":"#64748b",padding:"7px 12px",cursor:"pointer",fontSize:15,lineHeight:1}}>{ic}</button>
+          ))}
+        </div>
+      </div>
 
       {showTpl && (
         <div style={S.overlay} onClick={()=>setShowTpl(false)}>
@@ -1011,6 +1019,28 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
             </div>
           )}
           {treeFiltered.length===0 ? <div style={{textAlign:"center",color:"#64748b",padding:"48px 0"}}>{t("noReports")}</div> : (
+            rView==="grid" ? (
+              /* GRILLE = lignes compactes */
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {treeFiltered.map(r=>{
+                  const tpl=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
+                  return (
+                    <div key={r.id} onClick={()=>onOpen(r.id)} style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 14px",cursor:"pointer"}}>
+                      <span style={{...S.pill,background:statusColor(r.status)}}>{statusLabel(r.status)}</span>
+                      <div style={{minWidth:160,flex:1}}>
+                        <div style={{fontWeight:700,color:"#0f172a"}}>{r.title||"(sans titre)"}</div>
+                        <div style={{fontSize:12,color:"#64748b"}}>{tpl}{r.client?` · ${r.client}`:""}{r.projectNo?` · ${r.projectNo}`:""}</div>
+                      </div>
+                      <span style={{fontSize:11,color:"#94a3b8"}}>{t("version")}{r.version} · {new Date(r.updatedAt).toLocaleDateString()}</span>
+                      <span style={{display:"flex",gap:8,marginLeft:"auto"}}>
+                        <button style={S.miniBtn} onClick={(e)=>{e.stopPropagation();onDuplicate(r.id,true);}}>{t("newVersion")}</button>
+                        <button style={S.miniBtnDel} onClick={(e)=>{e.stopPropagation();onDelete(r.id);}}>{t("del")}</button>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
             <div style={S.grid}>
               {treeFiltered.map(r=>{
                 const tpl=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
@@ -1032,6 +1062,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
                 );
               })}
             </div>
+            )
           )}
         </div>
       </div>
