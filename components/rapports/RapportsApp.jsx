@@ -2787,29 +2787,53 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
         const fileRef=L.fileRef||r.num||r.projectNo||"";
         const dateStr=L.date||today;
         const attachment=L.attachment||(LANG==="en"?"Report":"Rapport");
+        // Salutation d'ouverture (norme lettre d'affaires) : reprend la civilité du destinataire
+        // si reconnue, sinon « Madame, Monsieur, ».
+        const rn=(L.recipientName||"").trim();
+        const civ = /^(monsieur|m\.|mr)\b/i.test(rn) ? (LANG==="en"?"Dear Sir,":"Monsieur,")
+                  : /^(madame|mme|mrs|ms)\b/i.test(rn) ? (LANG==="en"?"Dear Madam,":"Madame,")
+                  : (LANG==="en"?"Dear Sir or Madam,":"Madame, Monsieur,");
         return (
-        <div className="letter-page-print" style={{minHeight:"247mm",display:"flex",flexDirection:"column",fontSize:12,lineHeight:1.5,color:"#1a1a1a"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:30}}>
-            {logo ? <img src={logo} alt="" style={{maxHeight:60,maxWidth:200,objectFit:"contain"}}/> : <span/>}
+        <div className="letter-page-print" style={{minHeight:"245mm",display:"flex",flexDirection:"column",fontFamily:"'Spline Sans',sans-serif",fontSize:11.5,lineHeight:1.55,color:"#1a1a1a",padding:"4mm 6mm"}}>
+          {/* En-tête : logo dimensionné + filet de séparation */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:10}}>
+            {logo ? <img src={logo} alt="" style={{maxHeight:74,maxWidth:230,objectFit:"contain"}}/> : <span/>}
           </div>
-          <div style={{textAlign:"right",marginBottom:22}}>{[L.city,dateStr].filter(Boolean).join(", ")}</div>
-          <div style={{marginBottom:18}}>
-            {L.recipientName && <div>{L.recipientName}</div>}
+          <div style={{borderBottom:"2px solid "+THEME.secBar,marginBottom:26}}/>
+          {/* Lieu et date, alignés à droite */}
+          <div style={{textAlign:"right",marginBottom:26}}>{[L.city,dateStr].filter(Boolean).join(", ")}</div>
+          {/* Bloc destinataire */}
+          <div style={{marginBottom:22,lineHeight:1.4}}>
+            {L.recipientName && <div style={{fontWeight:700}}>{L.recipientName}</div>}
             {company && <div>{company}</div>}
             {L.addr1 && <div>{L.addr1}</div>}
             {L.addr2 && <div>{L.addr2}</div>}
           </div>
-          {subject && <div style={{fontWeight:700,marginBottom:14}}>{LANG==="en"?"Subject":"Objet"} : {subject}</div>}
-          <div style={{marginBottom:14}}>
-            {L.clientRef && <div>{LANG==="en"?"Your client":"Votre client"} : {L.clientRef}</div>}
-            {L.orderRef && <div>{LANG==="en"?"Your order":"Votre commande"} : {L.orderRef}</div>}
-            {fileRef && <div>{LANG==="en"?"Our file":"Notre dossier"} : {fileRef}</div>}
-          </div>
-          <div style={{whiteSpace:"pre-wrap",marginBottom:26,flex:1}}>{L.body||""}</div>
+          {/* Objet (gras + souligné) */}
+          {subject && <div style={{fontWeight:700,textDecoration:"underline",marginBottom:16}}>{LANG==="en"?"Subject":"Objet"} : {subject}</div>}
+          {/* Références */}
+          {(L.clientRef||L.orderRef||fileRef) && (
+            <div style={{marginBottom:20,lineHeight:1.4}}>
+              {L.clientRef && <div>{LANG==="en"?"Your client":"Votre client"} : {L.clientRef}</div>}
+              {L.orderRef && <div>{LANG==="en"?"Your order":"Votre commande"} : {L.orderRef}</div>}
+              {fileRef && <div>{LANG==="en"?"Our file":"Notre dossier"} : {fileRef}</div>}
+            </div>
+          )}
+          {/* Appel */}
+          <div style={{marginBottom:14}}>{civ}</div>
+          {/* Corps justifié */}
+          <div style={{whiteSpace:"pre-wrap",textAlign:"justify",marginBottom:30,flex:1}}>{L.body||""}</div>
+          {/* Signature : espace pour signature manuscrite + nom/titre */}
           <div style={{marginTop:"auto"}}>
-            {L.signName && <div style={{fontWeight:700}}>{L.signName}{L.signTitle?`, ${L.signTitle}`:""}</div>}
-            {L.initials && <div style={{fontSize:10,color:"#555",marginTop:10}}>{L.initials}</div>}
-            {attachment && <div style={{fontSize:11,marginTop:10}}>{LANG==="en"?"Enclosure":"Pièce jointe"} : {attachment}</div>}
+            {L.signName && <>
+              <div style={{height:"16mm"}}/>
+              <div style={{fontWeight:700}}>{L.signName}</div>
+              {L.signTitle && <div style={{fontSize:11}}>{L.signTitle}</div>}
+            </>}
+            {(L.initials||attachment) && <div style={{borderTop:"1px solid #d9d9d9",marginTop:14,paddingTop:8}}>
+              {L.initials && <div style={{fontSize:10,color:"#666"}}>{L.initials}</div>}
+              {attachment && <div style={{fontSize:11,marginTop:4}}>{LANG==="en"?"Enclosure":"Pièce jointe"} : {attachment}</div>}
+            </div>}
           </div>
         </div>
         );
