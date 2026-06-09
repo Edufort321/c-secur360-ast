@@ -2,7 +2,7 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, type LucideIcon } from 'lucide-react';
 
 export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports';
 export type ModuleStatus = 'available' | 'soon';
@@ -58,17 +58,10 @@ export const MODULES: ModuleDef[] = [
   },
   {
     key: 'accidents',
-    labelFr: 'Accidents', labelEn: 'Accidents',
-    descFr: 'Déclaration et suivi des accidents et incidents.',
-    descEn: 'Accident and incident reporting and tracking.',
+    labelFr: 'Accidents et incidents', labelEn: 'Accidents & incidents',
+    descFr: 'Déclaration et suivi de tous les incidents : accidents, passés proches, véhicules, matériels, maladies — avec actions correctives.',
+    descEn: 'Reporting and tracking of all incidents: accidents, near-misses, vehicle, property, illness — with corrective actions.',
     icon: AlertTriangle, basePath: 'accidents', color: 'text-red-600', accent: 'bg-red-600', status: 'available',
-  },
-  {
-    key: 'near_miss',
-    labelFr: 'Presque-accidents', labelEn: 'Near-miss',
-    descFr: 'Événements à haut potentiel (presque-accidents) et actions correctives.',
-    descEn: 'High-potential events (near-misses) and corrective actions.',
-    icon: AlertOctagon, basePath: 'near-miss', color: 'text-orange-600', accent: 'bg-orange-600', status: 'available',
   },
   {
     key: 'inventory',

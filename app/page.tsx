@@ -8,7 +8,7 @@ import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
 import {
   Shield, Users, HardHat, Calendar, FileCheck, AlertTriangle,
-  AlertCircle, Package, ClipboardCheck, Clock, Truck,
+  Package, ClipboardCheck, Clock, Truck,
   CheckSquare, BarChart3, ChevronLeft, ChevronRight, Lock,
   CheckCircle, Smartphone, Globe, ArrowRight, Phone, Mail,
   Building2, Star, Menu, X, FileText
@@ -57,8 +57,7 @@ const MODULES_FR = [
   { icon: Calendar,       key: 'planner',     name: 'Planificateur',          desc: 'Calendrier interactif, affectation du personnel et ressources par journee.' },
   { icon: Shield,         key: 'ast',         name: 'AST / Securite',         desc: 'Analyses de securite de taches, signatures electroniques, conformite CNESST.' },
   { icon: FileCheck,      key: 'permits',     name: 'Permis de travail',      desc: 'Permis d\'espaces confines, travaux en hauteur, hot work et excavation.' },
-  { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents',              desc: 'Rapport d\'accident, enquete, actions correctives et suivi reglementaire.' },
-  { icon: AlertCircle,    key: 'presque',     name: 'Presque-accidents',      desc: 'Declaration et suivi des quasi-accidents pour prevention proactive.' },
+  { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents et incidents',  desc: 'Tous les incidents : accidents, passes proches, vehicules, materiels et maladies — enquete, actions correctives et suivi reglementaire.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventaire',             desc: 'Gestion du stock, equipements de protection individuelle et consommables.' },
   { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Listes de verification, inspections periodiques et rapports d\'etat.' },
   { icon: Clock,          key: 'temps',       name: 'Feuilles de temps',      desc: 'Saisie des heures, approbation superviseur et export comptable.' },
@@ -73,8 +72,7 @@ const MODULES_EN = [
   { icon: Calendar,       key: 'planner',     name: 'Planner',                desc: 'Interactive calendar, personnel assignment and daily resource management.' },
   { icon: Shield,         key: 'ast',         name: 'JSA / Safety',           desc: 'Job safety analysis, electronic signatures, CNESST & OHS compliance.' },
   { icon: FileCheck,      key: 'permits',     name: 'Work Permits',           desc: 'Confined space, working at heights, hot work and excavation permits.' },
-  { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents',              desc: 'Accident reports, investigations, corrective actions and regulatory tracking.' },
-  { icon: AlertCircle,    key: 'presque',     name: 'Near-Misses',            desc: 'Near-miss reporting and tracking for proactive hazard prevention.' },
+  { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents & incidents',   desc: 'All incidents: accidents, near-misses, vehicle, property and illness — investigations, corrective actions and regulatory tracking.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventory',              desc: 'Stock management, personal protective equipment and consumables.' },
   { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Checklists, scheduled inspections and condition reports.' },
   { icon: Clock,          key: 'temps',       name: 'Timesheets',             desc: 'Time entry, supervisor approval and accounting export.' },
