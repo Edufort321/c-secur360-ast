@@ -948,7 +948,7 @@ export default function App(){
             <p style={{...S.hint,marginTop:0}}>{LANG==="en"?"Take several photos in a row, then generate the report.":"Prenez plusieurs photos à la suite, puis générez le rapport."}</p>
             <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
               📷 {LANG==="en"?"Add photos":"Ajouter des photos"}
-              <input type="file" accept="image/*" capture="environment" multiple style={{display:"none"}} onChange={e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(fs.length) addCapPhotos(fs); }}/>
+              <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(fs.length) addCapPhotos(fs); }}/>
             </label>
             {(photoCap.photos||[]).length>0 && (
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:8,margin:"12px 0"}}>
@@ -2015,7 +2015,7 @@ function PhotosEditor({ block, onChange, onZoom }){
                   : <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:140,cursor:"pointer",color:"#1e293b"}}>
                       <span style={{fontSize:26,lineHeight:1}}>＋</span>
                       <span style={{fontSize:12,marginTop:4,fontWeight:700,fontFamily:"'Archivo'"}}>{t("photoAddHere")}</span>
-                      <input type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) fillSlot(p.id,f); e.target.value=""; }}/>
+                      <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) fillSlot(p.id,f); e.target.value=""; }}/>
                     </label>}
                 <button onClick={()=>delSlot(p.id)} title={t("del")} style={{position:"absolute",top:5,right:5,border:"none",background:"rgba(157,2,8,.8)",color:"#fff",borderRadius:5,fontSize:12,cursor:"pointer",padding:"2px 6px"}}>✕</button>
                 <input style={{...S.input,border:"none",borderTop:"1px solid #e2e8f0",borderRadius:0,fontSize:12}} value={p.caption||""} placeholder={t("photoCaption")} onChange={e=>setCap(p.id,e.target.value)}/>
