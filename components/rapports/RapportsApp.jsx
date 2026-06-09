@@ -1649,6 +1649,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const presenceChan=useRef(null);
   const myInfo=useRef(null);
   const editTimer=useRef(null);
+  const myEditingBlock=useRef(null); // bloc que J'édite (préservé lors d'une fusion distante)
+  const rRef=useRef(report);         // dernière version locale (pour la fusion sans dépendances)
+  const bcTimer=useRef(null);
   const [peers,setPeers]=useState([]);
   useEffect(()=>{ let cancelled=false;
     (async()=>{
@@ -1665,6 +1668,25 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           Object.keys(st||{}).forEach(k=>{ const m=(st[k]&&st[k][0])||{}; if(m.id && m.id!==me.id) list.push(m); });
           setPeers(list);
         });
+        // Synchro de contenu en direct : on applique les blocs distants, SAUF celui qu'on édite
+        // (validate-before-merge léger : mon édition en cours gagne localement, je verrai la leur après).
+        chan.on("broadcast",{event:"blocks"},({payload})=>{
+          if(!payload || payload.from===me.id || !Array.isArray(payload.blocks)) return;
+          setR(prev=>{
+            const incoming=new Map(payload.blocks.map(b=>[b.id,b]));
+            let changed=false;
+            const merged=(prev.blocks||[]).map(b=>{
+              if(b.id===myEditingBlock.current) return b;           // je l'édite -> je garde le mien
+              const inc=incoming.get(b.id);
+              if(inc && JSON.stringify(inc)!==JSON.stringify(b)){ changed=true; return inc; }
+              return b;
+            });
+            if(!changed) return prev;
+            const next={...prev,blocks:merged};
+            rRef.current=next;
+            return next; // setR direct (pas onUpdate) : l'émetteur a déjà sauvegardé côté serveur
+          });
+        });
         chan.subscribe(async(status)=>{ if(status==="SUBSCRIBED" && !cancelled){ try{ await chan.track({ ...me, blockId:null, at:Date.now() }); }catch{} } });
         presenceChan.current=chan;
       }catch{}
@@ -1674,13 +1696,20 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   },[report.id]);
   // Diffuse la section en cours d'édition (verrou souple : les autres voient « X édite »).
   function broadcastEditing(blockId){
+    myEditingBlock.current=blockId;
     const ch=presenceChan.current, me=myInfo.current; if(!ch||!me) return;
     try{ ch.track({ ...me, blockId, at:Date.now() }); }catch{}
     clearTimeout(editTimer.current);
-    editTimer.current=setTimeout(()=>{ try{ ch.track({ ...me, blockId:null, at:Date.now() }); }catch{} },4000);
+    editTimer.current=setTimeout(()=>{ myEditingBlock.current=null; try{ ch.track({ ...me, blockId:null, at:Date.now() }); }catch{} },4000);
+  }
+  // Diffuse l'état des blocs aux collaborateurs (debounce ; ils fusionnent sans toucher leur édition).
+  function broadcastBlocks(next){
+    const ch=presenceChan.current, me=myInfo.current; if(!ch||!me) return;
+    clearTimeout(bcTimer.current);
+    bcTimer.current=setTimeout(()=>{ try{ ch.send({ type:"broadcast", event:"blocks", payload:{ from:me.id, blocks:next.blocks||[] } }); }catch{} },500);
   }
 
-  function commit(next){ setR(next); onUpdate(next); setSavedFlash(true); }
+  function commit(next){ rRef.current=next; setR(next); onUpdate(next); setSavedFlash(true); broadcastBlocks(next); }
   useEffect(()=>{ if(!savedFlash) return; const id=setTimeout(()=>setSavedFlash(false),1200); return ()=>clearTimeout(id); },[savedFlash]);
   function setField(k,v){ commit({...r,[k]:v}); }
   function setBlocks(blocks){ commit({...r,blocks}); }
