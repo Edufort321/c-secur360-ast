@@ -347,12 +347,13 @@ async function extractMultiPhotoWithApi(images){ // images = [{base64, mediaType
   const prompt = `On te fournit PLUSIEURS PHOTOS (prises à la suite) d'un même relevé de terrain (pages, sections, tableaux, notes manuscrites ou imprimées). Combine TOUT en UN SEUL rapport technique structuré, dans l'ordre des photos.
 Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
 {"title":"","client":"","location":"","projectNo":"","suggestedTemplate":"inspection | testing | quote | generic",
+ "templateNum":"<si un NUMÉRO DE GABARIT est imprimé (souvent en BAS de page, ex GAB-INS-01 / GAB-XXXXX), recopie-le ; sinon ''>",
  "blocks":[
    {"type":"section","title":"titre","fields":[{"label":"libellé","value":"valeur","uncertain":true|false}]},
    {"type":"table","title":"titre","columns":["..."],"rows":[["..."]],"uncertainCells":[[ri,ci],...]},
    {"type":"text","value":"texte","uncertain":true|false}
  ]}
-RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisible marque "uncertain":true ; n'invente rien ; conserve TOUTES les sections et colonnes de TOUTES les photos ; garde la langue d'origine (${langName}).`;
+RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisible marque "uncertain":true ; n'invente rien ; conserve TOUTES les sections et colonnes de TOUTES les photos ; cherche le NUMÉRO DE GABARIT en bas de page ; garde la langue d'origine (${langName}).`;
   const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
   content.push({ type:"text", text:prompt });
   const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" },
@@ -1534,7 +1535,15 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     setFixing(false);
   }
 
-  function doExport(){ setTimeout(()=>window.print(),200); }
+  function doExport(){
+    // Avertir si des champs de section sont vides (non remplis / non validés) avant l'export.
+    let emptyN=0;
+    (r.blocks||[]).forEach(b=>{ if(b.type==="section") (b.fields||[]).forEach(f=>{ if(!String(f.value||"").trim() && !f.validated) emptyN++; }); });
+    if(emptyN>0 && !confirm(LANG==="en"
+      ? `${emptyN} empty field(s) remain (set N/V, N/A, validate or remove them in the report). Export to PDF anyway?`
+      : `${emptyN} champ(s) encore vide(s) (inscrire N/V, N/A, valider ou les retirer dans le rapport). Exporter en PDF quand même ?`)) return;
+    setTimeout(()=>window.print(),200);
+  }
 
   return (
     <div>
