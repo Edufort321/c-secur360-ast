@@ -335,6 +335,32 @@ RÈGLES IMPORTANTES :
   return JSON.parse(m?m[0]:clean);
 }
 
+// Extraction depuis PLUSIEURS PHOTOS (caméra, prises à la suite) -> UN SEUL rapport structuré
+async function extractMultiPhotoWithApi(images){ // images = [{base64, mediaType}]
+  const langName = LANG==="en"?"English":"français";
+  const prompt = `On te fournit PLUSIEURS PHOTOS (prises à la suite) d'un même relevé de terrain (pages, sections, tableaux, notes manuscrites ou imprimées). Combine TOUT en UN SEUL rapport technique structuré, dans l'ordre des photos.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{"title":"","client":"","location":"","projectNo":"","suggestedTemplate":"inspection | testing | quote | generic",
+ "blocks":[
+   {"type":"section","title":"titre","fields":[{"label":"libellé","value":"valeur","uncertain":true|false}]},
+   {"type":"table","title":"titre","columns":["..."],"rows":[["..."]],"uncertainCells":[[ri,ci],...]},
+   {"type":"text","value":"texte","uncertain":true|false}
+ ]}
+RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisible marque "uncertain":true ; n'invente rien ; conserve TOUTES les sections et colonnes de TOUTES les photos ; garde la langue d'origine (${langName}).`;
+  const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
+  content.push({ type:"text", text:prompt });
+  const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ max_tokens:8192, messages:[{ role:"user", content }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const parsed=JSON.parse(m?m[0]:clean);
+  parsed.__truncated = data.stop_reason==="max_tokens";
+  return parsed;
+}
+
 // Normalise les blocs extraits vers le format interne (avec ids)
 function normalizeBlocks(blocks){
   if(!Array.isArray(blocks)) return [];
@@ -941,8 +967,10 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
           </label>
           <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
         </div>
-        {/* Classement (ordre de l'arborescence) — déplacé près des actions */}
-        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+        {/* Carte « Tous les rapports + Classement » — alignée avec les actions */}
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"6px 12px"}}>
+          <button onClick={()=>setTreePath([])} style={{display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
+          <span style={{width:1,height:18,background:"#e2e8f0"}}/>
           <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569"}}>{t("treeOrder")} :</span>
           {order.map((lvlId,i)=>(
             <span key={lvlId} style={S.treeOrderChip} onClick={()=>{ const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]); }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</span>
@@ -970,9 +998,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
       <div style={S.treeLayout}>
         {db.length>0 && (
         <aside style={S.treePanel}>
-          <div style={{...S.treeNode, ...(treePath.length===0?S.treeNodeOn:{}), fontWeight:700}} onClick={()=>setTreePath([])}>
-            <span style={{flex:1}}>📁 {t("treeAll")}</span><span style={S.treeCount}>{db.length}</span>
-          </div>
+          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569",marginBottom:8}}>{t("treeOrder")}</div>
           <TreeNode node={tree} path={[]}/>
         </aside>
         )}
