@@ -10,7 +10,7 @@ const NAVY = '#111827';
 export async function GET(req: Request) {
   const { origin, searchParams } = new URL(req.url);
   const size = Math.min(1024, Math.max(64, Number(searchParams.get('size')) || 512));
-  const logo = Math.round(size * 0.95); // logo quasi pleine pastille (très visible)
+  const logo = Math.round(size * 0.8); // logo bien visible, sur fond navy pleine surface
   return new ImageResponse(
     (
       <div
@@ -21,7 +21,9 @@ export async function GET(req: Request) {
           alignItems: 'center',
           justifyContent: 'center',
           background: NAVY,
-          borderRadius: '50%', // PASTILLE RONDE bleu navy
+          // Pastille navy ARRONDIE (squircle), pleine surface -> navy partout (pas de coins
+          // transparents), look rond, et le logo peut rester gros sans déborder d'un cercle.
+          borderRadius: `${Math.round(size * 0.28)}px`,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
