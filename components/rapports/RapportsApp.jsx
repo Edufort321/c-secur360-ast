@@ -361,6 +361,39 @@ RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisib
   return parsed;
 }
 
+// Reconnaissance DANS un GABARIT EXISTANT (standardisation) : l'IA remplit EXACTEMENT la
+// structure du gabarit (mêmes sections/libellés/colonnes) avec les valeurs lues sur les photos.
+async function extractIntoTemplate(images, tplBlocks){
+  const langName = LANG==="en"?"English":"français";
+  const schema = (tplBlocks||[]).map(b=>{
+    if(b.type==="section") return { type:"section", title:b.title||"", fields:(b.fields||[]).map(f=>({label:f.label||""})) };
+    if(b.type==="table") return { type:"table", title:b.title||"", columns:(b.columns||[]).slice() };
+    return { type:"text", title:b.title||"" };
+  });
+  const prompt = `On te fournit une ou plusieurs PHOTOS d'un relevé de terrain (souvent manuscrit) ET un GABARIT cible. Remplis EXACTEMENT la structure du gabarit avec les valeurs lues sur les photos, pour STANDARDISER le rapport.
+GABARIT (structure à remplir — NE CHANGE PAS les titres, libellés de champ ni colonnes de tableau) :
+${JSON.stringify(schema)}
+Retourne UNIQUEMENT un objet JSON valide, MÊME structure que le gabarit, avec les valeurs :
+{"title":"","client":"","location":"","projectNo":"","blocks":[
+  {"type":"section","title":"<identique au gabarit>","fields":[{"label":"<identique>","value":"<valeur lue>","uncertain":true|false}]},
+  {"type":"table","title":"<identique>","columns":["<identiques>"],"rows":[["<valeurs>"]],"uncertainCells":[[ri,ci]]},
+  {"type":"text","title":"<identique>","value":"<texte>"}
+]}
+RÈGLES : conserve EXACTEMENT les mêmes sections, libellés et colonnes que le gabarit (même ordre). Mets la valeur lue pour chaque champ/cellule ; absente -> '' ; lecture incertaine -> "uncertain":true. N'invente rien. Langue : ${langName}.`;
+  const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
+  content.push({ type:"text", text:prompt });
+  const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ max_tokens:8192, messages:[{ role:"user", content }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const parsed=JSON.parse(m?m[0]:clean);
+  parsed.__truncated = data.stop_reason==="max_tokens";
+  return parsed;
+}
+
 // Normalise les blocs extraits vers le format interne (avec ids)
 function normalizeBlocks(blocks){
   if(!Array.isArray(blocks)) return [];
@@ -666,6 +699,7 @@ export default function App(){
   const [importing,setImporting]=useState(false);
   const [importErr,setImportErr]=useState(null);
   const [importPreview,setImportPreview]=useState(null);
+  const [photoCap,setPhotoCap]=useState(null); // capture caméra multi-photos : null=fermé, {photos:[],tplId:""}=ouvert
   const [customTpls,setCustomTpls]=useState([]);
   const [hiddenTpls,setHiddenTpls]=useState([]);
   const [theme,setTheme]=useState({...DEFAULT_THEME});
@@ -826,6 +860,34 @@ export default function App(){
     setImporting(false);
   }
 
+  // Caméra MULTI-PHOTOS : on prend plusieurs photos à la suite, puis on génère le rapport.
+  function addCapPhotos(files){ (async()=>{ const next=[...(photoCap?.photos||[])]; for(const f of files){ try{ const d=await compressImage(f,1500,0.72); next.push({ id:bid(), data:d }); }catch{} } setPhotoCap(p=>({ ...(p||{tplId:""}), photos:next })); })(); }
+  async function handleMultiPhoto(){
+    const photos=photoCap?.photos||[]; if(!photos.length) return;
+    setImporting(true); setImportErr(null);
+    try{
+      const images=photos.map(p=>({ base64:p.data.split(",")[1], mediaType:(p.data.match(/^data:(.*?);/)||[])[1]||"image/jpeg" }));
+      const tplId=photoCap?.tplId||"";
+      let out;
+      if(tplId){
+        // Reconnaissance DANS un gabarit existant (standardisation)
+        const tBlocks = customTpls.find(c=>c.id===tplId)?.blocks || tplBlocks(tplId);
+        out=await extractIntoTemplate(images, tBlocks);
+        out.suggestedTemplate=tplId;
+      } else {
+        out=await extractMultiPhotoWithApi(images);
+      }
+      const blocks=normalizeBlocks(out.blocks);
+      setPhotoCap(null);
+      setImportPreview({
+        title:out.title||"", client:out.client||"", location:out.location||"", projectNo:out.projectNo||"",
+        template: tplId || (["inspection","testing","quote","generic"].includes(out.suggestedTemplate)?out.suggestedTemplate:"generic"),
+        blocks, truncated:!!out.__truncated, sourceText:"", handwriting:true,
+      });
+    }catch(e){ setImportErr(e.message); }
+    setImporting(false);
+  }
+
   const filtered = db.filter(r=>{
     if(statusFilter!=="all" && r.status!==statusFilter) return false;
     if(!query.trim()) return true;
@@ -861,6 +923,40 @@ export default function App(){
 
       {importPreview && <ImportReview ip={importPreview} setIp={setImportPreview} onApply={applyImport} onCancel={()=>{ setImportPreview(null); setImporting(false); setImportErr(null); }}/>}
 
+      {/* Caméra multi-photos -> rapport (avec format de gabarit optionnel pour standardiser) */}
+      {photoCap!==null && (
+        <div style={S.overlay} onClick={()=>{ if(!importing) setPhotoCap(null); }}>
+          <div style={{...S.modal,maxWidth:600,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <h2 style={S.h2}>📷 {LANG==="en"?"Photos → report":"Photos → rapport"}</h2>
+            <p style={{...S.hint,marginTop:0}}>{LANG==="en"?"Take several photos in a row, then generate the report.":"Prenez plusieurs photos à la suite, puis générez le rapport."}</p>
+            <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
+              📷 {LANG==="en"?"Add photos":"Ajouter des photos"}
+              <input type="file" accept="image/*" capture="environment" multiple style={{display:"none"}} onChange={e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(fs.length) addCapPhotos(fs); }}/>
+            </label>
+            {(photoCap.photos||[]).length>0 && (
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:8,margin:"12px 0"}}>
+                {photoCap.photos.map(p=>(
+                  <div key={p.id} style={{position:"relative"}}>
+                    <img src={p.data} alt="" style={{width:"100%",height:84,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+                    <button onClick={()=>setPhotoCap(pc=>({...pc,photos:pc.photos.filter(x=>x.id!==p.id)}))} style={{position:"absolute",top:2,right:2,width:20,height:20,borderRadius:"50%",border:"none",background:"rgba(157,2,8,.9)",color:"#fff",cursor:"pointer",fontSize:12,lineHeight:1}}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label style={S.label}>{LANG==="en"?"Output format (standardization)":"Format de sortie (standardisation)"}</label>
+            <select style={S.input} value={photoCap.tplId} onChange={e=>setPhotoCap(pc=>({...pc,tplId:e.target.value}))}>
+              <option value="">{LANG==="en"?"Auto-detect structure":"Auto-détecter la structure"}</option>
+              {visTpls().map(tp=>(<option key={tp.id} value={tp.id}>{t(tp.key)}</option>))}
+              {(customTpls||[]).map(c=>(<option key={c.id} value={c.id}>★ {c.name}</option>))}
+            </select>
+            <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+              <button style={S.btnPrimary} disabled={importing||!(photoCap.photos||[]).length} onClick={handleMultiPhoto}>{importing?"…":(LANG==="en"?`Generate report (${(photoCap.photos||[]).length})`:`Générer le rapport (${(photoCap.photos||[]).length})`)}</button>
+              <button style={S.btnGhost} onClick={()=>{ if(!importing) setPhotoCap(null); }}>{t("cancel")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {view==="list" && (
         <>
           <div style={S.tabRow} className="screen-only">
@@ -869,7 +965,7 @@ export default function App(){
           </div>
           {tab==="reports" ? (
             <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={handleHandwriting} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
+              onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={handleHandwriting} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
           ) : (
             <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
           )}
@@ -891,7 +987,7 @@ const TREE_LEVELS = [
   { id:"location", key:"lvlLocation", get:(r)=> (r.location||"").trim() || t("noLocation") },
 ];
 
-function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onNew, onImport, onHandwriting, customTpls, onDelete, onDuplicate }){
+function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onNew, onImport, onHandwriting, onPhotos, customTpls, onDelete, onDuplicate }){
   const [showTpl,setShowTpl]=useState(false);
   const [rView,setRView]=useState("gallery"); // galerie (cartes) | grille (lignes compactes)
   const [order,setOrder]=useState(["client","job","location"]); // ordre des niveaux
@@ -966,6 +1062,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
             {t("handwriting")}
             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onHandwriting(f); e.target.value=""; }}/>
           </label>
+          <button style={{...S.btnDark,background:"#0e7490",cursor:"pointer"}} onClick={onPhotos}>📷 {LANG==="en"?"Photos":"Photos"}</button>
           <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
         </div>
         {/* Carte « Tous les rapports + Classement » — alignée avec les actions */}
