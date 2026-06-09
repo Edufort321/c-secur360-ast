@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Sécurité : ne pas exposer la techno (X-Powered-By) ni le code source en prod.
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false, // pas de source maps client en production (code non exposé)
   // Retire les console.* (sauf error/warn) des bundles de PRODUCTION uniquement.
   // Nettoie le bruit (ex. logs verbeux du Gantt du planificateur) sans toucher au dev.
   compiler: {
