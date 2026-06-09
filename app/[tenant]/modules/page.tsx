@@ -45,6 +45,18 @@ export default function ModulesPage() {
   const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0 });
   const [inspStats, setInspStats] = useState({ total: 0, nonConf: 0 });
   const [tsStats, setTsStats] = useState({ total: 0, pending: 0 });
+  // Rapports terrain : données en localStorage (rpt_reports_v1) — comptées côté client.
+  const [rapStats, setRapStats] = useState({ total: 0, in_progress: 0, review: 0, approved: 0, sent: 0 });
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('rpt_reports_v1') : null;
+      const list: any[] = raw ? JSON.parse(raw) : [];
+      const norm = (s: string) => (s === 'draft' ? 'in_progress' : s === 'final' ? 'approved' : s);
+      const c = { total: list.length, in_progress: 0, review: 0, approved: 0, sent: 0 } as any;
+      list.forEach(r => { const s = norm(r?.status || 'in_progress'); if (c[s] != null) c[s]++; });
+      setRapStats(c);
+    } catch { /* pas de données */ }
+  }, [tenant]);
 
   // Modules activés : tenant hardcodé (cerdia) → liste fixe, sinon Supabase tenant_modules, sinon tout.
   const entitlements = useEntitlements(tenant);
@@ -170,6 +182,7 @@ export default function ModulesPage() {
   if (has('logbook')) cards.push({ key: 'logbook', title: tr('Logbook véhicules', 'Vehicle logbook'), href: `/${tenant}/logbook`, big: `${Math.round(logbookStats.kmWeek).toLocaleString('fr-CA')} km`, sub: `${logbookStats.vehicles} ${tr('véhicules actifs', 'active vehicles')} · ${Math.round(logbookStats.kmYear).toLocaleString('fr-CA')} km ${tr('cette année', 'this year')}`, available: true });
   if (has('todo')) cards.push({ key: 'todo', title: 'To-Do', href: `/${tenant}/todo`, big: String(todoStats.total), sub: `${todoStats.todo} ${tr('à faire', 'to do')} · ${todoStats.in_progress} ${tr('en cours', 'wip')} · ${todoStats.done} ${tr('terminé', 'done')}`, available: true });
   if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}${dgaStats.inspDue ? ` · ${dgaStats.inspDue} ${tr('insp. dues', 'insp. due')}` : ''}`, available: true });
+  if (has('rapports')) cards.push({ key: 'rapports', title: tr('Rapports terrain', 'Field reports'), href: `/${tenant}/rapports`, big: String(rapStats.total), sub: `${rapStats.in_progress} ${tr('en cours', 'wip')} · ${rapStats.review} ${tr('révision', 'review')} · ${rapStats.approved} ${tr('approuvé', 'appr.')} · ${rapStats.sent} ${tr('envoyé', 'sent')}`, available: true });
 
   const iconFor = (k: string) => (MODULES.find(m => m.key === k || (k === 'events' && m.key === 'accidents'))?.icon) || LayoutGrid;
 
