@@ -544,6 +544,17 @@ Rapport : ${JSON.stringify(payload)}`;
   };
 }
 
+// Convertit une URL d'image (ex. logo tenant distant) en data URL base64, pour qu'elle
+// s'embarque dans le rapport et s'IMPRIME de façon fiable (sinon non chargée à temps au print).
+async function urlToDataUrl(url){
+  try{
+    const r=await fetch(url,{ mode:"cors", credentials:"omit" });
+    if(!r.ok) return null;
+    const blob=await r.blob();
+    return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=()=>res(null); fr.readAsDataURL(blob); });
+  }catch{ return null; }
+}
+
 function compressImage(file, maxDim=1200, quality=0.7){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
@@ -726,7 +737,7 @@ export default function App(){
           const {data:cs}=await supabase.from("company_settings").select("logo_url").eq("tenant_id",tn).maybeSingle();
           url=cs?.logo_url||null;
           if(!url){ const {data:tnt}=await supabase.from("tenants").select("logo_url").eq("id",tn).maybeSingle(); url=tnt?.logo_url||null; }
-          if(url) setLogo(url);
+          if(url){ const dataUrl=await urlToDataUrl(url); setLogo(dataUrl||url); }
         }
       }catch{}
     }
