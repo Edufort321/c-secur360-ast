@@ -393,6 +393,31 @@ Objectif : quelqu'un qui lit les blocs doit avoir EXACTEMENT le même contenu qu
   return parsed;
 }
 
+// RAPPORT VOCAL : structure une NARRATION LIBRE (dictée/texte) en blocs de rapport.
+async function extractFromFreeText(text){
+  const langName = LANG==="en"?"English":"français";
+  const prompt = `Un technicien DÉCRIT librement (à l'oral, transcrit) ce qu'il a constaté sur le terrain. Restructure ce texte en rapport technique clair.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{"blocks":[
+  {"type":"section","title":"titre de section","fields":[{"label":"libellé","value":"valeur"}]},
+  {"type":"inspect","title":"titre","items":[{"label":"point","state":"good|anomaly|na","note":"","severity":"minor|major|critical"}]},
+  {"type":"text","value":"paragraphe de texte"}
+]}
+RÈGLES : regroupe par thème en sections claires ; transforme les constats d'état/défauts en grille d'inspection (state="anomaly" pour un problème, avec severity) ; garde un bloc "text" pour les explications libres ; n'invente RIEN qui n'est pas dit ; langue : ${langName}.
+NARRATION :
+"""${(text||"").slice(0,8000)}"""`;
+  const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ max_tokens:6144, messages:[{ role:"user", content:[{ type:"text", text:prompt }] }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const parsed=repairJsonParse(m?m[0]:clean);
+  parsed.__truncated = data.stop_reason==="max_tokens";
+  return parsed;
+}
+
 // Extraction d'un brouillon MANUSCRIT depuis une image (jpg/png)
 async function extractHandwritingWithApi(key, base64Image, mediaType){
   const langName = LANG==="en"?"English":"français";
@@ -660,6 +685,35 @@ function compressImage(file, maxDim=1200, quality=0.7){
     }; img.onerror=reject; img.src=reader.result; };
     reader.onerror=reject; reader.readAsDataURL(file);
   });
+}
+
+// Ré-encode une data URL image à une taille max + qualité données (pour réduire le poids réseau).
+function shrinkDataUrl(dataUrl, maxDim, q){
+  return new Promise((resolve)=>{
+    try{ const img=new Image(); img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>maxDim||h>maxDim){ const rr=Math.min(maxDim/w,maxDim/h); w=Math.round(w*rr); h=Math.round(h*rr); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h); resolve(c.toDataURL("image/jpeg",q));
+    }; img.onerror=()=>resolve(dataUrl); img.src=dataUrl; }catch{ resolve(dataUrl); }
+  });
+}
+// Plafonne le POIDS TOTAL des images envoyées à l'IA (limite Vercel ~4,5 Mo) : on réduit
+// progressivement dimensions/qualité jusqu'à passer sous ~3,6 Mo de base64.
+async function fitImagesForAi(dataUrls){
+  const LIMIT=3_600_000; let dims=1200, q=0.6, arr=dataUrls||[];
+  for(let attempt=0;attempt<6;attempt++){
+    const shrunk=await Promise.all(arr.map(d=>shrinkDataUrl(d,dims,q)));
+    const total=shrunk.reduce((s,d)=>s+(d?d.length:0),0);
+    if(total<LIMIT || (dims<=640 && q<=0.38)) return shrunk;
+    dims=Math.round(dims*0.78); q=Math.max(0.38,q-0.08);
+  }
+  return await Promise.all(arr.map(d=>shrinkDataUrl(d,640,0.4)));
+}
+// Construit le tableau {base64,mediaType} attendu par l'IA à partir de data URLs, sous la limite.
+async function aiImagesFrom(dataUrls){
+  const fitted=await fitImagesForAi(dataUrls);
+  return fitted.map(d=>({ base64:(d||"").split(",")[1]||"", mediaType:((d||"").match(/^data:(.*?);/)||[])[1]||"image/jpeg" }));
 }
 
 // Convertit chaque page d'un PDF en image (pleine page) via PDF.js
@@ -947,7 +1001,13 @@ export default function App(){
         setImportErr(null);
       } else {
         const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
-        out=await extractDocWithApi(key,b64);
+        // PDF trop lourd pour l'envoi binaire (limite Vercel ~4,5 Mo) -> extraction par TEXTE (lots).
+        if(b64.length>4_000_000){
+          out=await extractLargePdf(key, file, (from,to,total)=>{ setImportErr(`${t("importBatch")} ${from}-${to} / ${total}…`); });
+          setImportErr(null);
+        } else {
+          out=await extractDocWithApi(key,b64);
+        }
       }
       // Joindre une copie visuelle fidèle de chaque page (photos, schémas, mise en page d'origine)
       let pageImages=[];
@@ -991,7 +1051,12 @@ export default function App(){
         setImportErr(null);
       } else {
         const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
-        out=await extractDocWithApi(key,b64);
+        if(b64.length>4_000_000){
+          out=await extractLargePdf(key, file, (from,to,total)=>{ setImportErr(`${t("importBatch")} ${from}-${to} / ${total}…`); });
+          setImportErr(null);
+        } else {
+          out=await extractDocWithApi(key,b64);
+        }
       }
       const blocks=emptyBlockValues(normalizeBlocks(out.blocks));
       const name=(out.title||file.name||"Gabarit").replace(/\.pdf$/i,"");
@@ -1009,16 +1074,15 @@ export default function App(){
     setImporting(true); setImportErr(null);
     try{
       const dataUrl=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result)); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
-      const b64=dataUrl.split(",")[1];
-      const mt=(file.type||"image/jpeg");
+      const imgs=await aiImagesFrom([dataUrl]); // compressé sous la limite Vercel (anti-413)
       let out;
       if(tplId){
         // Associé à un gabarit -> on remplit EXACTEMENT sa structure (standardisation)
         const tBlocks = customTpls.find(c=>c.id===tplId)?.blocks || tplBlocks(tplId);
-        out=await extractIntoTemplate([{base64:b64,mediaType:mt}], tBlocks);
+        out=await extractIntoTemplate(imgs, tBlocks);
         out.suggestedTemplate=tplId;
       } else {
-        out=await extractHandwritingWithApi("server",b64,mt);
+        out=await extractHandwritingWithApi("server", imgs[0].base64, imgs[0].mediaType);
       }
       const blocks=normalizeBlocks(out.blocks);
       setImportPreview({
@@ -1036,7 +1100,7 @@ export default function App(){
     const photos=photoCap?.photos||[]; if(!photos.length) return;
     setImporting(true); setImportErr(null);
     try{
-      const images=photos.map(p=>({ base64:p.data.split(",")[1], mediaType:(p.data.match(/^data:(.*?);/)||[])[1]||"image/jpeg" }));
+      const images=await aiImagesFrom(photos.map(p=>p.data)); // plafonne le poids total (anti-413)
       const tplId=photoCap?.tplId||"";
       let out;
       if(tplId){
@@ -1630,6 +1694,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showAssemble,setShowAssemble]=useState(false); // assemblage mixte (fusion de pages manuscrites)
   const [assembleBusy,setAssembleBusy]=useState(false);
   const [assembleResult,setAssembleResult]=useState(null);
+  const [showVoice,setShowVoice]=useState(false);   // rapport vocal (dictée -> structure IA)
+  const [voiceBusy,setVoiceBusy]=useState(false);
+  const [voiceResult,setVoiceResult]=useState(null);
   const [insertAt,setInsertAt]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
@@ -1946,13 +2013,24 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     const arr=[...(files||[])]; if(!arr.length) return;
     setAssembleBusy(true); setAssembleResult(null);
     try{
-      const images=[];
-      for(const f of arr){ const d=await compressImage(f,1500,0.72); images.push({ base64:d.split(",")[1], mediaType:(d.match(/^data:(.*?);/)||[])[1]||"image/jpeg" }); }
+      const dataUrls=await Promise.all(arr.map(f=>compressImage(f,1600,0.8)));
+      const images=await aiImagesFrom(dataUrls); // plafonne le poids total (anti-413)
       const out=await extractMultiPhotoWithApi(images);
       const res=mergeHandwritten(out.blocks||[]);
       setAssembleResult({ ...res, truncated:out.__truncated });
     }catch(e){ setAssembleResult({ error:e.message }); }
     setAssembleBusy(false);
+  }
+  // Rapport vocal : structure la narration libre (dictée/texte) puis l'assemble dans le rapport.
+  async function doVoice(text){
+    if(!String(text||"").trim()) return;
+    setVoiceBusy(true); setVoiceResult(null);
+    try{
+      const out=await extractFromFreeText(text);
+      const res=mergeHandwritten(out.blocks||[]);
+      setVoiceResult({ ...res, truncated:out.__truncated });
+    }catch(e){ setVoiceResult({ error:e.message }); }
+    setVoiceBusy(false);
   }
 
   return (
@@ -1980,6 +2058,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"qr", label:`🔳 ${LANG==="en"?"QR / page":"QR / page"}`, on:()=>setShowQr(true), title:LANG==="en"?"Page QR code — scan to open & edit this report":"QR code de page — scanner pour ouvrir et éditer ce rapport" },
             { key:"share", label:`📤 ${LANG==="en"?"Share":"Partager"}`, on:()=>setShowShare(true), title:LANG==="en"?"Share a read/review link with a verifier":"Partager un lien lecture/révision à un vérificateur" },
             { key:"assemble", label:`🤝 ${LANG==="en"?"Merge handwritten":"Assembler manuscrit"}`, on:()=>{ setAssembleResult(null); setShowAssemble(true); }, title:LANG==="en"?"Scan handwritten pages — the AI places them at the right spot in this report":"Scanner des pages manuscrites — l'IA les replace au bon endroit dans ce rapport" },
+            { key:"voice", label:`🎤 ${LANG==="en"?"Voice report":"Rapport vocal"}`, on:()=>{ setVoiceResult(null); setShowVoice(true); }, title:LANG==="en"?"Dictate freely — the AI structures it into the report":"Dictez librement — l'IA structure le tout dans le rapport" },
             { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
             priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
@@ -2177,6 +2256,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* ASSEMBLAGE MIXTE : fusion de pages manuscrites au bon endroit */}
       {showAssemble && <AssembleModal busy={assembleBusy} result={assembleResult} onFiles={doAssemble} onClose={()=>{ setShowAssemble(false); setAssembleResult(null); }}/>}
+
+      {/* RAPPORT VOCAL : dictée libre -> structuration IA -> assemblage */}
+      {showVoice && <VoiceModal busy={voiceBusy} result={voiceResult} onStructure={doVoice} onClose={()=>{ setShowVoice(false); setVoiceResult(null); }}/>}
 
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
@@ -2656,6 +2738,60 @@ function LinkPanel({ report, onSet, onClose }){
         </div>
         )}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Modale RAPPORT VOCAL : le technicien DICTE librement (Web Speech API si dispo, sinon clavier/micro
+// du téléphone), puis l'IA structure la narration en sections et l'assemble dans le rapport.
+function VoiceModal({ busy, result, onStructure, onClose }){
+  const [text,setText]=useState("");
+  const [listening,setListening]=useState(false);
+  const recRef=useRef(null);
+  const supported = typeof window!=="undefined" && (window.SpeechRecognition||window.webkitSpeechRecognition);
+  function toggleMic(){
+    if(listening){ try{ recRef.current && recRef.current.stop(); }catch{} setListening(false); return; }
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return;
+    const rec=new SR(); rec.lang=LANG==="en"?"en-CA":"fr-CA"; rec.continuous=true; rec.interimResults=true;
+    let finalAcc="";
+    rec.onresult=(e)=>{ let interim=""; for(let i=e.resultIndex;i<e.results.length;i++){ const tr=e.results[i][0].transcript; if(e.results[i].isFinal) finalAcc+=tr+" "; else interim+=tr; } setText(prev=>{ const base=prev.replace(/\s*\[…\][\s\S]*$/,""); return (base+(base&&!base.endsWith(" ")?" ":"")+finalAcc+(interim?(" […]"+interim):"")).replace(/\s*\[…\]\s*$/,""); }); };
+    rec.onend=()=>{ setListening(false); setText(prev=>prev.replace(/\s*\[…\][\s\S]*$/,"")); };
+    rec.onerror=()=>{ setListening(false); };
+    recRef.current=rec; try{ rec.start(); setListening(true); }catch{}
+  }
+  useEffect(()=>()=>{ try{ recRef.current && recRef.current.stop(); }catch{} },[]);
+  return (
+    <div style={S.overlay} onClick={()=>{ if(!busy){ try{recRef.current&&recRef.current.stop();}catch{} onClose(); } }}>
+      <div style={{...S.modal,maxWidth:560,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>🎤 {LANG==="en"?"Voice report":"Rapport vocal"}</h2>
+          {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
+        </div>
+        <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Describe freely what you observed. The AI will structure it into sections and merge it into the report.":"Décrivez librement ce que vous avez constaté. L'IA structurera le tout en sections et l'assemblera dans le rapport."}</p>
+        {!result && <>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+            {supported
+              ? <button style={{...S.btnDark,background:listening?"#9d0208":"#0e7490"}} onClick={toggleMic} disabled={busy}>{listening?"⏹ "+(LANG==="en"?"Stop":"Arrêter"):"🎤 "+(LANG==="en"?"Dictate":"Dicter")}</button>
+              : <span style={{fontSize:11,color:"#94a3b8"}}>{LANG==="en"?"Voice capture unavailable on this browser — type or use your phone keyboard mic.":"Dictée vocale indisponible sur ce navigateur — tapez ou utilisez le micro du clavier."}</span>}
+            {listening && <span style={{fontSize:12,color:"#9d0208",fontWeight:700}}>● {LANG==="en"?"listening…":"écoute…"}</span>}
+          </div>
+          <textarea style={{...S.input,minHeight:140,resize:"vertical",fontFamily:"'Spline Sans'"}} value={text} onChange={e=>setText(e.target.value)} placeholder={LANG==="en"?"e.g. North transformer, oil level normal, slight corrosion on bushing 2, recommend cleaning…":"ex. Transformateur nord, niveau d'huile normal, légère corrosion sur la traverse 2, recommander un nettoyage…"}/>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10}}>
+            <button style={S.btnGhost} onClick={onClose} disabled={busy}>{t("cancel")}</button>
+            <button style={S.btnPrimary} onClick={()=>{ try{recRef.current&&recRef.current.stop();}catch{} onStructure(text); }} disabled={busy||!text.trim()}>{busy?(LANG==="en"?"Structuring…":"Structuration…"):"✨ "+(LANG==="en"?"Structure & merge":"Structurer & assembler")}</button>
+          </div>
+        </>}
+        {result && result.error && <div style={{fontSize:13,color:"#9d0208",background:"#fdf0ee",border:"1px solid #e3a0a0",borderRadius:8,padding:"10px 12px"}}>{LANG==="en"?"Error":"Erreur"} : {result.error}</div>}
+        {result && !result.error && (
+          <div>
+            <div style={{fontSize:13,background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              ✓ {LANG==="en"?"Added":"Ajouté"} : <b>{result.mergedSections}</b> {LANG==="en"?"merged":"fusionnée(s)"}, <b>{result.addedBlocks}</b> {LANG==="en"?"new section(s)":"nouvelle(s) section(s)"}, <b>{result.filledFields}</b> {LANG==="en"?"value(s)":"valeur(s)"}.
+              {result.truncated && <div style={{color:"#b45309",marginTop:4,fontSize:12}}>⚠ {LANG==="en"?"AI answer truncated — check the result.":"Réponse IA tronquée — vérifiez le résultat."}</div>}
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end"}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+          </div>
+        )}
       </div>
     </div>
   );
