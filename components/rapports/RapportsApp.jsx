@@ -754,19 +754,20 @@ export default function App(){
     THEME=th; setTheme(th);
     const migrated=d.map(r=>({...r, status:migrateStatus(r.status)}));
     setDb(migrated); setCustomTpls(ct);
-    // Logo : custom du tenant (localStorage) sinon logo du TENANT (comme le reste de l'app).
-    if(l){ setLogo(l); }
-    else {
+    // Logo : TOUJOURS celui du TENANT (comme les autres modules), sinon le logo C-Secur360 par
+    // défaut (comme DGA). Pas de logo propre au module. Converti en data URL pour qu'il s'imprime.
+    {
+      let url=null;
       try{
         const tn=(window.location.pathname.split("/")[1])||"";
         if(tn){
-          let url=null;
           const {data:cs}=await supabase.from("company_settings").select("logo_url").eq("tenant_id",tn).maybeSingle();
           url=cs?.logo_url||null;
           if(!url){ const {data:tnt}=await supabase.from("tenants").select("logo_url").eq("id",tn).maybeSingle(); url=tnt?.logo_url||null; }
-          if(url){ const dataUrl=await urlToDataUrl(url); setLogo(dataUrl||url); }
         }
       }catch{}
+      if(!url) url="/c-secur360-logo.png"; // repli défaut C-Secur360 (comme DGA)
+      try{ const dataUrl=await urlToDataUrl(url); setLogo(dataUrl||url); }catch{ setLogo(url); }
     }
     setLoaded(true);
   })(); },[]);
@@ -1460,11 +1461,11 @@ function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:520,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <h2 style={S.h2}>⚙ {t("settings")}</h2>
-        <div style={S.label}>Logo</div>
+        {/* Le logo vient automatiquement du TENANT (ou C-Secur360 par défaut), comme les autres
+            modules : aucun réglage de logo propre au module ici. */}
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
           {logo && <img src={logo} alt="" style={{maxHeight:40,maxWidth:120,objectFit:"contain"}}/>}
-          <label style={{...S.btnGhost,cursor:"pointer"}}>{logo?"Changer":"Ajouter"}<input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files?.[0]; if(f){ const d=await compressImage(f,400,0.8); onLogo(d); } e.target.value=""; }}/></label>
-          {logo && <button style={S.miniBtnDel} onClick={()=>onLogo(null)}>{t("del")}</button>}
+          <span style={{fontSize:12,color:"#64748b"}}>{LANG==="en"?"Logo from your organization (automatic)":"Logo de votre organisation (automatique)"}</span>
         </div>
 
         {/* THÈME DE COULEURS */}
