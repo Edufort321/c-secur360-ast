@@ -128,16 +128,14 @@ export default function AccidentsPage() {
   const [resetConfirm, setResetConfirm] = useState<'accident' | 'near_miss' | null>(null);
 
   const load = useCallback(async () => {
-    if (!supabase) { setLoading(false); return; }
     setLoading(true);
-
-    const [{ data: rows }, { data: cnt }] = await Promise.all([
-      supabase.from('incident_reports').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }),
-      supabase.from('incident_day_counters').select('*').eq('tenant_id', tenant).single(),
-    ]);
-
-    setReports((rows as IncidentRow[]) ?? []);
-    setCounter(cnt as DayCounter | null);
+    // Lecture via route SERVEUR (tables fermées à l'anon) — scopée au tenant de session.
+    try {
+      const res = await fetch('/api/incidents/data', { credentials: 'include' });
+      const j: any = res.ok ? await res.json() : {};
+      setReports((j.reports as IncidentRow[]) ?? []);
+      setCounter((j.counter as DayCounter | null) ?? null);
+    } catch { setReports([]); setCounter(null); }
     setLoading(false);
   }, [tenant]);
 
@@ -146,29 +144,13 @@ export default function AccidentsPage() {
   useRealtime(['incident_reports'], tenant, load);
 
   async function handleReset(type: 'accident' | 'near_miss') {
-    if (!supabase) return;
-    const today = new Date().toISOString().split('T')[0];
-    const field = type === 'near_miss' ? 'last_near_miss_date' : 'last_accident_date';
-    const recordField = type === 'near_miss' ? 'near_miss_record_days' : 'accident_record_days';
-
-    if (counter) {
-      const lastDate: string | null = counter[field];
-      const prevRecord: number = counter[recordField] ?? 0;
-      const daysSince = lastDate ? Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000) : 0;
-      await supabase!.from('incident_day_counters').update({
-        [field]: today,
-        [recordField]: Math.max(prevRecord, daysSince),
-        updated_at: new Date().toISOString(),
-      }).eq('tenant_id', tenant);
-    } else {
-      await supabase!.from('incident_day_counters').insert({
-        tenant_id: tenant,
-        [field]: today,
-        [recordField]: 0,
-        updated_at: new Date().toISOString(),
+    // Remise à zéro du compteur via la route SERVEUR (logique read-modify-write côté serveur).
+    try {
+      await fetch('/api/incidents/data', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'reset', incidentType: type }),
       });
-    }
-
+    } catch { /* ignore */ }
     setResetConfirm(null);
     load();
   }
