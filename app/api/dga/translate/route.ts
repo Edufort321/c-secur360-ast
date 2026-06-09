@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard } from '@/lib/aiGuard';
 
 // #DGA — Traduction du commentaire/recommandation expert (FR <-> EN), pour le mode
 // « traduction auto selon la langue du header ». Proxy serveur (clé non exposée).
@@ -8,6 +9,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 

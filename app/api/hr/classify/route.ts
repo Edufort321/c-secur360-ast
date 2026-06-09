@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 
 // RH — Classement automatique d'un document déposé (assistance IA). Détermine le TYPE,
 // une CATÉGORIE, le NOM de la personne concernée (extrait du document, le cas échéant),
@@ -21,6 +22,7 @@ Lis le document et réponds UNIQUEMENT en JSON valide (sans texte autour, sans b
 Règles : déduis le type et la catégorie du contenu. Pour une certification/carte de compétence, capte la date d'expiration. Ne devine pas un nom : si aucune personne précise n'est visée, personName=null et isGeneral=true.`;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configurée (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
     catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   }
   if (!b64) return NextResponse.json({ error: 'Fichier requis' }, { status: 400 });
+  if (guard.user?.tenant_id) tenant = guard.user.tenant_id; // budget scopé au tenant de session
 
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 512,
-        messages: [{ role: 'user', content: [docBlock, { type: 'text', text: PROMPT }] }],
+        messages: [{ role: 'user', content: [docBlock, { type: 'text', text: PROMPT + '\n' + ANTI_INJECTION }] }],
       }),
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }

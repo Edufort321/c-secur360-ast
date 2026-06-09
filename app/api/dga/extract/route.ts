@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 
 // #DGA — Extraction IA d'un rapport PDF de labo (DGA + qualité huile) vers JSON structuré.
 // Proxy SERVEUR de l'appel Anthropic : la clé (ANTHROPIC_API_KEY) reste côté serveur — jamais
@@ -26,9 +27,11 @@ Regles :
 - CHANGEUR DE PRISES EN CHARGE (OLTC) : un meme rapport peut contenir l'huile de la CUVE PRINCIPALE et celle du COMPARTIMENT DU CHANGEUR DE PRISES (souvent un n° de serie/equipement distinct). Mets isOltc=true si l'echantillon/equipement designe un changeur de prises (synonymes: changeur de prises, prise sous charge, OLTC, LTC, tap changer, selecteur, diverter, regleur en charge, commutateur de prises). Sinon isOltc=false. L'OLTC reste un transformer distinct dans "transformers".
 - parentSerial : si le rapport relie le changeur a son transformateur (n° de serie/equipement du transformateur parent), mets-le ; sinon null.
 - oilType : capte le type d'huile tel qu'ecrit (mineral, mineral inhibe, silicone, ester naturel/vegetal (FR3), ester synthetique (MIDEL), askarel/BPC, etc.) ; sinon null.
-Retourne le JSON et rien d'autre.`;
+Retourne le JSON et rien d'autre.
+${ANTI_INJECTION}`;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
@@ -50,6 +53,7 @@ export async function POST(req: NextRequest) {
     tenant = String(body.tenant || '').trim();
   }
   if (!pdfBase64) return NextResponse.json({ error: 'pdfBase64 requis' }, { status: 400 });
+  if (guard.user?.tenant_id) tenant = guard.user.tenant_id; // budget scopé au tenant de session
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   try {

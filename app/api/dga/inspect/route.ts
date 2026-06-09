@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard } from '@/lib/aiGuard';
 
 // #DGA — Aide technique IA pour l'inspection de routine d'un transformateur à l'huile.
 // À partir des points en ANOMALIE relevés, propose des correctifs concrets (cause probable +
@@ -14,6 +15,7 @@ Réponds en JSON STRICT, sans texte autour : {"summaryFr": "...", "summaryEn": "
 summaryFr/En = 1-3 phrases de synthèse. actionsFr/En = liste de correctifs (1 par anomalie ou regroupés).`;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest) {
   const dossier = body.dossier || {};
   const anomalies = Array.isArray(body.anomalies) ? body.anomalies : [];
   if (!anomalies.length) return NextResponse.json({ error: 'Aucune anomalie à analyser' }, { status: 400 });
-  const tenant = String(body.tenant || dossier.tenant_id || '').trim();
+  const tenant = String((guard.user?.tenant_id) || body.tenant || dossier.tenant_id || '').trim();
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   const userMsg = `Équipement : ${JSON.stringify({ ident: dossier.ident, kv: dossier.kv, mva: dossier.mva, oil_type: dossier.oil_type, manufacturer: dossier.manufacturer, year: dossier.year })}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard } from '@/lib/aiGuard';
 
 // #Inventaire — Assistant Prix IA : recherche WEB du prix coutant a jour des articles.
 // Proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote serveur). Utilise l'outil
@@ -11,13 +12,14 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const items: any[] = Array.isArray(body.items) ? body.items : [];
-  const tenant = String(body.tenant || '').trim();
+  const tenant = String((guard.user?.tenant_id) || body.tenant || '').trim();
   if (!items.length) return NextResponse.json({ error: 'Aucun article a rechercher.' }, { status: 400 });
   if (items.length > 20) return NextResponse.json({ error: `Trop d'articles (${items.length}). Maximum 20 par recherche.` }, { status: 400 });
 

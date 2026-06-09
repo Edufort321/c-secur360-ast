@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard } from '@/lib/aiGuard';
 
 // #Inventaire — Import IA d'articles depuis une feuille Excel STRICTE (gabarit impose).
 // Calque sur /api/dga/extract : proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote
@@ -51,13 +52,14 @@ Regles d'extraction (quand conforme) :
 Retourne UNIQUEMENT le JSON, sans texte autour ni backticks.`;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const rows: any[] = Array.isArray(body.rows) ? body.rows : [];
-  const tenant = String(body.tenant || '').trim();
+  const tenant = String((guard.user?.tenant_id) || body.tenant || '').trim();
   if (!rows.length) return NextResponse.json({ error: 'Aucune ligne a importer (feuille vide).' }, { status: 400 });
   if (rows.length > 600) return NextResponse.json({ error: `Lot trop grand (${rows.length} lignes). Maximum 600 par requete — decoupez en lots plus petits.` }, { status: 400 });
   // Forfait IA : bloque si le budget du tenant est epuise (sauf "illimite" = pas de forfait).

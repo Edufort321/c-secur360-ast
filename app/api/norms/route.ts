@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { scopeForModule } from '@/lib/norms/registry';
+import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 
 // Assistant « Normes à jour » — fournit, selon le module en cours, les normes/standards et la
 // LÉGISLATION applicable, TOUJOURS à jour, via l'outil serveur web_search (Anthropic exécute les
@@ -12,12 +13,13 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configurée (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
-  const tenant = String(body.tenant || '').trim();
+  const tenant = String((guard.user?.tenant_id) || body.tenant || '').trim();
   const province = String(body.province || 'QC').trim().toUpperCase();
   const userQuery = String(body.query || '').slice(0, 300).trim();
   const { key, scope } = scopeForModule(body.module);
@@ -46,7 +48,7 @@ Donne 4 à 8 items pertinents, du plus important au moins important.`;
     model: 'claude-sonnet-4-6',
     max_tokens: 2500,
     tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content: prompt + '\n' + ANTI_INJECTION }],
   };
 
   try {

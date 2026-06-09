@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
+import { aiGuard } from '@/lib/aiGuard';
 
 // #DGA — Analyseur IA expert. Connaissances normatives intégrées (IEEE C57.104, IEC 60599, Duval,
 // Rogers, Doernenburg, qualité d'huile, furannes/DP, tendances). Proxy serveur (clé non exposée).
@@ -69,6 +70,7 @@ Donne une analyse claire, priorisée, actionnable. Réponds en JSON STRICT, sans
  "recheckJustification": "1 phrase justifiant les intervalles selon les normes et la tendance"}`;
 
 export async function POST(req: NextRequest) {
+  const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
@@ -77,7 +79,8 @@ export async function POST(req: NextRequest) {
   const dossier = body.dossier || {};
   const measures = Array.isArray(body.measures) ? body.measures : [];
   if (!measures.length) return NextResponse.json({ error: 'Aucune mesure a analyser' }, { status: 400 });
-  const tenant = String(body.tenant || dossier.tenant_id || '').trim();
+  // Budget IA scopé au tenant de la SESSION (empêche de drainer le forfait d'un autre tenant).
+  const tenant = String((guard.user?.tenant_id) || body.tenant || dossier.tenant_id || '').trim();
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   const isOltc = !!(dossier.extra?.is_oltc);
