@@ -198,7 +198,13 @@ const DB_KEY = "rpt_reports_v1";
 const LOGO_KEY = "rpt_logo_v1";
 const LANG_KEY = "rpt_lang_v1";
 const TPL_KEY = "rpt_templates_v1";
+const HIDDEN_TPL_KEY = "rpt_hidden_tpls_v1";
 const THEME_KEY = "rpt_theme_v1";
+// Gabarits PAR DÉFAUT masqués par le tenant (s'il ne les veut pas). Filtrés partout via visTpls().
+let HIDDEN_TPLS = [];
+function visTpls(){ return TEMPLATES.filter(t=>!HIDDEN_TPLS.includes(t.id)); }
+async function loadHidden(){ try{ const r=await window.storage.get(HIDDEN_TPL_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
+async function saveHidden(list){ try{ await window.storage.set(HIDDEN_TPL_KEY, JSON.stringify(list)); }catch{} }
 const DEFAULT_THEME = {
   secBar:  "#1e293b",  // bandeaux de section
   tableHd: "#34495e",  // en-têtes de tableau
@@ -627,16 +633,30 @@ export default function App(){
   const [importErr,setImportErr]=useState(null);
   const [importPreview,setImportPreview]=useState(null);
   const [customTpls,setCustomTpls]=useState([]);
+  const [hiddenTpls,setHiddenTpls]=useState([]);
   const [theme,setTheme]=useState({...DEFAULT_THEME});
 
+  function hideDefaultTpl(id){ const next=[...new Set([...hiddenTpls,id])]; HIDDEN_TPLS=next; setHiddenTpls(next); saveHidden(next); }
+  function restoreDefaultTpls(){ HIDDEN_TPLS=[]; setHiddenTpls([]); saveHidden([]); }
+
   useEffect(()=>{ (async()=>{
-    const [d,l,ct,th]=await Promise.all([loadDB(),loadLogo(),loadTemplates(),loadTheme()]);
-    let lg="fr"; try{ lg=localStorage.getItem(LANG_KEY)||"fr"; }catch{}
+    const [d,l,ct,th,hid]=await Promise.all([loadDB(),loadLogo(),loadTemplates(),loadTheme(),loadHidden()]);
+    HIDDEN_TPLS=hid||[]; setHiddenTpls(HIDDEN_TPLS);
+    // La langue suit le SITE (header principal) : on lit 'cs-lang' (repli rpt_lang_v1).
+    let lg="fr"; try{ lg=localStorage.getItem("cs-lang")||localStorage.getItem(LANG_KEY)||"fr"; }catch{}
     LANG=lg; setLang(lg);
     THEME=th; setTheme(th);
     const migrated=d.map(r=>({...r, status:migrateStatus(r.status)}));
     setDb(migrated); setLogo(l); setCustomTpls(ct); setLoaded(true);
   })(); },[]);
+
+  // Synchronise la langue avec le header principal du site (événement cs-lang-change + storage).
+  useEffect(()=>{
+    const apply=()=>{ try{ const lg=localStorage.getItem("cs-lang")||"fr"; LANG=lg; setLang(lg); }catch{} };
+    window.addEventListener("cs-lang-change",apply);
+    window.addEventListener("storage",apply);
+    return ()=>{ window.removeEventListener("cs-lang-change",apply); window.removeEventListener("storage",apply); };
+  },[]);
 
   function persist(next){ setDb(next); saveDB(next); }
   function persistTpls(next){ setCustomTpls(next); saveTemplates(next); }
@@ -779,10 +799,7 @@ export default function App(){
           </div>
         </div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
-          <button style={S.langBtn} onClick={toggleLang} title="FR / EN">
-            <span style={{...S.langOpt,...(lang==="fr"?S.langOptOn:{})}}>FR</span>
-            <span style={{...S.langOpt,...(lang==="en"?S.langOptOn:{})}}>EN</span>
-          </button>
+          {/* FR/EN retiré : la langue suit le header principal du site (cs-lang). */}
           <button style={S.gearBtn} onClick={()=>setShowSettings(true)} title={t("settings")}>⚙</button>
           {view!=="list" && <button style={S.btnGhost} onClick={()=>{setView("list");setSelId(null);}}>{t("backAll")}</button>}
         </div>
@@ -805,7 +822,7 @@ export default function App(){
             <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={handleHandwriting} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
           ) : (
-            <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)}/>
+            <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
           )}
         </>
       )}
@@ -905,7 +922,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
           <div style={{...S.modal,maxWidth:460}} onClick={e=>e.stopPropagation()}>
             <h2 style={S.h2}>{t("chooseTemplate")}</h2>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {TEMPLATES.map(tp=>(<button key={tp.id} style={S.tplCard} onClick={()=>{setShowTpl(false);onNew(tp.id);}}>{t(tp.key)}</button>))}
+              {visTpls().map(tp=>(<button key={tp.id} style={S.tplCard} onClick={()=>{setShowTpl(false);onNew(tp.id);}}>{t(tp.key)}</button>))}
               {(customTpls||[]).map(c=>(<button key={c.id} style={{...S.tplCard,borderColor:"#6b4e9d",color:"#6b4e9d"}} onClick={()=>{setShowTpl(false);onNew(c.id);}}>★ {c.name}</button>))}
             </div>
             <div style={{marginTop:14}}><button style={S.btnGhost} onClick={()=>setShowTpl(false)}>{t("cancel")}</button></div>
@@ -970,7 +987,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
 // ============================================================
 //  VUE GABARITS (modèles)
 // ============================================================
-function TemplatesView({ custom, onImportPdf, onDelete, onUse }){
+function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore, hiddenCount }){
   const [preview,setPreview]=useState(null); // {kind:'default'|'custom', id}
   function blocksOf(p){ return p.kind==="custom" ? (custom.find(c=>c.id===p.id)||{}).blocks||[] : tplBlocks(p.id); }
   function nameOf(p){ return p.kind==="custom" ? (custom.find(c=>c.id===p.id)||{}).name||"" : t((TEMPLATES.find(x=>x.id===p.id)||{}).key); }
@@ -1003,13 +1020,19 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse }){
         </div>
       )}
 
-      <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:8}}>{t("tplDefaults")}</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8,flexWrap:"wrap"}}>
+        <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569"}}>{t("tplDefaults")}</div>
+        {hiddenCount>0 && <button style={{...S.miniBtn}} onClick={onRestore}>↺ {LANG==="en"?`Restore defaults (${hiddenCount})`:`Restaurer les défauts (${hiddenCount})`}</button>}
+      </div>
       <div style={S.grid}>
-        {TEMPLATES.map(tp=>{
+        {visTpls().map(tp=>{
           const blocks=tplBlocks(tp.id);
           return (
             <div key={tp.id} style={S.card}>
-              <div style={S.cardTitle} onClick={()=>setPreview({kind:"default",id:tp.id})}>{t(tp.key)}</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={S.cardTitle} onClick={()=>setPreview({kind:"default",id:tp.id})}>{t(tp.key)}</div>
+                <button style={S.miniBtnDel} title={LANG==="en"?"Hide this template":"Masquer ce gabarit"} onClick={()=>{ if(confirm(LANG==="en"?"Hide this default template?":"Masquer ce gabarit par défaut ?")) onHide(tp.id); }}>{t("del")}</button>
+              </div>
               <div style={S.cardMeta}>{blocks.length} {LANG==="en"?"blocks":"blocs"}</div>
               <div style={{marginTop:8,fontSize:11,color:"#64748b"}}>
                 {blocks.map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="photos"?"🖼 "+b.title:"¶"}</span>))}
@@ -1057,7 +1080,7 @@ function ImportReview({ ip, setIp, onApply, onCancel }){
         </div>
         <label style={S.label}>{t("templateSuggested")}</label>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-          {TEMPLATES.map(tp=>(<button key={tp.id} onClick={()=>setIp({...ip,template:tp.id})} style={{...S.chip,...(ip.template===tp.id?S.chipOn:{})}}>{t(tp.key)}</button>))}
+          {visTpls().map(tp=>(<button key={tp.id} onClick={()=>setIp({...ip,template:tp.id})} style={{...S.chip,...(ip.template===tp.id?S.chipOn:{})}}>{t(tp.key)}</button>))}
         </div>
         <label style={S.label}>{t("extractedContent")} ({ip.blocks.length})</label>
         <div style={{border:"1px solid #e2e8f0",borderRadius:8,padding:10,maxHeight:240,overflowY:"auto",background:"#f8fafc",fontSize:12}}>
@@ -1082,17 +1105,10 @@ function ImportReview({ ip, setIp, onApply, onCancel }){
 //  RÉGLAGES
 // ============================================================
 function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
-  const [key,setKey]=useState(getApiKey()||"");
-  const [store,setStore]=useState(isKeyStored()?"local":"mem");
-  const [status,setStatus]=useState(null);
-  const [testing,setTesting]=useState(false);
+  // Clé IA gérée côté serveur (proxy /api/rapports/ai) : plus de champ clé ici.
   const [th,setTh]=useState({...theme});
-  function save(){ if(!key.trim())return; if(store==="local")setApiKeyLocal(key.trim()); else {clearApiKey();setApiKeyMem(key.trim());} setStatus({ok:true,msg:t("saved")}); }
-  function del(){ clearApiKey(); setKey(""); setStatus({ok:true,msg:t("keyNone")}); }
-  async function test(){ setTesting(true); setStatus(null); try{ await testApiConnection(key.trim()); setStatus({ok:true,msg:"✓"}); }catch(e){ setStatus({ok:false,msg:e.message}); } setTesting(false); }
   function setColor(k,v){ const next={...th,[k]:v}; setTh(next); onTheme(next); }
   function resetTheme(){ setTh({...DEFAULT_THEME}); onTheme({...DEFAULT_THEME}); }
-  const masked=key?key.slice(0,7)+"…"+key.slice(-4):"";
   const COLOR_FIELDS=[["secBar","themeSecBar"],["tableHd","themeTableHd"],["accent","themeAccent"],["title","themeTitle"],["text","themeText"],["border","themeBorder"]];
   return (
     <div style={S.overlay} onClick={onClose}>
@@ -1131,19 +1147,8 @@ function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
           </div>
         </div>
 
-        <div style={S.label}>{t("apiKeyTitle")}</div>
-        <input style={S.input} type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-ant-..." autoComplete="off"/>
-        {getApiKey() && <div style={{fontSize:11,color:"#2a9d8f",marginTop:4}}>{t("keyActive")} : {masked} {isKeyStored()?"(local)":"(mémoire)"}</div>}
-        <div style={{display:"flex",gap:14,marginTop:12}}>
-          {[["mem",t("storeMem")],["local",t("storeLocal")]].map(([v,lbl])=>(<label key={v} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer"}}><input type="radio" name="st" checked={store===v} onChange={()=>setStore(v)}/>{lbl}</label>))}
-        </div>
-        <p style={{...S.hint,color:"#9d6b2e",background:"#fef6ec",padding:"8px 10px",borderRadius:6,marginTop:12}}>⚠ {t("apiKeyHint")}</p>
-        {status && <div style={{fontSize:12,marginTop:10,color:status.ok?"#2a9d8f":"#c1121f",fontWeight:600,wordBreak:"break-word"}}>{status.msg}</div>}
-        <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
-          <button style={S.btnPrimary} onClick={save}>{t("save")}</button>
-          <button style={S.btnGhost} onClick={test} disabled={testing||!key.trim()}>{testing?"…":t("testConn")}</button>
-          <button style={{...S.btnGhost,color:"#9d0208",borderColor:"#e3a0a0"}} onClick={del}>{t("deleteKey")}</button>
-          <button style={{...S.btnGhost,marginLeft:"auto"}} onClick={onClose}>{t("cancel")}</button>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
+          <button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button>
         </div>
       </div>
     </div>
@@ -1759,7 +1764,7 @@ function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
     <div>
       <label style={S.label}>{t("chooseTemplate")}</label>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-        {TEMPLATES.map(tp=>(<button key={tp.id} onClick={()=>setTplId(tp.id)} style={{...S.chip,...(tplId===tp.id?S.chipOn:{})}}>{t(tp.key)}</button>))}
+        {visTpls().map(tp=>(<button key={tp.id} onClick={()=>setTplId(tp.id)} style={{...S.chip,...(tplId===tp.id?S.chipOn:{})}}>{t(tp.key)}</button>))}
       </div>
       {customs.length>0 && <>
         <div style={{fontSize:11,color:"#6b4e9d",fontWeight:700,margin:"6px 0 4px"}}>★ {t("tplCustom")}</div>
