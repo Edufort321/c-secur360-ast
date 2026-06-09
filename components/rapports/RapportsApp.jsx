@@ -235,10 +235,47 @@ async function loadDB(){
   try{ const c=await window.storage.get(DB_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; } // repli hors-ligne
 }
 async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringify(list)); }catch{} } // cache local (write-through)
+
+// ---------- FILE DE SYNCHRONISATION HORS-LIGNE ----------
+// Toute écriture serveur qui échoue (hors-ligne / erreur réseau) est mise en file dans localStorage
+// et rejouée automatiquement à la reconnexion (événement `online`) — aucune modif n'est perdue.
+const PENDING_KEY = "rpt_pending_v1";
+function loadPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||"[]"); }catch{ return []; } }
+function savePending(q){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(q.slice(-200))); }catch{} }
+function queueOp(op){
+  // Déduplique : un upsert du même rapport remplace le précédent en attente.
+  const q=loadPending().filter(o=>!(o.kind===op.kind && o.action===op.action && o.id===op.id));
+  q.push(op); savePending(q);
+}
+let _flushing=false;
+async function flushPending(){
+  if(_flushing) return; _flushing=true;
+  let q=loadPending();
+  const keep=[];
+  for(const op of q){
+    try{
+      let res;
+      if(op.action==="upsert") res=await fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:op.kind, item:op.item }) });
+      else res=await fetch(`/api/rapports/data?kind=${op.kind}&id=${encodeURIComponent(op.id)}`,{ method:"DELETE", credentials:"include" });
+      if(!res.ok && res.status!==401) keep.push(op); // 401 = session expirée : on n'empile pas indéfiniment
+    }catch{ keep.push(op); } // toujours hors-ligne : on garde
+  }
+  savePending(keep); _flushing=false;
+  return keep.length;
+}
+function pendingCount(){ return loadPending().length; }
+if(typeof window!=="undefined"){ window.addEventListener("online", ()=>{ flushPending(); }); }
+
 // Push serveur d'UN rapport (debounce par id, car l'édition déclenche à chaque frappe).
 const _rapTimers={};
-function pushReport(report){ if(!report?.id) return; clearTimeout(_rapTimers[report.id]); _rapTimers[report.id]=setTimeout(()=>{ fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report }) }).catch(()=>{}); },600); }
-function pushDelete(id){ fetch("/api/rapports/data?kind=reports&id="+id,{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
+function pushReport(report){ if(!report?.id) return; clearTimeout(_rapTimers[report.id]); _rapTimers[report.id]=setTimeout(()=>{
+  fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report }) })
+    .then(r=>{ if(!r.ok && r.status!==401) queueOp({kind:"reports",action:"upsert",id:report.id,item:report}); })
+    .catch(()=>queueOp({kind:"reports",action:"upsert",id:report.id,item:report})); // hors-ligne -> file
+},600); }
+function pushDelete(id){ fetch("/api/rapports/data?kind=reports&id="+id,{ method:"DELETE", credentials:"include" })
+  .then(r=>{ if(!r.ok && r.status!==401) queueOp({kind:"reports",action:"delete",id}); })
+  .catch(()=>queueOp({kind:"reports",action:"delete",id})); }
 function pushTpl(tpl){ if(!tpl?.id) return; fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"templates", item:tpl }) }).catch(()=>{}); }
 function pushTplDelete(id){ fetch("/api/rapports/data?kind=templates&id="+id,{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
 async function loadLogo(){ try{ const r=await window.storage.get(LOGO_KEY); return r?r.value:null; }catch{ return null; } }
@@ -733,6 +770,8 @@ export default function App(){
   const [statusFilter,setStatusFilter]=useState("all");
   const [showSettings,setShowSettings]=useState(false);
   const [showAnomDash,setShowAnomDash]=useState(false); // dashboard anomalies/recos consolidé (tous rapports)
+  const [pendingN,setPendingN]=useState(0);       // modifications en attente de synchro (hors-ligne)
+  const [online,setOnline]=useState(true);
   const [importing,setImporting]=useState(false);
   const [importErr,setImportErr]=useState(null);
   const [importPreview,setImportPreview]=useState(null);
@@ -795,6 +834,17 @@ export default function App(){
       }
     }catch{}
   },[loaded]);
+
+  // Synchro hors-ligne : flush de la file au démarrage + à la reconnexion ; suivi du compteur.
+  useEffect(()=>{
+    const refresh=()=>{ setOnline(typeof navigator==="undefined"||navigator.onLine); setPendingN(pendingCount()); };
+    const tick=async()=>{ await flushPending(); refresh(); };
+    tick();
+    const onOnline=()=>tick(); const onOffline=()=>refresh();
+    window.addEventListener("online",onOnline); window.addEventListener("offline",onOffline);
+    const iv=setInterval(refresh,5000);
+    return ()=>{ window.removeEventListener("online",onOnline); window.removeEventListener("offline",onOffline); clearInterval(iv); };
+  },[]);
 
   // Synchronise la langue avec le header principal du site (cs-lang-change + storage).
   useEffect(()=>{
@@ -997,8 +1047,14 @@ export default function App(){
             <div style={S.h1}>{t("appName")}</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
           {/* FR/EN retiré : la langue suit le header principal du site (cs-lang). */}
+          {(!online || pendingN>0) && (
+            <span title={LANG==="en"?"Changes are saved locally and will sync when back online":"Les modifications sont enregistrées localement et se synchroniseront au retour en ligne"}
+              style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,padding:"4px 10px",borderRadius:20,border:"1px solid",...(online?{color:"#b45309",background:"#fff7ed",borderColor:"#fed7aa"}:{color:"#9d0208",background:"#fdf0ee",borderColor:"#e3a0a0"})}}>
+              {online ? `⟳ ${pendingN} ${LANG==="en"?"to sync":"à synchro."}` : `⚠ ${LANG==="en"?"Offline":"Hors ligne"}${pendingN>0?` · ${pendingN}`:""}`}
+            </span>
+          )}
           <button style={S.gearBtn} onClick={()=>setShowSettings(true)} title={t("settings")}>⚙</button>
           {view!=="list" && <button style={S.btnGhost} onClick={()=>{setView("list");setSelId(null);}}>{t("backAll")}</button>}
         </div>
