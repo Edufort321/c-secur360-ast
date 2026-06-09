@@ -445,6 +445,25 @@ RÈGLES : AJOUTE tous les champs réellement présents sur la plaque (impédance
   return parsed;
 }
 
+// DÉTECTION IA DE DÉFAUTS : analyse une/des photo(s) d'équipement -> anomalies visibles.
+async function extractDefects(images){ // images = [{base64, mediaType}]
+  const langName = LANG==="en"?"English":"français";
+  const prompt = `Tu inspectes une ou plusieurs PHOTOS d'équipement/installation industrielle (électrique, mécanique, structure) pour repérer les DÉFAUTS et ANOMALIES VISIBLES : corrosion, rouille, fuite, fissure, trace de surchauffe/brûlure, usure, pièce manquante ou desserrée, câblage dangereux, mise à la terre absente, fuite d'huile, danger SST, non-conformité, etc.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{"anomalies":[{"title":"défaut court","desc":"description + localisation précise sur la photo","severity":"minor|major|critical"}]}
+RÈGLES STRICTES : ne signale QUE ce qui est RÉELLEMENT visible sur la photo (n'invente RIEN) ; si rien d'anormal, renvoie {"anomalies":[]} ; "severity" selon la gravité (critical = danger immédiat/sécurité, major = à corriger rapidement, minor = à surveiller) ; sois précis et concis ; langue : ${langName}.`;
+  const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
+  content.push({ type:"text", text:prompt });
+  const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ max_tokens:4096, messages:[{ role:"user", content }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const parsed=repairJsonParse(m?m[0]:clean);
+  return parsed;
+}
+
 // Extraction d'un brouillon MANUSCRIT depuis une image (jpg/png)
 async function extractHandwritingWithApi(key, base64Image, mediaType){
   const langName = LANG==="en"?"English":"français";
@@ -1723,6 +1742,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showPlate,setShowPlate]=useState(false);   // OCR plaque signalétique
   const [plateBusy,setPlateBusy]=useState(false);
   const [plateResult,setPlateResult]=useState(null);
+  const [showDefects,setShowDefects]=useState(false); // détection IA de défauts sur photo
+  const [defectsBusy,setDefectsBusy]=useState(false);
+  const [defectsResult,setDefectsResult]=useState(null);
   const [insertAt,setInsertAt]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
@@ -2060,6 +2082,23 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     }catch(e){ setPlateResult({ error:e.message }); }
     setPlateBusy(false);
   }
+  // Détection IA de défauts : analyse les photos et ajoute les anomalies trouvées aux annotations.
+  async function doDefects(files){
+    const arr=[...(files||[])]; if(!arr.length) return;
+    setDefectsBusy(true); setDefectsResult(null);
+    try{
+      const dataUrls=await Promise.all(arr.map(f=>compressImage(f,1600,0.82)));
+      const images=await aiImagesFrom(dataUrls);
+      const out=await extractDefects(images);
+      const found=(out.anomalies||[]).filter(a=>a && (a.title||a.desc));
+      if(found.length){
+        const news=found.map(a=>({ id:bid(), kind:"anomaly", title:a.title||"", desc:a.desc||"", severity:["minor","major","critical"].includes(a.severity)?a.severity:"major", equipment:r.title||"", photo:null, priceWanted:true, source:"ai" }));
+        setAnnotations([...(r.annotations||[]), ...news]);
+      }
+      setDefectsResult({ count:found.length });
+    }catch(e){ setDefectsResult({ error:e.message }); }
+    setDefectsBusy(false);
+  }
   // Rapport vocal : structure la narration libre (dictée/texte) puis l'assemble dans le rapport.
   async function doVoice(text){
     if(!String(text||"").trim()) return;
@@ -2099,6 +2138,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"assemble", label:`🤝 ${LANG==="en"?"Merge handwritten":"Assembler manuscrit"}`, on:()=>{ setAssembleResult(null); setShowAssemble(true); }, title:LANG==="en"?"Scan handwritten pages — the AI places them at the right spot in this report":"Scanner des pages manuscrites — l'IA les replace au bon endroit dans ce rapport" },
             { key:"voice", label:`🎤 ${LANG==="en"?"Voice report":"Rapport vocal"}`, on:()=>{ setVoiceResult(null); setShowVoice(true); }, title:LANG==="en"?"Dictate freely — the AI structures it into the report":"Dictez librement — l'IA structure le tout dans le rapport" },
             { key:"plate", label:`🔖 ${LANG==="en"?"Nameplate OCR":"Plaque (OCR)"}`, on:()=>{ setPlateResult(null); setShowPlate(true); }, title:LANG==="en"?"Photograph an equipment nameplate — the AI reads its specs":"Photographiez une plaque signalétique — l'IA lit ses caractéristiques" },
+            { key:"defects", label:`🔍 ${LANG==="en"?"Detect defects (AI)":"Détecter défauts (IA)"}`, on:()=>{ setDefectsResult(null); setShowDefects(true); }, title:LANG==="en"?"Photograph equipment — the AI flags visible defects as anomalies":"Photographiez l'équipement — l'IA repère les défauts visibles en anomalies" },
             { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
             priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
@@ -2309,6 +2349,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* OCR PLAQUE SIGNALÉTIQUE : photo -> section de caractéristiques */}
       {showPlate && <NameplateModal busy={plateBusy} result={plateResult} onFiles={doNameplate} onClose={()=>{ setShowPlate(false); setPlateResult(null); }}/>}
+
+      {/* DÉTECTION IA DE DÉFAUTS : photo -> anomalies */}
+      {showDefects && <DefectsModal busy={defectsBusy} result={defectsResult} onFiles={doDefects} onClose={()=>{ setShowDefects(false); setDefectsResult(null); }}/>}
 
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
@@ -2788,6 +2831,40 @@ function LinkPanel({ report, onSet, onClose }){
         </div>
         )}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Modale DÉTECTION DE DÉFAUTS : on photographie l'équipement ; l'IA repère les défauts visibles et
+// les ajoute en ANOMALIES (qui alimentent le récap, le dashboard et le flux soumission).
+function DefectsModal({ busy, result, onFiles, onClose }){
+  return (
+    <div style={S.overlay} onClick={()=>{ if(!busy) onClose(); }}>
+      <div style={{...S.modal,maxWidth:480}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>🔍 {LANG==="en"?"Detect defects (AI)":"Détecter les défauts (IA)"}</h2>
+          {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
+        </div>
+        <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Photograph the equipment. The AI flags visible defects (corrosion, leak, crack, overheating…) and adds them as anomalies — to review before export.":"Photographiez l'équipement. L'IA repère les défauts visibles (corrosion, fuite, fissure, surchauffe…) et les ajoute en anomalies — à valider avant l'export."}</p>
+        {!result && (
+          <label style={{...S.btnPrimary,display:"inline-flex",alignItems:"center",cursor:busy?"default":"pointer",opacity:busy?0.6:1}}>
+            {busy ? (LANG==="en"?"Analyzing…":"Analyse en cours…") : (LANG==="en"?"📷 Photograph the equipment":"📷 Photographier l'équipement")}
+            <input type="file" accept="image/*" multiple disabled={busy} style={{display:"none"}} onChange={e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(fs.length) onFiles(fs); }}/>
+          </label>
+        )}
+        {result && result.error && <div style={{fontSize:13,color:"#9d0208",background:"#fdf0ee",border:"1px solid #e3a0a0",borderRadius:8,padding:"10px 12px"}}>{LANG==="en"?"Error":"Erreur"} : {result.error}</div>}
+        {result && !result.error && (
+          <div>
+            <div style={{fontSize:13,background:result.count>0?"#fdf0ee":"#eef7f4",border:`1.5px solid ${result.count>0?"#e3a0a0":"#2a9d8f"}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              {result.count>0
+                ? <>⚠ <b>{result.count}</b> {LANG==="en"?"defect(s) detected and added as anomalies":"défaut(s) détecté(s) et ajouté(s) en anomalies"}. {LANG==="en"?"Open 💬 Annotations to review/adjust.":"Ouvrez 💬 Annotations pour valider/ajuster."}</>
+                : <>✓ {LANG==="en"?"No visible defect detected.":"Aucun défaut visible détecté."}</>}
+            </div>
+            <div style={{fontSize:11,color:"#94a3b8",marginBottom:10}}>{LANG==="en"?"Always verify the AI findings on site.":"Vérifiez toujours les constats de l'IA sur le terrain."}</div>
+            <div style={{display:"flex",justifyContent:"flex-end"}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+          </div>
+        )}
       </div>
     </div>
   );
