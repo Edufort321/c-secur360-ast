@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const row: any = (kind === 'templates')
     ? { id: item.id, tenant_id: tenant, name: item.name || '', num: item.num || null, blocks: item.blocks || [], deleted: false, updated_at: new Date().toISOString() }
-    : { id: item.id, tenant_id: tenant, title: item.title || '', status: item.status || 'in_progress', template: item.template || null, num: item.num || null, data: item, author_email: item.author_email || u.email || null, version: item.version || 1, deleted: false, updated_at: new Date().toISOString() };
+    : { id: item.id, tenant_id: tenant, title: item.title || '', status: item.status || 'in_progress', template: item.template || null, num: item.num || null, data: item, author_email: item.author_email || u.email || null, version: item.version || 1, project_id: (item.link && item.link.projectId) || null, planner_job_id: (item.link && item.link.jobId) || null, deleted: false, updated_at: new Date().toISOString() };
 
   const { error } = await supabaseAdmin.from(TABLE(kind)).upsert(row, { onConflict: 'id' });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

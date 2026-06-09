@@ -160,6 +160,43 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
   useEffect(() => { if (sub === 'stats') getSoumissionStats(tenant).then(setStats).catch(() => setStats(null)); }, [sub, tenant]);
 
+  // Pré-remplissage depuis le module RAPPORTS : un rapport a transmis des anomalies/recommandations
+  // à chiffrer (sessionStorage). Une fois le chargement terminé, on ouvre une NOUVELLE soumission
+  // avec un item par anomalie sélectionnée, rattachée au projet/client du rapport.
+  const prefillDone = useRef(false);
+  useEffect(() => {
+    if (loading || prefillDone.current || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('prefill') !== 'rapport') return;
+    let draft: any = null;
+    try { draft = JSON.parse(window.sessionStorage.getItem('cs_soum_prefill_v1') || 'null'); } catch { draft = null; }
+    prefillDone.current = true;
+    // nettoie l'URL et le brouillon (one-shot)
+    url.searchParams.delete('prefill'); window.history.replaceState({}, '', url.pathname + url.search);
+    try { window.sessionStorage.removeItem('cs_soum_prefill_v1'); } catch { /* ignore */ }
+    if (!draft || !Array.isArray(draft.items) || draft.items.length === 0) return;
+    (async () => {
+      const px = (selSiteId ? prefixFromSel(selSiteId, selDeptId) : sitePrefix) || sitePrefix || companyLetter || 'XX';
+      let numero = ''; try { numero = await genSoumissionNumero(tenant, px); } catch { numero = ''; }
+      const def = catalogues.find(c => c.preferred) || catalogues[0] || null;
+      const cn = draft.clientName || '';
+      setHdr({
+        ...blankHdr(), numero, seller_id: sellerId, catalogue_id: def?.id || null,
+        project_id: draft.projectId || null,
+        notes: `${tr('Depuis le rapport', 'From report')}: ${draft.reportTitle || draft.reportId || ''}`.trim(),
+        client_snapshot: { name: cn, lieu: '', source_report_id: draft.reportId || '', projet: draft.projectNumber || '' },
+      });
+      setClientName(cn);
+      setItems(draft.items.map((it: any, i: number) => ({
+        name: it.name || `Item ${i + 1}`, total: 0,
+        lignes: [{ ...blankLigne('mo_chantier'), description: it.description || it.name || '' }],
+      })));
+      setSub('liste'); setView('edit');
+      setNotice(tr(`Soumission pré-remplie depuis le rapport (${draft.items.length} item(s) à chiffrer).`, `Quote pre-filled from the report (${draft.items.length} item(s) to price).`));
+    })();
+    /* eslint-disable-next-line */
+  }, [loading]);
+
   async function newSoumission() {
     const px = (selSiteId ? prefixFromSel(selSiteId, selDeptId) : sitePrefix) || sitePrefix || companyLetter || 'XX';
     const numero = await genSoumissionNumero(tenant, px);

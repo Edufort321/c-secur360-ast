@@ -1448,6 +1448,8 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [fixMsg,setFixMsg]=useState(null);
   const [savedFlash,setSavedFlash]=useState(false);
   const [paleExport,setPaleExport]=useState(false); // export "à compléter à la main" (valeurs en pâle)
+  const [showLink,setShowLink]=useState(false);   // panneau "Lier au projet / événement"
+  const [showSoum,setShowSoum]=useState(false);   // constructeur de soumission depuis anomalies/recos
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
   const [insertAt,setInsertAt]=useState(null);
@@ -1565,7 +1567,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   // Annotations
   const annotations = r.annotations||[];
   function setAnnotations(list){ commit({...r,annotations:list}); }
-  function addAnnotation(kind){ setAnnotations([...annotations, { id:bid(), kind, title:"", desc:"", severity:"minor", equipment:r.title||"", photo:null }]); }
+  function addAnnotation(kind){ setAnnotations([...annotations, { id:bid(), kind, title:"", desc:"", severity:"minor", equipment:r.title||"", photo:null, priceWanted: kind!=="comment" }]); }
   function updAnnotation(id,patch){ setAnnotations(annotations.map(a=>a.id===id?{...a,...patch}:a)); }
   function delAnnotation(id){ if(!confirm(t("delAnnotation")))return; setAnnotations(annotations.filter(a=>a.id!==id)); }
 
@@ -1599,6 +1601,12 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     setPaleExport(true);
     setTimeout(()=>{ window.print(); setTimeout(()=>setPaleExport(false),600); },250);
   }
+  // Lien vers un PROJET (hub) et un ÉVÉNEMENT du planner. Stocké dans r.link ; les colonnes
+  // project_id / planner_job_id sont renseignées côté serveur (le statut du rapport remonte
+  // alors au projet et à la facturation, et le rapport suit l'événement).
+  function setLink(link){ commit({...r, link:{...(r.link||{}), ...link}}); }
+  // Items chiffrables = anomalies + recommandations du rapport (pour « Faire une soumission »).
+  const priceItems = (annotations||[]).filter(a=>a.kind==="anomaly"||a.kind==="reco");
 
   return (
     <div>
@@ -1612,7 +1620,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           <span style={{...S.savedBadge, opacity:savedFlash?1:0}}>{t("savedTag")}</span>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button style={{...S.btnGhost,...((r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{})}} onClick={()=>setShowLink(true)} title={LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement"}>🔗 {(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}</button>
           <button style={S.btnGhost} onClick={()=>setShowAnn(true)}>💬 {t("annotations")} {annotations.length>0?`(${annotations.length})`:""}</button>
+          {priceItems.length>0 && <button style={{...S.btnGhost,borderColor:"#2a6f97",color:"#2a6f97"}} onClick={()=>setShowSoum(true)} title={LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer"}>💲 {LANG==="en"?"Quote":"Soumission"} ({priceItems.length})</button>}
           {r.sourceText && <button style={S.btnGhost} onClick={()=>setShowCompare(true)}>{t("compareView")}</button>}
           <button style={S.btnGhost} onClick={()=>setShowInsert(true)}>{t("insertPage")}</button>
           <button style={S.btnGhost} onClick={doFix} disabled={fixing}>{fixing?t("fixing"):t("fixReport")}</button>
@@ -1627,6 +1637,12 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* PANNEAU ANNOTATIONS */}
       {showAnn && <AnnotationsPanel annotations={annotations} onAdd={addAnnotation} onUpd={updAnnotation} onDel={delAnnotation} onClose={()=>setShowAnn(false)} onZoom={setLightbox}/>}
+
+      {/* PANNEAU LIER (projet + événement planner) */}
+      {showLink && <LinkPanel report={r} onSet={setLink} onClose={()=>setShowLink(false)}/>}
+
+      {/* CONSTRUCTEUR DE SOUMISSION (anomalies/recommandations sélectionnées) */}
+      {showSoum && <SoumissionBuilder report={r} items={priceItems} onClose={()=>setShowSoum(false)}/>}
 
       {/* MODALE INSÉRER PAGE GABARIT */}
       {showInsert && (
@@ -2114,25 +2130,158 @@ function PhotosEditor({ block, onChange, onZoom }){
 // ============================================================
 //  PANNEAU ANNOTATIONS (anomalies / commentaires)
 // ============================================================
+// Panneau « Lier » : rattache le rapport à un PROJET (hub) et à un ÉVÉNEMENT du planner.
+// Le lien rend le statut du rapport visible côté projet/facturation et le rattache à l'événement.
+function LinkPanel({ report, onSet, onClose }){
+  const [loading,setLoading]=useState(true);
+  const [projects,setProjects]=useState([]);
+  const [jobs,setJobs]=useState([]);
+  const [qp,setQp]=useState(""); const [qj,setQj]=useState("");
+  const link=report.link||{};
+  useEffect(()=>{ (async()=>{
+    try{ const res=await fetch("/api/rapports/links?kind=all",{credentials:"include"});
+      if(res.ok){ const d=await res.json(); setProjects(d.projects||[]); setJobs(d.jobs||[]); } }
+    catch(e){}
+    setLoading(false);
+  })(); },[]);
+  function pickProject(p){ onSet({ projectId:p.id, projectNumber:p.number, projectTitle:p.title, clientName:p.client||link.clientName||"" }); }
+  function pickJob(j){ onSet({ jobId:j.id, jobNumber:j.number||j.title, projectId: j.projectId||link.projectId||"" , clientName: j.client||link.clientName||"" }); }
+  const fp=projects.filter(p=>{ const s=(qp||"").toLowerCase(); return !s || (p.number+" "+p.title+" "+p.client).toLowerCase().includes(s); });
+  const fj=jobs.filter(j=>{ const s=(qj||"").toLowerCase(); return !s || (j.number+" "+j.title+" "+j.client).toLowerCase().includes(s); });
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:640,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <h2 style={{...S.h2,margin:0}}>🔗 {LANG==="en"?"Link the report":"Lier le rapport"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Linking a project makes the report status visible to the project & invoicing; linking a scheduler event attaches the report to that event.":"Lier un projet rend le statut du rapport visible au projet et à la facturation ; lier un événement rattache le rapport à cet événement."}</p>
+
+        {(link.projectId||link.jobId) && (
+          <div style={{background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:13}}>
+            <b>{LANG==="en"?"Current link":"Lien actuel"} :</b>{" "}
+            {link.projectNumber?`📁 ${link.projectNumber}${link.projectTitle?" — "+link.projectTitle:""}`:""}
+            {link.jobNumber?`  ·  📅 ${link.jobNumber}`:""}
+            {link.clientName?`  ·  👤 ${link.clientName}`:""}
+            <button style={{...S.btnGhost,fontSize:11,padding:"3px 8px",marginLeft:10}} onClick={()=>onSet({projectId:"",projectNumber:"",projectTitle:"",jobId:"",jobNumber:""})}>{LANG==="en"?"Detach":"Détacher"}</button>
+          </div>
+        )}
+
+        {loading ? <div style={{textAlign:"center",color:"#64748b",padding:"20px 0"}}>…</div> : (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          <div>
+            <label style={S.label}>📁 {LANG==="en"?"Project":"Projet"}</label>
+            <input style={S.input} placeholder={LANG==="en"?"Search…":"Rechercher…"} value={qp} onChange={e=>setQp(e.target.value)}/>
+            <div style={{maxHeight:240,overflowY:"auto",marginTop:6,border:"1px solid #e2e8f0",borderRadius:8}}>
+              {fp.length===0 ? <div style={{padding:10,fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No project":"Aucun projet"}</div> :
+                fp.map(p=>(<button key={p.id} onClick={()=>pickProject(p)} style={{display:"block",width:"100%",textAlign:"left",padding:"8px 10px",border:"none",borderBottom:"1px solid #f1f5f9",background:link.projectId===p.id?"#e0f2ec":"#fff",cursor:"pointer",fontSize:12.5}}>
+                  <b>{p.number||"—"}</b> {p.title?"· "+p.title:""}<br/><span style={{color:"#64748b",fontSize:11}}>{p.client} {p.status?"· "+p.status:""}</span>
+                </button>))}
+            </div>
+          </div>
+          <div>
+            <label style={S.label}>📅 {LANG==="en"?"Scheduler event":"Événement (planner)"}</label>
+            <input style={S.input} placeholder={LANG==="en"?"Search…":"Rechercher…"} value={qj} onChange={e=>setQj(e.target.value)}/>
+            <div style={{maxHeight:240,overflowY:"auto",marginTop:6,border:"1px solid #e2e8f0",borderRadius:8}}>
+              {fj.length===0 ? <div style={{padding:10,fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No event":"Aucun événement"}</div> :
+                fj.map(j=>(<button key={j.id} onClick={()=>pickJob(j)} style={{display:"block",width:"100%",textAlign:"left",padding:"8px 10px",border:"none",borderBottom:"1px solid #f1f5f9",background:link.jobId===j.id?"#e0f2ec":"#fff",cursor:"pointer",fontSize:12.5}}>
+                  <b>{j.number||j.title||"—"}</b><br/><span style={{color:"#64748b",fontSize:11}}>{j.client} {j.date?"· "+j.date:""} {j.status?"· "+j.status:""}</span>
+                </button>))}
+            </div>
+          </div>
+        </div>
+        )}
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Constructeur de soumission : l'utilisateur coche les anomalies/recommandations que le client
+// veut faire chiffrer ; chaque item devient une ligne de soumission. On transmet un brouillon au
+// module Soumissions (via sessionStorage) puis on y navigue — la soumission s'ouvre pré-remplie.
+function SoumissionBuilder({ report, items, onClose }){
+  const [sel,setSel]=useState(()=>{ const o={}; (items||[]).forEach(a=>{ o[a.id]= a.priceWanted!==false; }); return o; });
+  const link=report.link||{};
+  const chosen=(items||[]).filter(a=>sel[a.id]);
+  function toggle(id){ setSel(s=>({...s,[id]:!s[id]})); }
+  function go(){
+    if(chosen.length===0){ alert(LANG==="en"?"Select at least one item.":"Sélectionnez au moins un item."); return; }
+    const draft={
+      from:"rapport", reportId:report.id, reportTitle:report.title||"",
+      projectId:link.projectId||"", projectNumber:link.projectNumber||"", clientName:link.clientName||"",
+      createdAt:new Date().toISOString(),
+      items: chosen.map((a,i)=>({
+        name: (a.title||a.desc||((LANG==="en"?"Item ":"Item ")+(i+1))).slice(0,120),
+        description: [a.title&&a.desc?a.desc:"", a.kind==="anomaly"?(LANG==="en"?"(Anomaly":"(Anomalie")+(a.severity?" — "+a.severity:"")+")":(LANG==="en"?"(Recommendation)":"(Recommandation)"), a.equipment?("• "+a.equipment):""].filter(Boolean).join("  ").trim(),
+        kind:a.kind, severity:a.severity||"", equipment:a.equipment||"",
+      })),
+    };
+    try{ window.sessionStorage.setItem("cs_soum_prefill_v1", JSON.stringify(draft)); }catch(e){}
+    const tenant=(typeof window!=="undefined" ? (window.location.pathname.split("/").filter(Boolean)[0]||"") : "");
+    window.location.href = `/${tenant}/projects/soumissions?prefill=rapport`;
+  }
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:620,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>💲 {LANG==="en"?"Create a quote":"Faire une soumission"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Select the anomalies/recommendations the client wants priced — each becomes a quote item.":"Sélectionnez les anomalies/recommandations que le client veut faire chiffrer — chacune devient un item de la soumission."}</p>
+        {!link.projectId && <div style={{fontSize:12,color:"#b45309",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:8,padding:"7px 10px",marginBottom:10}}>{LANG==="en"?"Tip: link a project first (🔗) so the quote attaches to it.":"Astuce : liez d'abord un projet (🔗) pour y rattacher la soumission."}</div>}
+        <div style={{maxHeight:"48vh",overflowY:"auto"}}>
+          {(items||[]).map(a=>(
+            <label key={a.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 10px",border:"1px solid #e2e8f0",borderRadius:9,marginBottom:7,cursor:"pointer",background:sel[a.id]?"#f0f7fb":"#fff"}}>
+              <input type="checkbox" checked={!!sel[a.id]} onChange={()=>toggle(a.id)} style={{marginTop:3}}/>
+              <span style={{fontSize:13}}>
+                <b style={{color:a.kind==="anomaly"?"#9d0208":"#2a6f97"}}>{a.kind==="anomaly"?"⚠ ":"➤ "}{a.title||(LANG==="en"?"(untitled)":"(sans titre)")}</b>
+                {a.equipment?<span style={{color:"#64748b"}}> · {a.equipment}</span>:null}
+                {a.desc?<><br/><span style={{color:"#475569",fontSize:12}}>{a.desc}</span></>:null}
+              </span>
+            </label>
+          ))}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,gap:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:"#64748b"}}>{chosen.length} {LANG==="en"?"item(s) selected":"item(s) sélectionné(s)"}</span>
+          <div style={{display:"flex",gap:8}}>
+            <button style={S.btnGhost} onClick={onClose}>{t("cancel")}</button>
+            <button style={S.btnPrimary} onClick={go}>💲 {LANG==="en"?"Open the quote":"Ouvrir la soumission"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnnotationsPanel({ annotations, onAdd, onUpd, onDel, onClose, onZoom }){
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:680,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
           <h2 style={{...S.h2,margin:0}}>💬 {t("annotations")}</h2>
-          <div style={{display:"flex",gap:8}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button style={{...S.btnDark,background:"#9d0208",fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("anomaly")}>{t("addAnomaly")}</button>
+            <button style={{...S.btnDark,background:"#2a6f97",fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("reco")}>{LANG==="en"?"+ Recommendation":"+ Recommandation"}</button>
             <button style={{...S.btnDark,fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("comment")}>{t("addComment")}</button>
           </div>
         </div>
         {annotations.length===0 ? <div style={{textAlign:"center",color:"#64748b",padding:"24px 0"}}>{t("noAnnotations")}</div> : (
           annotations.map((a,i)=>(
-            <div key={a.id} style={{border:`1.5px solid ${a.kind==="anomaly"?"#e3a0a0":"#aebdc8"}`,borderRadius:10,padding:12,marginBottom:10,background:a.kind==="anomaly"?"#fdf0ee":"#eef2f5"}}>
+            <div key={a.id} style={{border:`1.5px solid ${a.kind==="anomaly"?"#e3a0a0":a.kind==="reco"?"#9ec5db":"#aebdc8"}`,borderRadius:10,padding:12,marginBottom:10,background:a.kind==="anomaly"?"#fdf0ee":a.kind==="reco"?"#eef5fa":"#eef2f5"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8,flexWrap:"wrap"}}>
-                <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:a.kind==="anomaly"?"#9d0208":"#34607a"}}>
-                  {a.kind==="anomaly"?"⚠ "+t("anomaly"):"💬 "+t("comment")} #{i+1}
+                <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:a.kind==="anomaly"?"#9d0208":a.kind==="reco"?"#2a6f97":"#34607a"}}>
+                  {a.kind==="anomaly"?"⚠ "+t("anomaly"):a.kind==="reco"?(LANG==="en"?"➤ Recommendation":"➤ Recommandation"):"💬 "+t("comment")} #{i+1}
                 </span>
-                <button style={S.miniBtnDel} onClick={()=>onDel(a.id)}>✕</button>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  {(a.kind==="anomaly"||a.kind==="reco") && (
+                    <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,fontWeight:700,color:a.priceWanted!==false?"#2a6f97":"#94a3b8",cursor:"pointer"}} title={LANG==="en"?"Include in the quote (client wants a price)":"Inclure dans la soumission (le client veut un prix)"}>
+                      <input type="checkbox" checked={a.priceWanted!==false} onChange={e=>onUpd(a.id,{priceWanted:e.target.checked})}/>
+                      💲 {LANG==="en"?"To price":"À chiffrer"}
+                    </label>
+                  )}
+                  <button style={S.miniBtnDel} onClick={()=>onDel(a.id)}>✕</button>
+                </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                 <div><label style={S.label}>{t("annTitle")}</label><input style={S.input} value={a.title} onChange={e=>onUpd(a.id,{title:e.target.value})}/></div>
