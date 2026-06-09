@@ -1828,6 +1828,10 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
               <input type="checkbox" checked={!!r.condensed} onChange={e=>setField("condensed",e.target.checked)}/>
               🗜 {LANG==="en"?"Condensed":"Condensé"}
             </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Include QR codes in the exported PDF (footer + per section)":"Inclure les QR codes dans le PDF exporté (pied de page + par section)"}>
+              <input type="checkbox" checked={r.qrShow!==false} onChange={e=>setField("qrShow",e.target.checked)}/>
+              🔳 {LANG==="en"?"QR in export":"QR à l'export"}
+            </label>
           </div>
           {(r.cover||{}).show!==false && (
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
@@ -2330,7 +2334,31 @@ function LinkPanel({ report, onSet, onClose }){
 function QrPanel({ report, qr, qrMap, onJump, onClose }){
   const sections=(report.blocks||[]).filter(b=>b.type==="section");
   const [copied,setCopied]=useState(null);
+  const [sel,setSel]=useState(()=>{ const o={report:true}; sections.forEach(b=>o[b.id]=true); return o; });
+  const [size,setSize]=useState("M"); // taille d'étiquette : S | M | L
   function copy(url,key){ try{ navigator.clipboard.writeText(url||""); setCopied(key); setTimeout(()=>setCopied(null),1500); }catch(e){} }
+  // Planche d'étiquettes QR (impression groupée) — comme les étiquettes du module Inventaire.
+  function printSheet(){
+    const px = size==="S"?120 : size==="L"?230 : 170;
+    const labels=[];
+    if(sel.report && qr) labels.push({ t:(LANG==="en"?"Full report":"Rapport complet")+" — "+(report.title||""), d:qr.data, u:qr.url });
+    sections.forEach((b,k)=>{ const q=(qrMap||{})[b.id]; if(sel[b.id] && q) labels.push({ t:`#${k+1} ${b.title||""}`, d:q.data, u:q.url }); });
+    if(labels.length===0){ alert(LANG==="en"?"Select at least one QR.":"Sélectionnez au moins un QR."); return; }
+    const sub=(report.num?(report.num+" · "):"")+(report.client||"");
+    const cells=labels.map(l=>`<div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;text-align:center;break-inside:avoid;page-break-inside:avoid">
+      <div style="font-weight:700;font-size:12px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(l.t||"").replace(/</g,"")}</div>
+      <div style="font-size:9px;color:#777;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(sub||"").replace(/</g,"")}</div>
+      <img src="${l.d}" style="width:${px}px;height:${px}px"/>
+      <div style="font-size:7.5px;color:#999;margin-top:4px;word-break:break-all">${(l.u||"").replace(/</g,"")}</div>
+    </div>`).join("");
+    const w=window.open("","_blank","width=900,height=1000"); if(!w) return;
+    w.document.write(`<html><head><title>QR — ${(report.title||"").replace(/</g,"")}</title>
+      <style>@page{size:letter portrait;margin:10mm} body{font-family:Archivo,Arial,sans-serif;margin:0;padding:8mm}
+      .grid{display:grid;grid-template-columns:repeat(${size==="L"?2:size==="S"?4:3},1fr);gap:8px}</style></head>
+      <body><div class="grid">${cells}</div><script>setTimeout(function(){window.print();},300);</script></body></html>`);
+    w.document.close();
+  }
+  const selCount=(sel.report?1:0)+sections.filter(b=>sel[b.id]).length;
   // Imprime une seule étiquette QR (à coller sur l'équipement) dans une fenêtre dédiée.
   function printLabel(title,dataUrl,url){
     const w=window.open("","_blank","width=420,height=520"); if(!w) return;
@@ -2352,11 +2380,21 @@ function QrPanel({ report, qr, qrMap, onJump, onClose }){
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"One QR for the whole report, plus one per section/equipment. Stick the equipment QR on the equipment: scanning opens that exact section to fill in — live — and everything assembles into the full report.":"Un QR pour le rapport complet, et un par section/équipement. Collez le QR d'un équipement dessus : le scan ouvre directement cette section à remplir — en direct — et tout s'assemble dans le rapport complet."}</p>
 
+        {/* Planche d'étiquettes : imprimer les QR cochés d'un coup (taille réglable) */}
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:9,padding:"8px 10px",marginBottom:12}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#475569"}}>🖨 {LANG==="en"?"Label sheet":"Planche d'étiquettes"}</span>
+          <span style={{fontSize:11,color:"#64748b"}}>{LANG==="en"?"Size":"Taille"}:</span>
+          {["S","M","L"].map(s=>(<button key={s} onClick={()=>setSize(s)} style={{...S.miniBtn,...(size===s?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}}>{s}</button>))}
+          <button style={{...S.btnPrimary,padding:"6px 12px",fontSize:12}} onClick={printSheet}>🖨 {LANG==="en"?"Print sheet":"Imprimer la planche"} ({selCount})</button>
+          <button style={{...S.miniBtn}} onClick={()=>{ const o={report:true}; sections.forEach(b=>o[b.id]=true); setSel(o); }}>{LANG==="en"?"All":"Tout"}</button>
+          <button style={{...S.miniBtn}} onClick={()=>{ const o={report:false}; sections.forEach(b=>o[b.id]=false); setSel(o); }}>{LANG==="en"?"None":"Aucun"}</button>
+        </div>
+
         {/* QR RAPPORT COMPLET */}
         <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",border:"1.5px solid #1e293b",borderRadius:12,padding:12,marginBottom:14}}>
           {qr ? <img src={qr.data||qr} alt="QR" style={{width:120,height:120}}/> : <div style={{width:120,height:120,display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8"}}>…</div>}
           <div style={{flex:"1 1 200px",minWidth:170}}>
-            <div style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:14}}>{LANG==="en"?"Full report":"Rapport complet"}</div>
+            <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}><input type="checkbox" checked={!!sel.report} onChange={e=>setSel(s=>({...s,report:e.target.checked}))}/><span style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:14}}>{LANG==="en"?"Full report":"Rapport complet"}</span></label>
             <div style={{fontSize:10.5,color:"#64748b",wordBreak:"break-all",margin:"4px 0 8px"}}>{qr?qr.url:""}</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               <button style={{...S.miniBtn}} onClick={()=>copy(qr&&qr.url,"rep")}>{copied==="rep"?"✓":(LANG==="en"?"Copy":"Copier")}</button>
@@ -2371,7 +2409,8 @@ function QrPanel({ report, qr, qrMap, onJump, onClose }){
           {sections.length===0 ? <div style={{fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No section yet.":"Aucune section."}</div> :
             sections.map((b,k)=>{ const q=(qrMap||{})[b.id];
               return (
-              <div key={b.id} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:10,textAlign:"center",background:"#fff"}}>
+              <div key={b.id} style={{border:`1px solid ${sel[b.id]?"#1e293b":"#e2e8f0"}`,borderRadius:10,padding:10,textAlign:"center",background:"#fff",position:"relative"}}>
+                <input type="checkbox" checked={!!sel[b.id]} onChange={e=>setSel(s=>({...s,[b.id]:e.target.checked}))} style={{position:"absolute",left:8,top:8}}/>
                 {q ? <img src={q.data} alt="QR" style={{width:100,height:100}}/> : <div style={{width:100,height:100,margin:"0 auto",color:"#cbd5e1"}}>…</div>}
                 <div style={{fontWeight:700,fontSize:12,marginTop:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={b.title||""}>{LANG==="en"?"Page":"Page"} {k+1} · {b.title||(LANG==="en"?"(untitled)":"(sans titre)")}</div>
                 <div style={{display:"flex",gap:5,justifyContent:"center",marginTop:7,flexWrap:"wrap"}}>
@@ -2674,7 +2713,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
             <span>{tplLabel} · {r.num || (TEMPLATES.find(x=>x.id===r.template)||{}).num || ""}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
             <span style={{display:"flex",alignItems:"center",gap:8}}>
               <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
-              {qr && <img src={qr} alt="QR" style={{height:30,width:30}}/>}
+              {qr && r.qrShow!==false && <img src={qr} alt="QR" style={{height:30,width:30}}/>}
             </span>
           </div>
         </td></tr></tfoot>
@@ -2777,7 +2816,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
           {b.type==="section" && <>
             <div className="secBar-print" style={{...DP.secBar,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
               <span>{b.title}</span>
-              {qrMap&&qrMap[b.id] && <img src={qrMap[b.id].data} alt="QR" title={b.title||""} style={{height:34,width:34,background:"#fff",padding:2,borderRadius:3,flexShrink:0}}/>}
+              {r.qrShow!==false && qrMap&&qrMap[b.id] && <img src={qrMap[b.id].data} alt="QR" title={b.title||""} style={{height:34,width:34,background:"#fff",padding:2,borderRadius:3,flexShrink:0}}/>}
             </div>
             <table style={DP.fieldTable}><tbody>{(b.fields||[]).map(f=>(<tr key={f.id}><td style={DP.fLbl}>{f.label}</td><td style={DP.fVal}>{f.value||"—"}</td></tr>))}</tbody></table>
           </>}
