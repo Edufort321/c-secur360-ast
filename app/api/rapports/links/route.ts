@@ -26,6 +26,19 @@ export async function GET(req: NextRequest) {
     }));
   }
 
+  // Recherche INVERSÉE : rapports rattachés à un projet ou à un événement (pour les afficher côté
+  // Projet / Facturation / Planner avec leur statut). Scopé au tenant de session.
+  if (kind === 'for-project' || kind === 'for-job') {
+    const col = kind === 'for-project' ? 'project_id' : 'planner_job_id';
+    const id = new URL(req.url).searchParams.get('id') || '';
+    if (!id) return NextResponse.json({ ok: true, reports: [] });
+    const { data } = await supabaseAdmin.from('rapports')
+      .select('id, title, status, num, updated_at')
+      .eq('tenant_id', tenant).eq(col, id).eq('deleted', false).order('updated_at', { ascending: false });
+    out.reports = (data || []).map((r: any) => ({ id: r.id, title: r.title || '', status: r.status || '', num: r.num || '', updatedAt: r.updated_at }));
+    return NextResponse.json(out);
+  }
+
   if (kind === 'jobs' || kind === 'all') {
     // planner_jobs : schéma mixte (colonnes scalaires + camelCase formulaire). On prend large.
     const { data } = await supabaseAdmin.from('planner_jobs')

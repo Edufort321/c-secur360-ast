@@ -35,6 +35,7 @@ export default function ProjectDetailPage() {
   const [p, setP] = useState<any>(null);
   const [linkedAst,     setLinkedAst]     = useState<any[]>([]);
   const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
+  const [linkedReports, setLinkedReports] = useState<any[]>([]);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
   const [tsActuals, setTsActuals] = useState<ProjectActuals | null>(null); // coût réel agrégé des feuilles de temps
@@ -124,6 +125,19 @@ export default function ProjectDetailPage() {
     })();
     return () => { active = false; };
   }, [p?.project_number, tenant]);
+
+  // Rapports terrain liés à ce projet (via la route serveur scopée au tenant ; lien par project_id).
+  useEffect(() => {
+    if (!id) { setLinkedReports([]); return; }
+    let active = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/rapports/links?kind=for-project&id=${encodeURIComponent(id)}`, { credentials: 'include' });
+        if (r.ok) { const j = await r.json(); if (active) setLinkedReports(j.reports || []); }
+      } catch { /* ignore */ }
+    })();
+    return () => { active = false; };
+  }, [id, tenant]);
 
   const set = (k: string, v: any) => setP((prev: any) => ({ ...prev, [k]: v }));
 
@@ -348,6 +362,30 @@ export default function ProjectDetailPage() {
                           <span className="flex items-center gap-3 text-xs text-gray-500">
                             <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">{pm.type}</span>
                             <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{pm.status}</span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Rapports terrain liés (associés par project_id ; statut visible côté projet) */}
+                <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-bold">{tr('Rapports terrain liés', 'Linked field reports')} ({linkedReports.length})</h3>
+                    <Link href={`/${tenant}/rapports`} className="text-xs font-semibold text-indigo-600 hover:underline">{tr('Aller aux rapports', 'Go to reports')}</Link>
+                  </div>
+                  {linkedReports.length === 0 ? (
+                    <p className="text-sm text-gray-400">{tr('Aucun rapport lié (associez un projet depuis le rapport).', 'No linked report (link a project from the report).')}</p>
+                  ) : (
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {linkedReports.map(rp => (
+                        <Link key={rp.id} href={`/${tenant}/rapports?r=${rp.id}`}
+                          className="flex items-center justify-between py-2 text-sm hover:text-indigo-600">
+                          <span className="font-medium">{rp.title || rp.num || rp.id}</span>
+                          <span className="flex items-center gap-3 text-xs text-gray-500">
+                            {rp.num && <span>{rp.num}</span>}
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{rp.status === 'in_progress' ? tr('En cours','In progress') : rp.status === 'review' ? tr('En révision','Review') : rp.status === 'approved' ? tr('Approuvé','Approved') : rp.status === 'sent' ? tr('Envoyé','Sent') : rp.status}</span>
                           </span>
                         </Link>
                       ))}
