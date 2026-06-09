@@ -194,9 +194,13 @@ function tplNumOf(tplId, customTpls){
 // ---------- IDs ----------
 let _seq=0;
 function bid(){ _seq++; return "b_"+Date.now().toString(36)+"_"+_seq; }
+// Identité d'ÉQUIPEMENT stable (cible des QR de section). Contrairement à l'id de bloc, l'eqId
+// persiste à travers les éditions ; une étiquette QR collée sur un équipement reste donc valide.
+function eqid(){ _seq++; return "eq_"+Date.now().toString(36)+"_"+_seq; }
 // Clone profond d'un bloc avec de nouveaux ids partout (pour duplication sûre)
 function cloneBlockFresh(src){
   const copy=JSON.parse(JSON.stringify(src)); copy.id=bid();
+  if(copy.type==="section") copy.eqId=eqid(); // une copie = un AUTRE équipement -> nouvelle identité QR
   if(copy.fields) copy.fields=copy.fields.map(f=>({...f,id:bid()}));
   if(copy.photos) copy.photos=copy.photos.map(p=>({...p,id:bid()}));
   if(copy.items) copy.items=copy.items.map(it=>({...it,id:bid()}));
@@ -249,7 +253,7 @@ async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.
 // Vide toutes les valeurs d'un ensemble de blocs (pour transformer un rapport en gabarit)
 function emptyBlockValues(blocks){
   return (blocks||[]).map(b=>{
-    if(b.type==="section") return {...b, id:bid(), fields:(b.fields||[]).map(f=>({...f,id:bid(),value:""}))};
+    if(b.type==="section"){ const {eqId,...rest}=b; return {...rest, id:bid(), fields:(b.fields||[]).map(f=>({...f,id:bid(),value:""}))}; } // gabarit = pas d'eqId (assigné par instance)
     if(b.type==="table") return {...b, id:bid(), rows:(b.rows||[]).map(r=>r.map(()=>""))};
     if(b.type==="inspect") return {...b, id:bid(), items:(b.items||[]).map(it=>({...it,id:bid(),state:"good",note:"",severity:"minor",photo:null}))};
     if(b.type==="text") return {...b, id:bid(), value:""};
@@ -774,13 +778,19 @@ export default function App(){
     if(!loaded||deepDone) return; setDeepDone(true);
     try{
       const sp=new URLSearchParams(window.location.search);
-      const rid=sp.get("r");
-      if(rid && db.find(x=>x.id===rid)){
-        setSelId(rid); setView("editor");
-        const blk=sp.get("blk");
-        if(blk) setTimeout(()=>{ const el=document.getElementById("blk-"+blk); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },400);
-        // nettoie l'URL (le rapport reste ouvert ; évite de ré-ouvrir au prochain rendu)
-        const u=new URL(window.location.href); u.searchParams.delete("r"); u.searchParams.delete("blk"); window.history.replaceState({},"",u.pathname+u.search);
+      const rid=sp.get("r"); const eq=sp.get("eq"); const blk=sp.get("blk");
+      // Résolution du rapport cible : r=<id> si présent, sinon par identité d'équipement (eq) —
+      // on ouvre le rapport le PLUS RÉCENT qui contient cet équipement (étiquette réutilisable).
+      let target=null;
+      if(rid && db.find(x=>x.id===rid)) target=db.find(x=>x.id===rid);
+      else if(eq){ const cands=db.filter(x=>(x.blocks||[]).some(b=>b.type==="section"&&b.eqId===eq)); cands.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)); target=cands[0]||null; }
+      if(target){
+        setSelId(target.id); setView("editor");
+        // Saut vers la bonne section : par bloc (blk) ou par équipement (eq).
+        let jumpBlk=blk;
+        if(!jumpBlk && eq){ const sec=(target.blocks||[]).find(b=>b.type==="section"&&b.eqId===eq); if(sec) jumpBlk=sec.id; }
+        if(jumpBlk) setTimeout(()=>{ const el=document.getElementById("blk-"+jumpBlk); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } },400);
+        const u=new URL(window.location.href); u.searchParams.delete("r"); u.searchParams.delete("blk"); u.searchParams.delete("eq"); window.history.replaceState({},"",u.pathname+u.search);
       }
     }catch{}
   },[loaded]);
@@ -1528,6 +1538,16 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   useEffect(()=>{ const h=()=>setNarrow(window.innerWidth<640); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
   const [pdfBusy,setPdfBusy]=useState(false);
   useEffect(()=>{ setR(report); },[report.id]);
+  // Identité d'équipement stable : toute section sans eqId en reçoit un (création gabarit, import,
+  // ajout manuel, anciens rapports). C'est la cible « logique » des QR — l'étiquette reste valide.
+  useEffect(()=>{
+    const secs=(report.blocks||[]).filter(b=>b.type==="section");
+    if(secs.length && secs.some(b=>!b.eqId)){
+      const blocks=(report.blocks||[]).map(b=> (b.type==="section"&&!b.eqId)?{...b,eqId:eqid()}:b);
+      commit({...report, blocks});
+    }
+  // eslint-disable-next-line
+  },[report.id]);
   // QR codes du rapport. DEUX niveaux (comme les étiquettes d'équipement DGA) :
   //  • QR RAPPORT  -> /{tenant}/rapports?r=<id>            (ouvre le rapport complet)
   //  • QR SECTION  -> /{tenant}/rapports?r=<id>&blk=<sec>  (ouvre DIRECTEMENT cette section/équipement)
@@ -1542,7 +1562,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       const data=await QR.toDataURL(base,{margin:1,width:240});
       const map={};
       for(const b of (r.blocks||[]).filter(x=>x.type==="section")){
-        map[b.id]={ url:`${base}&blk=${b.id}`, data: await QR.toDataURL(`${base}&blk=${b.id}`,{margin:1,width:200}) };
+        // Cible l'identité d'équipement STABLE (eqId) ; repli sur l'id de bloc si pas encore assigné.
+        const target = b.eqId ? `${base}&eq=${b.eqId}` : `${base}&blk=${b.id}`;
+        map[b.id]={ url:target, data: await QR.toDataURL(target,{margin:1,width:200}) };
       }
       if(on){ setQr({url:base,data}); setQrMap(map); }
     }catch(e){ if(on){ setQr(null); setQrMap({}); } }
