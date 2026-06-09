@@ -179,11 +179,17 @@ function tplBlocks(id){
   ];
 }
 const TEMPLATES = [
-  { id:"inspection", key:"tplInspection" },
-  { id:"testing",    key:"tplTesting" },
-  { id:"quote",      key:"tplQuote" },
-  { id:"generic",    key:"tplGeneric" },
+  { id:"inspection", key:"tplInspection", num:"GAB-INS-01" },
+  { id:"testing",    key:"tplTesting",    num:"GAB-TST-01" },
+  { id:"quote",      key:"tplQuote",      num:"GAB-DEV-01" },
+  { id:"generic",    key:"tplGeneric",    num:"GAB-GEN-01" },
 ];
+// Numéro UNIQUE d'un gabarit (défaut ou custom) — sert d'identifiant imprimé en bas de page
+// ET de clé de reconnaissance IA (remplir la même structure si le gabarit est rempli à la main).
+function tplNumOf(tplId, customTpls){
+  const c=(customTpls||[]).find(x=>x.id===tplId); if(c) return c.num || ("GAB-"+String(c.id).replace(/[^A-Za-z0-9]/g,"").slice(-6).toUpperCase());
+  const d=TEMPLATES.find(x=>x.id===tplId); return d?d.num:"";
+}
 
 // ---------- IDs ----------
 let _seq=0;
@@ -843,7 +849,7 @@ export default function App(){
       }
       const blocks=emptyBlockValues(normalizeBlocks(out.blocks));
       const name=(out.title||file.name||"Gabarit").replace(/\.pdf$/i,"");
-      const tpl={ id:"ct_"+Date.now(), name, blocks };
+      const tpl={ id:"ct_"+Date.now(), name, blocks, num:"GAB-"+Date.now().toString(36).slice(-5).toUpperCase() };
       persistTpls([tpl,...customTpls]);
     }catch(e){ setImportErr(e.message); }
     setImporting(false);
@@ -2168,7 +2174,7 @@ function PrintDoc({ report, logo }){
         </td></tr></thead>
         <tfoot><tr><td>
           <div className="run-foot" style={{borderTop:"1px solid "+THEME.border}}>
-            <span>{tplLabel}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
+            <span>{tplLabel} · {tplNumOf(r.template, customTpls)}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
             <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
           </div>
         </td></tr></tfoot>
