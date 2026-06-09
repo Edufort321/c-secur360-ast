@@ -250,13 +250,15 @@ let HIDDEN_TPLS = [];
 function visTpls(){ return TEMPLATES.filter(t=>!HIDDEN_TPLS.includes(t.id)); }
 async function loadHidden(){ try{ const r=await window.storage.get(HIDDEN_TPL_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
 async function saveHidden(list){ try{ await window.storage.set(HIDDEN_TPL_KEY, JSON.stringify(list)); }catch{} }
+// Thème par défaut ALIGNÉ sur le module DGA : bandeaux/accents teal #277da1, titres #1a1a1a,
+// bordures slate #dde5ea (personnalisable par tenant dans les réglages).
 const DEFAULT_THEME = {
-  secBar:  "#1e293b",  // bandeaux de section
-  tableHd: "#34495e",  // en-têtes de tableau
-  accent:  "#9d0208",  // accent (lignes, IPS)
-  title:   "#0f172a",  // titres
-  text:    "#0f172a",  // texte courant
-  border:  "#e2e8f0",  // bordures
+  secBar:  "#277da1",  // bandeaux de section (teal DGA)
+  tableHd: "#34495e",  // en-têtes de tableau (slate foncé)
+  accent:  "#9d0208",  // accent / critique (rouge DGA)
+  title:   "#1a1a1a",  // titres
+  text:    "#1a1a1a",  // texte courant
+  border:  "#dde5ea",  // bordures (slate clair DGA)
 };
 let THEME = {...DEFAULT_THEME};
 async function loadTheme(){ try{ const r=await window.storage.get(THEME_KEY); return r?{...DEFAULT_THEME,...JSON.parse(r.value)}:{...DEFAULT_THEME}; }catch{ return {...DEFAULT_THEME}; } }
@@ -4021,7 +4023,7 @@ const DP = {
   sevTag:{ fontSize:8, fontWeight:700, border:"1px solid", borderRadius:4, padding:"1px 5px", marginLeft:6 },
   mLbl:{ background:"#eef2f5", fontWeight:600, padding:"4px 6px", border:"0.5px solid #dde5ea", color:"#34495e", width:"14%" },
   mVal:{ padding:"4px 6px", border:"0.5px solid #dde5ea", width:"36%" },
-  get secBar(){ return { background:THEME.secBar, color:"#fff", fontFamily:"'Archivo'", fontWeight:700, fontSize:11, padding:"4px 10px", borderRadius:3, marginBottom:6 }; },
+  get secBar(){ return { background:THEME.secBar, color:"#fff", fontFamily:"'Archivo',Arial,sans-serif", fontWeight:700, fontSize:11, padding:"5px 10px", borderRadius:4, marginBottom:8 }; },
   fieldTable:{ width:"100%", borderCollapse:"collapse", fontSize:10 },
   inspGrid:{ width:"100%", borderCollapse:"collapse", fontSize:9.5 },
   get inspLbl(){ return { width:"30%", padding:"3px 6px", border:"0.5px solid "+THEME.border, color:THEME.text }; },
