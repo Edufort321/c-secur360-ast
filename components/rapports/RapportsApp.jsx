@@ -1598,6 +1598,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
   const [showLetter,setShowLetter]=useState(false); // éditeur de lettre de présentation
+  const [showDga,setShowDga]=useState(false);       // sélecteur d'analyse DGA à insérer
   const [insertAt,setInsertAt]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
@@ -1785,6 +1786,11 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     if(atIndex==null || atIndex>=r.blocks.length){ setBlocks([...r.blocks,b]); }
     else { const a=[...r.blocks]; a.splice(atIndex,0,b); setBlocks(a); }
     return b.id;
+  }
+  // Insère une analyse DGA (résumé embarqué = snapshot, s'imprime même hors-ligne / après évolution).
+  function insertDgaBlock(summary){
+    const b={ type:"dga", id:bid(), summary, importedAt:new Date().toISOString() };
+    setBlocks([...r.blocks, b]); setShowDga(false);
   }
   // Importer un PDF externe -> bloc "pdfpage" avec une image par page
   async function addPdfPageBlock(file){
@@ -2092,12 +2098,15 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {/* MODALE LETTRE DE PRÉSENTATION */}
       {showLetter && <LetterModal report={r} onSet={(patch)=>setField("letter",{...(r.letter||{}),...patch})} onClose={()=>setShowLetter(false)}/>}
 
+      {/* SÉLECTEUR D'ANALYSE DGA À INSÉRER */}
+      {showDga && <DgaPicker onPick={insertDgaBlock} onClose={()=>setShowDga(false)}/>}
+
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
         {r.blocks.map((b,idx)=>{
-          const icon = b.type==="zone"?"🗂":b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
-          const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : (b.value||"").trim().slice(0,40);
-          const fallback = b.type==="zone"?(LANG==="en"?"Zone":"Zone"):b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
+          const icon = b.type==="zone"?"🗂":b.type==="dga"?"🧪":b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
+          const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : b.type==="dga" ? ("DGA · "+((b.summary||{}).equipment||"")) : (b.value||"").trim().slice(0,40);
+          const fallback = b.type==="zone"?(LANG==="en"?"Zone":"Zone"):b.type==="dga"?"DGA":b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
           const startsNewPage = (b.type==="section" && (b.newPage || (r.sectionPerPage && idx!==r.blocks.findIndex(x=>x.type==="section")))) || (b.type==="zone" && b.newPage!==false);
           return (
           <React.Fragment key={b.id}>
@@ -2165,6 +2174,15 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             {b.type==="table" && <TableEditor block={b} onChange={patch=>updBlock(b.id,patch)}/>}
             {b.type==="inspect" && <InspectEditor block={b} onChange={patch=>updBlock(b.id,patch)} onZoom={setLightbox}/>}
             {b.type==="text" && <textarea style={{...S.input,minHeight:90,resize:"vertical",fontFamily:"'Spline Sans'"}} value={b.value} placeholder={b.placeholder||t("freeText")} onChange={e=>updBlock(b.id,{value:e.target.value})}/>}
+            {b.type==="dga" && (
+              <div style={{border:"1px solid #bfdbfe",background:"#eff6ff",borderRadius:8,padding:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <span style={{fontFamily:"'Archivo'",fontWeight:800,fontSize:12,color:"#1e40af"}}>🧪 {LANG==="en"?"DGA analysis (snapshot)":"Analyse DGA (instantané)"}</span>
+                  <span style={{fontSize:10.5,color:"#64748b"}}>{(b.importedAt||"").slice(0,10)}</span>
+                </div>
+                <DgaSummaryView s={b.summary}/>
+              </div>
+            )}
             {b.type==="photos" && <PhotosEditor block={b} onChange={patch=>updBlock(b.id,patch)} onZoom={setLightbox}/>}
             {b.type==="pdfpage" && (
               <div>
@@ -2198,8 +2216,8 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {/* NAVIGATION INTERNE — bouton flottant + panneau de sauts */}
       <button className="screen-only" style={S.navFab} onClick={()=>setShowNav(s=>!s)} title={t("navTitle")}>☰ {t("navTitle")}</button>
       {showNav && (()=>{
-        const TYPE_META={ zone:{ic:"🗂",col:"#4f46e5",key:"navTypeZone"}, section:{ic:"§",col:"#1e293b",key:"navTypeSection"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"☑",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:"🖼",col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:"📄",col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#64748b",key:"navTypeText"} };
-        const blkLabel=(b)=> (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,40);
+        const TYPE_META={ zone:{ic:"🗂",col:"#4f46e5",key:"navTypeZone"}, section:{ic:"§",col:"#1e293b",key:"navTypeSection"}, dga:{ic:"🧪",col:"#1e40af",key:"navTypeDga"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"☑",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:"🖼",col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:"📄",col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#64748b",key:"navTypeText"} };
+        const blkLabel=(b)=> (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):b.type==="dga"?("DGA · "+((b.summary||{}).equipment||"")):(b.value||"").trim().slice(0,40);
         const filtered = r.blocks.map((b,i)=>({b,i})).filter(({b})=> navFilter==="all" || b.type===navFilter);
         return (
         <div className="screen-only" style={S.navPanel}>
@@ -2210,7 +2228,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           {/* Filtres par type */}
           <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
             <button onClick={()=>setNavFilter("all")} style={{...S.navChip,...(navFilter==="all"?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}}>{t("navAll")} ({r.blocks.length})</button>
-            {["zone","section","inspect","table","photos","pdfpage","text"].map(tp=>{ const c=r.blocks.filter(b=>b.type===tp).length; if(!c)return null; const m=TYPE_META[tp];
+            {["zone","section","dga","inspect","table","photos","pdfpage","text"].map(tp=>{ const c=r.blocks.filter(b=>b.type===tp).length; if(!c)return null; const m=TYPE_META[tp];
               return <button key={tp} onClick={()=>setNavFilter(tp)} style={{...S.navChip,...(navFilter===tp?{background:m.col,color:"#fff",borderColor:m.col}:{color:m.col,borderColor:m.col})}}>{m.ic} {c}</button>;
             })}
           </div>
@@ -2244,6 +2262,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             <button style={S.addPanelItem} onClick={()=>{ addBlock("table"); setShowAdd(false); }}>▦ {t("addTable").replace("+ ","")}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("photos"); setShowAdd(false); }}>🖼 {t("addPhotos").replace("+ ","")}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("text"); setShowAdd(false); }}>¶ {t("addText").replace("+ ","")}</button>
+            <button style={{...S.addPanelItem,background:"#eff6ff",borderColor:"#93c5fd"}} onClick={()=>{ setShowAdd(false); setShowDga(true); }}>🧪 {LANG==="en"?"DGA analysis":"Analyse DGA"}</button>
             <label style={{...S.addPanelItem,cursor:"pointer"}}>📄 {pdfBusy?t("importingPdf"):t("addPdfPage").replace("+ ","")}
               <input type="file" accept="application/pdf" style={{display:"none"}} disabled={pdfBusy} onChange={e=>{ const f=e.target.files?.[0]; if(f){ addPdfPageBlock(f); setShowAdd(false); } e.target.value=""; }}/>
             </label>
@@ -2560,6 +2579,89 @@ function LinkPanel({ report, onSet, onClose }){
         </div>
         )}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Résumé d'une analyse DGA (snapshot embarqué) — rendu commun écran/impression.
+function DgaSummaryView({ s, print }){
+  if(!s) return null;
+  const g=s.gases||{};
+  const gas=[["H₂",g.h2],["CH₄",g.ch4],["C₂H₆",g.c2h6],["C₂H₄",g.c2h4],["C₂H₂",g.c2h2],["CO",g.co],["CO₂",g.co2],["TDCG",s.tdcg]];
+  const condColor = s.condition>=4?"#9d0208":s.condition===3?"#e85d04":s.condition===2?"#e0a96d":"#2a9d8f";
+  const fs=print?10.5:13;
+  return (
+    <div style={{fontSize:fs}}>
+      <table style={{width:"100%",borderCollapse:"collapse",marginBottom:8}}><tbody>
+        <tr>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea",background:"#eef2f5",fontWeight:600,width:"22%"}}>{LANG==="en"?"Equipment":"Équipement"}</td>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea"}}>{s.equipment||"—"}{s.serial?` (${s.serial})`:""}</td>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea",background:"#eef2f5",fontWeight:600,width:"18%"}}>{LANG==="en"?"Date":"Date"}</td>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea"}}>{s.analysisDate||"—"}</td>
+        </tr>
+        <tr>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea",background:"#eef2f5",fontWeight:600}}>{LANG==="en"?"Location":"Localisation"}</td>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea"}}>{s.location||"—"}</td>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea",background:"#eef2f5",fontWeight:600}}>{LANG==="en"?"Rating":"Caract."}</td>
+          <td style={{padding:"3px 6px",border:"0.5px solid #dde5ea"}}>{[s.kv?`${s.kv} kV`:"",s.mva?`${s.mva} MVA`:""].filter(Boolean).join(" · ")||"—"}</td>
+        </tr>
+      </tbody></table>
+      {s.gases && (
+        <table style={{width:"100%",borderCollapse:"collapse",marginBottom:8,textAlign:"center"}}>
+          <thead><tr>{gas.map(([k])=>(<th key={k} style={{padding:"3px 4px",border:"0.5px solid #dde5ea",background:"#34495e",color:"#fff",fontSize:print?9:11}}>{k}</th>))}</tr></thead>
+          <tbody><tr>{gas.map(([k,v],i)=>(<td key={i} style={{padding:"3px 4px",border:"0.5px solid #dde5ea"}}>{v==null?"—":v}</td>))}</tr></tbody>
+        </table>
+      )}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
+        {s.condition!=null && <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:print?10:12,color:"#fff",background:condColor,borderRadius:6,padding:"3px 10px"}}>{LANG==="en"?"Condition":"Condition"} {s.condition}</span>}
+        {s.duval && <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:print?10:12,color:"#1e293b",background:"#e2e8f0",borderRadius:6,padding:"3px 10px"}}>Duval : {s.duval}</span>}
+        {s.fault && <span style={{fontSize:print?10:12,color:"#475569",alignSelf:"center"}}>⚠ {s.fault}</span>}
+      </div>
+      {s.recommendation && <div style={{fontSize:print?10:12.5,background:"#fffaf0",border:"1px solid #e0d5c2",borderRadius:6,padding:"6px 9px",marginBottom:4}}><b>{LANG==="en"?"Recommendation":"Recommandation"} :</b> {s.recommendation}</div>}
+      {s.nextDate && <div style={{fontSize:print?9.5:11.5,color:"#64748b"}}>{LANG==="en"?"Next analysis":"Prochaine analyse"} : {s.nextDate}</div>}
+    </div>
+  );
+}
+
+// Sélecteur d'ANALYSE DGA : liste les dossiers du tenant (route serveur), puis insère un RÉSUMÉ
+// embarqué (snapshot) de la dernière mesure dans le rapport terrain.
+function DgaPicker({ onPick, onClose }){
+  const [loading,setLoading]=useState(true);
+  const [list,setList]=useState([]);
+  const [q,setQ]=useState("");
+  const [busy,setBusy]=useState("");
+  useEffect(()=>{ (async()=>{
+    try{ const r=await fetch("/api/dga/list",{credentials:"include"}); if(r.ok){ const j=await r.json(); setList(j.dossiers||[]); } }catch(e){}
+    setLoading(false);
+  })(); },[]);
+  async function pick(id){
+    setBusy(id);
+    try{ const r=await fetch("/api/dga/list?dossierId="+encodeURIComponent(id),{credentials:"include"}); const j=await r.json();
+      if(r.ok && j.summary) onPick(j.summary); else alert(j.error||"Erreur"); }
+    catch(e){ alert(LANG==="en"?"Network error":"Erreur réseau"); }
+    setBusy("");
+  }
+  const f=list.filter(d=>{ const s=(q||"").toLowerCase(); return !s || (d.ident+" "+d.serie+" "+d.client).toLowerCase().includes(s); });
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:560,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>🧪 {LANG==="en"?"Insert a DGA analysis":"Insérer une analyse DGA"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"A printable summary of the latest measurement is embedded into the report.":"Un résumé imprimable de la dernière mesure est embarqué dans le rapport."}</p>
+        <input style={{...S.input,marginBottom:8}} placeholder={LANG==="en"?"Search equipment…":"Rechercher un équipement…"} value={q} onChange={e=>setQ(e.target.value)}/>
+        {loading ? <div style={{textAlign:"center",color:"#94a3b8",padding:"20px 0"}}>…</div> :
+          f.length===0 ? <div style={{fontSize:12,color:"#94a3b8",padding:"10px 0"}}>{LANG==="en"?"No DGA dossier.":"Aucun dossier DGA."}</div> :
+          <div style={{maxHeight:"54vh",overflowY:"auto"}}>
+            {f.map(d=>(
+              <button key={d.id} onClick={()=>pick(d.id)} disabled={!!busy} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,width:"100%",textAlign:"left",border:"1px solid #e2e8f0",borderRadius:9,padding:"9px 11px",marginBottom:6,background:"#fff",cursor:"pointer",fontSize:13}}>
+                <span><b>{d.ident||"—"}</b>{d.serie?<span style={{color:"#64748b"}}> · {d.serie}</span>:null}<br/><span style={{fontSize:11,color:"#94a3b8"}}>{d.client||""}{d.kv?` · ${d.kv} kV`:""}{d.mva?` · ${d.mva} MVA`:""}</span></span>
+                <span style={{color:"#2a6f97",fontWeight:700,fontSize:12}}>{busy===d.id?"…":(LANG==="en"?"Insert ›":"Insérer ›")}</span>
+              </button>
+            ))}
+          </div>}
       </div>
     </div>
   );
@@ -3173,8 +3275,8 @@ function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
               const isZone=b.type==="zone";
               const isHead=b.type==="section";
               if(isHead) secNo++;
-              const ic = b.type==="section"?"":b.type==="zone"?"🗂 ":b.type==="photos"?"🖼 ":b.type==="pdfpage"?"📄 ":b.type==="table"?"▦ ":b.type==="inspect"?"☑ ":"¶ ";
-              const lbl=(b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,60);
+              const ic = b.type==="section"?"":b.type==="zone"?"🗂 ":b.type==="dga"?"🧪 ":b.type==="photos"?"🖼 ":b.type==="pdfpage"?"📄 ":b.type==="table"?"▦ ":b.type==="inspect"?"☑ ":"¶ ";
+              const lbl=(b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):b.type==="dga"?("DGA · "+((b.summary||{}).equipment||"")):(b.value||"").trim().slice(0,60);
               if(isZone) return <div key={b.id} style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:13,color:THEME.title,marginTop:i?12:0,marginBottom:3,borderBottom:"1px solid "+THEME.border,paddingBottom:2}}>{ic}{lbl}</div>;
               return <div key={b.id} style={isHead?DP.tocHead:DP.tocSub}>
                 {isHead && <span style={{color:THEME.secBar,fontWeight:700,marginRight:8}}>{secNo}.</span>}
@@ -3321,6 +3423,10 @@ function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
             <tbody>{(b.rows||[]).map((row,ri)=>(<tr key={ri}>{b.columns.map((_,ci)=>(<td key={ci} style={DP.tdCell}>{row[ci]||""}</td>))}</tr>))}</tbody></table>
           </>}
           {b.type==="text" && <p style={DP.text}>{b.value}</p>}
+          {b.type==="dga" && <>
+            <div className="secBar-print" style={DP.secBar}>🧪 {LANG==="en"?"DGA analysis":"Analyse DGA"}{(b.summary||{}).equipment?` — ${b.summary.equipment}`:""}</div>
+            <DgaSummaryView s={b.summary} print/>
+          </>}
           {b.type==="inspect" && (b.items||[]).length>0 && (()=>{
             const items=b.items||[]; let n=0;
             const anomalies=items.filter(it=>it.state==="anomaly").map(it=>({...it,num:++n}));
