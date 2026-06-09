@@ -418,6 +418,33 @@ NARRATION :
   return parsed;
 }
 
+// OCR PLAQUE SIGNALÉTIQUE : lit la plaque d'un équipement -> une section de caractéristiques.
+async function extractNameplate(images){ // images = [{base64, mediaType}]
+  const langName = LANG==="en"?"English":"français";
+  const prompt = `Tu lis la PLAQUE SIGNALÉTIQUE (nameplate) d'un équipement électrique (transformateur, disjoncteur, moteur, panneau, etc.). Recopie FIDÈLEMENT ses caractéristiques.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{"equipment":"<type/nom si lisible, sinon ''>",
+ "blocks":[{"type":"section","title":"Plaque signalétique","fields":[
+   {"label":"Fabricant","value":"","uncertain":false},
+   {"label":"Modèle","value":""},{"label":"No de série","value":""},
+   {"label":"Tension","value":""},{"label":"Puissance","value":""},
+   {"label":"Courant","value":""},{"label":"Fréquence","value":""},
+   {"label":"Phases","value":""},{"label":"Année","value":""}
+ ]}]}
+RÈGLES : AJOUTE tous les champs réellement présents sur la plaque (impédance, type d'huile, poids, BIL, etc.) ; valeurs VERBATIM avec unités ; n'invente RIEN d'absent ; marque "uncertain":true si illisible ; langue ${langName}.`;
+  const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
+  content.push({ type:"text", text:prompt });
+  const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ max_tokens:3072, messages:[{ role:"user", content }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const parsed=repairJsonParse(m?m[0]:clean);
+  if(parsed.equipment && parsed.blocks && parsed.blocks[0] && !/—|-/.test(parsed.blocks[0].title)) parsed.blocks[0].title="Plaque signalétique — "+parsed.equipment;
+  return parsed;
+}
+
 // Extraction d'un brouillon MANUSCRIT depuis une image (jpg/png)
 async function extractHandwritingWithApi(key, base64Image, mediaType){
   const langName = LANG==="en"?"English":"français";
@@ -1697,6 +1724,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showVoice,setShowVoice]=useState(false);   // rapport vocal (dictée -> structure IA)
   const [voiceBusy,setVoiceBusy]=useState(false);
   const [voiceResult,setVoiceResult]=useState(null);
+  const [showPlate,setShowPlate]=useState(false);   // OCR plaque signalétique
+  const [plateBusy,setPlateBusy]=useState(false);
+  const [plateResult,setPlateResult]=useState(null);
   const [insertAt,setInsertAt]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
@@ -2021,6 +2051,19 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     }catch(e){ setAssembleResult({ error:e.message }); }
     setAssembleBusy(false);
   }
+  // OCR plaque signalétique : photo de la plaque -> section de caractéristiques ajoutée au rapport.
+  async function doNameplate(files){
+    const arr=[...(files||[])]; if(!arr.length) return;
+    setPlateBusy(true); setPlateResult(null);
+    try{
+      const dataUrls=await Promise.all(arr.map(f=>compressImage(f,1600,0.82)));
+      const images=await aiImagesFrom(dataUrls);
+      const out=await extractNameplate(images);
+      const res=mergeHandwritten(out.blocks||[]);
+      setPlateResult({ ...res, equipment:out.equipment||"" });
+    }catch(e){ setPlateResult({ error:e.message }); }
+    setPlateBusy(false);
+  }
   // Rapport vocal : structure la narration libre (dictée/texte) puis l'assemble dans le rapport.
   async function doVoice(text){
     if(!String(text||"").trim()) return;
@@ -2059,6 +2102,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"share", label:`📤 ${LANG==="en"?"Share":"Partager"}`, on:()=>setShowShare(true), title:LANG==="en"?"Share a read/review link with a verifier":"Partager un lien lecture/révision à un vérificateur" },
             { key:"assemble", label:`🤝 ${LANG==="en"?"Merge handwritten":"Assembler manuscrit"}`, on:()=>{ setAssembleResult(null); setShowAssemble(true); }, title:LANG==="en"?"Scan handwritten pages — the AI places them at the right spot in this report":"Scanner des pages manuscrites — l'IA les replace au bon endroit dans ce rapport" },
             { key:"voice", label:`🎤 ${LANG==="en"?"Voice report":"Rapport vocal"}`, on:()=>{ setVoiceResult(null); setShowVoice(true); }, title:LANG==="en"?"Dictate freely — the AI structures it into the report":"Dictez librement — l'IA structure le tout dans le rapport" },
+            { key:"plate", label:`🔖 ${LANG==="en"?"Nameplate OCR":"Plaque (OCR)"}`, on:()=>{ setPlateResult(null); setShowPlate(true); }, title:LANG==="en"?"Photograph an equipment nameplate — the AI reads its specs":"Photographiez une plaque signalétique — l'IA lit ses caractéristiques" },
             { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
             priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
@@ -2259,6 +2303,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* RAPPORT VOCAL : dictée libre -> structuration IA -> assemblage */}
       {showVoice && <VoiceModal busy={voiceBusy} result={voiceResult} onStructure={doVoice} onClose={()=>{ setShowVoice(false); setVoiceResult(null); }}/>}
+
+      {/* OCR PLAQUE SIGNALÉTIQUE : photo -> section de caractéristiques */}
+      {showPlate && <NameplateModal busy={plateBusy} result={plateResult} onFiles={doNameplate} onClose={()=>{ setShowPlate(false); setPlateResult(null); }}/>}
 
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
@@ -2738,6 +2785,37 @@ function LinkPanel({ report, onSet, onClose }){
         </div>
         )}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:14}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+      </div>
+    </div>
+  );
+}
+
+// Modale OCR PLAQUE : on photographie la plaque signalétique d'un équipement ; l'IA lit ses
+// caractéristiques et les ajoute en section dans le rapport.
+function NameplateModal({ busy, result, onFiles, onClose }){
+  return (
+    <div style={S.overlay} onClick={()=>{ if(!busy) onClose(); }}>
+      <div style={{...S.modal,maxWidth:460}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>🔖 {LANG==="en"?"Nameplate OCR":"Plaque signalétique (OCR)"}</h2>
+          {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
+        </div>
+        <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Photograph the equipment nameplate. The AI reads the specs (serial, manufacturer, rating…) and adds them as a section.":"Photographiez la plaque signalétique de l'équipement. L'IA lit les caractéristiques (n° série, fabricant, tension…) et les ajoute en section."}</p>
+        {!result && (
+          <label style={{...S.btnPrimary,display:"inline-flex",alignItems:"center",cursor:busy?"default":"pointer",opacity:busy?0.6:1}}>
+            {busy ? (LANG==="en"?"Reading…":"Lecture en cours…") : (LANG==="en"?"📷 Photograph the nameplate":"📷 Photographier la plaque")}
+            <input type="file" accept="image/*" multiple disabled={busy} style={{display:"none"}} onChange={e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(fs.length) onFiles(fs); }}/>
+          </label>
+        )}
+        {result && result.error && <div style={{fontSize:13,color:"#9d0208",background:"#fdf0ee",border:"1px solid #e3a0a0",borderRadius:8,padding:"10px 12px"}}>{LANG==="en"?"Error":"Erreur"} : {result.error}</div>}
+        {result && !result.error && (
+          <div>
+            <div style={{fontSize:13,background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              ✓ {LANG==="en"?"Nameplate added":"Plaque ajoutée"}{result.equipment?` (${result.equipment})`:""} — <b>{result.filledFields+(result.addedBlocks||0)}</b> {LANG==="en"?"field(s)":"champ(s)"}.
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end"}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
+          </div>
+        )}
       </div>
     </div>
   );
