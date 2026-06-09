@@ -12,7 +12,7 @@ export const viewport = {
   themeColor: '#10b981',
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://csecur360.ca';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.c-secur360.ca';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

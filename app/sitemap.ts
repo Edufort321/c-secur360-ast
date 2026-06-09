@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 // SEO (#23) : sitemap des pages PUBLIQUES uniquement (jamais d'admin/tenant).
-const BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://csecur360.ca';
+const BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.c-secur360.ca';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages = ['', '/pricing', '/privacy', '/terms'];

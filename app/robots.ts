@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 // Securite/SEO (#23) : bloquer l'indexation des espaces prives (admin, API, dashboards, auth, tenants).
-const BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://csecur360.ca';
+const BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.c-secur360.ca';
 
 export default function robots(): MetadataRoute.Robots {
   return {

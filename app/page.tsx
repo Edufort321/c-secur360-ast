@@ -473,7 +473,7 @@ export default function LandingPage() {
             </button>
           </form>
           <p className="text-slate-500 text-xs mt-3">
-            {fr ? 'URL: csecur360.ca/votre-organisation' : 'URL: csecur360.ca/your-organization'}
+            {fr ? 'URL: www.c-secur360.ca/votre-organisation' : 'URL: www.c-secur360.ca/your-organization'}
           </p>
         </div>
       </section>

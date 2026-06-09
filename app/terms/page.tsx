@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/terms' },
 };
 
-const CONTACT = process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'confidentialite@csecur360.ca';
+const CONTACT = process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'confidentialite@cerdia.ai';
 const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'C-Secur360 (CERDIA inc.)';
 
 export default function TermsPage() {

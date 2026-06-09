@@ -2,7 +2,7 @@
 // /confidentialite (canonique, FR) et /privacy (alias historique). Une seule source à maintenir.
 
 // Coordonnées configurables via variables d'environnement (valeurs par défaut sûres).
-const CONTACT = process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'confidentialite@csecur360.ca';
+const CONTACT = process.env.NEXT_PUBLIC_PRIVACY_EMAIL || 'confidentialite@cerdia.ai';
 const PRIVACY_OFFICER = process.env.NEXT_PUBLIC_PRIVACY_OFFICER || 'Eric Dufort';
 const LEGAL_ENTITY = process.env.NEXT_PUBLIC_LEGAL_ENTITY || 'C-Secur360 (CERDIA inc.)';
 

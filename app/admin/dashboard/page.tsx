@@ -130,7 +130,7 @@ export default function AdminDashboard() {
   };
 
   const generateQRCode = (clientSubdomain: string) => {
-    const url = `https://csecur360.ca/${clientSubdomain}`;
+    const url = `https://www.c-secur360.ca/${clientSubdomain}`;
     window.open(`/api/qr/generate?client=${clientSubdomain}`, '_blank');
   };
 
@@ -757,7 +757,7 @@ export default function AdminDashboard() {
                       required
                     />
                     <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                      URL: csecur360.ca/{newClient.subdomain || 'votre-slug'}
+                      URL: www.c-secur360.ca/{newClient.subdomain || 'votre-slug'}
                     </p>
                   </div>
                 </div>
