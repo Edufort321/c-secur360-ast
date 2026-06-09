@@ -50,7 +50,8 @@ export default function RootLayout({
     <html lang="fr">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="theme-color" content="#3498db" />
+        <link rel="apple-touch-icon" href="/icon-pwa?size=180" />
+        <meta name="theme-color" content="#111827" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

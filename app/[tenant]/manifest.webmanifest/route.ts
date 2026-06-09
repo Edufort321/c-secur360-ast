@@ -16,13 +16,13 @@ export function GET(_req: Request, { params }: { params: { tenant: string } }) {
     scope: `/${tenant}/`,
     display: 'standalone',
     orientation: 'any',
-    background_color: '#0f172a',
-    theme_color: '#10b981',
+    background_color: '#111827',
+    theme_color: '#111827',
     icons: [
-      { src: '/logo.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/logo.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: '/csecur360-logo-v2025.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/csecur360-logo-v2025.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-pwa?size=192', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-pwa?size=192', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-pwa?size=512', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-pwa?size=512', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
   return new NextResponse(JSON.stringify(manifest), {
