@@ -766,6 +766,24 @@ export default function App(){
     setLoaded(true);
   })(); },[]);
 
+  // Deep-link QR : ?r=<id> (scan d'un QR de page) ouvre directement le rapport dans l'éditeur.
+  // Un rapport = un seul QR (couvre toutes ses pages) ; ?blk=<id> permet de viser une page.
+  const [deepDone,setDeepDone]=useState(false);
+  useEffect(()=>{
+    if(!loaded||deepDone) return; setDeepDone(true);
+    try{
+      const sp=new URLSearchParams(window.location.search);
+      const rid=sp.get("r");
+      if(rid && db.find(x=>x.id===rid)){
+        setSelId(rid); setView("editor");
+        const blk=sp.get("blk");
+        if(blk) setTimeout(()=>{ const el=document.getElementById("blk-"+blk); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },400);
+        // nettoie l'URL (le rapport reste ouvert ; évite de ré-ouvrir au prochain rendu)
+        const u=new URL(window.location.href); u.searchParams.delete("r"); u.searchParams.delete("blk"); window.history.replaceState({},"",u.pathname+u.search);
+      }
+    }catch{}
+  },[loaded]);
+
   // Synchronise la langue avec le header principal du site (cs-lang-change + storage).
   useEffect(()=>{
     const apply=()=>{ try{ const lg=localStorage.getItem("cs-lang")||"fr"; LANG=lg; setLang(lg); }catch{} };
@@ -1451,6 +1469,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showLink,setShowLink]=useState(false);   // panneau "Lier au projet / événement"
   const [showSoum,setShowSoum]=useState(false);   // constructeur de soumission depuis anomalies/recos
   const [showTools,setShowTools]=useState(false); // menu "⋯" (actions repliées sur mobile)
+  const [qr,setQr]=useState(null);                // { url, data } QR du rapport (deep-link ?r=)
+  const [qrMap,setQrMap]=useState({});            // { sectionId: {url,data} } QR par section/équipement
+  const [showQr,setShowQr]=useState(false);
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
   const [insertAt,setInsertAt]=useState(null);
@@ -1468,6 +1489,25 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   useEffect(()=>{ const h=()=>setNarrow(window.innerWidth<640); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
   const [pdfBusy,setPdfBusy]=useState(false);
   useEffect(()=>{ setR(report); },[report.id]);
+  // QR codes du rapport. DEUX niveaux (comme les étiquettes d'équipement DGA) :
+  //  • QR RAPPORT  -> /{tenant}/rapports?r=<id>            (ouvre le rapport complet)
+  //  • QR SECTION  -> /{tenant}/rapports?r=<id>&blk=<sec>  (ouvre DIRECTEMENT cette section/équipement)
+  // Le client colle le QR de section sur l'équipement ; le scan ouvre la bonne page à remplir, en
+  // direct, et tout s'assemble dans le rapport complet. Généré client-only (import dynamique).
+  const sectionIds=(r.blocks||[]).filter(b=>b.type==="section").map(b=>b.id).join(",");
+  useEffect(()=>{ let on=true; (async()=>{
+    try{
+      const QR=(await import("qrcode")).default;
+      const tn=(window.location.pathname.split("/").filter(Boolean)[0])||"";
+      const base=`${window.location.origin}/${tn}/rapports?r=${report.id}`;
+      const data=await QR.toDataURL(base,{margin:1,width:240});
+      const map={};
+      for(const b of (r.blocks||[]).filter(x=>x.type==="section")){
+        map[b.id]={ url:`${base}&blk=${b.id}`, data: await QR.toDataURL(`${base}&blk=${b.id}`,{margin:1,width:200}) };
+      }
+      if(on){ setQr({url:base,data}); setQrMap(map); }
+    }catch(e){ if(on){ setQr(null); setQrMap({}); } }
+  })(); return ()=>{on=false;}; },[report.id, sectionIds]);
 
   function commit(next){ setR(next); onUpdate(next); setSavedFlash(true); }
   useEffect(()=>{ if(!savedFlash) return; const id=setTimeout(()=>setSavedFlash(false),1200); return ()=>clearTimeout(id); },[savedFlash]);
@@ -1624,6 +1664,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           // Actions de l'éditeur. Sur écran étroit (mobile), elles se replient dans un menu « ⋯ ».
           const actions=[
             { key:"link", label:`🔗 ${(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}`, on:()=>setShowLink(true), style:(r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement" },
+            { key:"qr", label:`🔳 ${LANG==="en"?"QR / page":"QR / page"}`, on:()=>setShowQr(true), title:LANG==="en"?"Page QR code — scan to open & edit this report":"QR code de page — scanner pour ouvrir et éditer ce rapport" },
             { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
             priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
@@ -1666,6 +1707,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
 
       {/* PANNEAU LIER (projet + événement planner) */}
       {showLink && <LinkPanel report={r} onSet={setLink} onClose={()=>setShowLink(false)}/>}
+
+      {/* MODALE QR (un seul QR pour tout le rapport + navigation par page/section) */}
+      {showQr && <QrPanel report={r} qr={qr} qrMap={qrMap} onJump={(bid)=>{ setShowQr(false); const el=document.getElementById("blk-"+bid); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.transition="box-shadow .3s"; el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } }} onClose={()=>setShowQr(false)}/>}
 
       {/* CONSTRUCTEUR DE SOUMISSION (anomalies/recommandations sélectionnées) */}
       {showSoum && <SoumissionBuilder report={r} items={priceItems} onClose={()=>setShowSoum(false)}/>}
@@ -1913,7 +1957,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {lightbox && <div style={S.overlay} className="screen-only" onClick={()=>setLightbox(null)}><img src={lightbox} alt="" style={{maxWidth:"92vw",maxHeight:"92vh",borderRadius:8}}/></div>}
 
       {/* RAPPORT IMPRIMABLE */}
-      <PrintDoc report={r} logo={logo} pale={paleExport}/>
+      <PrintDoc report={r} logo={logo} pale={paleExport} qr={qr&&qr.data} qrMap={qrMap}/>
     </div>
   );
 }
@@ -2223,6 +2267,69 @@ function LinkPanel({ report, onSet, onClose }){
   );
 }
 
+// Modale QR : un SEUL QR couvre tout le rapport (toutes ses pages). Le scan ouvre le rapport dans
+// l'éditeur (deep-link ?r=). On liste les « pages » (sections/équipements) pour sauter directement
+// à l'une d'elles — logique terrain : même QR, on choisit / on passe à la page suivante.
+function QrPanel({ report, qr, qrMap, onJump, onClose }){
+  const sections=(report.blocks||[]).filter(b=>b.type==="section");
+  const [copied,setCopied]=useState(null);
+  function copy(url,key){ try{ navigator.clipboard.writeText(url||""); setCopied(key); setTimeout(()=>setCopied(null),1500); }catch(e){} }
+  // Imprime une seule étiquette QR (à coller sur l'équipement) dans une fenêtre dédiée.
+  function printLabel(title,dataUrl,url){
+    const w=window.open("","_blank","width=420,height=520"); if(!w) return;
+    w.document.write(`<html><head><title>QR — ${(title||"").replace(/</g,"")}</title></head>
+      <body style="font-family:Archivo,Arial,sans-serif;text-align:center;padding:24px;margin:0">
+      <div style="font-weight:900;font-size:18px;margin-bottom:6px">${(title||"").replace(/</g,"")||"Équipement"}</div>
+      <div style="font-size:11px;color:#555;margin-bottom:12px">${(report.title||"").replace(/</g,"")} ${report.num?("· "+report.num):""}</div>
+      <img src="${dataUrl}" style="width:280px;height:280px"/>
+      <div style="font-size:9px;color:#888;margin-top:10px;word-break:break-all">${(url||"").replace(/</g,"")}</div>
+      <script>setTimeout(function(){window.print();},250);</script></body></html>`);
+    w.document.close();
+  }
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:600,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>🔳 {LANG==="en"?"QR codes":"QR codes"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"One QR for the whole report, plus one per section/equipment. Stick the equipment QR on the equipment: scanning opens that exact section to fill in — live — and everything assembles into the full report.":"Un QR pour le rapport complet, et un par section/équipement. Collez le QR d'un équipement dessus : le scan ouvre directement cette section à remplir — en direct — et tout s'assemble dans le rapport complet."}</p>
+
+        {/* QR RAPPORT COMPLET */}
+        <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",border:"1.5px solid #1e293b",borderRadius:12,padding:12,marginBottom:14}}>
+          {qr ? <img src={qr.data||qr} alt="QR" style={{width:120,height:120}}/> : <div style={{width:120,height:120,display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8"}}>…</div>}
+          <div style={{flex:"1 1 200px",minWidth:170}}>
+            <div style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:14}}>{LANG==="en"?"Full report":"Rapport complet"}</div>
+            <div style={{fontSize:10.5,color:"#64748b",wordBreak:"break-all",margin:"4px 0 8px"}}>{qr?qr.url:""}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <button style={{...S.miniBtn}} onClick={()=>copy(qr&&qr.url,"rep")}>{copied==="rep"?"✓":(LANG==="en"?"Copy":"Copier")}</button>
+              {qr && <button style={{...S.miniBtn}} onClick={()=>printLabel(report.title||(LANG==="en"?"Full report":"Rapport complet"),qr.data,qr.url)}>🖨 {LANG==="en"?"Label":"Étiquette"}</button>}
+            </div>
+          </div>
+        </div>
+
+        {/* QR PAR SECTION / ÉQUIPEMENT */}
+        <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>{LANG==="en"?"Per section / equipment":"Par section / équipement"} ({sections.length})</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:10}}>
+          {sections.length===0 ? <div style={{fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No section yet.":"Aucune section."}</div> :
+            sections.map((b,k)=>{ const q=(qrMap||{})[b.id];
+              return (
+              <div key={b.id} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:10,textAlign:"center",background:"#fff"}}>
+                {q ? <img src={q.data} alt="QR" style={{width:100,height:100}}/> : <div style={{width:100,height:100,margin:"0 auto",color:"#cbd5e1"}}>…</div>}
+                <div style={{fontWeight:700,fontSize:12,marginTop:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={b.title||""}>{LANG==="en"?"Page":"Page"} {k+1} · {b.title||(LANG==="en"?"(untitled)":"(sans titre)")}</div>
+                <div style={{display:"flex",gap:5,justifyContent:"center",marginTop:7,flexWrap:"wrap"}}>
+                  <button style={{...S.miniBtn,fontSize:10.5,padding:"3px 7px"}} onClick={()=>onJump(b.id)}>{LANG==="en"?"Edit":"Éditer"}</button>
+                  {q && <button style={{...S.miniBtn,fontSize:10.5,padding:"3px 7px"}} onClick={()=>copy(q.url,b.id)}>{copied===b.id?"✓":(LANG==="en"?"Copy":"Copier")}</button>}
+                  {q && <button style={{...S.miniBtn,fontSize:10.5,padding:"3px 7px"}} onClick={()=>printLabel(b.title,q.data,q.url)}>🖨</button>}
+                </div>
+              </div>
+            ); })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Constructeur de soumission : l'utilisateur coche les anomalies/recommandations que le client
 // veut faire chiffrer ; chaque item devient une ligne de soumission. On transmet un brouillon au
 // module Soumissions (via sessionStorage) puis on y navigue — la soumission s'ouvre pré-remplie.
@@ -2371,7 +2478,7 @@ function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
 // ============================================================
 //  RAPPORT IMPRIMABLE
 // ============================================================
-function PrintDoc({ report, logo, pale }){
+function PrintDoc({ report, logo, pale, qr, qrMap }){
   const r=report; const today=new Date().toISOString().slice(0,10);
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
   return (
@@ -2431,7 +2538,10 @@ function PrintDoc({ report, logo, pale }){
         <tfoot><tr><td>
           <div className="run-foot" style={{borderTop:"1px solid "+THEME.border}}>
             <span>{tplLabel} · {r.num || (TEMPLATES.find(x=>x.id===r.template)||{}).num || ""}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
-            <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
+            <span style={{display:"flex",alignItems:"center",gap:8}}>
+              <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
+              {qr && <img src={qr} alt="QR" style={{height:30,width:30}}/>}
+            </span>
           </div>
         </td></tr></tfoot>
         <tbody><tr><td>
@@ -2526,7 +2636,10 @@ function PrintDoc({ report, logo, pale }){
       {r.blocks.map(b=>(
         <div key={b.id} style={{marginTop:12, breakInside:(b.type==="table"&&(b.rows||[]).length>6)?"auto":"avoid"}}>
           {b.type==="section" && <>
-            <div className="secBar-print" style={DP.secBar}>{b.title}</div>
+            <div className="secBar-print" style={{...DP.secBar,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+              <span>{b.title}</span>
+              {qrMap&&qrMap[b.id] && <img src={qrMap[b.id].data} alt="QR" title={b.title||""} style={{height:34,width:34,background:"#fff",padding:2,borderRadius:3,flexShrink:0}}/>}
+            </div>
             <table style={DP.fieldTable}><tbody>{(b.fields||[]).map(f=>(<tr key={f.id}><td style={DP.fLbl}>{f.label}</td><td style={DP.fVal}>{f.value||"—"}</td></tr>))}</tbody></table>
           </>}
           {b.type==="table" && (b.columns||[]).length>0 && <>
