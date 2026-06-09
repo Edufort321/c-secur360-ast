@@ -2234,9 +2234,16 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Attach a presentation letter as the first page":"Joindre une lettre de présentation en première page"}>
               <input type="checkbox" checked={!!(r.letter&&r.letter.show)} onChange={e=>{
                 const on=e.target.checked; const base=r.letter||{};
-                // Pré-remplit la lettre depuis les infos DÉJÀ enregistrées du rapport (1re activation).
-                const seed=(on && !base.subject && !base.company && !base.fileRef)
-                  ? { company:r.client||"", subject:r.title||"", fileRef:r.num||r.projectNo||"", attachment:base.attachment||(LANG==="en"?"Report":"Rapport") } : {};
+                // À l'activation : pré-remplit depuis les infos du rapport ET met un TEXTE PAR DÉFAUT
+                // (éditable ensuite dans « Éditer la lettre »). On ne remplace jamais ce qui existe déjà.
+                const subj=r.title||"";
+                const defBody = LANG==="en"
+                  ? `Please find enclosed our report regarding ${subj||"the inspection"}.\n\nWe hope it meets your full satisfaction. Do not hesitate to contact us for any additional information.\n\nYours sincerely,`
+                  : `Veuillez trouver ci-joint notre rapport concernant ${subj||"l'inspection"}.\n\nNous espérons le tout à votre entière satisfaction. N'hésitez pas à communiquer avec nous pour toute information supplémentaire.\n\nNous vous prions d'agréer, Madame, Monsieur, nos sincères salutations.`;
+                const seed = on ? {
+                  ...((!base.subject && !base.company && !base.fileRef) ? { company:r.client||"", subject:r.title||"", fileRef:r.num||r.projectNo||"", attachment:base.attachment||(LANG==="en"?"Report":"Rapport") } : {}),
+                  ...(!base.body ? { body: defBody } : {}),
+                } : {};
                 setField("letter",{...base,...seed,show:on});
               }}/>
               ✉ {LANG==="en"?"Cover letter":"Lettre de présentation"}
