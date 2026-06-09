@@ -340,7 +340,8 @@ RÈGLES IMPORTANTES :
 - INCERTITUDE : pour CHAQUE valeur dont la lecture n'est PAS certaine (chiffre ambigu, mot illisible, rature), marque "uncertain": true sur le field ou le bloc text. Pour un tableau, liste les coordonnées [ligne,colonne] douteuses dans "uncertainCells".
 - Sois HONNÊTE sur l'incertitude : un chiffre technique mal lu est dangereux. En cas de doute, marque uncertain.
 - Si une zone est totalement illisible, mets "???" comme valeur et uncertain:true.
-- NE PAS inventer de données qui ne sont pas dans le brouillon. Garder la langue d'origine (${langName}).`;
+- NE PAS inventer de données qui ne sont pas dans le brouillon. Garder la langue d'origine (${langName}).
+- RÉFÉRENCE PÂLE : si des valeurs IMPRIMÉES TRÈS PÂLES/grises servent de trame de référence et que des valeurs MANUSCRITES (plus foncées) sont écrites par-dessus ou à côté, lis UNIQUEMENT le MANUSCRIT (les valeurs pâles sont l'ancienne version, à ignorer). Si un champ pâle n'a PAS été réécrit à la main, traite-le comme vide.`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:6144, messages:[{ role:"user", content:[
@@ -366,7 +367,7 @@ Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
    {"type":"table","title":"titre","columns":["..."],"rows":[["..."]],"uncertainCells":[[ri,ci],...]},
    {"type":"text","value":"texte","uncertain":true|false}
  ]}
-RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisible marque "uncertain":true ; n'invente rien ; conserve TOUTES les sections et colonnes de TOUTES les photos ; cherche le NUMÉRO DE GABARIT en bas de page ; garde la langue d'origine (${langName}).`;
+RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisible marque "uncertain":true ; n'invente rien ; conserve TOUTES les sections et colonnes de TOUTES les photos ; cherche le NUMÉRO DE GABARIT en bas de page ; garde la langue d'origine (${langName}). RÉFÉRENCE PÂLE : si des valeurs imprimées TRÈS PÂLES servent de trame et que du MANUSCRIT plus foncé est écrit par-dessus/à côté, lis le MANUSCRIT (le pâle = ancienne version à ignorer ; champ pâle non réécrit = vide).`;
   const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
   content.push({ type:"text", text:prompt });
   const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" },
@@ -399,7 +400,7 @@ Retourne UNIQUEMENT un objet JSON valide, MÊME structure que le gabarit, avec l
   {"type":"table","title":"<identique>","columns":["<identiques>"],"rows":[["<valeurs>"]],"uncertainCells":[[ri,ci]]},
   {"type":"text","title":"<identique>","value":"<texte>"}
 ]}
-RÈGLES : conserve EXACTEMENT les mêmes sections, libellés et colonnes que le gabarit (même ordre). Mets la valeur lue pour chaque champ/cellule ; absente -> '' ; lecture incertaine -> "uncertain":true. N'invente rien. Langue : ${langName}.`;
+RÈGLES : conserve EXACTEMENT les mêmes sections, libellés et colonnes que le gabarit (même ordre). Mets la valeur lue pour chaque champ/cellule ; absente -> '' ; lecture incertaine -> "uncertain":true. N'invente rien. RÉFÉRENCE PÂLE : si des valeurs imprimées TRÈS PÂLES servent de trame et que du MANUSCRIT plus foncé est écrit par-dessus/à côté, lis le MANUSCRIT (le pâle = ancienne version à ignorer ; champ pâle non réécrit = vide). Langue : ${langName}.`;
   const content = images.map(im=>({ type:"image", source:{ type:"base64", media_type:im.mediaType||"image/jpeg", data:im.base64 } }));
   content.push({ type:"text", text:prompt });
   const r=await fetch("/api/rapports/ai",{ method:"POST", headers:{ "Content-Type":"application/json" },
@@ -1446,6 +1447,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [fixing,setFixing]=useState(false);
   const [fixMsg,setFixMsg]=useState(null);
   const [savedFlash,setSavedFlash]=useState(false);
+  const [paleExport,setPaleExport]=useState(false); // export "à compléter à la main" (valeurs en pâle)
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
   const [insertAt,setInsertAt]=useState(null);
@@ -1592,6 +1594,11 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       : `${emptyN} champ(s) encore vide(s) (inscrire N/V, N/A, valider ou les retirer dans le rapport). Exporter en PDF quand même ?`)) return;
     setTimeout(()=>window.print(),200);
   }
+  // Export « à compléter à la main » : valeurs en pâle (référence) pour réécrire par-dessus.
+  function doExportHandwrite(){
+    setPaleExport(true);
+    setTimeout(()=>{ window.print(); setTimeout(()=>setPaleExport(false),600); },250);
+  }
 
   return (
     <div>
@@ -1612,6 +1619,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           <button style={S.btnGhost} onClick={doTranslate} disabled={fixing}>{t("translateReport")}</button>
           <button style={S.btnGhost} onClick={()=>onDuplicate(r.id,false)}>{t("duplicate")}</button>
           <button style={S.btnGhost} onClick={()=>onDuplicate(r.id,true)}>{t("newVersion")}</button>
+          <button style={S.btnGhost} onClick={doExportHandwrite} title={LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main"}>🖊 {LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}</button>
           <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
         </div>
       </div>
@@ -1863,7 +1871,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {lightbox && <div style={S.overlay} className="screen-only" onClick={()=>setLightbox(null)}><img src={lightbox} alt="" style={{maxWidth:"92vw",maxHeight:"92vh",borderRadius:8}}/></div>}
 
       {/* RAPPORT IMPRIMABLE */}
-      <PrintDoc report={r} logo={logo}/>
+      <PrintDoc report={r} logo={logo} pale={paleExport}/>
     </div>
   );
 }
@@ -2188,11 +2196,11 @@ function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
 // ============================================================
 //  RAPPORT IMPRIMABLE
 // ============================================================
-function PrintDoc({ report, logo }){
+function PrintDoc({ report, logo, pale }){
   const r=report; const today=new Date().toISOString().slice(0,10);
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
   return (
-    <div className="print-only" style={DP.wrap}>
+    <div className={"print-only"+(pale?" pale":"")} style={DP.wrap}>
       {/* PAGE COUVERTURE (optionnelle) — hors du tableau d'en-tête/pied répété */}
       {(r.cover||{}).show!==false && (()=>{
         const cv=r.cover||{};
@@ -2422,6 +2430,8 @@ const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@
   .screen-only{ display:none !important; }
   .print-only, .print-only *{ visibility:visible !important; }
   .print-only{ display:block !important; position:absolute !important; left:0; top:0; width:100%; }
+  /* Export "à compléter à la main" : valeurs/contenu en pâle (référence) pour réécrire par-dessus. */
+  .print-only.pale .rpt-content, .print-only.pale .cover-page-print, .print-only.pale .toc-page-print{ opacity:0.32 !important; }
   .cover-page-print{ page: covpage; page-break-after:always; break-after:page; }
   .toc-page-print{ page-break-after:always; break-after:page; }
   .rpt-content{ counter-reset: page 0; }
