@@ -1524,6 +1524,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showQr,setShowQr]=useState(false);
   const [showNav,setShowNav]=useState(false);
   const [showCover,setShowCover]=useState(false);
+  const [showLetter,setShowLetter]=useState(false); // éditeur de lettre de présentation
   const [insertAt,setInsertAt]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
@@ -1690,6 +1691,23 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     setFixing(false);
   }
 
+  // Numéro de DOSSIER = nom du fichier PDF à l'enregistrement (obligatoire). Priorité : n° dossier
+  // (projectNo) > n° de rapport (num) > titre.
+  function dossierName(){ return (r.projectNo||r.num||r.title||"").trim(); }
+  // Imprime en posant document.title = numéro de dossier (le navigateur l'utilise comme nom de
+  // fichier PDF), puis restaure le titre d'origine.
+  function printWithName(){
+    const dossier=dossierName();
+    if(!dossier){ alert(LANG==="en"?"A file/dossier number is required before export (set the project no. or report no.).":"Un numéro de dossier est obligatoire avant l'export (renseignez le n° de dossier ou le n° de rapport)."); return false; }
+    const safe=dossier.replace(/[\\/:*?"<>|]+/g,"-");
+    const prev=document.title;
+    document.title=safe;
+    const restore=()=>{ document.title=prev; window.removeEventListener("afterprint",restore); };
+    window.addEventListener("afterprint",restore);
+    window.print();
+    setTimeout(restore,4000); // filet de sécurité si afterprint ne se déclenche pas
+    return true;
+  }
   function doExport(){
     // Avertir si des champs de section sont vides (non remplis / non validés) avant l'export.
     let emptyN=0;
@@ -1697,12 +1715,13 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     if(emptyN>0 && !confirm(LANG==="en"
       ? `${emptyN} empty field(s) remain (set N/V, N/A, validate or remove them in the report). Export to PDF anyway?`
       : `${emptyN} champ(s) encore vide(s) (inscrire N/V, N/A, valider ou les retirer dans le rapport). Exporter en PDF quand même ?`)) return;
-    setTimeout(()=>window.print(),200);
+    setTimeout(()=>printWithName(),200);
   }
   // Export « à compléter à la main » : valeurs en pâle (référence) pour réécrire par-dessus.
   function doExportHandwrite(){
+    if(!dossierName()){ alert(LANG==="en"?"A file/dossier number is required before export.":"Un numéro de dossier est obligatoire avant l'export."); return; }
     setPaleExport(true);
-    setTimeout(()=>{ window.print(); setTimeout(()=>setPaleExport(false),600); },250);
+    setTimeout(()=>{ printWithName(); setTimeout(()=>setPaleExport(false),600); },250);
   }
   // Lien vers un PROJET (hub) et un ÉVÉNEMENT du planner. Stocké dans r.link ; les colonnes
   // project_id / planner_job_id sont renseignées côté serveur (le statut du rapport remonte
@@ -1855,11 +1874,26 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
               <input type="checkbox" checked={r.qrShow!==false} onChange={e=>setField("qrShow",e.target.checked)}/>
               🔳 {LANG==="en"?"QR in export":"QR à l'export"}
             </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Attach a presentation letter as the first page":"Joindre une lettre de présentation en première page"}>
+              <input type="checkbox" checked={!!(r.letter&&r.letter.show)} onChange={e=>{
+                const on=e.target.checked; const base=r.letter||{};
+                // Pré-remplit la lettre depuis les infos DÉJÀ enregistrées du rapport (1re activation).
+                const seed=(on && !base.subject && !base.company && !base.fileRef)
+                  ? { company:r.client||"", subject:r.title||"", fileRef:r.num||r.projectNo||"", attachment:base.attachment||(LANG==="en"?"Report":"Rapport") } : {};
+                setField("letter",{...base,...seed,show:on});
+              }}/>
+              ✉ {LANG==="en"?"Cover letter":"Lettre de présentation"}
+            </label>
           </div>
           {(r.cover||{}).show!==false && (
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
               <input style={{...S.input,flex:1,minWidth:180}} value={(r.cover||{}).subtitle||""} placeholder={t("coverSubtitle")} onChange={e=>setField("cover",{...(r.cover||{}),subtitle:e.target.value})}/>
               <button style={S.btnGhost} onClick={()=>setShowCover(true)}>🎨 {t("coverCustomize")}</button>
+            </div>
+          )}
+          {(r.letter&&r.letter.show) && (
+            <div style={{marginTop:10}}>
+              <button style={S.btnGhost} onClick={()=>setShowLetter(true)}>✉ {LANG==="en"?"Edit the cover letter":"Éditer la lettre de présentation"}</button>
             </div>
           )}
         </div>
@@ -1896,6 +1930,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
         </div>
         );
       })()}
+
+      {/* MODALE LETTRE DE PRÉSENTATION */}
+      {showLetter && <LetterModal report={r} onSet={(patch)=>setField("letter",{...(r.letter||{}),...patch})} onClose={()=>setShowLetter(false)}/>}
 
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
@@ -2583,6 +2620,63 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
   );
 }
 
+// Éditeur de LETTRE DE PRÉSENTATION (page couverture jointe au rapport). Tous les champs sont
+// éditables et VIDES par défaut (aucune donnée d'exemple). Un bouton génère un corps type.
+function LetterModal({ report, onSet, onClose }){
+  const L=report.letter||{};
+  const set=(k,v)=>onSet({[k]:v});
+  function genBody(){
+    const subj=L.subject||report.title||"";
+    const body = LANG==="en"
+      ? `Please find enclosed our report regarding ${subj||"the inspection"}.\n\nWe hope it meets your full satisfaction. Do not hesitate to contact us for any additional information.\n\nYours sincerely,`
+      : `Veuillez trouver ci-joint notre rapport concernant ${subj||"l'inspection"}.\n\nNous espérons le tout à votre entière satisfaction. N'hésitez pas à communiquer avec nous pour toute information supplémentaire.\n\nNous vous prions d'agréer, Madame, Monsieur, nos sincères salutations.`;
+    set("body",body);
+  }
+  const F=(label,key,opt={})=>(
+    <div style={{gridColumn:opt.full?"1 / -1":"auto"}}>
+      <label style={S.label}>{label}</label>
+      <input style={S.input} value={L[key]||""} onChange={e=>set(key,e.target.value)} placeholder={opt.ph||""}/>
+    </div>
+  );
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:640,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <h2 style={{...S.h2,margin:0}}>✉ {LANG==="en"?"Cover letter":"Lettre de présentation"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Editable letter attached as the first page of the export.":"Lettre éditable jointe en première page de l'export."}</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,200px),1fr))",gap:10}}>
+          {F(LANG==="en"?"City":"Ville", "city", {ph:LANG==="en"?"Sherbrooke":"Sherbrooke"})}
+          {F(LANG==="en"?"Date":"Date", "date", {ph:LANG==="en"?"June 9, 2026":"le 9 juin 2026"})}
+          {F(LANG==="en"?"Recipient":"Destinataire", "recipientName", {ph:LANG==="en"?"Mr. John Smith":"Monsieur Jean Tremblay"})}
+          {F(LANG==="en"?"Company":"Entreprise", "company")}
+          {F(LANG==="en"?"Address line 1":"Adresse (ligne 1)", "addr1")}
+          {F(LANG==="en"?"Address line 2":"Adresse (ligne 2)", "addr2")}
+          {F(LANG==="en"?"Subject":"Objet", "subject", {full:true})}
+          {F(LANG==="en"?"Their client":"Votre client", "clientRef")}
+          {F(LANG==="en"?"Their order #":"Votre commande", "orderRef")}
+          {F(LANG==="en"?"Our file #":"Notre dossier", "fileRef")}
+          {F(LANG==="en"?"Attachment":"Pièce jointe", "attachment", {ph:LANG==="en"?"Report":"Rapport"})}
+        </div>
+        <div style={{marginTop:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <label style={S.label}>{LANG==="en"?"Body":"Corps de la lettre"}</label>
+            <button style={{...S.miniBtn,marginBottom:4}} onClick={genBody}>✨ {LANG==="en"?"Generate text":"Générer le texte type"}</button>
+          </div>
+          <textarea style={{...S.input,minHeight:120,resize:"vertical",fontFamily:"'Spline Sans'"}} value={L.body||""} onChange={e=>set("body",e.target.value)}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,200px),1fr))",gap:10,marginTop:10}}>
+          {F(LANG==="en"?"Signatory":"Signataire", "signName")}
+          {F(LANG==="en"?"Title":"Titre", "signTitle", {ph:LANG==="en"?"tech.":"tech."})}
+          {F(LANG==="en"?"Initials":"Initiales", "initials")}
+        </div>
+        <div style={{marginTop:16,textAlign:"right"}}><button style={S.btnDark} onClick={onClose}>{t("save")}</button></div>
+      </div>
+    </div>
+  );
+}
+
 function AnnotationsPanel({ annotations, onAdd, onUpd, onDel, onClose, onZoom }){
   return (
     <div style={S.overlay} onClick={onClose}>
@@ -2679,6 +2773,42 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
   return (
     <div className={"print-only"+(pale?" pale":"")+(r.condensed?" cond":"")+(r.sectionPerPage?" secpage":"")} style={DP.wrap}>
+      {/* LETTRE DE PRÉSENTATION (optionnelle) — tout en première page. Champs vides repliés sur
+          les infos déjà enregistrées du rapport. */}
+      {(r.letter&&r.letter.show) && (()=>{
+        const L=r.letter||{};
+        const company=L.company||r.client||"";
+        const subject=L.subject||r.title||"";
+        const fileRef=L.fileRef||r.num||r.projectNo||"";
+        const dateStr=L.date||today;
+        const attachment=L.attachment||(LANG==="en"?"Report":"Rapport");
+        return (
+        <div className="letter-page-print" style={{minHeight:"247mm",display:"flex",flexDirection:"column",fontSize:12,lineHeight:1.5,color:"#1a1a1a"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:30}}>
+            {logo ? <img src={logo} alt="" style={{maxHeight:60,maxWidth:200,objectFit:"contain"}}/> : <span/>}
+          </div>
+          <div style={{textAlign:"right",marginBottom:22}}>{[L.city,dateStr].filter(Boolean).join(", ")}</div>
+          <div style={{marginBottom:18}}>
+            {L.recipientName && <div>{L.recipientName}</div>}
+            {company && <div>{company}</div>}
+            {L.addr1 && <div>{L.addr1}</div>}
+            {L.addr2 && <div>{L.addr2}</div>}
+          </div>
+          {subject && <div style={{fontWeight:700,marginBottom:14}}>{LANG==="en"?"Subject":"Objet"} : {subject}</div>}
+          <div style={{marginBottom:14}}>
+            {L.clientRef && <div>{LANG==="en"?"Your client":"Votre client"} : {L.clientRef}</div>}
+            {L.orderRef && <div>{LANG==="en"?"Your order":"Votre commande"} : {L.orderRef}</div>}
+            {fileRef && <div>{LANG==="en"?"Our file":"Notre dossier"} : {fileRef}</div>}
+          </div>
+          <div style={{whiteSpace:"pre-wrap",marginBottom:26,flex:1}}>{L.body||""}</div>
+          <div style={{marginTop:"auto"}}>
+            {L.signName && <div style={{fontWeight:700}}>{L.signName}{L.signTitle?`, ${L.signTitle}`:""}</div>}
+            {L.initials && <div style={{fontSize:10,color:"#555",marginTop:10}}>{L.initials}</div>}
+            {attachment && <div style={{fontSize:11,marginTop:10}}>{LANG==="en"?"Enclosure":"Pièce jointe"} : {attachment}</div>}
+          </div>
+        </div>
+        );
+      })()}
       {/* PAGE COUVERTURE (optionnelle) — hors du tableau d'en-tête/pied répété */}
       {(r.cover||{}).show!==false && (()=>{
         const cv=r.cover||{};
@@ -2921,6 +3051,7 @@ const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@
   .print-only{ display:block !important; position:absolute !important; left:0; top:0; width:100%; }
   /* Export "à compléter à la main" : valeurs/contenu en pâle (référence) pour réécrire par-dessus. */
   .print-only.pale .rpt-content, .print-only.pale .cover-page-print, .print-only.pale .toc-page-print{ opacity:0.32 !important; }
+  .letter-page-print{ page: covpage; page-break-after:always; break-after:page; }
   .cover-page-print{ page: covpage; page-break-after:always; break-after:page; }
   .toc-page-print{ page-break-after:always; break-after:page; }
   .rpt-content{ counter-reset: page 0; }
