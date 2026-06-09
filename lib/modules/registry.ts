@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -118,6 +118,13 @@ export const MODULES: ModuleDef[] = [
     descFr: 'Demandes de congés (vacances, maladie, formation), approbation superviseur, soldes.',
     descEn: 'Time-off requests (vacation, sick, training), supervisor approval, balances.',
     icon: Plane, basePath: 'conges', color: 'text-violet-600', accent: 'bg-violet-600', status: 'available',
+  },
+  {
+    key: 'rapports',
+    labelFr: 'Rapports terrain', labelEn: 'Field reports',
+    descFr: "Constructeur de rapports techniques : gabarits, extraction IA de PDF/manuscrit, annotations, photos, export.",
+    descEn: 'Technical report builder: templates, AI extraction from PDF/handwriting, annotations, photos, export.',
+    icon: FileText, basePath: 'rapports', color: 'text-fuchsia-600', accent: 'bg-fuchsia-600', status: 'available',
   },
 ];
 

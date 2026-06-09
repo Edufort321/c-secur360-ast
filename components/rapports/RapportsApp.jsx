@@ -1,0 +1,2129 @@
+'use client';
+import React, { useState, useEffect } from "react";
+
+// ============================================================
+//  RAPPORTS TERRAIN — Générateur de documents à gabarit (tenant)
+//  Prototype HTML autonome. Dépose un document -> l'IA extrait
+//  et propose un gabarit -> édition mixte (sections + texte libre
+//  + zones photo) -> historique réutilisable.
+// ============================================================
+
+// ---------- LANGUE / I18N ----------
+let LANG = "fr";
+const I18N = {
+  fr: {
+    appName:"Rapports Terrain", tagline:"Générateur de documents à gabarit",
+    backAll:"← Tous les rapports", newReport:"Nouveau rapport", importDoc:"📄 Importer un document",
+    settings:"Réglages", search:"Rechercher (titre, client, type)…",
+    filterAll:"Tous", stInProgress:"En cours", stReview:"En révision", stApproved:"Approuvé", stSent:"Envoyé",
+    templates:"Gabarits", chooseTemplate:"Choisir un gabarit", templateSuggested:"Gabarit proposé",
+    create:"Créer", cancel:"Annuler", save:"Enregistrer", saved:"Enregistré ✓",
+    del:"Supprimer", duplicate:"Dupliquer", newVersion:"Nouvelle version", export:"Exporter PDF",
+    title:"Titre", client:"Client", location:"Lieu", projectNo:"N° de projet", date:"Date",
+    addSection:"+ Section", addText:"+ Texte libre", addPhotos:"+ Zone photo", addField:"+ Champ",
+    sectionTitle:"Titre de section", fieldLabel:"Libellé", fieldValue:"Valeur",
+    freeText:"Texte libre…", photoZone:"Zone photo", addPhoto:"+ Photo", noPhoto:"Aucune photo",
+    delPhoto:"Supprimer cette photo?", photoCaption:"Légende…",
+    importing:"Lecture du document…", importErr:"Échec de l'import :", importNoKey:"Ajoute une clé API dans Réglages.", importBatch:"Traitement des pages",
+    importSnap:"Capture des pages", importOriginalPages:"Pages originales (copie du PDF)",
+    importReview:"Vérifie et choisis le gabarit", extractedContent:"Contenu extrait",
+    applyImport:"Créer le rapport", noReports:"Aucun rapport. Importe un document ou crée-en un.",
+    status:"Statut", lastEdit:"Modifié", version:"v", createdFrom:"Créé à partir de",
+    apiKeyTitle:"Clé API Anthropic", apiKeyHint:"Pour démo. Clé en stockage local = lisible sur ce poste. En prod : serveur.",
+    storeMem:"Mémoire seule", storeLocal:"Stocker sur ce poste", testConn:"Tester", deleteKey:"Supprimer la clé",
+    keyActive:"Clé active", keyNone:"Aucune clé", confirmDel:"Supprimer ce rapport définitivement?",
+    moveUp:"Monter", moveDown:"Descendre", removeBlock:"Retirer ce bloc", blockType:"Type de bloc", blockActions:"Actions",
+    tplInspection:"Rapport d'inspection", tplTesting:"Rapport d'essais", tplQuote:"Soumission / Devis", tplGeneric:"Rapport générique",
+    truncWarn:"⚠ Document long : l'extraction a pu être coupée à la fin. Vérifie les derniers blocs et complète au besoin.",
+    tabReports:"Rapports", tabTemplates:"Modèles / Gabarits",
+    tplManage:"Gestion des gabarits", tplNew:"+ Nouveau gabarit", tplName:"Nom du gabarit", tplEdit:"Modifier", tplDefault:"(par défaut)",
+    insertPage:"Insérer une page gabarit", insertWhere:"Insérer après le bloc n°", insertConfirm:"Insérer ici", insertPos:"Position",
+    annotations:"Anomalies & commentaires", addAnomaly:"+ Anomalie", addComment:"+ Commentaire",
+    anomaly:"Anomalie", comment:"Commentaire", severity:"Gravité", equipment:"Équipement concerné",
+    sevMinor:"Mineur", sevMajor:"Majeur", sevCritical:"Critique",
+    annTitle:"Titre", annDesc:"Description", annPhoto:"Photo", noAnnotations:"Aucune anomalie ni commentaire.",
+    genReport:"Générer le récap", recapAnomalies:"SOMMAIRE DES ANOMALIES", recapComments:"SOMMAIRE DES COMMENTAIRES",
+    fixReport:"✨ Corriger le rapport", fixing:"Correction en cours…", fixDone:"Rapport corrigé ✓",
+    translateReport:"🌐 Traduire le rapport", translateDone:"Rapport traduit ✓",
+    fixNoKey:"Ajoute une clé API dans Réglages pour la correction IA.",
+    annotateBlock:"💬 Annoter", delAnnotation:"Supprimer cette annotation?",
+    savedTag:"Enregistré ✓", dupBlock:"Dupliquer ce bloc", dragHint:"Glisser pour réordonner",
+    treeAll:"Tous les rapports", treeOrder:"Classement", treeEmpty:"(vide)", noClient:"Sans client", noLocation:"Sans lieu", noYear:"Sans année", noJob:"Sans n° projet",
+    navTitle:"Navigation", navBlocks:"sections",
+    navAll:"Tout", navNone:"Aucun élément de ce type", navTypeSection:"Section", navTypeTable:"Tableau", navTypeInspect:"Inspection", navTypePhotos:"Photos", navTypePdf:"Page PDF", navTypeText:"Texte",
+    lvlYear:"Année", lvlClient:"Client", lvlLocation:"Endroit", lvlJob:"N° de projet",
+    cover:"Page couverture", coverShow:"Inclure une page couverture", coverSubtitle:"Sous-titre / note", coverEdit:"Personnaliser la couverture",
+    tocShow:"Table des matières", tocTitle:"Table des matières",
+    addPdfPage:"+ Page PDF externe", pdfPageZone:"Page PDF importée", importingPdf:"Conversion du PDF en images…", pdfPages:"page(s)",
+    addTable:"+ Tableau", tableTitle:"Titre du tableau", addRow:"+ Ligne", addCol:"+ Colonne", delRow:"Supprimer la ligne", delCol:"Supprimer la colonne",
+    addInspect:"+ Grille d'inspection", inspectTitle:"Inspection visuelle", inspectPoint:"Point d'inspection", inspectAddPoint:"+ Point", inspectNote:"Description de l'anomalie",
+    addEquip:"+ Équipement", dupEquip:"Dupliquer tout l'équipement (section + inspection + photos)", copyTag:"(copie)", equipNew:"Nouvel équipement", equipFab:"Fabricant", equipModel:"Modèle", equipSerial:"N° de série", equipLoc:"Emplacement",
+    inspLoadList:"Charger une liste", inspLoadHint:"Remplace les points actuels :", inspReplaceConfirm:"Remplacer les points actuels de cette grille ?",
+    convertInspect:"Convertir en grille d'inspection (états Bon/Anomalie/N-V)", convertEmpty:"Ajoute d'abord des libellés aux champs.",
+    convertSection:"Reconvertir en section (annuler)", inspPhoto:"Photo",
+    libTransfo:"Transformateur", libBreaker:"Disjoncteur", libContactor:"Contacteur", libGeneral:"Général",
+    inspGood:"Bon", inspNormal:"Normal", inspAnomaly:"Anomalie", inspNA:"N/V",
+    anomRecapTitle:"Sommaire des anomalies", anomLoc:"Emplacement", anomPoint:"Point", anomSeverity:"Gravité", anomDesc:"Description", anomBanner:"anomalie(s) relevée(s)",
+    cellClear:"Vider la cellule", cellSplit:"Diviser (nouvelle ligne)", cellMerge:"Fusionner avec la droite", cellActions:"Actions cellule",
+    tplDefaults:"Gabarits par défaut", tplCustom:"Mes gabarits", tplImportPdf:"📄 Importer un PDF comme gabarit", tplImporting:"Création du gabarit…",
+    tplSaveName:"Nom du gabarit", tplUse:"Utiliser", tplDelete:"Supprimer ce gabarit?", tplNoCustom:"Aucun gabarit personnalisé. Importe un PDF pour en créer un.",
+    handwriting:"✍ Brouillon manuscrit", handwritingImport:"✍ Importer un brouillon manuscrit (photo)", handwritingBusy:"Lecture de l'écriture…",
+    uncertainBadge:"à vérifier", uncertainNote:"⚠ Les valeurs marquées « à vérifier » ont été lues sur l'écriture manuscrite et peuvent contenir des erreurs. Vérifie-les avant de finaliser.",
+    themeTitle2:"Couleurs de mise en page", themeReset:"Réinitialiser", themeHint:"S'applique à l'app et aux rapports PDF (charte globale).",
+    themeSecBar:"Bandeaux de section", themeTableHd:"En-têtes de tableau", themeAccent:"Accent (boutons)", themeTitle:"Titres", themeText:"Texte", themeBorder:"Bordures",
+    compareView:"🔍 Comparer à la source", compareTitle:"Comparaison source vs extrait", compareSource:"Document source (texte)", compareExtract:"Contenu extrait", compareHint:"Vérifie qu'aucune donnée ne manque. Ce qui est dans la source mais absent de l'extrait doit être ajouté manuellement.", compareNoSource:"Texte source non disponible (réimporte le PDF pour comparer).",
+  },
+  en: {
+    appName:"Field Reports", tagline:"Template-based document generator",
+    backAll:"← All reports", newReport:"New report", importDoc:"📄 Import a document",
+    settings:"Settings", search:"Search (title, client, type)…",
+    filterAll:"All", stInProgress:"In progress", stReview:"In review", stApproved:"Approved", stSent:"Sent",
+    templates:"Templates", chooseTemplate:"Choose a template", templateSuggested:"Suggested template",
+    create:"Create", cancel:"Cancel", save:"Save", saved:"Saved ✓",
+    del:"Delete", duplicate:"Duplicate", newVersion:"New version", export:"Export PDF",
+    title:"Title", client:"Client", location:"Location", projectNo:"Project No.", date:"Date",
+    addSection:"+ Section", addText:"+ Free text", addPhotos:"+ Photo zone", addField:"+ Field",
+    sectionTitle:"Section title", fieldLabel:"Label", fieldValue:"Value",
+    freeText:"Free text…", photoZone:"Photo zone", addPhoto:"+ Photo", noPhoto:"No photo",
+    delPhoto:"Delete this photo?", photoCaption:"Caption…",
+    importing:"Reading document…", importErr:"Import failed:", importNoKey:"Add an API key in Settings.", importBatch:"Processing pages",
+    importSnap:"Capturing pages", importOriginalPages:"Original pages (PDF copy)",
+    importReview:"Review and choose template", extractedContent:"Extracted content",
+    applyImport:"Create report", noReports:"No reports. Import a document or create one.",
+    status:"Status", lastEdit:"Edited", version:"v", createdFrom:"Created from",
+    apiKeyTitle:"Anthropic API key", apiKeyHint:"Demo only. Local-stored key is readable on this machine. In prod: server.",
+    storeMem:"Memory only", storeLocal:"Store on this machine", testConn:"Test", deleteKey:"Delete key",
+    keyActive:"Key active", keyNone:"No key", confirmDel:"Delete this report permanently?",
+    moveUp:"Up", moveDown:"Down", removeBlock:"Remove block", blockType:"Block type", blockActions:"Actions",
+    tplInspection:"Inspection report", tplTesting:"Testing report", tplQuote:"Quote / Proposal", tplGeneric:"Generic report",
+    truncWarn:"⚠ Long document: extraction may have been cut off at the end. Check the last blocks and complete as needed.",
+    tabReports:"Reports", tabTemplates:"Templates",
+    tplManage:"Template management", tplNew:"+ New template", tplName:"Template name", tplEdit:"Edit", tplDefault:"(default)",
+    insertPage:"Insert template page", insertWhere:"Insert after block #", insertConfirm:"Insert here", insertPos:"Position",
+    annotations:"Anomalies & comments", addAnomaly:"+ Anomaly", addComment:"+ Comment",
+    anomaly:"Anomaly", comment:"Comment", severity:"Severity", equipment:"Related equipment",
+    sevMinor:"Minor", sevMajor:"Major", sevCritical:"Critical",
+    annTitle:"Title", annDesc:"Description", annPhoto:"Photo", noAnnotations:"No anomaly or comment.",
+    genReport:"Generate summary", recapAnomalies:"ANOMALY SUMMARY", recapComments:"COMMENT SUMMARY",
+    fixReport:"✨ Fix report", fixing:"Fixing…", fixDone:"Report fixed ✓",
+    translateReport:"🌐 Translate report", translateDone:"Report translated ✓",
+    fixNoKey:"Add an API key in Settings for AI correction.",
+    annotateBlock:"💬 Annotate", delAnnotation:"Delete this annotation?",
+    savedTag:"Saved ✓", dupBlock:"Duplicate this block", dragHint:"Drag to reorder",
+    treeAll:"All reports", treeOrder:"Grouping", treeEmpty:"(empty)", noClient:"No client", noLocation:"No location", noYear:"No year", noJob:"No project no.",
+    navTitle:"Navigation", navBlocks:"sections",
+    navAll:"All", navNone:"No item of this type", navTypeSection:"Section", navTypeTable:"Table", navTypeInspect:"Inspection", navTypePhotos:"Photos", navTypePdf:"PDF page", navTypeText:"Text",
+    lvlYear:"Year", lvlClient:"Client", lvlLocation:"Location", lvlJob:"Project No.",
+    cover:"Cover page", coverShow:"Include a cover page", coverSubtitle:"Subtitle / note", coverEdit:"Customize cover",
+    tocShow:"Table of contents", tocTitle:"Table of contents",
+    addPdfPage:"+ External PDF page", pdfPageZone:"Imported PDF page", importingPdf:"Converting PDF to images…", pdfPages:"page(s)",
+    addTable:"+ Table", tableTitle:"Table title", addRow:"+ Row", addCol:"+ Column", delRow:"Delete row", delCol:"Delete column",
+    addInspect:"+ Inspection grid", inspectTitle:"Visual inspection", inspectPoint:"Inspection point", inspectAddPoint:"+ Point", inspectNote:"Anomaly description",
+    addEquip:"+ Equipment", dupEquip:"Duplicate whole equipment (section + inspection + photos)", copyTag:"(copy)", equipNew:"New equipment", equipFab:"Manufacturer", equipModel:"Model", equipSerial:"Serial no.", equipLoc:"Location",
+    inspLoadList:"Load a list", inspLoadHint:"Replaces current points:", inspReplaceConfirm:"Replace the current points of this grid?",
+    convertInspect:"Convert to inspection grid (Good/Anomaly/N-V states)", convertEmpty:"Add labels to the fields first.",
+    convertSection:"Convert back to section (undo)", inspPhoto:"Photo",
+    libTransfo:"Transformer", libBreaker:"Breaker", libContactor:"Contactor", libGeneral:"General",
+    inspGood:"Good", inspNormal:"Normal", inspAnomaly:"Anomaly", inspNA:"N/V",
+    anomRecapTitle:"Anomaly summary", anomLoc:"Location", anomPoint:"Point", anomSeverity:"Severity", anomDesc:"Description", anomBanner:"anomaly(ies) found",
+    cellClear:"Clear cell", cellSplit:"Split (new row)", cellMerge:"Merge with right", cellActions:"Cell actions",
+    tplDefaults:"Default templates", tplCustom:"My templates", tplImportPdf:"📄 Import a PDF as template", tplImporting:"Creating template…",
+    tplSaveName:"Template name", tplUse:"Use", tplDelete:"Delete this template?", tplNoCustom:"No custom template. Import a PDF to create one.",
+    handwriting:"✍ Handwritten draft", handwritingImport:"✍ Import a handwritten draft (photo)", handwritingBusy:"Reading handwriting…",
+    uncertainBadge:"to verify", uncertainNote:"⚠ Values marked \"to verify\" were read from handwriting and may contain errors. Check them before finalizing.",
+    themeTitle2:"Layout colors", themeReset:"Reset", themeHint:"Applies to the app and PDF reports (global brand).",
+    themeSecBar:"Section bars", themeTableHd:"Table headers", themeAccent:"Accent (buttons)", themeTitle:"Titles", themeText:"Text", themeBorder:"Borders",
+    compareView:"🔍 Compare to source", compareTitle:"Source vs extract comparison", compareSource:"Source document (text)", compareExtract:"Extracted content", compareHint:"Check that no data is missing. Anything in the source but absent from the extract must be added manually.", compareNoSource:"Source text not available (re-import the PDF to compare).",
+  },
+};
+function t(k){ return (I18N[LANG] && I18N[LANG][k]) || (I18N.fr[k]) || k; }
+
+// ---------- GABARITS (templates tenant) ----------
+// Chaque gabarit = ensemble de blocs par défaut. blocs : section | text | photos
+function tplBlocks(id){
+  const sec=(title,fields)=>({type:"section", id:bid(), title, fields:fields.map(f=>({id:bid(),label:f,value:""}))});
+  const txt=(ph)=>({type:"text", id:bid(), value:"", placeholder:ph});
+  const ph=(title)=>({type:"photos", id:bid(), title, photos:[]});
+  if(id==="inspection") return [
+    sec(LANG==="en"?"Equipment":"Équipement", LANG==="en"?["Name","Serial No.","Voltage","Manufacturer","Year"]:["Nom","N° de série","Tension","Fabricant","Année"]),
+    txt(LANG==="en"?"Visual inspection observations…":"Observations de l'inspection visuelle…"),
+    ph(LANG==="en"?"Field photos":"Photos terrain"),
+    sec(LANG==="en"?"Measurements":"Mesures", LANG==="en"?["Insulation resistance","Contact resistance","Notes"]:["Résistance d'isolement","Résistance de contact","Notes"]),
+    txt(LANG==="en"?"Conclusion and recommendations…":"Conclusion et recommandations…"),
+  ];
+  if(id==="testing") return [
+    sec(LANG==="en"?"Equipment under test":"Équipement testé", LANG==="en"?["Designation","Type","Rating"]:["Désignation","Type","Calibre"]),
+    sec(LANG==="en"?"Test conditions":"Conditions d'essai", LANG==="en"?["Temperature","Humidity","Instrument"]:["Température","Humidité","Instrument"]),
+    txt(LANG==="en"?"Test results…":"Résultats des essais…"),
+    ph(LANG==="en"?"Test setup photos":"Photos du montage"),
+    txt(LANG==="en"?"Verdict…":"Verdict…"),
+  ];
+  if(id==="quote") return [
+    sec(LANG==="en"?"Mandate":"Mandat", LANG==="en"?["Client","Site","Scope"]:["Client","Site","Portée"]),
+    txt(LANG==="en"?"Work description…":"Description des travaux…"),
+    sec(LANG==="en"?"Pricing":"Prix", LANG==="en"?["Lump sum","Hourly rate","Validity"]:["Forfaitaire","Taux horaire","Validité"]),
+    txt(LANG==="en"?"Terms and conditions…":"Conditions et modalités…"),
+  ];
+  // generic
+  return [
+    sec(LANG==="en"?"General information":"Informations générales", LANG==="en"?["Subject","Reference"]:["Objet","Référence"]),
+    txt(LANG==="en"?"Content…":"Contenu…"),
+    ph(LANG==="en"?"Photos":"Photos"),
+  ];
+}
+const TEMPLATES = [
+  { id:"inspection", key:"tplInspection" },
+  { id:"testing",    key:"tplTesting" },
+  { id:"quote",      key:"tplQuote" },
+  { id:"generic",    key:"tplGeneric" },
+];
+
+// ---------- IDs ----------
+let _seq=0;
+function bid(){ _seq++; return "b_"+Date.now().toString(36)+"_"+_seq; }
+// Clone profond d'un bloc avec de nouveaux ids partout (pour duplication sûre)
+function cloneBlockFresh(src){
+  const copy=JSON.parse(JSON.stringify(src)); copy.id=bid();
+  if(copy.fields) copy.fields=copy.fields.map(f=>({...f,id:bid()}));
+  if(copy.photos) copy.photos=copy.photos.map(p=>({...p,id:bid()}));
+  if(copy.items) copy.items=copy.items.map(it=>({...it,id:bid()}));
+  return copy;
+}
+
+// ---------- STOCKAGE ----------
+const DB_KEY = "rpt_reports_v1";
+const LOGO_KEY = "rpt_logo_v1";
+const LANG_KEY = "rpt_lang_v1";
+const TPL_KEY = "rpt_templates_v1";
+const THEME_KEY = "rpt_theme_v1";
+const DEFAULT_THEME = {
+  secBar:  "#277da1",  // bandeaux de section
+  tableHd: "#34495e",  // en-têtes de tableau
+  accent:  "#9d0208",  // accent (lignes, IPS)
+  title:   "#2b2118",  // titres
+  text:    "#2b2118",  // texte courant
+  border:  "#d8cdbb",  // bordures
+};
+let THEME = {...DEFAULT_THEME};
+async function loadTheme(){ try{ const r=await window.storage.get(THEME_KEY); return r?{...DEFAULT_THEME,...JSON.parse(r.value)}:{...DEFAULT_THEME}; }catch{ return {...DEFAULT_THEME}; } }
+async function saveTheme(th){ try{ await window.storage.set(THEME_KEY, JSON.stringify(th)); }catch(e){ console.error(e); } }
+async function loadDB(){ try{ const r=await window.storage.get(DB_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
+async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringify(list)); }catch(e){ console.error(e); } }
+async function loadLogo(){ try{ const r=await window.storage.get(LOGO_KEY); return r?r.value:null; }catch{ return null; } }
+async function saveLogo(d){ try{ await window.storage.set(LOGO_KEY, d); }catch(e){ console.error(e); } }
+async function clearLogo(){ try{ await window.storage.delete(LOGO_KEY); }catch(e){ console.error(e); } }
+async function loadTemplates(){ try{ const r=await window.storage.get(TPL_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
+async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.stringify(list)); }catch(e){ console.error(e); } }
+
+// Vide toutes les valeurs d'un ensemble de blocs (pour transformer un rapport en gabarit)
+function emptyBlockValues(blocks){
+  return (blocks||[]).map(b=>{
+    if(b.type==="section") return {...b, id:bid(), fields:(b.fields||[]).map(f=>({...f,id:bid(),value:""}))};
+    if(b.type==="table") return {...b, id:bid(), rows:(b.rows||[]).map(r=>r.map(()=>""))};
+    if(b.type==="inspect") return {...b, id:bid(), items:(b.items||[]).map(it=>({...it,id:bid(),state:"good",note:"",severity:"minor",photo:null}))};
+    if(b.type==="text") return {...b, id:bid(), value:""};
+    if(b.type==="photos") return {...b, id:bid(), photos:[]};
+    if(b.type==="pdfpage") return {...b, id:bid(), pages:[]};
+    return {...b, id:bid()};
+  });
+}
+
+// ---------- CLÉ API ----------
+const APIKEY_LS = "rpt_api_key_v1";
+let MEM_KEY = null;
+function getApiKey(){ return "server"; /* cle geree cote serveur via /api/rapports/ai */ }
+function setApiKeyMem(k){ MEM_KEY=k||null; }
+function setApiKeyLocal(k){ try{ localStorage.setItem(APIKEY_LS,k); }catch(e){} MEM_KEY=k; }
+function clearApiKey(){ MEM_KEY=null; try{ localStorage.removeItem(APIKEY_LS); }catch(e){} }
+function isKeyStored(){ try{ return !!localStorage.getItem(APIKEY_LS); }catch{ return false; } }
+
+async function testApiConnection(key){
+  const r=await fetch("/api/rapports/ai",{ method:"POST",
+    headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:16, messages:[{role:"user",content:"ping"}] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,200)}`); }
+  return true;
+}
+
+// Extraction + proposition de gabarit à partir d'un PDF
+async function extractDocWithApi(key, base64Pdf){
+  const langName = LANG==="en"?"English":"français";
+  const prompt = `Tu transcris INTÉGRALEMENT un document technique (rapport d'essais, analyse d'huile, soumission…) dans une structure éditable, en restant FIDÈLE AU MOT PRÈS.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{
+ "title": "titre exact du document",
+ "client": "nom du client si présent, sinon ''",
+ "location": "lieu/site si présent",
+ "projectNo": "numéro de dossier/projet/P.O./Sample No si présent",
+ "suggestedTemplate": "inspection | testing | quote | generic (le plus proche)",
+ "blocks": [
+   {"type":"section","title":"titre exact de section","fields":[{"label":"libellé exact","value":"valeur exacte"}]},
+   {"type":"table","title":"titre exact du tableau","columns":["Colonne 1","Colonne 2","..."],"rows":[["cellule","cellule","..."]]},
+   {"type":"text","value":"texte recopié intégralement, mot pour mot"}
+ ]
+}
+RÈGLES STRICTES DE FIDÉLITÉ :
+- RECOPIE le texte VERBATIM, mot pour mot. NE RÉSUME PAS, NE REFORMULE PAS, NE RACCOURCIS PAS.
+- N'OMETS AUCUNE SECTION. Capture TOUT : Reference, Equipment, DGA, OIL QUALITY, ADDITIONAL TESTS, Comments, conditions, prix, etc. Si le document a une section "Oil Quality" / "Qualité d'huile" avec humidité, tension interfaciale, acidité, facteur de puissance, densité, inhibiteur d'oxydation, PCB, furanes — TU DOIS TOUTES LES INCLURE.
+- TABLEAUX MULTI-COLONNES (TRÈS IMPORTANT) : si un tableau a PLUSIEURS colonnes de valeurs (ex: deux dates 2025-08-22 et 2025-12-09 côte à côte), tu DOIS utiliser le type "table" et GARDER TOUTES LES COLONNES. NE choisis JAMAIS une seule colonne. Mets les en-têtes exacts dans "columns" (incluant les dates) et chaque ligne complète dans "rows". Recopie les valeurs dans le bon ordre de colonnes.
+- Conserve la numérotation et les libellés d'origine (ex: "2.1", "B.7a", "D.15", codes de méthode comme "D 1533-20").
+- Une "section" = champs à UNE seule valeur. Un "table" = données à PLUSIEURS colonnes. Un "text" = paragraphe ou liste.
+- NE PAS inventer de valeurs absentes (mettre '' ou '—'). Garder la langue d'origine.
+- Ignore uniquement les images/logos : on ajoutera des zones photo séparément.
+Objectif : quelqu'un qui lit les blocs doit avoir EXACTEMENT le même contenu que le PDF, AVEC toutes les colonnes et toutes les sections, sans aucune perte.`;
+  const r=await fetch("/api/rapports/ai",{ method:"POST",
+    headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:[
+      { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64Pdf } },
+      { type:"text", text:prompt } ] }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  // Avertir si la réponse a probablement été tronquée (limite de tokens atteinte)
+  const truncated = data.stop_reason==="max_tokens";
+  const parsed = JSON.parse(m?m[0]:clean);
+  parsed.__truncated = truncated;
+  return parsed;
+}
+
+// Extraction d'un brouillon MANUSCRIT depuis une image (jpg/png)
+async function extractHandwritingWithApi(key, base64Image, mediaType){
+  const langName = LANG==="en"?"English":"français";
+  const prompt = `Tu lis un BROUILLON MANUSCRIT (écrit à la main) photographié, et tu le transformes en rapport technique structuré.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{
+ "title": "titre du rapport si lisible, sinon ''",
+ "client": "", "location": "", "projectNo": "",
+ "suggestedTemplate": "inspection | testing | quote | generic",
+ "blocks": [
+   {"type":"section","title":"titre","fields":[{"label":"libellé","value":"valeur","uncertain":true|false}]},
+   {"type":"table","title":"titre","columns":["..."],"rows":[["..."]],"uncertainCells":[[ri,ci],...]},
+   {"type":"text","value":"texte transcrit","uncertain":true|false}
+ ]
+}
+RÈGLES IMPORTANTES :
+- Transcris fidèlement l'écriture manuscrite. Structure le contenu en sections/tableaux/texte selon le sens.
+- INCERTITUDE : pour CHAQUE valeur dont la lecture n'est PAS certaine (chiffre ambigu, mot illisible, rature), marque "uncertain": true sur le field ou le bloc text. Pour un tableau, liste les coordonnées [ligne,colonne] douteuses dans "uncertainCells".
+- Sois HONNÊTE sur l'incertitude : un chiffre technique mal lu est dangereux. En cas de doute, marque uncertain.
+- Si une zone est totalement illisible, mets "???" comme valeur et uncertain:true.
+- NE PAS inventer de données qui ne sont pas dans le brouillon. Garder la langue d'origine (${langName}).`;
+  const r=await fetch("/api/rapports/ai",{ method:"POST",
+    headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:6144, messages:[{ role:"user", content:[
+      { type:"image", source:{ type:"base64", media_type:mediaType||"image/jpeg", data:base64Image } },
+      { type:"text", text:prompt } ] }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  return JSON.parse(m?m[0]:clean);
+}
+
+// Normalise les blocs extraits vers le format interne (avec ids)
+function normalizeBlocks(blocks){
+  if(!Array.isArray(blocks)) return [];
+  return blocks.map(b=>{
+    if(b.type==="section") return { type:"section", id:bid(), title:b.title||"", fields:(b.fields||[]).map(f=>({id:bid(),label:f.label||"",value:f.value||"",uncertain:!!f.uncertain})) };
+    if(b.type==="table") return { type:"table", id:bid(), title:b.title||"", columns:(b.columns||[]).slice(), rows:(b.rows||[]).map(r=>Array.isArray(r)?r.slice():[String(r)]), uncertainCells:(b.uncertainCells||[]).map(c=>c.slice()) };
+    if(b.type==="photos") return { type:"photos", id:bid(), title:b.title||t("photoZone"), photos:[] };
+    return { type:"text", id:bid(), value:b.value||"", placeholder:t("freeText"), uncertain:!!b.uncertain };
+  });
+}
+
+// ---------- ANNOTATIONS (anomalies / commentaires) ----------
+const SEVERITIES = [
+  { id:"minor",    key:"sevMinor",    color:"#577590" },
+  { id:"major",    key:"sevMajor",    color:"#e0a96d" },
+  { id:"critical", key:"sevCritical", color:"#9d0208" },
+];
+function sevColor(id){ return (SEVERITIES.find(s=>s.id===id)||{}).color || "#577590"; }
+function sevLabel(id){ const s=SEVERITIES.find(x=>x.id===id); return s?t(s.key):id; }
+
+// États d'un point d'inspection (façon rapport TAFISA)
+const INSP_STATES = [
+  { id:"good",    key:"inspGood",    color:"#2a9d8f" },  // Bon / Bonne
+  { id:"normal",  key:"inspNormal",  color:"#2a9d8f" },  // Normal
+  { id:"anomaly", key:"inspAnomaly", color:"#9d0208" },  // Anomalie
+  { id:"na",      key:"inspNA",      color:"#8a7c6c" },  // N/V (non vérifié)
+];
+function inspColor(id){ return (INSP_STATES.find(s=>s.id===id)||{}).color || "#8a7c6c"; }
+function inspLabel(id){ const s=INSP_STATES.find(x=>x.id===id); return s?t(s.key):id; }
+
+// Bibliothèques de points d'inspection pré-faites par type d'équipement
+const INSP_LIBRARIES = [
+  { id:"transfo", key:"libTransfo", points:[
+    "Propreté générale","État de la cuve","Étanchéité / fuites d'huile","Niveau d'huile","Indicateur de température",
+    "Traversées (bushings)","Connexions primaires","Connexions secondaires","Mise à la terre","Radiateurs / ventilation",
+    "Relais de pression (Buchholz)","Silicagel / déshydrateur","Plaque signalétique","Absence de corrosion","Bruit / vibrations" ] },
+  { id:"breaker", key:"libBreaker", points:[
+    "Propreté générale","État du boîtier","Contacts principaux","Mécanisme de manœuvre","Chambre de coupure",
+    "Connexions / serrage","Mise à la terre","Indicateur d'usure des contacts","Dispositif de déclenchement","Étiquetage / identification",
+    "Absence de corrosion","Lubrification mécanique" ] },
+  { id:"contactor", key:"libContactor", points:[
+    "Propreté générale","Contacts de puissance","Bobine de commande","Contacts auxiliaires","Connexions / serrage",
+    "Relais de surcharge","État du boîtier","Identification","Absence de surchauffe","Fonctionnement mécanique" ] },
+  { id:"general", key:"libGeneral", points:[
+    "Propreté générale","Connexions / serrage","Mise à la terre","Identification / étiquetage","Absence de corrosion",
+    "Absence de surchauffe","État général","Conformité au code" ] },
+];
+
+// ---------- STATUTS DE RAPPORT (cycle de vie) ----------
+const STATUSES = [
+  { id:"in_progress", key:"stInProgress", color:"#577590" },
+  { id:"review",      key:"stReview",     color:"#e0a96d" },
+  { id:"approved",    key:"stApproved",   color:"#2a9d8f" },
+  { id:"sent",        key:"stSent",       color:"#277da1" },
+];
+function statusColor(id){ return (STATUSES.find(s=>s.id===id)||{}).color || "#577590"; }
+function statusLabel(id){ const s=STATUSES.find(x=>x.id===id); return s?t(s.key):id; }
+// Migration des anciens statuts (draft/final)
+function migrateStatus(s){ if(s==="draft")return "in_progress"; if(s==="final")return "approved"; if(STATUSES.some(x=>x.id===s))return s; return "in_progress"; }
+
+// Correction IA du texte + nettoyage mise en page
+async function fixReportWithApi(key, report, lang){
+  const langName = lang==="en"?"English":"français";
+  // On envoie les blocs texte et titres pour correction, on garde la structure
+  const payload = {
+    title: report.title,
+    blocks: report.blocks.map(b=>({
+      type:b.type, id:b.id,
+      title: b.title||"",
+      value: b.value||"",
+      fields: (b.fields||[]).map(f=>({id:f.id,label:f.label,value:f.value})),
+    })),
+  };
+  const prompt = `Tu es correcteur professionnel de rapports techniques en ${langName}.
+On te donne la structure JSON d'un rapport. Corrige l'orthographe, la grammaire, la ponctuation et la typographie de TOUS les textes (title, value, fields.label, fields.value), et améliore la clarté SANS changer le sens technique ni les valeurs numériques/unités.
+Ne supprime aucun bloc, ne change aucun id, ne réorganise pas l'ordre. Garde exactement la même structure.
+Retourne UNIQUEMENT le même objet JSON corrigé (même forme, mêmes ids), sans texte autour, sans backticks.
+Rapport : ${JSON.stringify(payload)}`;
+  const r=await fetch("/api/rapports/ai",{ method:"POST",
+    headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const fixed=JSON.parse(m?m[0]:clean);
+  // Réintégrer les corrections dans les blocs existants (par id), sans toucher aux photos
+  const byId={}; (fixed.blocks||[]).forEach(b=>{ byId[b.id]=b; });
+  const newBlocks=report.blocks.map(b=>{
+    const f=byId[b.id]; if(!f) return b;
+    if(b.type==="section") return {...b, title:f.title??b.title, fields:(b.fields||[]).map(fl=>{ const ff=(f.fields||[]).find(x=>x.id===fl.id); return ff?{...fl,label:ff.label??fl.label,value:ff.value??fl.value}:fl; })};
+    if(b.type==="text") return {...b, value:f.value??b.value};
+    if(b.type==="photos") return {...b, title:f.title??b.title};
+    return b;
+  });
+  return { title: fixed.title??report.title, blocks:newBlocks };
+}
+
+// Traduction IA du rapport complet (contenu saisi) vers la langue cible
+async function translateReportWithApi(key, report, targetLang){
+  const target = targetLang==="en"?"English":"français";
+  const payload = {
+    title: report.title, client: report.client, location: report.location,
+    cover: report.cover ? { subtitle: report.cover.subtitle||"" } : null,
+    blocks: report.blocks.map(b=>({
+      type:b.type, id:b.id, title:b.title||"", value:b.value||"",
+      fields:(b.fields||[]).map(f=>({id:f.id,label:f.label,value:f.value})),
+      columns:b.columns||undefined, rows:b.rows||undefined,
+    })),
+    annotations:(report.annotations||[]).map(a=>({id:a.id,title:a.title,desc:a.desc,equipment:a.equipment})),
+  };
+  const prompt = `Tu es traducteur technique professionnel. Traduis TOUT le contenu textuel de ce rapport vers ${target}.
+RÈGLES :
+- Traduis : title, client (si nom traduisible), location, cover.subtitle, et dans chaque bloc : title, value, fields.label, fields.value, columns (en-têtes de tableau), rows (cellules de tableau), et les annotations (title, desc, equipment).
+- NE TRADUIS PAS les valeurs numériques, unités, codes (ex: "34.5 kV", "212051041", "D 1533-20"), noms propres d'entreprises et identifiants d'équipement.
+- Garde EXACTEMENT la même structure : mêmes ids, même ordre, mêmes dimensions de tableaux (mêmes nombres de colonnes/lignes).
+- Retourne UNIQUEMENT le même objet JSON traduit, sans texte autour, sans backticks.
+Rapport : ${JSON.stringify(payload)}`;
+  const r=await fetch("/api/rapports/ai",{ method:"POST",
+    headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const tr=JSON.parse(m?m[0]:clean);
+  const byId={}; (tr.blocks||[]).forEach(b=>{ byId[b.id]=b; });
+  const annById={}; (tr.annotations||[]).forEach(a=>{ annById[a.id]=a; });
+  const newBlocks=report.blocks.map(b=>{
+    const tb=byId[b.id]; if(!tb) return b;
+    if(b.type==="section") return {...b, title:tb.title??b.title, fields:(b.fields||[]).map(fl=>{ const ff=(tb.fields||[]).find(x=>x.id===fl.id); return ff?{...fl,label:ff.label??fl.label,value:ff.value??fl.value}:fl; })};
+    if(b.type==="table") return {...b, title:tb.title??b.title, columns:(tb.columns&&tb.columns.length===(b.columns||[]).length)?tb.columns:b.columns, rows:(tb.rows&&tb.rows.length===(b.rows||[]).length)?tb.rows:b.rows};
+    if(b.type==="text") return {...b, value:tb.value??b.value};
+    if(b.type==="photos") return {...b, title:tb.title??b.title};
+    return b;
+  });
+  const newAnnotations=(report.annotations||[]).map(a=>{ const ta=annById[a.id]; return ta?{...a,title:ta.title??a.title,desc:ta.desc??a.desc,equipment:ta.equipment??a.equipment}:a; });
+  return {
+    title: tr.title??report.title, client: tr.client??report.client, location: tr.location??report.location,
+    cover: report.cover ? {...report.cover, subtitle: (tr.cover&&tr.cover.subtitle!=null)?tr.cover.subtitle:report.cover.subtitle} : report.cover,
+    blocks:newBlocks, annotations:newAnnotations,
+  };
+}
+
+function compressImage(file, maxDim=1200, quality=0.7){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{ const img=new Image(); img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>maxDim||h>maxDim){ const r=Math.min(maxDim/w,maxDim/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h); resolve(c.toDataURL("image/jpeg",quality));
+    }; img.onerror=reject; img.src=reader.result; };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
+
+// Convertit chaque page d'un PDF en image (pleine page) via PDF.js
+// Capture toutes les pages d'un PDF en images (pour joindre une copie visuelle fidèle)
+async function pdfFileToPageSnapshots(file, onProgress, scale=1.4){
+  const lib=window.pdfjsLib; if(!lib) throw new Error("PDF.js non chargé");
+  const buf=await file.arrayBuffer();
+  const pdf=await lib.getDocument({ data: buf }).promise;
+  const out=[];
+  const total=pdf.numPages;
+  for(let i=1;i<=total;i++){
+    if(onProgress) onProgress(i,total);
+    const page=await pdf.getPage(i);
+    const viewport=page.getViewport({ scale });
+    const canvas=document.createElement("canvas");
+    canvas.width=viewport.width; canvas.height=viewport.height;
+    const ctx=canvas.getContext("2d");
+    await page.render({ canvasContext:ctx, viewport }).promise;
+    out.push(canvas.toDataURL("image/jpeg", 0.7));
+    canvas.width=0; canvas.height=0; // libérer la mémoire
+  }
+  return out;
+}
+
+async function pdfFileToImages(file, scale=2, maxPages=20){
+  const lib = window.pdfjsLib;
+  if(!lib) throw new Error("PDF.js non chargé");
+  const buf = await file.arrayBuffer();
+  const pdf = await lib.getDocument({ data: buf }).promise;
+  const out=[];
+  const n=Math.min(pdf.numPages, maxPages);
+  for(let i=1;i<=n;i++){
+    const page=await pdf.getPage(i);
+    const viewport=page.getViewport({ scale });
+    const canvas=document.createElement("canvas");
+    canvas.width=viewport.width; canvas.height=viewport.height;
+    const ctx=canvas.getContext("2d");
+    await page.render({ canvasContext:ctx, viewport }).promise;
+    // compresser un peu (jpeg) pour limiter le poids en stockage
+    out.push(canvas.toDataURL("image/jpeg", 0.82));
+  }
+  return out;
+}
+
+// Extrait le texte brut d'un PDF (pour comparaison source vs extrait)
+async function pdfPageCount(file){
+  const lib=window.pdfjsLib; if(!lib) return 0;
+  try{ const buf=await file.arrayBuffer(); const pdf=await lib.getDocument({data:buf}).promise; return pdf.numPages; }catch{ return 0; }
+}
+// Extrait le texte d'une plage de pages [from..to] (1-indexé)
+async function pdfTextRange(file, from, to){
+  const lib=window.pdfjsLib; if(!lib) return "";
+  const buf=await file.arrayBuffer();
+  const pdf=await lib.getDocument({data:buf}).promise;
+  const end=Math.min(to, pdf.numPages);
+  let txt="";
+  for(let i=from;i<=end;i++){
+    const page=await pdf.getPage(i);
+    const content=await page.getTextContent();
+    txt += `\n----- PAGE ${i} -----\n` + content.items.map(it=>it.str).join(" ")+"\n";
+  }
+  return txt;
+}
+// Extraction depuis du TEXTE (pour gros PDF >90 pages, contourne la limite de 100 pages de l'API PDF)
+async function extractDocFromText(key, textChunk, isFirst){
+  const langName=LANG==="en"?"English":"français";
+  const prompt = `Tu transcris INTÉGRALEMENT le texte d'un document technique dans une structure éditable, FIDÈLE AU MOT PRÈS.
+Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
+{${isFirst?'\n "title": "titre exact", "client": "client si présent", "location": "lieu si présent", "projectNo": "n° projet/dossier si présent", "suggestedTemplate": "inspection|testing|quote|generic",':''}
+ "blocks": [
+   {"type":"section","title":"titre exact","fields":[{"label":"libellé","value":"valeur"}]},
+   {"type":"table","title":"titre","columns":["C1","C2"],"rows":[["a","b"]]},
+   {"type":"text","value":"texte recopié mot pour mot"}
+ ]
+}
+RÈGLES : recopie VERBATIM, n'omets aucune section, garde TOUTES les colonnes des tableaux, conserve numérotation/codes. Ne pas inventer (mettre '' ou '—'). Voici le texte à structurer :
+${textChunk}`;
+  const r=await fetch("/api/rapports/ai",{ method:"POST",
+    headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
+  if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,200)}`); }
+  const data=await r.json();
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const clean=txt.replace(/```json|```/g,"").trim();
+  const m=clean.match(/\{[\s\S]*\}/);
+  const parsed=JSON.parse(m?m[0]:clean);
+  parsed.__truncated = data.stop_reason==="max_tokens";
+  return parsed;
+}
+// Import d'un gros PDF par lots de pages (texte), fusionne les blocs
+async function extractLargePdf(key, file, onProgress){
+  const total=await pdfPageCount(file);
+  const BATCH=40; // pages par lot (marge sous la limite)
+  let merged={ title:"", client:"", location:"", projectNo:"", suggestedTemplate:"generic", blocks:[], __truncated:false };
+  let first=true;
+  for(let from=1; from<=total; from+=BATCH){
+    const to=Math.min(from+BATCH-1, total);
+    if(onProgress) onProgress(from, to, total);
+    const chunk=await pdfTextRange(file, from, to);
+    if(!chunk.trim()) continue;
+    const part=await extractDocFromText(key, chunk, first);
+    if(first){ merged.title=part.title||""; merged.client=part.client||""; merged.location=part.location||""; merged.projectNo=part.projectNo||""; merged.suggestedTemplate=part.suggestedTemplate||"generic"; first=false; }
+    merged.blocks=merged.blocks.concat(part.blocks||[]);
+    merged.__truncated = merged.__truncated || !!part.__truncated;
+  }
+  return merged;
+}
+
+async function pdfFileToText(file, maxPages=20){
+  const lib = window.pdfjsLib;
+  if(!lib) return "";
+  // Ne jamais bloquer l'import : timeout de sécurité
+  const work = (async()=>{
+    const buf = await file.arrayBuffer();
+    const pdf = await lib.getDocument({ data: buf }).promise;
+    const n=Math.min(pdf.numPages, maxPages);
+    let txt="";
+    for(let i=1;i<=n;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      txt += content.items.map(it=>it.str).join(" ")+"\n\n";
+    }
+    return txt;
+  })();
+  const timeout = new Promise(res=>setTimeout(()=>res(""), 8000));
+  try{ return await Promise.race([work, timeout]); }catch{ return ""; }
+}
+
+//  APP
+// ============================================================
+export default function App(){
+  const [db,setDb]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+  const [logo,setLogo]=useState(null);
+  const [lang,setLang]=useState("fr");
+  const [view,setView]=useState("list");   // list | editor
+  const [tab,setTab]=useState("reports");   // reports | templates
+  const [selId,setSelId]=useState(null);
+  const [query,setQuery]=useState("");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [showSettings,setShowSettings]=useState(false);
+  const [importing,setImporting]=useState(false);
+  const [importErr,setImportErr]=useState(null);
+  const [importPreview,setImportPreview]=useState(null);
+  const [customTpls,setCustomTpls]=useState([]);
+  const [theme,setTheme]=useState({...DEFAULT_THEME});
+
+  useEffect(()=>{ (async()=>{
+    const [d,l,ct,th]=await Promise.all([loadDB(),loadLogo(),loadTemplates(),loadTheme()]);
+    let lg="fr"; try{ lg=localStorage.getItem(LANG_KEY)||"fr"; }catch{}
+    LANG=lg; setLang(lg);
+    THEME=th; setTheme(th);
+    const migrated=d.map(r=>({...r, status:migrateStatus(r.status)}));
+    setDb(migrated); setLogo(l); setCustomTpls(ct); setLoaded(true);
+  })(); },[]);
+
+  function persist(next){ setDb(next); saveDB(next); }
+  function persistTpls(next){ setCustomTpls(next); saveTemplates(next); }
+  function applyTheme(next){ THEME=next; setTheme({...next}); saveTheme(next); }
+  function toggleLang(){ const nx=lang==="fr"?"en":"fr"; setLang(nx); LANG=nx; try{ localStorage.setItem(LANG_KEY,nx); }catch{} }
+
+  // Crée un nouveau rapport à partir d'un gabarit (défaut ou custom)
+  function blocksForTemplate(tplId){
+    const custom=customTpls.find(c=>c.id===tplId);
+    if(custom) return emptyBlockValues(JSON.parse(JSON.stringify(custom.blocks||[])));
+    return tplBlocks(tplId);
+  }
+
+  const sel = db.find(r=>r.id===selId)||null;
+
+  function newReport(tplId){
+    const r={ id:"r_"+Date.now(), title:"", client:"", location:"", projectNo:"", date:new Date().toISOString().slice(0,10),
+      template:tplId, status:"in_progress", version:1, createdFrom:null, blocks:blocksForTemplate(tplId), annotations:[], cover:{show:true,subtitle:""}, updatedAt:Date.now() };
+    persist([r,...db]); setSelId(r.id); setView("editor");
+  }
+  function updateReport(id,patch){ persist(db.map(r=>r.id===id?{...r,...patch,updatedAt:Date.now()}:r)); }
+  function deleteReport(id){ if(!confirm(t("confirmDel")))return; persist(db.filter(r=>r.id!==id)); if(selId===id){setSelId(null);setView("list");} }
+  function duplicateReport(id, asVersion){
+    const src=db.find(r=>r.id===id); if(!src)return;
+    const copy=JSON.parse(JSON.stringify(src));
+    copy.id="r_"+Date.now(); copy.updatedAt=Date.now();
+    if(asVersion){ copy.version=(src.version||1)+1; copy.createdFrom=src.title||src.id; copy.status="in_progress"; }
+    else { copy.version=1; copy.createdFrom=src.title||src.id; copy.title=(src.title||"")+" (copie)"; }
+    persist([copy,...db]); setSelId(copy.id); setView("editor");
+  }
+
+  async function handleImport(file){
+    const key=getApiKey();
+    if(!key){ alert(t("importNoKey")); setShowSettings(true); return; }
+    setImporting(true); setImportErr(null);
+    try{
+      const pages=await pdfPageCount(file);
+      const sourceText=await pdfFileToText(file);
+      let out;
+      if(pages>90){
+        // Gros PDF : extraction par lots de pages (texte) pour contourner la limite API de 100 pages
+        out=await extractLargePdf(key, file, (from,to,total)=>{ setImportErr(`${t("importBatch")} ${from}-${to} / ${total}…`); });
+        setImportErr(null);
+      } else {
+        const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
+        out=await extractDocWithApi(key,b64);
+      }
+      // Joindre une copie visuelle fidèle de chaque page (photos, schémas, mise en page d'origine)
+      let pageImages=[];
+      try{
+        setImportErr(`${t("importSnap")} 0 / ${pages}…`);
+        pageImages=await pdfFileToPageSnapshots(file,(i,tot)=>{ setImportErr(`${t("importSnap")} ${i} / ${tot}…`); });
+        setImportErr(null);
+      }catch(snapErr){ pageImages=[]; }
+      const blocks=normalizeBlocks(out.blocks);
+      if(pageImages.length){
+        blocks.push({ type:"pdfpage", id:bid(), name:t("importOriginalPages"), pages:pageImages });
+      }
+      setImportPreview({
+        title:out.title||"", client:out.client||"", location:out.location||"", projectNo:out.projectNo||"",
+        template: ["inspection","testing","quote","generic"].includes(out.suggestedTemplate)?out.suggestedTemplate:"generic",
+        blocks, truncated: !!out.__truncated, sourceText, pageCount:pageImages.length,
+      });
+    }catch(e){ setImportErr(e.message); }
+    setImporting(false);
+  }
+  function applyImport(){
+    if(!importPreview)return;
+    const ip=importPreview;
+    const r={ id:"r_"+Date.now(), title:ip.title, client:ip.client, location:ip.location, projectNo:ip.projectNo,
+      date:new Date().toISOString().slice(0,10), template:ip.template, status:"in_progress", version:1, createdFrom:"import",
+      blocks: ip.blocks.length?ip.blocks:tplBlocks(ip.template), annotations:[], cover:{show:true,subtitle:""}, sourceText:ip.sourceText||"", updatedAt:Date.now() };
+    persist([r,...db]); setSelId(r.id); setImportPreview(null); setView("editor");
+  }
+
+  // Importer un PDF directement comme GABARIT (structure conservée, valeurs vidées)
+  async function importPdfAsTemplate(file){
+    const key=getApiKey();
+    if(!key){ alert(t("importNoKey")); setShowSettings(true); return; }
+    setImporting(true); setImportErr(null);
+    try{
+      const pages=await pdfPageCount(file);
+      let out;
+      if(pages>90){
+        out=await extractLargePdf(key, file, (from,to,total)=>{ setImportErr(`${t("importBatch")} ${from}-${to} / ${total}…`); });
+        setImportErr(null);
+      } else {
+        const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
+        out=await extractDocWithApi(key,b64);
+      }
+      const blocks=emptyBlockValues(normalizeBlocks(out.blocks));
+      const name=(out.title||file.name||"Gabarit").replace(/\.pdf$/i,"");
+      const tpl={ id:"ct_"+Date.now(), name, blocks };
+      persistTpls([tpl,...customTpls]);
+    }catch(e){ setImportErr(e.message); }
+    setImporting(false);
+  }
+  function deleteTemplate(id){ if(!confirm(t("tplDelete")))return; persistTpls(customTpls.filter(c=>c.id!==id)); }
+
+  // Importer un BROUILLON MANUSCRIT (image) -> rapport avec valeurs "à vérifier"
+  async function handleHandwriting(file){
+    const key=getApiKey();
+    if(!key){ alert(t("importNoKey")); setShowSettings(true); return; }
+    setImporting(true); setImportErr(null);
+    try{
+      const dataUrl=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result)); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
+      const b64=dataUrl.split(",")[1];
+      const mt=(file.type||"image/jpeg");
+      const out=await extractHandwritingWithApi(key,b64,mt);
+      // marquer les flags d'incertitude dans les blocs normalisés
+      const blocks=normalizeBlocks(out.blocks);
+      setImportPreview({
+        title:out.title||"", client:out.client||"", location:out.location||"", projectNo:out.projectNo||"",
+        template: ["inspection","testing","quote","generic"].includes(out.suggestedTemplate)?out.suggestedTemplate:"generic",
+        blocks, truncated:false, sourceText:"", handwriting:true,
+      });
+    }catch(e){ setImportErr(e.message); }
+    setImporting(false);
+  }
+
+  const filtered = db.filter(r=>{
+    if(statusFilter!=="all" && r.status!==statusFilter) return false;
+    if(!query.trim()) return true;
+    const q=query.toLowerCase();
+    const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
+    return [r.title,r.client,r.location,r.projectNo,tplLabel].filter(Boolean).some(v=>String(v).toLowerCase().includes(q));
+  });
+
+  if(!loaded) return <div style={S.page} className="app-page"><style>{CSS}</style>…</div>;
+
+  return (
+    <div style={S.page} className="app-page">
+      <style>{CSS}</style>
+      <header style={S.header} className="screen-only">
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          {logo && <img src={logo} alt="" style={{maxHeight:42,maxWidth:120,objectFit:"contain"}}/>}
+          <div>
+            <div style={S.kicker}>{t("tagline").toUpperCase()}</div>
+            <div style={S.h1}>{t("appName")}</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          <button style={S.langBtn} onClick={toggleLang} title="FR / EN">
+            <span style={{...S.langOpt,...(lang==="fr"?S.langOptOn:{})}}>FR</span>
+            <span style={{...S.langOpt,...(lang==="en"?S.langOptOn:{})}}>EN</span>
+          </button>
+          <button style={S.gearBtn} onClick={()=>setShowSettings(true)} title={t("settings")}>⚙</button>
+          {view!=="list" && <button style={S.btnGhost} onClick={()=>{setView("list");setSelId(null);}}>{t("backAll")}</button>}
+        </div>
+      </header>
+
+      {showSettings && <SettingsModal logo={logo} onLogo={(d)=>{ setLogo(d); if(d) saveLogo(d); else clearLogo(); }} theme={theme} onTheme={applyTheme} onClose={()=>setShowSettings(false)}/>}
+
+      {importing && <div style={S.overlay}><div style={{...S.modal,maxWidth:340,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>📄</div><div style={{fontFamily:"'Archivo'",fontWeight:700}}>{t("importing")}</div></div></div>}
+      {importErr && <div style={S.overlay} onClick={()=>setImportErr(null)}><div style={{...S.modal,maxWidth:440}} onClick={e=>e.stopPropagation()}><h2 style={{...S.h2,color:"#c1121f"}}>{t("importErr")}</h2><p style={{fontSize:13,wordBreak:"break-word"}}>{importErr}</p><div style={{marginTop:14}}><button style={S.btnGhost} onClick={()=>setImportErr(null)}>{t("cancel")}</button></div></div></div>}
+
+      {importPreview && <ImportReview ip={importPreview} setIp={setImportPreview} onApply={applyImport} onCancel={()=>setImportPreview(null)}/>}
+
+      {view==="list" && (
+        <>
+          <div style={S.tabRow} className="screen-only">
+            <button style={{...S.tab,...(tab==="reports"?S.tabOn:{})}} onClick={()=>setTab("reports")}>{t("tabReports")}</button>
+            <button style={{...S.tab,...(tab==="templates"?S.tabOn:{})}} onClick={()=>setTab("templates")}>{t("tabTemplates")}</button>
+          </div>
+          {tab==="reports" ? (
+            <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={handleHandwriting} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
+          ) : (
+            <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)}/>
+          )}
+        </>
+      )}
+      {view==="editor" && sel && <Editor report={sel} logo={logo} customTpls={customTpls} onUpdate={(patch)=>updateReport(sel.id,patch)} onDuplicate={duplicateReport}/>}
+    </div>
+  );
+}
+
+// ============================================================
+//  VUE LISTE
+// ============================================================
+// Niveaux d'arborescence disponibles
+const TREE_LEVELS = [
+  { id:"year",     key:"lvlYear",     get:(r)=> (r.date||"").slice(0,4) || t("noYear") },
+  { id:"client",   key:"lvlClient",   get:(r)=> (r.client||"").trim() || t("noClient") },
+  { id:"job",      key:"lvlJob",      get:(r)=> (r.projectNo||"").trim() || t("noJob") },
+  { id:"location", key:"lvlLocation", get:(r)=> (r.location||"").trim() || t("noLocation") },
+];
+
+function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onNew, onImport, onHandwriting, customTpls, onDelete, onDuplicate }){
+  const [showTpl,setShowTpl]=useState(false);
+  const [order,setOrder]=useState(["client","job","location"]); // ordre des niveaux
+  const [treePath,setTreePath]=useState([]); // ex: ["2025","Hydro","Poste 12"]
+  const counts={ all:all.length }; STATUSES.forEach(s=>{ counts[s.id]=all.filter(r=>r.status===s.id).length; });
+
+  const levelGet=(id)=> (TREE_LEVELS.find(l=>l.id===id)||{}).get || (()=> "");
+
+  // Construit l'arbre à partir de TOUS les rapports (db = déjà filtré par recherche+statut)
+  function buildTree(list){
+    const root={};
+    list.forEach(r=>{
+      let node=root;
+      order.forEach(lvlId=>{
+        const k=levelGet(lvlId)(r);
+        node[k]=node[k]||{__count:0,__children:{}};
+        node[k].__count++;
+        node=node[k].__children;
+      });
+    });
+    return root;
+  }
+  const tree=buildTree(db);
+
+  // Rapports correspondant au chemin sélectionné dans l'arbre
+  const treeFiltered = db.filter(r=> treePath.every((seg,i)=> levelGet(order[i])(r)===seg));
+
+  function TreeNode({ node, path }){
+    const keys=Object.keys(node).sort((a,b)=> b.localeCompare(a)); // années récentes d'abord, sinon alpha inverse
+    return (
+      <div style={{marginLeft:path.length?12:0}}>
+        {keys.map(k=>{
+          const here=[...path,k];
+          const active = treePath.length>=here.length && here.every((s,i)=>treePath[i]===s);
+          const isLeafSel = treePath.length===here.length && active;
+          const children=node[k].__children;
+          const hasChildren=Object.keys(children).length>0;
+          return (
+            <div key={k}>
+              <div style={{...S.treeNode,...(isLeafSel?S.treeNodeOn:{})}} onClick={()=> setTreePath(isLeafSel? here.slice(0,-1) : here)}>
+                <span style={{opacity:.5,fontSize:10}}>{hasChildren?(active?"▼":"▶"):"•"}</span>
+                <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k}</span>
+                <span style={S.treeCount}>{node[k].__count}</span>
+              </div>
+              {hasChildren && active && <TreeNode node={children} path={here}/>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:16}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
+            {t("importDoc")}
+            <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImport(f); e.target.value=""; }}/>
+          </label>
+          <label style={{...S.btnDark,background:"#6b4e9d",cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
+            {t("handwriting")}
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onHandwriting(f); e.target.value=""; }}/>
+          </label>
+          <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
+        </div>
+      </div>
+
+      <div style={{marginBottom:12}}><input style={{...S.input,maxWidth:480}} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("search")}/></div>
+      <div style={S.filterRow}>
+        {[["all",t("filterAll"),counts.all,"#6b5d4f"], ...STATUSES.map(s=>[s.id,t(s.key),counts[s.id],s.color])].map(([k,lbl,c,col])=>(
+          <button key={k} onClick={()=>setStatusFilter(k)} style={{...S.filterTab,...(statusFilter===k?{background:col,color:"#fff",borderColor:col}:{color:col,borderColor:col})}}>{lbl} <span style={S.filterCount}>{c}</span></button>
+        ))}
+      </div>
+
+      {showTpl && (
+        <div style={S.overlay} onClick={()=>setShowTpl(false)}>
+          <div style={{...S.modal,maxWidth:460}} onClick={e=>e.stopPropagation()}>
+            <h2 style={S.h2}>{t("chooseTemplate")}</h2>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {TEMPLATES.map(tp=>(<button key={tp.id} style={S.tplCard} onClick={()=>{setShowTpl(false);onNew(tp.id);}}>{t(tp.key)}</button>))}
+              {(customTpls||[]).map(c=>(<button key={c.id} style={{...S.tplCard,borderColor:"#6b4e9d",color:"#6b4e9d"}} onClick={()=>{setShowTpl(false);onNew(c.id);}}>★ {c.name}</button>))}
+            </div>
+            <div style={{marginTop:14}}><button style={S.btnGhost} onClick={()=>setShowTpl(false)}>{t("cancel")}</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* DISPOSITION : arbre à gauche, rapports à droite */}
+      <div style={S.treeLayout}>
+        <aside style={S.treePanel}>
+          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#6b5d4f",marginBottom:8}}>{t("treeOrder")}</div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
+            {order.map((lvlId,i)=>(
+              <span key={lvlId} style={S.treeOrderChip} onClick={()=>{
+                // rotation de l'ordre : clic déplace ce niveau en première position
+                const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]);
+              }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</span>
+            ))}
+          </div>
+          <div style={{...S.treeNode, ...(treePath.length===0?S.treeNodeOn:{}), fontWeight:700}} onClick={()=>setTreePath([])}>
+            <span style={{flex:1}}>📁 {t("treeAll")}</span><span style={S.treeCount}>{db.length}</span>
+          </div>
+          {db.length>0 ? <TreeNode node={tree} path={[]}/> : <div style={{fontSize:12,color:"#a99",padding:"8px 0"}}>{t("treeEmpty")}</div>}
+        </aside>
+
+        <div style={{flex:1,minWidth:0}}>
+          {treePath.length>0 && (
+            <div style={S.breadcrumb}>
+              <span onClick={()=>setTreePath([])} style={{cursor:"pointer",color:"#277da1"}}>{t("treeAll")}</span>
+              {treePath.map((seg,i)=>(<span key={i}> › <span onClick={()=>setTreePath(treePath.slice(0,i+1))} style={{cursor:"pointer"}}>{seg}</span></span>))}
+            </div>
+          )}
+          {treeFiltered.length===0 ? <div style={{textAlign:"center",color:"#8a7c6c",padding:"48px 0"}}>{t("noReports")}</div> : (
+            <div style={S.grid}>
+              {treeFiltered.map(r=>{
+                const tpl=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
+                return (
+                  <div key={r.id} style={S.card} onClick={()=>onOpen(r.id)}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                      <div style={S.cardTitle}>{r.title||"(sans titre)"}</div>
+                      <span style={{...S.pill,background:statusColor(r.status)}}>{statusLabel(r.status)}</span>
+                    </div>
+                    <div style={S.cardMeta}>{tpl}{r.client?` · ${r.client}`:""}{r.projectNo?` · ${r.projectNo}`:""}</div>
+                    <div style={S.cardFoot}>
+                      <span>{t("version")}{r.version} · {t("lastEdit")} {new Date(r.updatedAt).toLocaleDateString()}</span>
+                      <span style={{display:"flex",gap:8}}>
+                        <button style={S.miniBtn} onClick={(e)=>{e.stopPropagation();onDuplicate(r.id,true);}}>{t("newVersion")}</button>
+                        <button style={S.miniBtnDel} onClick={(e)=>{e.stopPropagation();onDelete(r.id);}}>{t("del")}</button>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+//  VUE GABARITS (modèles)
+// ============================================================
+function TemplatesView({ custom, onImportPdf, onDelete, onUse }){
+  const [preview,setPreview]=useState(null); // {kind:'default'|'custom', id}
+  function blocksOf(p){ return p.kind==="custom" ? (custom.find(c=>c.id===p.id)||{}).blocks||[] : tplBlocks(p.id); }
+  function nameOf(p){ return p.kind==="custom" ? (custom.find(c=>c.id===p.id)||{}).name||"" : t((TEMPLATES.find(x=>x.id===p.id)||{}).key); }
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:8}}>
+        <h2 style={{...S.h2,margin:0}}>{t("tplManage")}</h2>
+        <label style={{...S.btnDark,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>{t("tplImportPdf")}
+          <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImportPdf(f); e.target.value=""; }}/>
+        </label>
+      </div>
+      <p style={{...S.hint,marginBottom:16}}>{LANG==="en"?"Import a PDF to turn its structure into a reusable empty template.":"Importe un PDF pour transformer sa structure en gabarit réutilisable vierge."}</p>
+
+      <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#6b5d4f",marginBottom:8}}>{t("tplCustom")}</div>
+      {custom.length===0 ? <div style={{color:"#8a7c6c",fontSize:13,marginBottom:18}}>{t("tplNoCustom")}</div> : (
+        <div style={{...S.grid,marginBottom:20}}>
+          {custom.map(c=>(
+            <div key={c.id} style={S.card}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={S.cardTitle} onClick={()=>setPreview({kind:"custom",id:c.id})}>{c.name||"(gabarit)"}</div>
+                <button style={S.miniBtnDel} onClick={()=>onDelete(c.id)}>{t("del")}</button>
+              </div>
+              <div style={S.cardMeta}>{(c.blocks||[]).length} {LANG==="en"?"blocks":"blocs"}</div>
+              <div style={{marginTop:8,fontSize:11,color:"#8a7c6c"}}>
+                {(c.blocks||[]).slice(0,8).map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?"🖼":"¶"}</span>))}
+              </div>
+              <button style={{...S.btnPrimary,marginTop:10,fontSize:12,padding:"7px 14px"}} onClick={()=>onUse(c.id)}>{t("tplUse")}</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#6b5d4f",marginBottom:8}}>{t("tplDefaults")}</div>
+      <div style={S.grid}>
+        {TEMPLATES.map(tp=>{
+          const blocks=tplBlocks(tp.id);
+          return (
+            <div key={tp.id} style={S.card}>
+              <div style={S.cardTitle} onClick={()=>setPreview({kind:"default",id:tp.id})}>{t(tp.key)}</div>
+              <div style={S.cardMeta}>{blocks.length} {LANG==="en"?"blocks":"blocs"}</div>
+              <div style={{marginTop:8,fontSize:11,color:"#8a7c6c"}}>
+                {blocks.map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="photos"?"🖼 "+b.title:"¶"}</span>))}
+              </div>
+              <button style={{...S.btnPrimary,marginTop:10,fontSize:12,padding:"7px 14px"}} onClick={()=>onUse(tp.id)}>{t("tplUse")}</button>
+            </div>
+          );
+        })}
+      </div>
+
+      {preview && (()=>{ const blocks=blocksOf(preview); return (
+        <div style={S.overlay} onClick={()=>setPreview(null)}>
+          <div style={{...S.modal,maxWidth:560,maxHeight:"82vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <h2 style={S.h2}>{nameOf(preview)}</h2>
+            {blocks.map((b,i)=>(
+              <div key={i} style={{marginBottom:10,padding:10,border:"1px solid #ece1cf",borderRadius:8,background:"#fdfaf4"}}>
+                <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#277da1"}}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?"🖼 "+b.title:"¶ "+t("freeText")}</div>
+                {b.type==="section" && <div style={{fontSize:12,color:"#6b5d4f",marginTop:4}}>{(b.fields||[]).map(f=>f.label).join(" · ")}</div>}
+                {b.type==="table" && <div style={{fontSize:12,color:"#6b5d4f",marginTop:4}}>{(b.columns||[]).join(" | ")}</div>}
+              </div>
+            ))}
+            <button style={S.btnGhost} onClick={()=>setPreview(null)}>{t("cancel")}</button>
+          </div>
+        </div>
+      ); })()}
+    </div>
+  );
+}
+
+// ============================================================
+//  PRÉVISUALISATION IMPORT (choix gabarit)
+// ============================================================
+function ImportReview({ ip, setIp, onApply, onCancel }){
+  return (
+    <div style={S.overlay} onClick={onCancel}>
+      <div style={{...S.modal,maxWidth:640,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <h2 style={S.h2}>{ip.handwriting?"✍":"📄"} {t("importReview")}</h2>
+        {ip.truncated && <div style={{background:"#fef6ec",border:"1.5px solid #e0a96d",borderRadius:8,padding:"8px 10px",marginBottom:12,fontSize:12,color:"#9d6b2e"}}>{t("truncWarn")}</div>}
+        {ip.handwriting && <div style={{background:"#f3eefb",border:"1.5px solid #b9a3dd",borderRadius:8,padding:"8px 10px",marginBottom:12,fontSize:12,color:"#5a3d8c"}}>{t("uncertainNote")}</div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div><label style={S.label}>{t("title")}</label><input style={S.input} value={ip.title} onChange={e=>setIp({...ip,title:e.target.value})}/></div>
+          <div><label style={S.label}>{t("client")}</label><input style={S.input} value={ip.client} onChange={e=>setIp({...ip,client:e.target.value})}/></div>
+          <div><label style={S.label}>{t("location")}</label><input style={S.input} value={ip.location} onChange={e=>setIp({...ip,location:e.target.value})}/></div>
+          <div><label style={S.label}>{t("projectNo")}</label><input style={S.input} value={ip.projectNo} onChange={e=>setIp({...ip,projectNo:e.target.value})}/></div>
+        </div>
+        <label style={S.label}>{t("templateSuggested")}</label>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+          {TEMPLATES.map(tp=>(<button key={tp.id} onClick={()=>setIp({...ip,template:tp.id})} style={{...S.chip,...(ip.template===tp.id?S.chipOn:{})}}>{t(tp.key)}</button>))}
+        </div>
+        <label style={S.label}>{t("extractedContent")} ({ip.blocks.length})</label>
+        <div style={{border:"1px solid #e7ddca",borderRadius:8,padding:10,maxHeight:240,overflowY:"auto",background:"#fdfaf4",fontSize:12}}>
+          {ip.blocks.map((b,i)=>(
+            <div key={i} style={{marginBottom:8}}>
+              {b.type==="section" && <><b>§ {b.title}</b>{(b.fields||[]).map((f,j)=><div key={j} style={{paddingLeft:10,color:"#6b5d4f"}}>{f.label}: {f.value||"—"}</div>)}</>}
+              {b.type==="text" && <div style={{color:"#3a2e25"}}>{b.value?b.value.slice(0,160):"—"}{b.value&&b.value.length>160?"…":""}</div>}
+              {b.type==="photos" && <i style={{color:"#999"}}>🖼 {t("photoZone")}</i>}
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:16}}>
+          <button style={S.btnPrimary} onClick={onApply}>{t("applyImport")}</button>
+          <button style={S.btnGhost} onClick={onCancel}>{t("cancel")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+//  RÉGLAGES
+// ============================================================
+function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
+  const [key,setKey]=useState(getApiKey()||"");
+  const [store,setStore]=useState(isKeyStored()?"local":"mem");
+  const [status,setStatus]=useState(null);
+  const [testing,setTesting]=useState(false);
+  const [th,setTh]=useState({...theme});
+  function save(){ if(!key.trim())return; if(store==="local")setApiKeyLocal(key.trim()); else {clearApiKey();setApiKeyMem(key.trim());} setStatus({ok:true,msg:t("saved")}); }
+  function del(){ clearApiKey(); setKey(""); setStatus({ok:true,msg:t("keyNone")}); }
+  async function test(){ setTesting(true); setStatus(null); try{ await testApiConnection(key.trim()); setStatus({ok:true,msg:"✓"}); }catch(e){ setStatus({ok:false,msg:e.message}); } setTesting(false); }
+  function setColor(k,v){ const next={...th,[k]:v}; setTh(next); onTheme(next); }
+  function resetTheme(){ setTh({...DEFAULT_THEME}); onTheme({...DEFAULT_THEME}); }
+  const masked=key?key.slice(0,7)+"…"+key.slice(-4):"";
+  const COLOR_FIELDS=[["secBar","themeSecBar"],["tableHd","themeTableHd"],["accent","themeAccent"],["title","themeTitle"],["text","themeText"],["border","themeBorder"]];
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:520,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <h2 style={S.h2}>⚙ {t("settings")}</h2>
+        <div style={S.label}>Logo</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+          {logo && <img src={logo} alt="" style={{maxHeight:40,maxWidth:120,objectFit:"contain"}}/>}
+          <label style={{...S.btnGhost,cursor:"pointer"}}>{logo?"Changer":"Ajouter"}<input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files?.[0]; if(f){ const d=await compressImage(f,400,0.8); onLogo(d); } e.target.value=""; }}/></label>
+          {logo && <button style={S.miniBtnDel} onClick={()=>onLogo(null)}>{t("del")}</button>}
+        </div>
+
+        {/* THÈME DE COULEURS */}
+        <div style={{borderTop:"1px solid #ece1cf",paddingTop:14,marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{...S.label,margin:0}}>🎨 {t("themeTitle2")}</div>
+            <button style={{...S.btnGhost,fontSize:11,padding:"5px 10px"}} onClick={resetTheme}>{t("themeReset")}</button>
+          </div>
+          <p style={{...S.hint,marginTop:0,marginBottom:10}}>{t("themeHint")}</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {COLOR_FIELDS.map(([k,lblKey])=>(
+              <label key={k} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#3a2e25"}}>
+                <input type="color" value={th[k]} onChange={e=>setColor(k,e.target.value)} style={{width:34,height:30,border:"1px solid #cdbfa8",borderRadius:6,padding:0,cursor:"pointer",background:"none"}}/>
+                <span>{t(lblKey)}</span>
+              </label>
+            ))}
+          </div>
+          {/* aperçu */}
+          <div style={{marginTop:12,border:"1px solid #ece1cf",borderRadius:8,overflow:"hidden"}}>
+            <div style={{background:th.secBar,color:"#fff",fontFamily:"'Archivo'",fontWeight:700,fontSize:11,padding:"4px 10px"}}>{LANG==="en"?"Section title":"Titre de section"}</div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+              <thead><tr><th style={{background:th.tableHd,color:"#fff",padding:"3px 8px",textAlign:"left"}}>Col A</th><th style={{background:th.tableHd,color:"#fff",padding:"3px 8px",textAlign:"left"}}>Col B</th></tr></thead>
+              <tbody><tr><td style={{padding:"3px 8px",borderTop:"1px solid "+th.border,color:th.text}}>{LANG==="en"?"Sample":"Exemple"}</td><td style={{padding:"3px 8px",borderTop:"1px solid "+th.border,color:th.text}}>123</td></tr></tbody>
+            </table>
+            <div style={{padding:"6px 10px",fontFamily:"'Archivo'",fontWeight:900,color:th.title,fontSize:13}}>{LANG==="en"?"Report title":"Titre du rapport"}</div>
+          </div>
+        </div>
+
+        <div style={S.label}>{t("apiKeyTitle")}</div>
+        <input style={S.input} type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-ant-..." autoComplete="off"/>
+        {getApiKey() && <div style={{fontSize:11,color:"#2a9d8f",marginTop:4}}>{t("keyActive")} : {masked} {isKeyStored()?"(local)":"(mémoire)"}</div>}
+        <div style={{display:"flex",gap:14,marginTop:12}}>
+          {[["mem",t("storeMem")],["local",t("storeLocal")]].map(([v,lbl])=>(<label key={v} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer"}}><input type="radio" name="st" checked={store===v} onChange={()=>setStore(v)}/>{lbl}</label>))}
+        </div>
+        <p style={{...S.hint,color:"#9d6b2e",background:"#fef6ec",padding:"8px 10px",borderRadius:6,marginTop:12}}>⚠ {t("apiKeyHint")}</p>
+        {status && <div style={{fontSize:12,marginTop:10,color:status.ok?"#2a9d8f":"#c1121f",fontWeight:600,wordBreak:"break-word"}}>{status.msg}</div>}
+        <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+          <button style={S.btnPrimary} onClick={save}>{t("save")}</button>
+          <button style={S.btnGhost} onClick={test} disabled={testing||!key.trim()}>{testing?"…":t("testConn")}</button>
+          <button style={{...S.btnGhost,color:"#9d0208",borderColor:"#e3a0a0"}} onClick={del}>{t("deleteKey")}</button>
+          <button style={{...S.btnGhost,marginLeft:"auto"}} onClick={onClose}>{t("cancel")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+//  ÉDITEUR DE RAPPORT
+// ============================================================
+function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
+  const [r,setR]=useState(report);
+  const [lightbox,setLightbox]=useState(null);
+  const [showAnn,setShowAnn]=useState(false);
+  const [showInsert,setShowInsert]=useState(false);
+  const [showCompare,setShowCompare]=useState(false);
+  const [fixing,setFixing]=useState(false);
+  const [fixMsg,setFixMsg]=useState(null);
+  const [savedFlash,setSavedFlash]=useState(false);
+  const [showNav,setShowNav]=useState(false);
+  const [navFilter,setNavFilter]=useState("all");
+  function jumpToBlock(bid){
+    const el=document.getElementById("blk-"+bid);
+    if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.transition="box-shadow .3s"; el.style.boxShadow="0 0 0 3px #277da1"; setTimeout(()=>{el.style.boxShadow="";},900); }
+    setShowNav(false);
+  }
+  const [dragId,setDragId]=useState(null);
+  const [overId,setOverId]=useState(null);
+  const [narrow,setNarrow]=useState(typeof window!=="undefined" && window.innerWidth<640);
+  const [openMenuId,setOpenMenuId]=useState(null);
+  useEffect(()=>{ const h=()=>setNarrow(window.innerWidth<640); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
+  const [pdfBusy,setPdfBusy]=useState(false);
+  useEffect(()=>{ setR(report); },[report.id]);
+
+  function commit(next){ setR(next); onUpdate(next); setSavedFlash(true); }
+  useEffect(()=>{ if(!savedFlash) return; const id=setTimeout(()=>setSavedFlash(false),1200); return ()=>clearTimeout(id); },[savedFlash]);
+  function setField(k,v){ commit({...r,[k]:v}); }
+  function setBlocks(blocks){ commit({...r,blocks}); }
+  function updBlock(id,patch){ setBlocks(r.blocks.map(b=>b.id===id?{...b,...patch}:b)); }
+  function removeBlock(id){ setBlocks(r.blocks.filter(b=>b.id!==id)); }
+  function moveBlock(id,dir){ const i=r.blocks.findIndex(b=>b.id===id); const j=i+dir; if(j<0||j>=r.blocks.length)return; const a=[...r.blocks]; [a[i],a[j]]=[a[j],a[i]]; setBlocks(a); }
+  function duplicateBlock(id){
+    const i=r.blocks.findIndex(b=>b.id===id); if(i<0)return;
+    const src=r.blocks[i];
+    const copy=cloneBlockFresh(src);
+    const a=[...r.blocks]; a.splice(i+1,0,copy); setBlocks(a);
+  }
+  // Un "équipement" = une section + tous les blocs qui suivent jusqu'à la prochaine section
+  function groupRange(startIdx){
+    let end=startIdx+1;
+    while(end<r.blocks.length && r.blocks[end].type!=="section") end++;
+    return [startIdx, end]; // [début inclus, fin exclue]
+  }
+  function duplicateGroup(id){
+    const i=r.blocks.findIndex(b=>b.id===id); if(i<0||r.blocks[i].type!=="section")return;
+    const [s,e]=groupRange(i);
+    const clones=r.blocks.slice(s,e).map(cloneBlockFresh);
+    // marquer le titre de la section dupliquée
+    if(clones[0]) clones[0].title=(clones[0].title||"")+" "+t("copyTag");
+    const a=[...r.blocks]; a.splice(e,0,...clones); setBlocks(a);
+  }
+  // Ajouter un équipement complet (section infos + grille inspection + photos)
+  function addEquipment(){
+    const sec={type:"section",id:bid(),title:t("equipNew"),fields:[
+      {id:bid(),label:t("equipFab"),value:""},{id:bid(),label:t("equipModel"),value:""},
+      {id:bid(),label:t("equipSerial"),value:""},{id:bid(),label:t("equipLoc"),value:""}
+    ]};
+    const insp={type:"inspect",id:bid(),title:t("inspectTitle"),items:[
+      {id:bid(),label:"",state:"good",note:""}
+    ]};
+    const ph={type:"photos",id:bid(),title:t("photoZone"),photos:[]};
+    setBlocks([...r.blocks,sec,insp,ph]);
+  }
+  function reorderBlocks(fromId,toId){
+    if(fromId===toId) return;
+    const a=[...r.blocks];
+    const fi=a.findIndex(b=>b.id===fromId), ti=a.findIndex(b=>b.id===toId);
+    if(fi<0||ti<0) return;
+    const [moved]=a.splice(fi,1); a.splice(ti,0,moved); setBlocks(a);
+  }
+  // Convertir une section (libellé→valeur) en grille d'inspection (chaque libellé devient un point)
+  function convertToInspect(id){
+    const i=r.blocks.findIndex(b=>b.id===id); if(i<0||r.blocks[i].type!=="section")return;
+    const sec=r.blocks[i];
+    const items=(sec.fields||[]).filter(f=>(f.label||"").trim()).map(f=>({id:bid(),label:f.label,state:"good",note:""}));
+    if(items.length===0){ alert(t("convertEmpty")); return; }
+    const insp={type:"inspect",id:bid(),title:sec.title||t("inspectTitle"),items};
+    const a=[...r.blocks]; a[i]=insp; setBlocks(a);
+  }
+  // Reconvertir une grille d'inspection en section (le libellé reste, l'état devient la valeur)
+  function convertToSection(id){
+    const i=r.blocks.findIndex(b=>b.id===id); if(i<0||r.blocks[i].type!=="inspect")return;
+    const insp=r.blocks[i];
+    const fields=(insp.items||[]).map(it=>({ id:bid(), label:it.label||"", value: it.state==="anomaly" ? (inspLabel("anomaly")+(it.note?" — "+it.note:"")) : (it.state&&it.state!=="good"?inspLabel(it.state):inspLabel("good")) }));
+    const sec={type:"section",id:bid(),title:insp.title||t("sectionTitle"),fields: fields.length?fields:[{id:bid(),label:"",value:""}]};
+    const a=[...r.blocks]; a[i]=sec; setBlocks(a);
+  }
+  function addBlock(type){
+    let b;
+    if(type==="section") b={type:"section",id:bid(),title:t("sectionTitle"),fields:[{id:bid(),label:"",value:""}]};
+    else if(type==="table") b={type:"table",id:bid(),title:t("tableTitle"),columns:["",""],rows:[["",""]]};
+    else if(type==="inspect") b={type:"inspect",id:bid(),title:t("inspectTitle"),items:[{id:bid(),label:"",state:"good",note:""}]};
+    else if(type==="photos") b={type:"photos",id:bid(),title:t("photoZone"),photos:[]};
+    else b={type:"text",id:bid(),value:"",placeholder:t("freeText")};
+    setBlocks([...r.blocks,b]);
+  }
+  // Importer un PDF externe -> bloc "pdfpage" avec une image par page
+  async function addPdfPageBlock(file){
+    setPdfBusy(true);
+    try{
+      const images=await pdfFileToImages(file);
+      const b={ type:"pdfpage", id:bid(), name:file.name, pages:images };
+      setBlocks([...r.blocks, b]);
+    }catch(e){ alert((LANG==="en"?"PDF error: ":"Erreur PDF : ")+e.message); }
+    setPdfBusy(false);
+  }
+  // Insérer une page gabarit à une position (après l'index donné)
+  function insertTemplatePage(tplId, afterIdx){
+    const custom=(customTpls||[]).find(c=>c.id===tplId);
+    let newBlocks = custom ? emptyBlockValues(JSON.parse(JSON.stringify(custom.blocks||[]))) : tplBlocks(tplId);
+    // ré-attribuer des ids uniques pour éviter les collisions avec les blocs existants
+    newBlocks = newBlocks.map(b=>({...b, id:bid()}));
+    const a=[...r.blocks];
+    a.splice(afterIdx+1, 0, ...newBlocks);
+    setBlocks(a); setShowInsert(false);
+  }
+  // Annotations
+  const annotations = r.annotations||[];
+  function setAnnotations(list){ commit({...r,annotations:list}); }
+  function addAnnotation(kind){ setAnnotations([...annotations, { id:bid(), kind, title:"", desc:"", severity:"minor", equipment:r.title||"", photo:null }]); }
+  function updAnnotation(id,patch){ setAnnotations(annotations.map(a=>a.id===id?{...a,...patch}:a)); }
+  function delAnnotation(id){ if(!confirm(t("delAnnotation")))return; setAnnotations(annotations.filter(a=>a.id!==id)); }
+
+  async function doFix(){
+    const key=getApiKey(); if(!key){ alert(t("fixNoKey")); return; }
+    setFixing(true); setFixMsg(null);
+    try{ const res=await fixReportWithApi(key, r, LANG); commit({...r, title:res.title, blocks:res.blocks}); setFixMsg(t("fixDone")); }
+    catch(e){ setFixMsg(t("importErr")+" "+e.message); }
+    setFixing(false);
+  }
+  async function doTranslate(){
+    const key=getApiKey(); if(!key){ alert(t("fixNoKey")); return; }
+    const target = LANG; // traduit vers la langue active de l'interface
+    setFixing(true); setFixMsg(null);
+    try{ const res=await translateReportWithApi(key, r, target); commit({...r, ...res}); setFixMsg(t("translateDone")); }
+    catch(e){ setFixMsg(t("importErr")+" "+e.message); }
+    setFixing(false);
+  }
+
+  function doExport(){ setTimeout(()=>window.print(),200); }
+
+  return (
+    <div>
+      {/* BARRE D'OUTILS */}
+      <div style={S.toolbar} className="screen-only">
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          {STATUSES.map(s=>(
+            <button key={s.id} style={{...S.statusToggle,...(r.status===s.id?{background:s.color,color:"#fff",borderColor:s.color}:{})}} onClick={()=>setField("status",s.id)}>{t(s.key)}</button>
+          ))}
+          <span style={{fontSize:12,color:"#8a7c6c"}}>{t("version")}{r.version}{r.createdFrom?` · ${t("createdFrom")} ${r.createdFrom}`:""}</span>
+          <span style={{...S.savedBadge, opacity:savedFlash?1:0}}>{t("savedTag")}</span>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button style={S.btnGhost} onClick={()=>setShowAnn(true)}>💬 {t("annotations")} {annotations.length>0?`(${annotations.length})`:""}</button>
+          {r.sourceText && <button style={S.btnGhost} onClick={()=>setShowCompare(true)}>{t("compareView")}</button>}
+          <button style={S.btnGhost} onClick={()=>setShowInsert(true)}>{t("insertPage")}</button>
+          <button style={S.btnGhost} onClick={doFix} disabled={fixing}>{fixing?t("fixing"):t("fixReport")}</button>
+          <button style={S.btnGhost} onClick={doTranslate} disabled={fixing}>{t("translateReport")}</button>
+          <button style={S.btnGhost} onClick={()=>onDuplicate(r.id,false)}>{t("duplicate")}</button>
+          <button style={S.btnGhost} onClick={()=>onDuplicate(r.id,true)}>{t("newVersion")}</button>
+          <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
+        </div>
+      </div>
+      {fixMsg && <div style={{...S.card,padding:"10px 16px",color:fixMsg.includes("✓")?"#2a9d8f":"#c1121f",fontWeight:600,fontSize:13}} className="screen-only">{fixMsg}</div>}
+
+      {/* PANNEAU ANNOTATIONS */}
+      {showAnn && <AnnotationsPanel annotations={annotations} onAdd={addAnnotation} onUpd={updAnnotation} onDel={delAnnotation} onClose={()=>setShowAnn(false)} onZoom={setLightbox}/>}
+
+      {/* MODALE INSÉRER PAGE GABARIT */}
+      {showInsert && (
+        <div style={S.overlay} onClick={()=>setShowInsert(false)}>
+          <div style={{...S.modal,maxWidth:480}} onClick={e=>e.stopPropagation()}>
+            <h2 style={S.h2}>{t("insertPage")}</h2>
+            <InsertPageForm blocks={r.blocks} customTpls={customTpls} onInsert={insertTemplatePage} onCancel={()=>setShowInsert(false)}/>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE COMPARAISON SOURCE vs EXTRAIT */}
+      {showCompare && (
+        <div style={S.overlay} onClick={()=>setShowCompare(false)}>
+          <div style={{...S.modal,maxWidth:980,maxHeight:"88vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <h2 style={S.h2}>{t("compareTitle")}</h2>
+            <p style={{...S.hint,marginTop:0,marginBottom:12}}>{t("compareHint")}</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,flex:1,minHeight:0}}>
+              <div style={{display:"flex",flexDirection:"column",minHeight:0}}>
+                <div style={S.compareHead}>{t("compareSource")}</div>
+                <div style={S.comparePane}>{r.sourceText ? <pre style={S.comparePre}>{r.sourceText}</pre> : <i style={{color:"#999"}}>{t("compareNoSource")}</i>}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",minHeight:0}}>
+                <div style={{...S.compareHead,background:"#277da1"}}>{t("compareExtract")}</div>
+                <div style={S.comparePane}>
+                  {r.blocks.map((b,i)=>(
+                    <div key={b.id} style={{marginBottom:8,paddingBottom:8,borderBottom:"1px solid #eee"}}>
+                      {b.type==="section" && <><b>§ {b.title}</b>{(b.fields||[]).map(f=><div key={f.id} style={{paddingLeft:8,color:"#555"}}>{f.label}: {f.value||"—"}</div>)}</>}
+                      {b.type==="table" && <><b>▦ {b.title}</b><div style={{fontSize:11,color:"#555",paddingLeft:8}}>{(b.columns||[]).join(" | ")}<br/>{(b.rows||[]).map((row,ri)=><div key={ri}>{row.join(" | ")}</div>)}</div></>}
+                      {b.type==="text" && <div style={{color:"#333",whiteSpace:"pre-wrap"}}>{b.value}</div>}
+                      {b.type==="photos" && <i style={{color:"#999"}}>🖼 {b.title}</i>}
+                      {b.type==="pdfpage" && <i style={{color:"#999"}}>📄 {b.name}</i>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{marginTop:12,textAlign:"right"}}><button style={S.btnGhost} onClick={()=>setShowCompare(false)}>{t("cancel")}</button></div>
+          </div>
+        </div>
+      )}
+      <div style={S.card} className="screen-only">
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
+          <div style={{gridColumn:"1 / 3"}}><label style={S.label}>{t("title")}</label><input style={S.input} value={r.title} onChange={e=>setField("title",e.target.value)}/></div>
+          <div><label style={S.label}>{t("date")}</label><input type="date" style={S.input} value={r.date} onChange={e=>setField("date",e.target.value)}/></div>
+          <div><label style={S.label}>{t("projectNo")}</label><input style={S.input} value={r.projectNo} onChange={e=>setField("projectNo",e.target.value)}/></div>
+          <div><label style={S.label}>{t("client")}</label><input style={S.input} value={r.client} onChange={e=>setField("client",e.target.value)}/></div>
+          <div style={{gridColumn:"2 / 5"}}><label style={S.label}>{t("location")}</label><input style={S.input} value={r.location} onChange={e=>setField("location",e.target.value)}/></div>
+        </div>
+        {(()=>{ let n=0,crit=0; (r.blocks||[]).forEach(b=>{ if(b.type==="inspect")(b.items||[]).forEach(it=>{ if(it.state==="anomaly"){n++; if((it.severity||"minor")==="critical")crit++;} }); });
+          if(n===0) return null;
+          return <div style={{marginTop:10,padding:"7px 12px",borderRadius:8,background:crit>0?"#fdeaea":"#fff6ea",border:"1px solid "+(crit>0?"#e3a0a0":"#e0c89a"),fontSize:13,color:"#7a3030",fontWeight:600}}>⚠ {n} {t("anomBanner")}{crit>0?` — ${crit} ${sevLabel("critical").toLowerCase()}`:""}</div>;
+        })()}
+        <div style={{display:"flex",alignItems:"center",gap:14,marginTop:12,flexWrap:"wrap",borderTop:"1px solid #ece1cf",paddingTop:12}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#6b5d4f"}}>
+            <input type="checkbox" checked={(r.cover||{}).show!==false} onChange={e=>setField("cover",{...(r.cover||{}),show:e.target.checked})}/>
+            📄 {t("coverShow")}
+          </label>
+          {(r.cover||{}).show!==false && (
+            <input style={{...S.input,flex:1,minWidth:200}} value={(r.cover||{}).subtitle||""} placeholder={t("coverSubtitle")} onChange={e=>setField("cover",{...(r.cover||{}),subtitle:e.target.value})}/>
+          )}
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#6b5d4f"}}>
+            <input type="checkbox" checked={!!r.toc} onChange={e=>setField("toc",e.target.checked)}/>
+            📑 {t("tocShow")}
+          </label>
+        </div>
+      </div>
+
+      {/* BLOCS ÉDITABLES */}
+      <div className="screen-only" style={{paddingBottom:80}}>
+        {r.blocks.map((b,idx)=>{
+          const icon = b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
+          const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : (b.value||"").trim().slice(0,40);
+          const fallback = b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
+          return (
+          <div key={b.id} id={"blk-"+b.id}
+            draggable
+            onDragStart={(e)=>{ setDragId(b.id); e.dataTransfer.effectAllowed="move"; }}
+            onDragOver={(e)=>{ e.preventDefault(); if(overId!==b.id) setOverId(b.id); }}
+            onDragEnd={()=>{ setDragId(null); setOverId(null); }}
+            onDrop={(e)=>{ e.preventDefault(); if(dragId) reorderBlocks(dragId,b.id); setDragId(null); setOverId(null); }}
+            style={{...S.blockCard, ...(dragId===b.id?{opacity:.4}:{}), ...(overId===b.id&&dragId&&dragId!==b.id?{borderTop:"3px solid #277da1"}:{})}}>
+            <div style={S.blockToolbar}>
+              <span style={S.blockType}><span style={S.dragHandle} title={t("dragHint")}>⠿</span> {icon} {label||fallback}</span>
+              <span style={{display:"flex",gap:6,position:"relative"}}>
+                {!narrow ? <>
+                  <button style={S.miniBtn} onClick={()=>moveBlock(b.id,-1)} disabled={idx===0}>↑</button>
+                  <button style={S.miniBtn} onClick={()=>moveBlock(b.id,1)} disabled={idx===r.blocks.length-1}>↓</button>
+                  <button style={S.miniBtn} onClick={()=>duplicateBlock(b.id)} title={t("dupBlock")}>⧉</button>
+                  {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>duplicateGroup(b.id)} title={t("dupEquip")}>⧉⧉</button>}
+                  {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>convertToInspect(b.id)} title={t("convertInspect")}>☑</button>}
+                  {b.type==="inspect" && <button style={{...S.miniBtn,color:"#277da1",borderColor:"#a9cddc"}} onClick={()=>convertToSection(b.id)} title={t("convertSection")}>§</button>}
+                  <button style={S.miniBtnDel} onClick={()=>removeBlock(b.id)}>✕</button>
+                </> : <>
+                  <button style={S.miniBtn} onClick={()=>setOpenMenuId(openMenuId===b.id?null:b.id)} title={t("blockActions")}>⋯</button>
+                  {openMenuId===b.id && (
+                    <div style={S.blockMenu} onMouseLeave={()=>setOpenMenuId(null)}>
+                      <button style={{...S.blockMenuItem,...(idx===0?{opacity:.4,pointerEvents:"none"}:{})}} onClick={()=>{moveBlock(b.id,-1);}}>↑ {t("moveUp")}</button>
+                      <button style={{...S.blockMenuItem,...(idx===r.blocks.length-1?{opacity:.4,pointerEvents:"none"}:{})}} onClick={()=>{moveBlock(b.id,1);}}>↓ {t("moveDown")}</button>
+                      <button style={S.blockMenuItem} onClick={()=>{duplicateBlock(b.id);setOpenMenuId(null);}}>⧉ {t("dupBlock")}</button>
+                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{duplicateGroup(b.id);setOpenMenuId(null);}}>⧉⧉ {t("dupEquip")}</button>}
+                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{convertToInspect(b.id);setOpenMenuId(null);}}>☑ {t("convertInspect")}</button>}
+                      {b.type==="inspect" && <button style={S.blockMenuItem} onClick={()=>{convertToSection(b.id);setOpenMenuId(null);}}>§ {t("convertSection")}</button>}
+                      <button style={{...S.blockMenuItem,color:"#9d0208"}} onClick={()=>{removeBlock(b.id);setOpenMenuId(null);}}>✕ {t("removeBlock")}</button>
+                    </div>
+                  )}
+                </>}
+              </span>
+            </div>
+            {b.type==="section" && <SectionEditor block={b} onChange={patch=>updBlock(b.id,patch)}/>}
+            {b.type==="table" && <TableEditor block={b} onChange={patch=>updBlock(b.id,patch)}/>}
+            {b.type==="inspect" && <InspectEditor block={b} onChange={patch=>updBlock(b.id,patch)} onZoom={setLightbox}/>}
+            {b.type==="text" && <textarea style={{...S.input,minHeight:90,resize:"vertical",fontFamily:"'Spline Sans'"}} value={b.value} placeholder={b.placeholder||t("freeText")} onChange={e=>updBlock(b.id,{value:e.target.value})}/>}
+            {b.type==="photos" && <PhotosEditor block={b} onChange={patch=>updBlock(b.id,patch)} onZoom={setLightbox}/>}
+            {b.type==="pdfpage" && (
+              <div>
+                <div style={{fontSize:12,color:"#6b5d4f",marginBottom:8}}>{(b.pages||[]).length} {t("pdfPages")}</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>
+                  {(b.pages||[]).map((p,i)=>(<img key={i} src={p} alt="" style={{width:"100%",border:"1px solid #ddd",borderRadius:4,cursor:"pointer"}} onClick={()=>setLightbox(p)}/>))}
+                </div>
+              </div>
+            )}
+          </div>
+          );
+        })}
+      </div>
+
+      {/* NAVIGATION INTERNE — bouton flottant + panneau de sauts */}
+      <button className="screen-only" style={S.navFab} onClick={()=>setShowNav(s=>!s)} title={t("navTitle")}>☰ {t("navTitle")}</button>
+      {showNav && (()=>{
+        const TYPE_META={ section:{ic:"§",col:"#277da1",key:"navTypeSection"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"☑",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:"🖼",col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:"📄",col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#8a7c6c",key:"navTypeText"} };
+        const blkLabel=(b)=> (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,40);
+        const filtered = r.blocks.map((b,i)=>({b,i})).filter(({b})=> navFilter==="all" || b.type===navFilter);
+        return (
+        <div className="screen-only" style={S.navPanel}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:13,color:"#277da1"}}>{t("navTitle")}</span>
+            <button style={S.miniBtn} onClick={()=>setShowNav(false)}>✕</button>
+          </div>
+          {/* Filtres par type */}
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
+            <button onClick={()=>setNavFilter("all")} style={{...S.navChip,...(navFilter==="all"?{background:"#3a2e25",color:"#fff",borderColor:"#3a2e25"}:{})}}>{t("navAll")} ({r.blocks.length})</button>
+            {["section","inspect","table","photos","pdfpage","text"].map(tp=>{ const c=r.blocks.filter(b=>b.type===tp).length; if(!c)return null; const m=TYPE_META[tp];
+              return <button key={tp} onClick={()=>setNavFilter(tp)} style={{...S.navChip,...(navFilter===tp?{background:m.col,color:"#fff",borderColor:m.col}:{color:m.col,borderColor:m.col})}}>{m.ic} {c}</button>;
+            })}
+          </div>
+          <div style={{maxHeight:"58vh",overflowY:"auto"}}>
+            {filtered.map(({b,i})=>{
+              const m=TYPE_META[b.type]||TYPE_META.text;
+              const isHead = b.type==="section";
+              return <button key={b.id} onClick={()=>jumpToBlock(b.id)}
+                style={{...S.navItem, ...(isHead?{fontWeight:700,fontSize:13,color:m.col,borderLeft:"3px solid "+m.col,paddingLeft:8,marginTop:4,background:"#faf6ee"}:{paddingLeft:18,fontSize:12,color:"#5a4e42"})}}>
+                <span style={{color:"#b3a690",marginRight:6,fontSize:10}}>{i+1}</span>
+                <span style={{marginRight:5}}>{m.ic}</span>{blkLabel(b)||t(m.key)}
+              </button>;
+            })}
+            {filtered.length===0 && <div style={{fontSize:12,color:"#999",padding:"10px 4px"}}>{t("navNone")}</div>}
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* BARRE D'AJOUT FIXE (suit le défilement) */}
+      <div style={S.addBar} className="screen-only">
+        <button style={S.addBtn} onClick={()=>addBlock("section")}>{t("addSection")}</button>
+        <button style={{...S.addBtn,background:"#2a9d8f",color:"#fff",borderColor:"#2a9d8f"}} onClick={addEquipment}>{t("addEquip")}</button>
+        <button style={S.addBtn} onClick={()=>addBlock("table")}>{t("addTable")}</button>
+        <button style={S.addBtn} onClick={()=>addBlock("inspect")}>{t("addInspect")}</button>
+        <button style={S.addBtn} onClick={()=>addBlock("text")}>{t("addText")}</button>
+        <button style={S.addBtn} onClick={()=>addBlock("photos")}>{t("addPhotos")}</button>
+        <label style={{...S.addBtn,cursor:"pointer"}}>{pdfBusy?t("importingPdf"):t("addPdfPage")}
+          <input type="file" accept="application/pdf" style={{display:"none"}} disabled={pdfBusy} onChange={e=>{ const f=e.target.files?.[0]; if(f) addPdfPageBlock(f); e.target.value=""; }}/>
+        </label>
+      </div>
+
+      {/* LIGHTBOX */}
+      {lightbox && <div style={S.overlay} className="screen-only" onClick={()=>setLightbox(null)}><img src={lightbox} alt="" style={{maxWidth:"92vw",maxHeight:"92vh",borderRadius:8}}/></div>}
+
+      {/* RAPPORT IMPRIMABLE */}
+      <PrintDoc report={r} logo={logo}/>
+    </div>
+  );
+}
+
+function SectionEditor({ block, onChange }){
+  const fields=block.fields||[];
+  function setF(id,patch){ onChange({fields:fields.map(f=>f.id===id?{...f,...patch}:f)}); }
+  function addF(){ onChange({fields:[...fields,{id:bid(),label:"",value:""}]}); }
+  function delF(id){ onChange({fields:fields.filter(f=>f.id!==id)}); }
+  return (
+    <div>
+      <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} placeholder={t("sectionTitle")} onChange={e=>onChange({title:e.target.value})}/>
+      {fields.map(f=>(
+        <div key={f.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}>
+          <input style={{...S.input,flex:"0 0 38%"}} value={f.label} placeholder={t("fieldLabel")} onChange={e=>setF(f.id,{label:e.target.value})}/>
+          <input style={{...S.input,flex:1,...(f.uncertain?{borderColor:"#b9a3dd",background:"#faf7ff"}:{})}} value={f.value} placeholder={t("fieldValue")} onChange={e=>setF(f.id,{value:e.target.value,uncertain:false})}/>
+          {f.uncertain && <span style={S.uncertainTag} title={t("uncertainNote")}>{t("uncertainBadge")}</span>}
+          <button style={S.miniBtnDel} onClick={()=>delF(f.id)}>✕</button>
+        </div>
+      ))}
+      <button style={S.addBtnSm} onClick={addF}>{t("addField")}</button>
+    </div>
+  );
+}
+
+function TableEditor({ block, onChange }){
+  const columns=block.columns||[]; const rows=block.rows||[];
+  const [menu,setMenu]=useState(null); // {ri,ci}
+  function setCol(i,v){ const c=[...columns]; c[i]=v; onChange({columns:c}); }
+  function setCell(ri,ci,v){ const rr=rows.map(r=>[...r]); rr[ri][ci]=v; onChange({rows:rr}); }
+  function addCol(){ onChange({columns:[...columns,""], rows:rows.map(r=>[...r,""])}); }
+  function delCol(ci){ onChange({columns:columns.filter((_,i)=>i!==ci), rows:rows.map(r=>r.filter((_,i)=>i!==ci))}); }
+  function addRow(){ onChange({rows:[...rows, columns.map(()=>"")]}); }
+  function delRow(ri){ onChange({rows:rows.filter((_,i)=>i!==ri)}); }
+  // Actions par cellule
+  function clearCell(ri,ci){ setCell(ri,ci,""); setMenu(null); }
+  function splitCell(ri,ci){
+    // crée une nouvelle ligne sous ri ; déplace le contenu de la cellule vers la nouvelle ligne
+    const rr=rows.map(r=>[...r]);
+    const newRow=columns.map(()=>"");
+    newRow[ci]=rr[ri][ci]||"";   // le contenu descend dans la nouvelle ligne
+    rr[ri][ci]="";               // la cellule d'origine se vide (divisée)
+    rr.splice(ri+1,0,newRow);
+    onChange({rows:rr}); setMenu(null);
+  }
+  function mergeRight(ri,ci){
+    if(ci>=columns.length-1) { setMenu(null); return; }
+    const rr=rows.map(r=>[...r]);
+    const a=(rr[ri][ci]||"").trim(), b=(rr[ri][ci+1]||"").trim();
+    rr[ri][ci]=[a,b].filter(Boolean).join(" ");  // concatène
+    rr[ri][ci+1]="";                              // vide la cellule de droite
+    onChange({rows:rr}); setMenu(null);
+  }
+  return (
+    <div>
+      <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} placeholder={t("tableTitle")} onChange={e=>onChange({title:e.target.value})}/>
+      <div style={{overflowX:"auto"}}>
+        <table style={{borderCollapse:"collapse",width:"100%",fontSize:12}}>
+          <thead><tr>
+            {columns.map((c,ci)=>(<th key={ci} style={{border:"1px solid #ddd",padding:2,background:"#f4ede1"}}>
+              <div style={{display:"flex",gap:2,alignItems:"center"}}>
+                <input style={{...S.input,fontWeight:700,fontSize:11,padding:"4px 6px",minWidth:70}} value={c} onChange={e=>setCol(ci,e.target.value)}/>
+                <button style={{...S.miniBtnDel,padding:"2px 5px"}} title={t("delCol")} onClick={()=>delCol(ci)}>✕</button>
+              </div>
+            </th>))}
+            <th style={{border:"none",padding:2}}><button style={S.addBtnSm} onClick={addCol}>{t("addCol")}</button></th>
+          </tr></thead>
+          <tbody>
+            {rows.map((r,ri)=>(<tr key={ri}>
+              {columns.map((_,ci)=>(
+                <td key={ci} style={{border:"1px solid #eee",padding:2,position:"relative"}} className="cell-host">
+                  <div style={{display:"flex",alignItems:"center",gap:2}}>
+                    <input style={{...S.input,fontSize:12,padding:"4px 18px 4px 6px",minWidth:70,width:"100%"}} value={r[ci]||""} onChange={e=>setCell(ri,ci,e.target.value)}/>
+                    <button className="cell-menu-btn" title={t("cellActions")} onClick={()=>setMenu(menu&&menu.ri===ri&&menu.ci===ci?null:{ri,ci})}
+                      style={{position:"absolute",right:3,top:"50%",transform:"translateY(-50%)",border:"none",background:"rgba(157,2,8,0.06)",borderRadius:4,cursor:"pointer",color:"#9d0208",fontSize:14,fontWeight:700,lineHeight:1,padding:"3px 5px"}}>⋮</button>
+                  </div>
+                  {menu&&menu.ri===ri&&menu.ci===ci && (
+                    <div style={S.cellMenu} onMouseLeave={()=>setMenu(null)}>
+                      <button style={S.cellMenuItem} onClick={()=>clearCell(ri,ci)}>🧹 {t("cellClear")}</button>
+                      <button style={S.cellMenuItem} onClick={()=>splitCell(ri,ci)}>✂ {t("cellSplit")}</button>
+                      <button style={{...S.cellMenuItem,...(ci>=columns.length-1?{opacity:.4,pointerEvents:"none"}:{})}} onClick={()=>mergeRight(ri,ci)}>⇥ {t("cellMerge")}</button>
+                    </div>
+                  )}
+                </td>
+              ))}
+              <td style={{border:"none",padding:2}}><button style={{...S.miniBtnDel,padding:"2px 6px"}} title={t("delRow")} onClick={()=>delRow(ri)}>✕</button></td>
+            </tr>))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:6,flexWrap:"wrap"}}>
+        <button style={S.addBtnSm} onClick={addRow}>{t("addRow")}</button>
+        <button style={S.addBtnSm} onClick={addCol}>{t("addCol")}</button>
+      </div>
+    </div>
+  );
+}
+
+function InspectEditor({ block, onChange, onZoom }){
+  const items=block.items||[];
+  const [showLib,setShowLib]=useState(false);
+  function setItem(i,patch){ const a=items.map((it,k)=>k===i?{...it,...patch}:it); onChange({items:a}); }
+  function addItem(){ onChange({items:[...items,{id:bid(),label:"",state:"good",note:""}]}); }
+  function delItem(i){ onChange({items:items.filter((_,k)=>k!==i)}); }
+  function loadLibrary(lib){
+    const newItems=lib.points.map(p=>({id:bid(),label:p,state:"good",note:""}));
+    onChange({items:newItems}); setShowLib(false);
+  }
+  // numérotation auto des anomalies
+  let anomCount=0;
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+        <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:"1 1 200px"}} value={block.title} placeholder={t("inspectTitle")} onChange={e=>onChange({title:e.target.value})}/>
+        <div style={{position:"relative"}}>
+          <button style={{...S.btnGhost,fontSize:12,padding:"7px 12px"}} onClick={()=>setShowLib(s=>!s)}>📋 {t("inspLoadList")}</button>
+          {showLib && (
+            <div style={{position:"absolute",right:0,top:"110%",zIndex:30,background:"#fff",border:"1px solid #d8cdbb",borderRadius:8,boxShadow:"0 6px 20px rgba(0,0,0,.2)",padding:6,minWidth:200}} onMouseLeave={()=>setShowLib(false)}>
+              <div style={{fontSize:10,color:"#8a7c6c",padding:"2px 8px 6px"}}>{t("inspLoadHint")}</div>
+              {INSP_LIBRARIES.map(lib=>(
+                <button key={lib.id} style={{display:"block",width:"100%",textAlign:"left",border:"none",background:"transparent",cursor:"pointer",padding:"7px 8px",fontSize:13,color:"#3a2e25",borderRadius:6}} onClick={()=>{ if(items.some(it=>it.label.trim()) && !confirm(t("inspReplaceConfirm"))) return; loadLibrary(lib); }}>
+                  {t(lib.key)} <span style={{color:"#9a8c78",fontSize:11}}>({lib.points.length})</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {items.map((it,i)=>{
+          const isAnom = it.state==="anomaly";
+          const num = isAnom ? (++anomCount) : null;
+          return (
+          <div key={it.id} style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",borderBottom:"1px solid #f0e8da",paddingBottom:6}}>
+            {num!=null && <span style={{...DP.annNum,background:"#9d0208",minWidth:16,height:16,fontSize:9}}>{String(num).padStart(2,"0")}</span>}
+            <input style={{...S.input,flex:"1 1 160px",minWidth:120}} value={it.label} placeholder={t("inspectPoint")} onChange={e=>setItem(i,{label:e.target.value})}/>
+            <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+              {INSP_STATES.map(st=>(
+                <button key={st.id} onClick={()=>setItem(i,{state:st.id})}
+                  style={{...S.chip, fontSize:11, padding:"4px 8px", ...(it.state===st.id?{background:st.color,color:"#fff",borderColor:st.color}:{color:st.color,borderColor:st.color})}}>
+                  {t(st.key)}
+                </button>
+              ))}
+            </div>
+            {isAnom && <div style={{display:"flex",gap:6,flex:"1 1 100%",flexWrap:"wrap",alignItems:"center"}}>
+              <div style={{display:"flex",gap:3}}>
+                {SEVERITIES.map(sv=>(
+                  <button key={sv.id} onClick={()=>setItem(i,{severity:sv.id})}
+                    style={{...S.chip, fontSize:10, padding:"3px 7px", ...((it.severity||"minor")===sv.id?{background:sv.color,color:"#fff",borderColor:sv.color}:{color:sv.color,borderColor:sv.color})}}>
+                    {sevLabel(sv.id)}
+                  </button>
+                ))}
+              </div>
+              <input style={{...S.input,flex:"1 1 200px",fontSize:12}} value={it.note||""} placeholder={t("inspectNote")} onChange={e=>setItem(i,{note:e.target.value})}/>
+              {it.photo
+                ? <div style={{position:"relative",flexShrink:0}}>
+                    <img src={it.photo} alt="" style={{height:42,width:42,objectFit:"cover",borderRadius:6,border:"1px solid #cbb89c",cursor:"pointer"}} onClick={()=>onZoom&&onZoom(it.photo)}/>
+                    <button onClick={()=>setItem(i,{photo:null})} title={t("del")} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",border:"none",background:"#9d0208",color:"#fff",fontSize:11,cursor:"pointer",lineHeight:1}}>✕</button>
+                  </div>
+                : <label style={{...S.chip,fontSize:11,padding:"4px 9px",cursor:"pointer",color:"#277da1",borderColor:"#a9cddc",flexShrink:0}}>📷 {t("inspPhoto")}
+                    <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files?.[0]; if(f){ const d=await compressImage(f,1000,0.7); setItem(i,{photo:d}); } e.target.value=""; }}/>
+                  </label>}
+            </div>}
+            <button style={{...S.miniBtnDel,padding:"3px 7px"}} onClick={()=>delItem(i)}>✕</button>
+          </div>
+          );
+        })}
+      </div>
+      <button style={{...S.addBtnSm,marginTop:8}} onClick={addItem}>{t("inspectAddPoint")}</button>
+    </div>
+  );
+}
+
+function PhotosEditor({ block, onChange, onZoom }){
+  const photos=block.photos||[];
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8,flexWrap:"wrap"}}>
+        <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:1,minWidth:160}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
+        <label style={{...S.btnDark,fontSize:12,padding:"7px 12px",cursor:"pointer"}}>{t("addPhoto")}
+          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={async e=>{ const files=[...(e.target.files||[])]; e.target.value=""; let next=[...photos]; for(const f of files){ try{ const d=await compressImage(f); next.push({id:bid(),data:d,caption:""}); }catch{} } onChange({photos:next}); }}/>
+        </label>
+      </div>
+      {photos.length===0 ? <div style={{textAlign:"center",color:"#8a7c6c",fontSize:13,padding:"14px 0"}}>{t("noPhoto")}</div> : (
+        <div style={S.photoGrid}>
+          {photos.map(p=>(
+            <div key={p.id} style={S.photoThumb}>
+              <img src={p.data} alt="" style={S.photoImg} onClick={()=>onZoom(p.data)}/>
+              <button style={S.photoDel} onClick={()=>{ if(confirm(t("delPhoto"))) onChange({photos:photos.filter(x=>x.id!==p.id)}); }}>×</button>
+              <input style={S.photoCap} value={p.caption||""} placeholder={t("photoCaption")} onChange={e=>onChange({photos:photos.map(x=>x.id===p.id?{...x,caption:e.target.value}:x)})}/>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+//  PANNEAU ANNOTATIONS (anomalies / commentaires)
+// ============================================================
+function AnnotationsPanel({ annotations, onAdd, onUpd, onDel, onClose, onZoom }){
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:680,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+          <h2 style={{...S.h2,margin:0}}>💬 {t("annotations")}</h2>
+          <div style={{display:"flex",gap:8}}>
+            <button style={{...S.btnDark,background:"#9d0208",fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("anomaly")}>{t("addAnomaly")}</button>
+            <button style={{...S.btnDark,fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("comment")}>{t("addComment")}</button>
+          </div>
+        </div>
+        {annotations.length===0 ? <div style={{textAlign:"center",color:"#8a7c6c",padding:"24px 0"}}>{t("noAnnotations")}</div> : (
+          annotations.map((a,i)=>(
+            <div key={a.id} style={{border:`1.5px solid ${a.kind==="anomaly"?"#e3a0a0":"#aebdc8"}`,borderRadius:10,padding:12,marginBottom:10,background:a.kind==="anomaly"?"#fdf0ee":"#eef2f5"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8,flexWrap:"wrap"}}>
+                <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:a.kind==="anomaly"?"#9d0208":"#34607a"}}>
+                  {a.kind==="anomaly"?"⚠ "+t("anomaly"):"💬 "+t("comment")} #{i+1}
+                </span>
+                <button style={S.miniBtnDel} onClick={()=>onDel(a.id)}>✕</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div><label style={S.label}>{t("annTitle")}</label><input style={S.input} value={a.title} onChange={e=>onUpd(a.id,{title:e.target.value})}/></div>
+                <div><label style={S.label}>{t("equipment")}</label><input style={S.input} value={a.equipment} onChange={e=>onUpd(a.id,{equipment:e.target.value})}/></div>
+              </div>
+              {a.kind==="anomaly" && (
+                <div style={{marginBottom:8}}>
+                  <label style={S.label}>{t("severity")}</label>
+                  <div style={{display:"flex",gap:6}}>
+                    {SEVERITIES.map(s=>(<button key={s.id} onClick={()=>onUpd(a.id,{severity:s.id})} style={{...S.chip,...(a.severity===s.id?{background:s.color,color:"#fff",borderColor:s.color}:{color:s.color,borderColor:s.color})}}>{t(s.key)}</button>))}
+                  </div>
+                </div>
+              )}
+              <label style={S.label}>{t("annDesc")}</label>
+              <textarea style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"'Spline Sans'"}} value={a.desc} onChange={e=>onUpd(a.id,{desc:e.target.value})}/>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:8}}>
+                {a.photo ? <img src={a.photo} alt="" style={{height:54,borderRadius:6,cursor:"pointer"}} onClick={()=>onZoom(a.photo)}/> : null}
+                <label style={{...S.btnGhost,cursor:"pointer",fontSize:12,padding:"6px 12px"}}>{a.photo?"Changer":t("annPhoto")}
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files?.[0]; if(f){ const d=await compressImage(f,800,0.7); onUpd(a.id,{photo:d}); } e.target.value=""; }}/>
+                </label>
+                {a.photo && <button style={S.miniBtnDel} onClick={()=>onUpd(a.id,{photo:null})}>{t("del")}</button>}
+              </div>
+            </div>
+          ))
+        )}
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}><button style={S.btnPrimary} onClick={onClose}>{t("genReport")}</button></div>
+      </div>
+    </div>
+  );
+}
+
+function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
+  const [tplId,setTplId]=useState("inspection");
+  const [afterIdx,setAfterIdx]=useState(blocks.length-1);
+  const customs=customTpls||[];
+  return (
+    <div>
+      <label style={S.label}>{t("chooseTemplate")}</label>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+        {TEMPLATES.map(tp=>(<button key={tp.id} onClick={()=>setTplId(tp.id)} style={{...S.chip,...(tplId===tp.id?S.chipOn:{})}}>{t(tp.key)}</button>))}
+      </div>
+      {customs.length>0 && <>
+        <div style={{fontSize:11,color:"#6b4e9d",fontWeight:700,margin:"6px 0 4px"}}>★ {t("tplCustom")}</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+          {customs.map(c=>(<button key={c.id} onClick={()=>setTplId(c.id)} style={{...S.chip,...(tplId===c.id?{...S.chipOn,background:"#6b4e9d",borderColor:"#6b4e9d"}:{borderColor:"#6b4e9d",color:"#6b4e9d"})}}>★ {c.name}</button>))}
+        </div>
+      </>}
+      <label style={S.label}>{t("insertWhere")}</label>
+      <select style={S.input} value={afterIdx} onChange={e=>setAfterIdx(parseInt(e.target.value))}>
+        <option value={-1}>{LANG==="en"?"At the very beginning":"Tout au début"}</option>
+        {blocks.map((b,i)=>(<option key={b.id} value={i}>#{i+1} — {b.type==="section"?b.title:b.type==="photos"?"🖼 "+b.title:"¶ "+(b.value||t("freeText")).slice(0,30)}</option>))}
+      </select>
+      <div style={{display:"flex",gap:10,marginTop:16}}>
+        <button style={S.btnPrimary} onClick={()=>onInsert(tplId,afterIdx)}>{t("insertConfirm")}</button>
+        <button style={S.btnGhost} onClick={onCancel}>{t("cancel")}</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+//  RAPPORT IMPRIMABLE
+// ============================================================
+function PrintDoc({ report, logo }){
+  const r=report; const today=new Date().toISOString().slice(0,10);
+  const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
+  return (
+    <div className="print-only" style={DP.wrap}>
+      {/* PAGE COUVERTURE (optionnelle) — hors du tableau d'en-tête/pied répété */}
+      {(r.cover||{}).show!==false && (
+        <div style={DP.coverPage} className="cover-page-print">
+          {logo && <img src={logo} alt="" style={{maxHeight:80,maxWidth:240,objectFit:"contain",marginBottom:30}}/>}
+          <div style={DP.coverKicker}>{tplLabel.toUpperCase()}</div>
+          <h1 style={DP.coverTitle}>{r.title||"—"}</h1>
+          {(r.cover||{}).subtitle && <div style={DP.coverSubtitle}>{r.cover.subtitle}</div>}
+          <div style={DP.coverMeta}>
+            {r.client && <div><b>{t("client")} :</b> {r.client}</div>}
+            {r.location && <div><b>{t("location")} :</b> {r.location}</div>}
+            {r.projectNo && <div><b>{t("projectNo")} :</b> {r.projectNo}</div>}
+            {r.date && <div><b>{t("date")} :</b> {r.date}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* TABLE DES MATIÈRES (optionnelle) — sa propre page, hors table en-tête/pied */}
+      {r.toc && (r.blocks||[]).length>0 && (
+        <div className="toc-page-print" style={DP.tocPage}>
+          <h2 style={DP.tocTitle}>{t("tocTitle")}</h2>
+          <div>
+            {(()=>{ let secNo=0; return (r.blocks||[]).map((b,i)=>{
+              const isHead=b.type==="section";
+              if(isHead) secNo++;
+              const ic = b.type==="section"?"":b.type==="photos"?"🖼 ":b.type==="pdfpage"?"📄 ":b.type==="table"?"▦ ":b.type==="inspect"?"☑ ":"¶ ";
+              const lbl=(b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,60);
+              return <div key={b.id} style={isHead?DP.tocHead:DP.tocSub}>
+                {isHead && <span style={{color:THEME.secBar,fontWeight:700,marginRight:8}}>{secNo}.</span>}
+                {ic}{lbl||t("freeText").replace("…","")}
+              </div>;
+            }); })()}
+          </div>
+        </div>
+      )}
+
+      {/* CONTENU avec en-tête/pied répétés via thead/tfoot (réservent l'espace) */}
+      <table className="rpt-runtable">
+        <thead><tr><td>
+          <div className="run-head" style={{borderBottom:"1.5px solid "+THEME.secBar}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>{logo && <img src={logo} alt="" style={{maxHeight:26,maxWidth:90,objectFit:"contain"}}/>}<span style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:11,color:THEME.title}}>{r.title||tplLabel}</span></div>
+            <span style={{fontSize:9,color:"#888"}}>{today}</span>
+          </div>
+        </td></tr></thead>
+        <tfoot><tr><td>
+          <div className="run-foot" style={{borderTop:"1px solid "+THEME.border}}>
+            <span>{tplLabel}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
+            <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
+          </div>
+        </td></tr></tfoot>
+        <tbody><tr><td>
+        <div className="rpt-content">
+      <div style={DP.titleRow}>
+        <div>
+          <div style={DP.kicker}>{tplLabel.toUpperCase()}</div>
+          <h1 style={DP.h1}>{r.title||"—"}</h1>
+        </div>
+        {logo && <img src={logo} alt="" style={{maxHeight:54,maxWidth:150,objectFit:"contain"}}/>}
+      </div>
+      <table style={DP.metaTable}><tbody>
+        <tr><td style={DP.mLbl}>{t("client")}</td><td style={DP.mVal}>{r.client||"—"}</td><td style={DP.mLbl}>{t("date")}</td><td style={DP.mVal}>{r.date||"—"}</td></tr>
+        <tr><td style={DP.mLbl}>{t("location")}</td><td style={DP.mVal}>{r.location||"—"}</td><td style={DP.mLbl}>{t("projectNo")}</td><td style={DP.mVal}>{r.projectNo||"—"}</td></tr>
+      </tbody></table>
+
+      {/* RÉCAP GLOBAL DES ANOMALIES D'INSPECTION (toutes grilles, trié par gravité) */}
+      {(()=>{
+        const collected=[];
+        (r.blocks||[]).forEach(b=>{ if(b.type==="inspect"){ (b.items||[]).forEach(it=>{ if(it.state==="anomaly"){ collected.push({ section:b.title||"", label:it.label||"", note:it.note||"", severity:it.severity||"minor" }); } }); } });
+        if(collected.length===0) return null;
+        const order={critical:0,major:1,minor:2};
+        collected.sort((a,b)=>(order[a.severity]??3)-(order[b.severity]??3));
+        const counts={critical:0,major:0,minor:0}; collected.forEach(c=>counts[c.severity]=(counts[c.severity]||0)+1);
+        return (
+          <div style={{marginTop:14, breakInside:"avoid"}}>
+            <div className="secBar-print" style={{...DP.secBar,background:"#9d0208"}}>{t("anomRecapTitle")} ({collected.length})</div>
+            <div style={{display:"flex",gap:14,fontSize:10,margin:"6px 2px 8px"}}>
+              {SEVERITIES.slice().reverse().map(sv=> counts[sv.id]>0 && <span key={sv.id} style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:"50%",background:sv.color,display:"inline-block"}}></span>{sevLabel(sv.id)} : <b>{counts[sv.id]}</b></span>)}
+            </div>
+            <table style={DP.dataTable}><thead><tr>
+              <th style={{...DP.thCell,width:"7%"}}>#</th>
+              <th style={{...DP.thCell,width:"26%"}}>{t("anomLoc")}</th>
+              <th style={{...DP.thCell,width:"22%"}}>{t("anomPoint")}</th>
+              <th style={{...DP.thCell,width:"13%"}}>{t("anomSeverity")}</th>
+              <th style={DP.thCell}>{t("anomDesc")}</th>
+            </tr></thead><tbody>
+              {collected.map((c,i)=>(<tr key={i}>
+                <td style={{...DP.tdCell,textAlign:"center",fontWeight:700,color:"#9d0208"}}>{String(i+1).padStart(2,"0")}</td>
+                <td style={DP.tdCell}>{c.section||"—"}</td>
+                <td style={DP.tdCell}>{c.label||"—"}</td>
+                <td style={{...DP.tdCell,color:sevColor(c.severity),fontWeight:700}}>{sevLabel(c.severity)}</td>
+                <td style={DP.tdCell}>{c.note||"—"}</td>
+              </tr>))}
+            </tbody></table>
+          </div>
+        );
+      })()}
+
+      {/* RÉCAP ANOMALIES (en début de rapport, numéroté) */}
+      {(()=>{ const anns=(r.annotations||[]); const anomalies=anns.filter(a=>a.kind==="anomaly"); const comments=anns.filter(a=>a.kind==="comment");
+        return (<>
+          {anomalies.length>0 && (
+            <div style={{marginTop:14, breakInside:"avoid"}}>
+              <div style={{...DP.secBar, background:"#9d0208"}}>{t("recapAnomalies")} ({anomalies.length})</div>
+              {anomalies.map((a,i)=>(
+                <div key={a.id} style={DP.annRow}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                    <span style={{...DP.annNum, background:sevColor(a.severity)}}>{i+1}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:11}}>{a.title||"—"} <span style={{...DP.sevTag,color:sevColor(a.severity),borderColor:sevColor(a.severity)}}>{sevLabel(a.severity)}</span></div>
+                      {a.equipment && <div style={{fontSize:9,color:"#777"}}>{t("equipment")}: {a.equipment}</div>}
+                      {a.desc && <div style={{fontSize:10,marginTop:2}}>{a.desc}</div>}
+                    </div>
+                    {a.photo && <img src={a.photo} alt="" style={{height:48,borderRadius:4,border:"1px solid #ddd"}}/>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {comments.length>0 && (
+            <div style={{marginTop:12, breakInside:"avoid"}}>
+              <div style={{...DP.secBar, background:"#34607a"}}>{t("recapComments")} ({comments.length})</div>
+              {comments.map((a,i)=>(
+                <div key={a.id} style={DP.annRow}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                    <span style={{...DP.annNum, background:"#34607a"}}>{i+1}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:11}}>{a.title||"—"}</div>
+                      {a.equipment && <div style={{fontSize:9,color:"#777"}}>{t("equipment")}: {a.equipment}</div>}
+                      {a.desc && <div style={{fontSize:10,marginTop:2}}>{a.desc}</div>}
+                    </div>
+                    {a.photo && <img src={a.photo} alt="" style={{height:48,borderRadius:4,border:"1px solid #ddd"}}/>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>);
+      })()}
+
+      {r.blocks.map(b=>(
+        <div key={b.id} style={{marginTop:12, breakInside:(b.type==="table"&&(b.rows||[]).length>6)?"auto":"avoid"}}>
+          {b.type==="section" && <>
+            <div className="secBar-print" style={DP.secBar}>{b.title}</div>
+            <table style={DP.fieldTable}><tbody>{(b.fields||[]).map(f=>(<tr key={f.id}><td style={DP.fLbl}>{f.label}</td><td style={DP.fVal}>{f.value||"—"}</td></tr>))}</tbody></table>
+          </>}
+          {b.type==="table" && (b.columns||[]).length>0 && <>
+            <div className="secBar-print" style={DP.secBar}>{b.title}</div>
+            <table style={DP.dataTable}><thead><tr>{b.columns.map((c,i)=>(<th key={i} style={DP.thCell}>{c}</th>))}</tr></thead>
+            <tbody>{(b.rows||[]).map((row,ri)=>(<tr key={ri}>{b.columns.map((_,ci)=>(<td key={ci} style={DP.tdCell}>{row[ci]||""}</td>))}</tr>))}</tbody></table>
+          </>}
+          {b.type==="text" && <p style={DP.text}>{b.value}</p>}
+          {b.type==="inspect" && (b.items||[]).length>0 && (()=>{
+            const items=b.items||[]; let n=0;
+            const anomalies=items.filter(it=>it.state==="anomaly").map(it=>({...it,num:++n}));
+            let m=0;
+            return <>
+              <div className="secBar-print" style={DP.secBar}>{b.title}</div>
+              <table style={DP.inspGrid}><tbody>
+                {Array.from({length:Math.ceil(items.length/2)},(_,ri)=>(
+                  <tr key={ri}>
+                    {[0,1].map(col=>{ const it=items[ri*2+col]; if(!it) return <React.Fragment key={col}><td style={DP.inspEmpty}></td><td style={DP.inspEmpty}></td></React.Fragment>;
+                      const isA=it.state==="anomaly"; const num=isA?(++m):null;
+                      return <React.Fragment key={col}>
+                        <td style={DP.inspLbl}>{num!=null && <b style={{color:"#9d0208"}}>{String(num).padStart(2,"0")} </b>}{it.label||"—"}</td>
+                        <td style={{...DP.inspVal,color:inspColor(it.state),fontWeight:isA?700:400}}>{inspLabel(it.state)}</td>
+                      </React.Fragment>;
+                    })}
+                  </tr>
+                ))}
+              </tbody></table>
+              {anomalies.length>0 && <table style={{...DP.fieldTable,marginTop:6}}><tbody>
+                {anomalies.map(a=>(<tr key={a.id}>
+                  <td style={{...DP.fLbl,width:"6%",color:"#9d0208",fontWeight:700,textAlign:"center"}}>{String(a.num).padStart(2,"0")}</td>
+                  <td style={DP.fVal}>{a.note||"—"}</td>
+                  {a.photo && <td style={{...DP.fVal,width:"22%",textAlign:"center"}}><img src={a.photo} alt="" style={{maxHeight:90,maxWidth:"100%",objectFit:"contain",borderRadius:3}}/></td>}
+                </tr>))}
+              </tbody></table>}
+            </>;
+          })()}
+          {b.type==="photos" && (b.photos||[]).length>0 && <>
+            <div className="secBar-print" style={DP.secBar}>{b.title}</div>
+            <div style={DP.photoGridPrint}>{b.photos.map(p=>(<div key={p.id} style={{breakInside:"avoid"}}><img src={p.data} alt="" style={DP.photoPrint}/>{p.caption && <div style={DP.cap}>{p.caption}</div>}</div>))}</div>
+          </>}
+          {b.type==="pdfpage" && (b.pages||[]).map((p,i)=>(
+            <div key={i} className="pdf-page-print"><img src={p} alt="" style={DP.pdfPagePrint}/></div>
+          ))}
+        </div>
+      ))}
+        </div>
+        </td></tr></tbody>
+      </table>
+    </div>
+  );
+}
+
+// ============================================================
+//  STYLES
+// ============================================================
+const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Spline+Sans:wght@400;500;600&display=swap');
+*{box-sizing:border-box;}
+.cell-menu-btn{ opacity:0.55; transition:opacity .15s; }
+.cell-host:hover .cell-menu-btn{ opacity:1; }
+.cell-menu-btn:hover{ color:#9d0208 !important; opacity:1 !important; }
+.print-only{display:none;}
+@media screen{ .run-head,.run-foot{display:none;} .rpt-runtable thead,.rpt-runtable tfoot{display:none;} }
+@media print{
+  @page{ size:letter portrait; margin:12mm; @bottom-right{ content: counter(page); font-family:'Spline Sans',sans-serif; font-size:9px; color:#888; } }
+  @page covpage{ @bottom-right{ content: ""; } }
+  html,body{ background:#fff !important; margin:0 !important; padding:0 !important; }
+  #root,.app-page{ background:#fff !important; padding:0 !important; min-height:0 !important; }
+  body *{ visibility:hidden !important; }
+  .screen-only{ display:none !important; }
+  .print-only, .print-only *{ visibility:visible !important; }
+  .print-only{ display:block !important; position:static; left:auto; top:auto; width:100%; }
+  .cover-page-print{ page: covpage; page-break-after:always; break-after:page; }
+  .toc-page-print{ page-break-after:always; break-after:page; }
+  .rpt-content{ counter-reset: page 0; }
+  /* Table porteuse : thead/tfoot se répètent sur chaque page ET réservent l'espace */
+  .rpt-runtable{ width:100%; border-collapse:collapse; }
+  .rpt-runtable thead{ display:table-header-group; }
+  .rpt-runtable tfoot{ display:table-footer-group; }
+  .rpt-runtable > tbody > tr > td, .rpt-runtable > thead > tr > td, .rpt-runtable > tfoot > tr > td{ padding:0; border:none; }
+  .run-head{ display:flex !important; align-items:center; justify-content:space-between; padding:0 1mm 4px; margin-bottom:6px; height:13mm; border-bottom:1.5px solid #277da1; background:#fff; }
+  .run-foot{ display:flex !important; align-items:center; justify-content:space-between; padding:4px 1mm 0; margin-top:6px; height:8mm; font-size:8.5px; color:#888; border-top:1px solid #d8cdbb; background:#fff; }
+  .pdf-page-print{ page-break-before:always; break-before:page; page-break-inside:avoid; }
+  .rpt-content table{ page-break-inside:auto; }
+  .rpt-content tr{ page-break-inside:avoid; break-inside:avoid; }
+  .rpt-content thead{ display:table-header-group; }
+  .rpt-content .secBar-print{ break-after:avoid; page-break-after:avoid; }
+  *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+}`;
+
+const S = {
+  page:{ fontFamily:"'Spline Sans',sans-serif", background:"linear-gradient(160deg,#f4ede1 0%,#e9ddc9 100%)", minHeight:"100vh", padding:"28px 24px", color:"#2b2118" },
+  header:{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16, marginBottom:22, borderBottom:"3px solid #2b2118", paddingBottom:16 },
+  kicker:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11, letterSpacing:3, color:"#277da1" },
+  h1:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:30, margin:"2px 0", lineHeight:1 },
+  h2:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:16, margin:"0 0 14px" },
+  label:{ display:"block", fontSize:11, fontWeight:600, color:"#6b5d4f", marginBottom:4, fontFamily:"'Archivo'" },
+  hint:{ fontSize:12, color:"#8a7c6c", margin:"6px 0 0" },
+  input:{ width:"100%", padding:"9px 11px", borderRadius:8, border:"1.5px solid #cdbfa8", background:"#fffdf9", fontSize:14, fontFamily:"'Spline Sans'", color:"#2b2118" },
+  card:{ background:"#fffdf9", borderRadius:14, padding:18, marginBottom:14, boxShadow:"0 2px 10px rgba(80,60,30,.06)" },
+  get btnPrimary(){ return { fontFamily:"'Archivo'", fontWeight:700, cursor:"pointer", border:"none", borderRadius:8, padding:"10px 18px", fontSize:13, background:THEME.accent, color:"#fff" }; },
+  get btnDark(){ return { fontFamily:"'Archivo'", fontWeight:700, cursor:"pointer", border:"none", borderRadius:8, padding:"10px 18px", fontSize:13, background:THEME.secBar, color:"#fff" }; },
+  btnGhost:{ fontFamily:"'Archivo'", fontWeight:700, cursor:"pointer", borderRadius:8, padding:"9px 16px", fontSize:13, background:"transparent", color:"#6b5d4f", border:"1.5px solid #c4b29a" },
+  langBtn:{ display:"flex", border:"1.5px solid #c4b29a", borderRadius:8, overflow:"hidden", cursor:"pointer", background:"#fff" },
+  langOpt:{ padding:"7px 10px", fontSize:12, fontFamily:"'Archivo'", fontWeight:700, color:"#8a7c6c" },
+  langOptOn:{ background:"#2b2118", color:"#fff" },
+  gearBtn:{ fontSize:18, width:40, height:38, borderRadius:8, border:"1.5px solid #c4b29a", background:"#fff", cursor:"pointer", color:"#6b5d4f", lineHeight:1 },
+  overlay:{ position:"fixed", inset:0, background:"rgba(43,33,24,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 },
+  modal:{ background:"#fffdf9", borderRadius:14, padding:24, maxWidth:440, width:"100%", boxShadow:"0 12px 48px rgba(0,0,0,.3)" },
+  grid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 },
+  cardTitle:{ fontFamily:"'Archivo'", fontWeight:900, fontSize:16, lineHeight:1.2 },
+  cardMeta:{ fontSize:12, color:"#8a7c6c", marginTop:4 },
+  cardFoot:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:14, fontSize:11, color:"#8a7c6c", flexWrap:"wrap", gap:8 },
+  pill:{ color:"#fff", fontFamily:"'Archivo'", fontWeight:700, fontSize:10, padding:"3px 9px", borderRadius:20, whiteSpace:"nowrap" },
+  miniBtn:{ fontSize:11, fontWeight:700, cursor:"pointer", border:"1.5px solid #c4b29a", background:"#fff", color:"#6b5d4f", borderRadius:6, padding:"4px 8px" },
+  miniBtnDel:{ fontSize:11, fontWeight:700, cursor:"pointer", border:"1.5px solid #e3a0a0", background:"#fff", color:"#9d0208", borderRadius:6, padding:"4px 8px" },
+  filterRow:{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:18 },
+  filterTab:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:12, padding:"6px 12px", borderRadius:20, border:"1.5px solid", background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", gap:6 },
+  filterCount:{ fontSize:11, background:"rgba(0,0,0,.12)", borderRadius:10, padding:"1px 7px" },
+  tplCard:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:14, padding:"22px 14px", borderRadius:10, border:"1.5px solid #cdbfa8", background:"#fffdf9", cursor:"pointer", color:"#2b2118" },
+  tabRow:{ display:"flex", gap:4, marginBottom:18, borderBottom:"2px solid #d8cdbb" },
+  tab:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:14, padding:"10px 20px", border:"none", background:"transparent", color:"#8a7c6c", cursor:"pointer", borderBottom:"3px solid transparent", marginBottom:"-2px" },
+  tabOn:{ color:"#9d0208", borderBottom:"3px solid #9d0208" },
+  tplTag:{ display:"inline-block", background:"#f4ede1", borderRadius:4, padding:"2px 6px", margin:"2px 3px 0 0", fontSize:10 },
+  treeLayout:{ display:"flex", gap:18, alignItems:"flex-start", flexWrap:"wrap" },
+  treePanel:{ flex:"0 0 240px", maxWidth:280, background:"#fffdf9", borderRadius:12, padding:14, boxShadow:"0 2px 10px rgba(80,60,30,.06)", position:"sticky", top:12 },
+  treeNode:{ display:"flex", alignItems:"center", gap:6, padding:"5px 8px", borderRadius:7, cursor:"pointer", fontSize:13, color:"#3a2e25", marginTop:2 },
+  treeNodeOn:{ background:"#eef2f5", color:"#277da1", fontWeight:600 },
+  treeCount:{ fontSize:10, background:"rgba(0,0,0,.08)", borderRadius:10, padding:"1px 7px", color:"#6b5d4f" },
+  treeOrderChip:{ fontSize:11, fontFamily:"'Archivo'", fontWeight:700, padding:"4px 8px", borderRadius:6, border:"1.5px solid #cdbfa8", background:"#fff", color:"#6b5d4f", cursor:"pointer" },
+  breadcrumb:{ fontSize:13, color:"#6b5d4f", marginBottom:12, fontFamily:"'Archivo'", fontWeight:600 },
+  compareHead:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:12, color:"#fff", background:"#6b5d4f", padding:"6px 10px", borderRadius:"6px 6px 0 0" },
+  comparePane:{ flex:1, overflowY:"auto", border:"1px solid #e7ddca", borderTop:"none", borderRadius:"0 0 6px 6px", padding:10, background:"#fdfaf4", fontSize:12, minHeight:200 },
+  comparePre:{ whiteSpace:"pre-wrap", fontFamily:"'Spline Sans'", fontSize:11, margin:0, color:"#3a2e25" },
+  cellMenu:{ position:"absolute", right:0, top:"100%", zIndex:60, background:"#fffdf9", border:"1px solid #cdbfa8", borderRadius:8, boxShadow:"0 6px 20px rgba(0,0,0,.18)", padding:4, minWidth:180, marginTop:2 },
+  cellMenuItem:{ display:"block", width:"100%", textAlign:"left", border:"none", background:"transparent", padding:"7px 10px", fontSize:12, fontFamily:"'Spline Sans'", color:"#3a2e25", cursor:"pointer", borderRadius:6, whiteSpace:"nowrap" },
+  uncertainTag:{ fontSize:9, fontWeight:700, fontFamily:"'Archivo'", color:"#6b4e9d", background:"#f3eefb", border:"1px solid #b9a3dd", borderRadius:10, padding:"2px 7px", whiteSpace:"nowrap" },
+  chip:{ fontFamily:"'Spline Sans'", fontSize:12, fontWeight:600, padding:"6px 12px", borderRadius:20, border:"1.5px solid #cdd6dd", background:"#fff", color:"#577590", cursor:"pointer" },
+  chipOn:{ background:"#277da1", color:"#fff", borderColor:"#277da1" },
+  toolbar:{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12, marginBottom:14, background:"#fffdf9", borderRadius:12, padding:"12px 16px", boxShadow:"0 2px 10px rgba(80,60,30,.06)" },
+  statusToggle:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:12, padding:"6px 14px", borderRadius:20, border:"1.5px solid #c4b29a", background:"#fff", color:"#8a7c6c", cursor:"pointer" },
+  statusDraft:{ background:"#577590", color:"#fff", borderColor:"#577590" },
+  statusFinal:{ background:"#2a9d8f", color:"#fff", borderColor:"#2a9d8f" },
+  blockCard:{ background:"#fffdf9", borderRadius:12, padding:14, marginBottom:12, border:"1px solid #ece1cf" },
+  blockToolbar:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 },
+  blockType:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11, color:"#277da1", letterSpacing:1, display:"flex", alignItems:"center", gap:6 },
+  dragHandle:{ cursor:"grab", color:"#bdae97", fontSize:14, letterSpacing:-2 },
+  savedBadge:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11, color:"#2a9d8f", background:"#e7f5f2", border:"1px solid #aeddd4", borderRadius:20, padding:"3px 10px", transition:"opacity .3s" },
+  addBtn:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:13, padding:"10px 16px", borderRadius:8, border:"1.5px dashed #c4b29a", background:"#fffdf9", color:"#6b5d4f", cursor:"pointer" },
+  addBar:{ position:"sticky", bottom:0, zIndex:50, display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", padding:"12px", margin:"0 -24px -28px", background:"linear-gradient(to top, #e9ddc9 70%, rgba(233,221,201,0))", borderTop:"1px solid #d8cdbb" },
+  navFab:{ position:"fixed", right:18, bottom:78, zIndex:60, fontFamily:"'Archivo'", fontWeight:700, fontSize:13, cursor:"pointer", border:"none", borderRadius:24, padding:"10px 16px", background:"#277da1", color:"#fff", boxShadow:"0 3px 12px rgba(0,0,0,.25)" },
+  navPanel:{ position:"fixed", right:18, bottom:120, zIndex:60, width:330, maxWidth:"88vw", background:"#fff", border:"1px solid #d8cdbb", borderRadius:12, padding:14, boxShadow:"0 8px 30px rgba(0,0,0,.25)" },
+  navChip:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:10.5, cursor:"pointer", border:"1.5px solid #cbb89c", borderRadius:14, padding:"3px 9px", background:"#fff", color:"#6b5d4f" },
+  navItem:{ display:"block", width:"100%", textAlign:"left", border:"none", borderBottom:"1px solid #f0e8da", background:"transparent", cursor:"pointer", padding:"8px 6px", fontSize:12.5, color:"#3a2e25", fontFamily:"'Spline Sans'", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" },
+  blockMenu:{ position:"absolute", right:0, top:"110%", zIndex:40, background:"#fff", border:"1px solid #d8cdbb", borderRadius:8, boxShadow:"0 6px 20px rgba(0,0,0,.22)", padding:5, minWidth:210 },
+  blockMenuItem:{ display:"block", width:"100%", textAlign:"left", border:"none", background:"transparent", cursor:"pointer", padding:"9px 10px", fontSize:13, color:"#3a2e25", borderRadius:6, fontFamily:"'Spline Sans'" },
+  addBtnSm:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:12, padding:"5px 12px", borderRadius:6, border:"1.5px dashed #c4b29a", background:"#fff", color:"#6b5d4f", cursor:"pointer" },
+  photoGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:10 },
+  photoThumb:{ borderRadius:10, overflow:"hidden", border:"1px solid #ece1cf", background:"#f8f2e7" },
+  photoImg:{ width:"100%", height:110, objectFit:"cover", cursor:"pointer", display:"block" },
+  photoDel:{ position:"relative", float:"right", marginTop:-104, marginRight:4, width:22, height:22, borderRadius:"50%", background:"rgba(157,2,8,.9)", color:"#fff", border:"2px solid #fff", cursor:"pointer", fontSize:13, lineHeight:1, padding:0 },
+  photoCap:{ width:"100%", border:"none", borderTop:"1px solid #ece1cf", padding:"6px 8px", fontSize:11, fontFamily:"'Spline Sans'", background:"#fffdf9" },
+};
+
+const DP = {
+  wrap:{ fontFamily:"'Spline Sans',sans-serif", color:"#1a1a1a" },
+  titleRow:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", paddingBottom:10, marginBottom:10, get borderBottom(){return "2px solid "+THEME.secBar;} },
+  get kicker(){ return { fontFamily:"'Archivo'", fontWeight:700, fontSize:9, letterSpacing:2, color:THEME.secBar }; },
+  get h1(){ return { fontFamily:"'Archivo'", fontWeight:900, fontSize:22, margin:"2px 0 0", color:THEME.title }; },
+  metaTable:{ width:"100%", borderCollapse:"collapse", fontSize:10 },
+  annRow:{ padding:"6px 4px", borderBottom:"0.5px solid #eee" },
+  annNum:{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18, borderRadius:"50%", color:"#fff", fontSize:10, fontWeight:700, flexShrink:0 },
+  sevTag:{ fontSize:8, fontWeight:700, border:"1px solid", borderRadius:4, padding:"1px 5px", marginLeft:6 },
+  mLbl:{ background:"#eef2f5", fontWeight:600, padding:"4px 6px", border:"0.5px solid #dde5ea", color:"#34495e", width:"14%" },
+  mVal:{ padding:"4px 6px", border:"0.5px solid #dde5ea", width:"36%" },
+  get secBar(){ return { background:THEME.secBar, color:"#fff", fontFamily:"'Archivo'", fontWeight:700, fontSize:11, padding:"4px 10px", borderRadius:3, marginBottom:6 }; },
+  fieldTable:{ width:"100%", borderCollapse:"collapse", fontSize:10 },
+  inspGrid:{ width:"100%", borderCollapse:"collapse", fontSize:9.5 },
+  get inspLbl(){ return { width:"30%", padding:"3px 6px", border:"0.5px solid "+THEME.border, color:THEME.text }; },
+  inspVal:{ width:"20%", padding:"3px 6px", border:"0.5px solid #e3eaef", textAlign:"center" },
+  inspEmpty:{ border:"none" },
+  fLbl:{ background:"#f4f7f9", fontWeight:600, padding:"3px 8px", border:"0.5px solid #e3eaef", width:"32%", color:"#34495e" },
+  fVal:{ padding:"3px 8px", border:"0.5px solid #e3eaef" },
+  dataTable:{ width:"100%", borderCollapse:"collapse", fontSize:9.5, marginTop:2 },
+  get thCell(){ return { background:THEME.tableHd, color:"#fff", fontWeight:700, padding:"3px 6px", border:"0.5px solid rgba(0,0,0,.25)", textAlign:"left" }; },
+  tdCell:{ padding:"3px 6px", border:"0.5px solid #e3eaef" },
+  get text(){ return { fontSize:11, lineHeight:1.5, margin:"0 0 4px", whiteSpace:"pre-wrap", color:THEME.text }; },
+  photoGridPrint:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 },
+  photoPrint:{ width:"100%", borderRadius:6, border:"1px solid #ddd", display:"block" },
+  pdfPagePrint:{ width:"100%", display:"block", border:"1px solid #ddd" },
+  coverPage:{ pageBreakAfter:"always", breakAfter:"page", minHeight:"86vh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", textAlign:"center", padding:"0 20px" },
+  tocPage:{ padding:"4mm 0" },
+  get tocTitle(){ return { fontFamily:"'Archivo'", fontWeight:900, fontSize:20, color:THEME.title, borderBottom:"2px solid "+THEME.secBar, paddingBottom:8, marginBottom:14 }; },
+  get tocHead(){ return { fontFamily:"'Archivo'", fontWeight:700, fontSize:12.5, color:THEME.title, padding:"6px 0 3px", borderBottom:"0.5px dotted "+THEME.border }; },
+  tocSub:{ fontSize:11, color:"#5a4e42", padding:"2px 0 2px 22px" },
+  get coverKicker(){ return { fontFamily:"'Archivo'", fontWeight:700, fontSize:12, letterSpacing:3, color:THEME.secBar, marginBottom:6 }; },
+  get coverTitle(){ return { fontFamily:"'Archivo'", fontWeight:900, fontSize:34, margin:"0 0 14px", lineHeight:1.1, maxWidth:600, color:THEME.title }; },
+  coverSubtitle:{ fontSize:15, color:"#555", marginBottom:30, maxWidth:520, whiteSpace:"pre-wrap" },
+  get coverMeta(){ return { fontSize:12, color:"#333", lineHeight:1.9, borderTop:"2px solid "+THEME.secBar, paddingTop:16, marginTop:10 }; },
+  cap:{ fontSize:9, color:"#666", marginTop:2, textAlign:"center" },
+};
