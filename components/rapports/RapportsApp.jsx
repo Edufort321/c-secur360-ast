@@ -1704,6 +1704,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     const a=[...r.blocks]; a[i]=sec; setBlocks(a);
   }
   function makeBlock(type){
+    if(type==="zone") return {type:"zone",id:bid(),title:LANG==="en"?"New zone":"Nouvelle zone",newPage:true};
     if(type==="section") return {type:"section",id:bid(),title:t("sectionTitle"),fields:[{id:bid(),label:"",value:""}]};
     if(type==="table") return {type:"table",id:bid(),title:t("tableTitle"),columns:["",""],rows:[["",""]]};
     if(type==="inspect") return {type:"inspect",id:bid(),title:t("inspectTitle"),items:[{id:bid(),label:"",state:"good",note:""}]};
@@ -2009,10 +2010,10 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
         {r.blocks.map((b,idx)=>{
-          const icon = b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
-          const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : (b.value||"").trim().slice(0,40);
-          const fallback = b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
-          const startsNewPage = b.type==="section" && (b.newPage || (r.sectionPerPage && idx!==r.blocks.findIndex(x=>x.type==="section")));
+          const icon = b.type==="zone"?"🗂":b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
+          const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : (b.value||"").trim().slice(0,40);
+          const fallback = b.type==="zone"?(LANG==="en"?"Zone":"Zone"):b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
+          const startsNewPage = (b.type==="section" && (b.newPage || (r.sectionPerPage && idx!==r.blocks.findIndex(x=>x.type==="section")))) || (b.type==="zone" && b.newPage!==false);
           return (
           <React.Fragment key={b.id}>
           {startsNewPage && (
@@ -2058,6 +2059,15 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
                 </>}
               </span>
             </div>
+            {b.type==="zone" && (
+              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <span style={{fontSize:20}}>🗂</span>
+                <input style={{...S.input,fontWeight:900,fontFamily:"'Archivo'",fontSize:16,background:"#eef2ff",borderColor:"#a9b6e8"}} value={b.title||""} onChange={e=>updBlock(b.id,{title:e.target.value})} placeholder={LANG==="en"?"Zone name (e.g. North Building)":"Nom de la zone (ex. Bâtiment Nord)"}/>
+                <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,fontWeight:700,color:b.newPage!==false?"#2a6f97":"#94a3b8",cursor:"pointer",whiteSpace:"nowrap"}} title={LANG==="en"?"Start this zone on a new page":"Démarrer cette zone sur une nouvelle page"}>
+                  <input type="checkbox" checked={b.newPage!==false} onChange={e=>updBlock(b.id,{newPage:e.target.checked})}/>📄
+                </label>
+              </div>
+            )}
             {b.type==="section" && <SectionEditor block={b} onChange={patch=>updBlock(b.id,patch)}/>}
             {b.type==="table" && <TableEditor block={b} onChange={patch=>updBlock(b.id,patch)}/>}
             {b.type==="inspect" && <InspectEditor block={b} onChange={patch=>updBlock(b.id,patch)} onZoom={setLightbox}/>}
@@ -2095,8 +2105,8 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {/* NAVIGATION INTERNE — bouton flottant + panneau de sauts */}
       <button className="screen-only" style={S.navFab} onClick={()=>setShowNav(s=>!s)} title={t("navTitle")}>☰ {t("navTitle")}</button>
       {showNav && (()=>{
-        const TYPE_META={ section:{ic:"§",col:"#1e293b",key:"navTypeSection"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"☑",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:"🖼",col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:"📄",col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#64748b",key:"navTypeText"} };
-        const blkLabel=(b)=> (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,40);
+        const TYPE_META={ zone:{ic:"🗂",col:"#4f46e5",key:"navTypeZone"}, section:{ic:"§",col:"#1e293b",key:"navTypeSection"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"☑",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:"🖼",col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:"📄",col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#64748b",key:"navTypeText"} };
+        const blkLabel=(b)=> (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,40);
         const filtered = r.blocks.map((b,i)=>({b,i})).filter(({b})=> navFilter==="all" || b.type===navFilter);
         return (
         <div className="screen-only" style={S.navPanel}>
@@ -2107,17 +2117,18 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           {/* Filtres par type */}
           <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
             <button onClick={()=>setNavFilter("all")} style={{...S.navChip,...(navFilter==="all"?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}}>{t("navAll")} ({r.blocks.length})</button>
-            {["section","inspect","table","photos","pdfpage","text"].map(tp=>{ const c=r.blocks.filter(b=>b.type===tp).length; if(!c)return null; const m=TYPE_META[tp];
+            {["zone","section","inspect","table","photos","pdfpage","text"].map(tp=>{ const c=r.blocks.filter(b=>b.type===tp).length; if(!c)return null; const m=TYPE_META[tp];
               return <button key={tp} onClick={()=>setNavFilter(tp)} style={{...S.navChip,...(navFilter===tp?{background:m.col,color:"#fff",borderColor:m.col}:{color:m.col,borderColor:m.col})}}>{m.ic} {c}</button>;
             })}
           </div>
           <div style={{maxHeight:"58vh",overflowY:"auto"}}>
             {filtered.map(({b,i})=>{
               const m=TYPE_META[b.type]||TYPE_META.text;
+              const isZone = b.type==="zone";
               const isHead = b.type==="section";
               return <button key={b.id} onClick={()=>jumpToBlock(b.id)}
-                style={{...S.navItem, ...(isHead?{fontWeight:700,fontSize:13,color:m.col,borderLeft:"3px solid "+m.col,paddingLeft:8,marginTop:4,background:"#faf6ee"}:{paddingLeft:18,fontSize:12,color:"#475569"})}}>
-                <span style={{color:"#b3a690",marginRight:6,fontSize:10}}>{i+1}</span>
+                style={{...S.navItem, ...(isZone?{fontWeight:900,fontSize:13,color:"#fff",background:m.col,borderRadius:6,marginTop:6,paddingLeft:8}:isHead?{fontWeight:700,fontSize:13,color:m.col,borderLeft:"3px solid "+m.col,paddingLeft:8,marginTop:4,background:"#faf6ee"}:{paddingLeft:18,fontSize:12,color:"#475569"})}}>
+                <span style={{color:isZone?"rgba(255,255,255,.7)":"#b3a690",marginRight:6,fontSize:10}}>{i+1}</span>
                 <span style={{marginRight:5}}>{m.ic}</span>{blkLabel(b)||t(m.key)}
               </button>;
             })}
@@ -2133,6 +2144,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
         <div className="screen-only" style={S.addPanel} onMouseLeave={()=>setShowAdd(false)}>
           <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#1e293b",marginBottom:8}}>{t("addBlockBtn")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <button style={{...S.addPanelItem,background:"#eef2ff",borderColor:"#a9b6e8"}} onClick={()=>{ addBlock("zone"); setShowAdd(false); }}>🗂 {LANG==="en"?"Zone (separator)":"Zone (séparateur)"}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("section"); setShowAdd(false); }}>§ {t("addSection").replace("+ ","")}</button>
             <button style={{...S.addPanelItem,background:"#e6f5f1",borderColor:"#9bd4cc"}} onClick={()=>{ addEquipment(); setShowAdd(false); }}>🔧 {t("addEquip").replace("+ ","")}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("inspect"); setShowAdd(false); }}>☑ {t("addInspect").replace("+ ","")}</button>
@@ -3050,10 +3062,12 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
           <h2 style={DP.tocTitle}>{t("tocTitle")}</h2>
           <div>
             {(()=>{ let secNo=0; return (r.blocks||[]).map((b,i)=>{
+              const isZone=b.type==="zone";
               const isHead=b.type==="section";
               if(isHead) secNo++;
-              const ic = b.type==="section"?"":b.type==="photos"?"🖼 ":b.type==="pdfpage"?"📄 ":b.type==="table"?"▦ ":b.type==="inspect"?"☑ ":"¶ ";
-              const lbl=(b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,60);
+              const ic = b.type==="section"?"":b.type==="zone"?"🗂 ":b.type==="photos"?"🖼 ":b.type==="pdfpage"?"📄 ":b.type==="table"?"▦ ":b.type==="inspect"?"☑ ":"¶ ";
+              const lbl=(b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):(b.value||"").trim().slice(0,60);
+              if(isZone) return <div key={b.id} style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:13,color:THEME.title,marginTop:i?12:0,marginBottom:3,borderBottom:"1px solid "+THEME.border,paddingBottom:2}}>{ic}{lbl}</div>;
               return <div key={b.id} style={isHead?DP.tocHead:DP.tocSub}>
                 {isHead && <span style={{color:THEME.secBar,fontWeight:700,marginRight:8}}>{secNo}.</span>}
                 {ic}{lbl||t("freeText").replace("…","")}
@@ -3171,11 +3185,16 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
 
       {(()=>{ const firstSecIdx=r.blocks.findIndex(x=>x.type==="section"); return r.blocks.map((b,bi)=>{
         const isSection=b.type==="section";
-        // Saut de page avant cette section : demande explicite (b.newPage) ou option globale
-        // « une page par section » (sauf la 1re, pour ne pas gaspiller la page de tête).
-        const pageBreak = isSection && (b.newPage || (r.sectionPerPage && bi!==firstSecIdx));
+        const isZone=b.type==="zone";
+        // Saut de page avant cette section/zone : demande explicite (b.newPage) ou option globale.
+        const pageBreak = (isSection && (b.newPage || (r.sectionPerPage && bi!==firstSecIdx))) || (isZone && b.newPage!==false && bi!==0);
         return (
-        <div key={b.id} className={(isSection?"section-print ":"")+(pageBreak?"pagebreak-print":"")} style={{marginTop:12, breakInside:(b.type==="table"&&(b.rows||[]).length>6)?"auto":"avoid"}}>
+        <div key={b.id} className={(isSection?"section-print ":"")+(pageBreak?"pagebreak-print":"")} style={{marginTop:isZone?0:12, breakInside:(b.type==="table"&&(b.rows||[]).length>6)?"auto":"avoid"}}>
+          {b.type==="zone" && (
+            <div style={{background:THEME.title,color:"#fff",borderRadius:6,padding:"10px 14px",margin:"4px 0 10px",fontFamily:"'Archivo'",fontWeight:900,fontSize:15,letterSpacing:.5,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{opacity:.85}}>▣</span>{b.title||""}
+            </div>
+          )}
           {b.type==="section" && <>
             <div className="secBar-print" style={{...DP.secBar,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
               <span>{b.title}</span>
