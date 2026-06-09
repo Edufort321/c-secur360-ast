@@ -1819,14 +1819,30 @@ function SectionEditor({ block, onChange }){
   return (
     <div>
       <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} placeholder={t("sectionTitle")} onChange={e=>onChange({title:e.target.value})}/>
-      {fields.map(f=>(
-        <div key={f.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}>
-          <input style={{...S.input,flex:"0 0 38%"}} value={f.label} placeholder={t("fieldLabel")} onChange={e=>setF(f.id,{label:e.target.value})}/>
-          <input style={{...S.input,flex:1,...(f.uncertain?{borderColor:"#b9a3dd",background:"#faf7ff"}:{})}} value={f.value} placeholder={t("fieldValue")} onChange={e=>setF(f.id,{value:e.target.value,uncertain:false})}/>
-          {f.uncertain && <span style={S.uncertainTag} title={t("uncertainNote")}>{t("uncertainBadge")}</span>}
-          <button style={S.miniBtnDel} onClick={()=>delF(f.id)}>✕</button>
+      {(()=>{ const emptyN=fields.filter(f=>!String(f.value||"").trim() && !f.validated).length; return emptyN>0 ? (
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,fontSize:11,color:"#9d6b2e",background:"#fffaf0",border:"1px solid #e0a96d",borderRadius:6,padding:"6px 10px"}}>
+          ⚠ {emptyN} {LANG==="en"?"empty field(s) — set N/V, N/A, validate, or remove":"champ(s) vide(s) — inscrire N/V, N/A, valider ou retirer"}
         </div>
-      ))}
+      ) : null; })()}
+      {fields.map(f=>{
+        const empty=!String(f.value||"").trim() && !f.validated;
+        const eb={fontFamily:"'Archivo'",fontWeight:700,fontSize:10,padding:"5px 7px",borderRadius:6,border:"1px solid #e0a96d",background:"#fff",color:"#9d6b2e",cursor:"pointer"};
+        return (
+          <div key={f.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}>
+            <input style={{...S.input,flex:"0 0 38%",minWidth:120}} value={f.label} placeholder={t("fieldLabel")} onChange={e=>setF(f.id,{label:e.target.value})}/>
+            <input style={{...S.input,flex:1,minWidth:120,...(f.uncertain?{borderColor:"#b9a3dd",background:"#faf7ff"}:empty?{borderColor:"#e0a96d",background:"#fffaf0"}:{})}} value={f.value} placeholder={t("fieldValue")} onChange={e=>setF(f.id,{value:e.target.value,uncertain:false,validated:false})}/>
+            {f.uncertain && <span style={S.uncertainTag} title={t("uncertainNote")}>{t("uncertainBadge")}</span>}
+            {empty && (
+              <span style={{display:"flex",gap:4}}>
+                <button style={eb} title={LANG==="en"?"Not verified":"Non vérifié"} onClick={()=>setF(f.id,{value:"N/V",uncertain:false})}>N/V</button>
+                <button style={eb} title={LANG==="en"?"Not applicable":"Non applicable"} onClick={()=>setF(f.id,{value:"N/A",uncertain:false})}>N/A</button>
+                <button style={{...eb,borderColor:"#2a9d8f",color:"#2a9d8f"}} title={LANG==="en"?"Validate (leave empty)":"Valider (laisser vide)"} onClick={()=>setF(f.id,{validated:true})}>✓</button>
+              </span>
+            )}
+            <button style={S.miniBtnDel} title={LANG==="en"?"Remove field":"Retirer le champ"} onClick={()=>delF(f.id)}>✕</button>
+          </div>
+        );
+      })}
       <button style={S.addBtnSm} onClick={addF}>{t("addField")}</button>
     </div>
   );
