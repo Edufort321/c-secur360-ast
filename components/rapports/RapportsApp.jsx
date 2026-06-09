@@ -1,8 +1,8 @@
-'use client';
-
+"use client";
 // __rpt_storage_shim : data layer base sur localStorage (la version HTML avait window.storage).
 if (typeof window !== "undefined" && !window.storage) { window.storage = { get: async (k)=>{ try{ const v=localStorage.getItem(k); return v==null?null:{value:v}; }catch{ return null; } }, set: async (k,v)=>{ try{ localStorage.setItem(k,v); }catch{} }, delete: async (k)=>{ try{ localStorage.removeItem(k); }catch{} } }; }
 import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 // ============================================================
 //  RAPPORTS TERRAIN — Générateur de documents à gabarit (tenant)
@@ -27,6 +27,7 @@ const I18N = {
     sectionTitle:"Titre de section", fieldLabel:"Libellé", fieldValue:"Valeur",
     freeText:"Texte libre…", photoZone:"Zone photo", addPhoto:"+ Photo", noPhoto:"Aucune photo",
     delPhoto:"Supprimer cette photo?", photoCaption:"Légende…",
+    photoLayout:"Disposition", layout1:"1 colonne", layout2:"2 côte à côte", layout4:"Grille 2×2", noPhotoSlot:"Aucune zone. Ajoute des zones photo ci-dessous.", photoAddHere:"Ajouter une photo", photoAddSlot:"+ 1 zone", photoAdd2:"+ 2 zones", photoReplace:"Remplacer",
     importing:"Lecture du document…", importErr:"Échec de l'import :", importNoKey:"Ajoute une clé API dans Réglages.", importBatch:"Traitement des pages",
     importSnap:"Capture des pages", importOriginalPages:"Pages originales (copie du PDF)",
     importReview:"Vérifie et choisis le gabarit", extractedContent:"Contenu extrait",
@@ -35,7 +36,7 @@ const I18N = {
     apiKeyTitle:"Clé API Anthropic", apiKeyHint:"Pour démo. Clé en stockage local = lisible sur ce poste. En prod : serveur.",
     storeMem:"Mémoire seule", storeLocal:"Stocker sur ce poste", testConn:"Tester", deleteKey:"Supprimer la clé",
     keyActive:"Clé active", keyNone:"Aucune clé", confirmDel:"Supprimer ce rapport définitivement?",
-    moveUp:"Monter", moveDown:"Descendre", removeBlock:"Retirer ce bloc", blockType:"Type de bloc", blockActions:"Actions",
+    moveUp:"Monter", moveDown:"Descendre", removeBlock:"Retirer ce bloc", blockType:"Type de bloc", blockActions:"Actions", insertHere:"Insérer ici", addBlockBtn:"Ajouter un bloc",
     tplInspection:"Rapport d'inspection", tplTesting:"Rapport d'essais", tplQuote:"Soumission / Devis", tplGeneric:"Rapport générique",
     truncWarn:"⚠ Document long : l'extraction a pu être coupée à la fin. Vérifie les derniers blocs et complète au besoin.",
     tabReports:"Rapports", tabTemplates:"Modèles / Gabarits",
@@ -56,7 +57,8 @@ const I18N = {
     navAll:"Tout", navNone:"Aucun élément de ce type", navTypeSection:"Section", navTypeTable:"Tableau", navTypeInspect:"Inspection", navTypePhotos:"Photos", navTypePdf:"Page PDF", navTypeText:"Texte",
     lvlYear:"Année", lvlClient:"Client", lvlLocation:"Endroit", lvlJob:"N° de projet",
     cover:"Page couverture", coverShow:"Inclure une page couverture", coverSubtitle:"Sous-titre / note", coverEdit:"Personnaliser la couverture",
-    tocShow:"Table des matières", tocTitle:"Table des matières",
+    coverCustomize:"Personnaliser la couverture", coverKickerLbl:"Surtitre (ex: INSPECTION)", coverTitleOverride:"Titre (remplace le titre du rapport)", coverPreparedBy:"Préparé par", coverBg:"Image de fond / bannière", coverBgAdd:"Ajouter une image", coverBgChange:"Changer l'image", coverBgRemove:"Retirer", coverBgHint:"L'image est atténuée pour garder le texte lisible.",
+    tocShow:"Table des matières", tocTitle:"Table des matières", layoutOptions:"Mise en page du rapport", anomRecapShow:"Sommaire des anomalies",
     addPdfPage:"+ Page PDF externe", pdfPageZone:"Page PDF importée", importingPdf:"Conversion du PDF en images…", pdfPages:"page(s)",
     addTable:"+ Tableau", tableTitle:"Titre du tableau", addRow:"+ Ligne", addCol:"+ Colonne", delRow:"Supprimer la ligne", delCol:"Supprimer la colonne",
     addInspect:"+ Grille d'inspection", inspectTitle:"Inspection visuelle", inspectPoint:"Point d'inspection", inspectAddPoint:"+ Point", inspectNote:"Description de l'anomalie",
@@ -89,6 +91,7 @@ const I18N = {
     sectionTitle:"Section title", fieldLabel:"Label", fieldValue:"Value",
     freeText:"Free text…", photoZone:"Photo zone", addPhoto:"+ Photo", noPhoto:"No photo",
     delPhoto:"Delete this photo?", photoCaption:"Caption…",
+    photoLayout:"Layout", layout1:"1 column", layout2:"2 side by side", layout4:"Grid 2×2", noPhotoSlot:"No zone. Add photo zones below.", photoAddHere:"Add a photo", photoAddSlot:"+ 1 zone", photoAdd2:"+ 2 zones", photoReplace:"Replace",
     importing:"Reading document…", importErr:"Import failed:", importNoKey:"Add an API key in Settings.", importBatch:"Processing pages",
     importSnap:"Capturing pages", importOriginalPages:"Original pages (PDF copy)",
     importReview:"Review and choose template", extractedContent:"Extracted content",
@@ -97,7 +100,7 @@ const I18N = {
     apiKeyTitle:"Anthropic API key", apiKeyHint:"Demo only. Local-stored key is readable on this machine. In prod: server.",
     storeMem:"Memory only", storeLocal:"Store on this machine", testConn:"Test", deleteKey:"Delete key",
     keyActive:"Key active", keyNone:"No key", confirmDel:"Delete this report permanently?",
-    moveUp:"Up", moveDown:"Down", removeBlock:"Remove block", blockType:"Block type", blockActions:"Actions",
+    moveUp:"Up", moveDown:"Down", removeBlock:"Remove block", blockType:"Block type", blockActions:"Actions", insertHere:"Insert here", addBlockBtn:"Add a block",
     tplInspection:"Inspection report", tplTesting:"Testing report", tplQuote:"Quote / Proposal", tplGeneric:"Generic report",
     truncWarn:"⚠ Long document: extraction may have been cut off at the end. Check the last blocks and complete as needed.",
     tabReports:"Reports", tabTemplates:"Templates",
@@ -118,7 +121,8 @@ const I18N = {
     navAll:"All", navNone:"No item of this type", navTypeSection:"Section", navTypeTable:"Table", navTypeInspect:"Inspection", navTypePhotos:"Photos", navTypePdf:"PDF page", navTypeText:"Text",
     lvlYear:"Year", lvlClient:"Client", lvlLocation:"Location", lvlJob:"Project No.",
     cover:"Cover page", coverShow:"Include a cover page", coverSubtitle:"Subtitle / note", coverEdit:"Customize cover",
-    tocShow:"Table of contents", tocTitle:"Table of contents",
+    coverCustomize:"Customize cover", coverKickerLbl:"Kicker (e.g. INSPECTION)", coverTitleOverride:"Title (overrides report title)", coverPreparedBy:"Prepared by", coverBg:"Background image / banner", coverBgAdd:"Add an image", coverBgChange:"Change image", coverBgRemove:"Remove", coverBgHint:"The image is dimmed to keep text readable.",
+    tocShow:"Table of contents", tocTitle:"Table of contents", layoutOptions:"Report layout", anomRecapShow:"Anomaly summary",
     addPdfPage:"+ External PDF page", pdfPageZone:"Imported PDF page", importingPdf:"Converting PDF to images…", pdfPages:"page(s)",
     addTable:"+ Table", tableTitle:"Table title", addRow:"+ Row", addCol:"+ Column", delRow:"Delete row", delCol:"Delete column",
     addInspect:"+ Inspection grid", inspectTitle:"Visual inspection", inspectPoint:"Inspection point", inspectAddPoint:"+ Point", inspectNote:"Anomaly description",
@@ -200,7 +204,6 @@ const LANG_KEY = "rpt_lang_v1";
 const TPL_KEY = "rpt_templates_v1";
 const HIDDEN_TPL_KEY = "rpt_hidden_tpls_v1";
 const THEME_KEY = "rpt_theme_v1";
-// Gabarits PAR DÉFAUT masqués par le tenant (s'il ne les veut pas). Filtrés partout via visTpls().
 let HIDDEN_TPLS = [];
 function visTpls(){ return TEMPLATES.filter(t=>!HIDDEN_TPLS.includes(t.id)); }
 async function loadHidden(){ try{ const r=await window.storage.get(HIDDEN_TPL_KEY); return r?JSON.parse(r.value):[]; }catch{ return []; } }
@@ -268,7 +271,8 @@ Retourne UNIQUEMENT un objet JSON valide (sans texte autour, sans backticks) :
  "blocks": [
    {"type":"section","title":"titre exact de section","fields":[{"label":"libellé exact","value":"valeur exacte"}]},
    {"type":"table","title":"titre exact du tableau","columns":["Colonne 1","Colonne 2","..."],"rows":[["cellule","cellule","..."]]},
-   {"type":"text","value":"texte recopié intégralement, mot pour mot"}
+   {"type":"text","value":"texte recopié intégralement, mot pour mot"},
+   {"type":"photos","title":"titre/légende de la zone (ex: Imagerie thermique, Photos)","count":2,"layout":"2col"}
  ]
 }
 RÈGLES STRICTES DE FIDÉLITÉ :
@@ -277,9 +281,9 @@ RÈGLES STRICTES DE FIDÉLITÉ :
 - TABLEAUX MULTI-COLONNES (TRÈS IMPORTANT) : si un tableau a PLUSIEURS colonnes de valeurs (ex: deux dates 2025-08-22 et 2025-12-09 côte à côte), tu DOIS utiliser le type "table" et GARDER TOUTES LES COLONNES. NE choisis JAMAIS une seule colonne. Mets les en-têtes exacts dans "columns" (incluant les dates) et chaque ligne complète dans "rows". Recopie les valeurs dans le bon ordre de colonnes.
 - Conserve la numérotation et les libellés d'origine (ex: "2.1", "B.7a", "D.15", codes de méthode comme "D 1533-20").
 - Une "section" = champs à UNE seule valeur. Un "table" = données à PLUSIEURS colonnes. Un "text" = paragraphe ou liste.
+- ZONES PHOTO (IMPORTANT) : quand une page contient des PHOTOS, des IMAGES, des IMAGERIES THERMIQUES ou des SCHÉMAS, ajoute un bloc {"type":"photos"} À CET ENDROIT dans l'ordre du document, avec "count" = le NOMBRE d'images sur la page (ex: une page d'imagerie thermique avec image thermique + photo réelle = count:2), "layout":"2col" si 2 images côte à côte, "1col" si une seule, "grid" si 4+. Donne un "title" décrivant la zone (ex: "Imagerie thermique - ASC A1"). NE mets PAS les images elles-mêmes (on placera les photos manuellement), mets seulement le bon nombre de cases vides au bon endroit.
 - NE PAS inventer de valeurs absentes (mettre '' ou '—'). Garder la langue d'origine.
-- Ignore uniquement les images/logos : on ajoutera des zones photo séparément.
-Objectif : quelqu'un qui lit les blocs doit avoir EXACTEMENT le même contenu que le PDF, AVEC toutes les colonnes et toutes les sections, sans aucune perte.`;
+Objectif : quelqu'un qui lit les blocs doit avoir EXACTEMENT le même contenu que le PDF, AVEC toutes les colonnes, toutes les sections, et des zones photo au bon endroit, sans aucune perte.`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:[
@@ -337,7 +341,11 @@ function normalizeBlocks(blocks){
   return blocks.map(b=>{
     if(b.type==="section") return { type:"section", id:bid(), title:b.title||"", fields:(b.fields||[]).map(f=>({id:bid(),label:f.label||"",value:f.value||"",uncertain:!!f.uncertain})) };
     if(b.type==="table") return { type:"table", id:bid(), title:b.title||"", columns:(b.columns||[]).slice(), rows:(b.rows||[]).map(r=>Array.isArray(r)?r.slice():[String(r)]), uncertainCells:(b.uncertainCells||[]).map(c=>c.slice()) };
-    if(b.type==="photos") return { type:"photos", id:bid(), title:b.title||t("photoZone"), photos:[] };
+    if(b.type==="photos"){
+      const n=Math.max(1,Math.min(8, b.count||2));
+      const layout = b.layout==="1col"||b.layout==="grid"?b.layout:"2col";
+      return { type:"photos", id:bid(), title:b.title||t("photoZone"), layout, photos:Array.from({length:n},()=>({id:bid(),data:null,caption:""})) };
+    }
     return { type:"text", id:bid(), value:b.value||"", placeholder:t("freeText"), uncertain:!!b.uncertain };
   });
 }
@@ -647,10 +655,25 @@ export default function App(){
     LANG=lg; setLang(lg);
     THEME=th; setTheme(th);
     const migrated=d.map(r=>({...r, status:migrateStatus(r.status)}));
-    setDb(migrated); setLogo(l); setCustomTpls(ct); setLoaded(true);
+    setDb(migrated); setCustomTpls(ct);
+    // Logo : custom du tenant (localStorage) sinon logo du TENANT (comme le reste de l'app).
+    if(l){ setLogo(l); }
+    else {
+      try{
+        const tn=(window.location.pathname.split("/")[1])||"";
+        if(tn){
+          let url=null;
+          const {data:cs}=await supabase.from("company_settings").select("logo_url").eq("tenant_id",tn).maybeSingle();
+          url=cs?.logo_url||null;
+          if(!url){ const {data:tnt}=await supabase.from("tenants").select("logo_url").eq("id",tn).maybeSingle(); url=tnt?.logo_url||null; }
+          if(url) setLogo(url);
+        }
+      }catch{}
+    }
+    setLoaded(true);
   })(); },[]);
 
-  // Synchronise la langue avec le header principal du site (événement cs-lang-change + storage).
+  // Synchronise la langue avec le header principal du site (cs-lang-change + storage).
   useEffect(()=>{
     const apply=()=>{ try{ const lg=localStorage.getItem("cs-lang")||"fr"; LANG=lg; setLang(lg); }catch{} };
     window.addEventListener("cs-lang-change",apply);
@@ -810,7 +833,7 @@ export default function App(){
       {importing && <div style={S.overlay}><div style={{...S.modal,maxWidth:340,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>📄</div><div style={{fontFamily:"'Archivo'",fontWeight:700}}>{t("importing")}</div></div></div>}
       {importErr && <div style={S.overlay} onClick={()=>setImportErr(null)}><div style={{...S.modal,maxWidth:440}} onClick={e=>e.stopPropagation()}><h2 style={{...S.h2,color:"#c1121f"}}>{t("importErr")}</h2><p style={{fontSize:13,wordBreak:"break-word"}}>{importErr}</p><div style={{marginTop:14}}><button style={S.btnGhost} onClick={()=>setImportErr(null)}>{t("cancel")}</button></div></div></div>}
 
-      {importPreview && <ImportReview ip={importPreview} setIp={setImportPreview} onApply={applyImport} onCancel={()=>setImportPreview(null)}/>}
+      {importPreview && <ImportReview ip={importPreview} setIp={setImportPreview} onApply={applyImport} onCancel={()=>{ setImportPreview(null); setImporting(false); setImportErr(null); }}/>}
 
       {view==="list" && (
         <>
@@ -1160,6 +1183,7 @@ function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
 // ============================================================
 function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [r,setR]=useState(report);
+  const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
   const [lightbox,setLightbox]=useState(null);
   const [showAnn,setShowAnn]=useState(false);
   const [showInsert,setShowInsert]=useState(false);
@@ -1168,6 +1192,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [fixMsg,setFixMsg]=useState(null);
   const [savedFlash,setSavedFlash]=useState(false);
   const [showNav,setShowNav]=useState(false);
+  const [showCover,setShowCover]=useState(false);
+  const [insertAt,setInsertAt]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
   const [navFilter,setNavFilter]=useState("all");
   function jumpToBlock(bid){
     const el=document.getElementById("blk-"+bid);
@@ -1245,14 +1272,18 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
     const sec={type:"section",id:bid(),title:insp.title||t("sectionTitle"),fields: fields.length?fields:[{id:bid(),label:"",value:""}]};
     const a=[...r.blocks]; a[i]=sec; setBlocks(a);
   }
-  function addBlock(type){
-    let b;
-    if(type==="section") b={type:"section",id:bid(),title:t("sectionTitle"),fields:[{id:bid(),label:"",value:""}]};
-    else if(type==="table") b={type:"table",id:bid(),title:t("tableTitle"),columns:["",""],rows:[["",""]]};
-    else if(type==="inspect") b={type:"inspect",id:bid(),title:t("inspectTitle"),items:[{id:bid(),label:"",state:"good",note:""}]};
-    else if(type==="photos") b={type:"photos",id:bid(),title:t("photoZone"),photos:[]};
-    else b={type:"text",id:bid(),value:"",placeholder:t("freeText")};
-    setBlocks([...r.blocks,b]);
+  function makeBlock(type){
+    if(type==="section") return {type:"section",id:bid(),title:t("sectionTitle"),fields:[{id:bid(),label:"",value:""}]};
+    if(type==="table") return {type:"table",id:bid(),title:t("tableTitle"),columns:["",""],rows:[["",""]]};
+    if(type==="inspect") return {type:"inspect",id:bid(),title:t("inspectTitle"),items:[{id:bid(),label:"",state:"good",note:""}]};
+    if(type==="photos") return {type:"photos",id:bid(),title:t("photoZone"),layout:"2col",photos:[{id:bid(),data:null,caption:""},{id:bid(),data:null,caption:""}]};
+    return {type:"text",id:bid(),value:"",placeholder:t("freeText")};
+  }
+  function addBlock(type, atIndex){
+    const b=makeBlock(type);
+    if(atIndex==null || atIndex>=r.blocks.length){ setBlocks([...r.blocks,b]); }
+    else { const a=[...r.blocks]; a.splice(atIndex,0,b); setBlocks(a); }
+    return b.id;
   }
   // Importer un PDF externe -> bloc "pdfpage" avec une image par page
   async function addPdfPageBlock(file){
@@ -1378,20 +1409,62 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           if(n===0) return null;
           return <div style={{marginTop:10,padding:"7px 12px",borderRadius:8,background:crit>0?"#fdeaea":"#fff6ea",border:"1px solid "+(crit>0?"#e3a0a0":"#e0c89a"),fontSize:13,color:"#7a3030",fontWeight:600}}>⚠ {n} {t("anomBanner")}{crit>0?` — ${crit} ${sevLabel("critical").toLowerCase()}`:""}</div>;
         })()}
-        <div style={{display:"flex",alignItems:"center",gap:14,marginTop:12,flexWrap:"wrap",borderTop:"1px solid #e2e8f0",paddingTop:12}}>
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
-            <input type="checkbox" checked={(r.cover||{}).show!==false} onChange={e=>setField("cover",{...(r.cover||{}),show:e.target.checked})}/>
-            📄 {t("coverShow")}
-          </label>
+        <div style={{marginTop:12,borderTop:"1px solid #e2e8f0",paddingTop:12}}>
+          <div style={{fontSize:11,fontWeight:700,fontFamily:"'Archivo'",color:"#64748b",textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{t("layoutOptions")}</div>
+          <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap"}}>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
+              <input type="checkbox" checked={(r.cover||{}).show!==false} onChange={e=>setField("cover",{...(r.cover||{}),show:e.target.checked})}/>
+              📄 {t("coverShow")}
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
+              <input type="checkbox" checked={!!r.toc} onChange={e=>setField("toc",e.target.checked)}/>
+              📑 {t("tocShow")}
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
+              <input type="checkbox" checked={r.anomRecap!==false} onChange={e=>setField("anomRecap",e.target.checked)}/>
+              ⚠ {t("anomRecapShow")}
+            </label>
+          </div>
           {(r.cover||{}).show!==false && (
-            <input style={{...S.input,flex:1,minWidth:200}} value={(r.cover||{}).subtitle||""} placeholder={t("coverSubtitle")} onChange={e=>setField("cover",{...(r.cover||{}),subtitle:e.target.value})}/>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
+              <input style={{...S.input,flex:1,minWidth:180}} value={(r.cover||{}).subtitle||""} placeholder={t("coverSubtitle")} onChange={e=>setField("cover",{...(r.cover||{}),subtitle:e.target.value})}/>
+              <button style={S.btnGhost} onClick={()=>setShowCover(true)}>🎨 {t("coverCustomize")}</button>
+            </div>
           )}
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
-            <input type="checkbox" checked={!!r.toc} onChange={e=>setField("toc",e.target.checked)}/>
-            📑 {t("tocShow")}
-          </label>
         </div>
       </div>
+
+      {/* MODALE PERSONNALISATION COUVERTURE */}
+      {showCover && (()=>{ const cv=r.cover||{}; const setCv=(patch)=>setField("cover",{...cv,...patch});
+        return (
+        <div style={S.overlay} className="screen-only" onClick={()=>setShowCover(false)}>
+          <div style={{...S.modal,maxWidth:560,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <h2 style={{...S.h2,margin:0}}>🎨 {t("coverCustomize")}</h2>
+              <button style={S.miniBtn} onClick={()=>setShowCover(false)}>✕</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div><label style={S.label}>{t("coverKickerLbl")}</label><input style={S.input} value={cv.kicker||""} placeholder={tplLabel} onChange={e=>setCv({kicker:e.target.value})}/></div>
+              <div><label style={S.label}>{t("coverTitleOverride")}</label><input style={S.input} value={cv.titleOverride||""} placeholder={r.title} onChange={e=>setCv({titleOverride:e.target.value})}/></div>
+              <div><label style={S.label}>{t("coverSubtitle")}</label><input style={S.input} value={cv.subtitle||""} onChange={e=>setCv({subtitle:e.target.value})}/></div>
+              <div><label style={S.label}>{t("coverPreparedBy")}</label><input style={S.input} value={cv.preparedBy||""} placeholder="Frédéric Brochu, tech." onChange={e=>setCv({preparedBy:e.target.value})}/></div>
+              <div>
+                <label style={S.label}>{t("coverBg")}</label>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  {cv.bg && <img src={cv.bg} alt="" style={{height:56,width:90,objectFit:"cover",borderRadius:6,border:"1px solid #cbd5e1"}}/>}
+                  <label style={{...S.btnGhost,cursor:"pointer",fontSize:13}}>{cv.bg?t("coverBgChange"):t("coverBgAdd")}
+                    <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files?.[0]; if(f){ const d=await compressImage(f,1400,0.72); setCv({bg:d}); } e.target.value=""; }}/>
+                  </label>
+                  {cv.bg && <button style={{...S.btnGhost,fontSize:13,color:"#9d0208"}} onClick={()=>setCv({bg:null})}>{t("coverBgRemove")}</button>}
+                </div>
+                <div style={{fontSize:11,color:"#64748b",marginTop:4}}>{t("coverBgHint")}</div>
+              </div>
+            </div>
+            <div style={{marginTop:16,textAlign:"right"}}><button style={S.btnDark} onClick={()=>setShowCover(false)}>{t("save")}</button></div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
@@ -1400,7 +1473,8 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : (b.value||"").trim().slice(0,40);
           const fallback = b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
           return (
-          <div key={b.id} id={"blk-"+b.id}
+          <React.Fragment key={b.id}>
+          <div id={"blk-"+b.id}
             draggable
             onDragStart={(e)=>{ setDragId(b.id); e.dataTransfer.effectAllowed="move"; }}
             onDragOver={(e)=>{ e.preventDefault(); if(overId!==b.id) setOverId(b.id); }}
@@ -1448,6 +1522,22 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
               </div>
             )}
           </div>
+          {/* Insérer un bloc ICI (après ce bloc) */}
+          <div className="screen-only" style={{position:"relative",display:"flex",justifyContent:"center",margin:"2px 0"}}>
+            {insertAt===idx+1 ? (
+              <div style={S.insertMenu} onMouseLeave={()=>setInsertAt(null)}>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("section",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>§ {t("addSection").replace("+ ","")}</button>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("inspect",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>☑ {t("inspectTitle")}</button>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("table",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>▦ {t("tableTitle")}</button>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("photos",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>🖼 {t("photoZone")}</button>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("text",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>¶ {t("freeText").replace("…","")}</button>
+                <button style={{...S.insertChip,color:"#9d0208"}} onClick={()=>setInsertAt(null)}>✕</button>
+              </div>
+            ) : (
+              <button className="insert-line-btn" style={S.insertLine} onClick={()=>setInsertAt(idx+1)} title={t("insertHere")}>+ {t("insertHere")}</button>
+            )}
+          </div>
+          </React.Fragment>
           );
         })}
       </div>
@@ -1487,18 +1577,24 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
         );
       })()}
 
-      {/* BARRE D'AJOUT FIXE (suit le défilement) */}
-      <div style={S.addBar} className="screen-only">
-        <button style={S.addBtn} onClick={()=>addBlock("section")}>{t("addSection")}</button>
-        <button style={{...S.addBtn,background:"#2a9d8f",color:"#fff",borderColor:"#2a9d8f"}} onClick={addEquipment}>{t("addEquip")}</button>
-        <button style={S.addBtn} onClick={()=>addBlock("table")}>{t("addTable")}</button>
-        <button style={S.addBtn} onClick={()=>addBlock("inspect")}>{t("addInspect")}</button>
-        <button style={S.addBtn} onClick={()=>addBlock("text")}>{t("addText")}</button>
-        <button style={S.addBtn} onClick={()=>addBlock("photos")}>{t("addPhotos")}</button>
-        <label style={{...S.addBtn,cursor:"pointer"}}>{pdfBusy?t("importingPdf"):t("addPdfPage")}
-          <input type="file" accept="application/pdf" style={{display:"none"}} disabled={pdfBusy} onChange={e=>{ const f=e.target.files?.[0]; if(f) addPdfPageBlock(f); e.target.value=""; }}/>
-        </label>
-      </div>
+      {/* BOUTON FLOTTANT D'AJOUT (toujours visible) */}
+      <button className="screen-only" style={S.addFab} onClick={()=>setShowAdd(s=>!s)} title={t("addBlockBtn")}>{showAdd?"✕":"＋"}</button>
+      {showAdd && (
+        <div className="screen-only" style={S.addPanel} onMouseLeave={()=>setShowAdd(false)}>
+          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#1e293b",marginBottom:8}}>{t("addBlockBtn")}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("section"); setShowAdd(false); }}>§ {t("addSection").replace("+ ","")}</button>
+            <button style={{...S.addPanelItem,background:"#e6f5f1",borderColor:"#9bd4cc"}} onClick={()=>{ addEquipment(); setShowAdd(false); }}>🔧 {t("addEquip").replace("+ ","")}</button>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("inspect"); setShowAdd(false); }}>☑ {t("addInspect").replace("+ ","")}</button>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("table"); setShowAdd(false); }}>▦ {t("addTable").replace("+ ","")}</button>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("photos"); setShowAdd(false); }}>🖼 {t("addPhotos").replace("+ ","")}</button>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("text"); setShowAdd(false); }}>¶ {t("addText").replace("+ ","")}</button>
+            <label style={{...S.addPanelItem,cursor:"pointer"}}>📄 {pdfBusy?t("importingPdf"):t("addPdfPage").replace("+ ","")}
+              <input type="file" accept="application/pdf" style={{display:"none"}} disabled={pdfBusy} onChange={e=>{ const f=e.target.files?.[0]; if(f){ addPdfPageBlock(f); setShowAdd(false); } e.target.value=""; }}/>
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* LIGHTBOX */}
       {lightbox && <div style={S.overlay} className="screen-only" onClick={()=>setLightbox(null)}><img src={lightbox} alt="" style={{maxWidth:"92vw",maxHeight:"92vh",borderRadius:8}}/></div>}
@@ -1680,25 +1776,50 @@ function InspectEditor({ block, onChange, onZoom }){
 
 function PhotosEditor({ block, onChange, onZoom }){
   const photos=block.photos||[];
+  const layout=block.layout||"grid"; // 1col | 2col | grid
+  const cols = layout==="1col"?1 : layout==="2col"?2 : 2;
+  function setLayout(l){ onChange({layout:l}); }
+  function addSlot(){ onChange({photos:[...photos,{id:bid(),data:null,caption:""}]}); }
+  function addSlots(n){ const add=Array.from({length:n},()=>({id:bid(),data:null,caption:""})); onChange({photos:[...photos,...add]}); }
+  async function fillSlot(id,file){ try{ const d=await compressImage(file); onChange({photos:photos.map(x=>x.id===id?{...x,data:d}:x)}); }catch{} }
+  function clearSlot(id){ onChange({photos:photos.map(x=>x.id===id?{...x,data:null}:x)}); }
+  function delSlot(id){ onChange({photos:photos.filter(x=>x.id!==id)}); }
+  function setCap(id,v){ onChange({photos:photos.map(x=>x.id===id?{...x,caption:v}:x)}); }
   return (
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8,flexWrap:"wrap"}}>
-        <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:1,minWidth:160}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
-        <label style={{...S.btnDark,fontSize:12,padding:"7px 12px",cursor:"pointer"}}>{t("addPhoto")}
-          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={async e=>{ const files=[...(e.target.files||[])]; e.target.value=""; let next=[...photos]; for(const f of files){ try{ const d=await compressImage(f); next.push({id:bid(),data:d,caption:""}); }catch{} } onChange({photos:next}); }}/>
-        </label>
-      </div>
-      {photos.length===0 ? <div style={{textAlign:"center",color:"#64748b",fontSize:13,padding:"14px 0"}}>{t("noPhoto")}</div> : (
-        <div style={S.photoGrid}>
-          {photos.map(p=>(
-            <div key={p.id} style={S.photoThumb}>
-              <img src={p.data} alt="" style={S.photoImg} onClick={()=>onZoom(p.data)}/>
-              <button style={S.photoDel} onClick={()=>{ if(confirm(t("delPhoto"))) onChange({photos:photos.filter(x=>x.id!==p.id)}); }}>×</button>
-              <input style={S.photoCap} value={p.caption||""} placeholder={t("photoCaption")} onChange={e=>onChange({photos:photos.map(x=>x.id===p.id?{...x,caption:e.target.value}:x)})}/>
-            </div>
-          ))}
+        <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:1,minWidth:140}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          <span style={{fontSize:11,color:"#64748b",marginRight:2}}>{t("photoLayout")}</span>
+          <button style={{...S.chip,fontSize:11,padding:"4px 9px",...(layout==="1col"?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}} onClick={()=>setLayout("1col")} title={t("layout1")}>▭</button>
+          <button style={{...S.chip,fontSize:11,padding:"4px 9px",...(layout==="2col"?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}} onClick={()=>setLayout("2col")} title={t("layout2")}>▯▯</button>
+          <button style={{...S.chip,fontSize:11,padding:"4px 9px",...(layout==="grid"?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}} onClick={()=>setLayout("grid")} title={t("layout4")}>⊞</button>
         </div>
-      )}
+      </div>
+      {photos.length===0
+        ? <div style={{textAlign:"center",color:"#64748b",fontSize:13,padding:"10px 0"}}>{t("noPhotoSlot")}</div>
+        : <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:8}}>
+            {photos.map(p=>(
+              <div key={p.id} style={{position:"relative",border:"1px dashed #cbd5e1",borderRadius:8,overflow:"hidden",background:"#faf6ee"}}>
+                {p.data
+                  ? <>
+                      <img src={p.data} alt="" style={{width:"100%",height:140,objectFit:"cover",cursor:"pointer",display:"block"}} onClick={()=>onZoom&&onZoom(p.data)}/>
+                      <button onClick={()=>clearSlot(p.id)} title={t("photoReplace")} style={{position:"absolute",top:5,right:30,border:"none",background:"rgba(0,0,0,.55)",color:"#fff",borderRadius:5,fontSize:11,cursor:"pointer",padding:"2px 6px"}}>↺</button>
+                    </>
+                  : <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:140,cursor:"pointer",color:"#1e293b"}}>
+                      <span style={{fontSize:26,lineHeight:1}}>＋</span>
+                      <span style={{fontSize:12,marginTop:4,fontWeight:700,fontFamily:"'Archivo'"}}>{t("photoAddHere")}</span>
+                      <input type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) fillSlot(p.id,f); e.target.value=""; }}/>
+                    </label>}
+                <button onClick={()=>delSlot(p.id)} title={t("del")} style={{position:"absolute",top:5,right:5,border:"none",background:"rgba(157,2,8,.8)",color:"#fff",borderRadius:5,fontSize:12,cursor:"pointer",padding:"2px 6px"}}>✕</button>
+                <input style={{...S.input,border:"none",borderTop:"1px solid #e2e8f0",borderRadius:0,fontSize:12}} value={p.caption||""} placeholder={t("photoCaption")} onChange={e=>setCap(p.id,e.target.value)}/>
+              </div>
+            ))}
+          </div>}
+      <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+        <button style={S.addBtnSm} onClick={addSlot}>{t("photoAddSlot")}</button>
+        <button style={S.addBtnSm} onClick={()=>addSlots(2)}>{t("photoAdd2")}</button>
+      </div>
     </div>
   );
 }
@@ -1794,20 +1915,29 @@ function PrintDoc({ report, logo }){
   return (
     <div className="print-only" style={DP.wrap}>
       {/* PAGE COUVERTURE (optionnelle) — hors du tableau d'en-tête/pied répété */}
-      {(r.cover||{}).show!==false && (
-        <div style={DP.coverPage} className="cover-page-print">
-          {logo && <img src={logo} alt="" style={{maxHeight:80,maxWidth:240,objectFit:"contain",marginBottom:30}}/>}
-          <div style={DP.coverKicker}>{tplLabel.toUpperCase()}</div>
-          <h1 style={DP.coverTitle}>{r.title||"—"}</h1>
-          {(r.cover||{}).subtitle && <div style={DP.coverSubtitle}>{r.cover.subtitle}</div>}
-          <div style={DP.coverMeta}>
-            {r.client && <div><b>{t("client")} :</b> {r.client}</div>}
-            {r.location && <div><b>{t("location")} :</b> {r.location}</div>}
-            {r.projectNo && <div><b>{t("projectNo")} :</b> {r.projectNo}</div>}
-            {r.date && <div><b>{t("date")} :</b> {r.date}</div>}
+      {(r.cover||{}).show!==false && (()=>{
+        const cv=r.cover||{};
+        const bg=cv.bg; // image de fond optionnelle
+        return (
+        <div style={{...DP.coverPage, position:"relative", overflow:"hidden", ...(bg?{justifyContent:"flex-start",paddingTop:"30mm"}:{})}} className="cover-page-print">
+          {bg && <img src={bg} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/>}
+          {bg && <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,0.74)",zIndex:0}}/>}
+          <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+            {logo && <img src={logo} alt="" style={{maxHeight:80,maxWidth:240,objectFit:"contain",marginBottom:30}}/>}
+            <div style={DP.coverKicker}>{(cv.kicker||tplLabel).toUpperCase()}</div>
+            <h1 style={DP.coverTitle}>{cv.titleOverride||r.title||"—"}</h1>
+            {cv.subtitle && <div style={DP.coverSubtitle}>{cv.subtitle}</div>}
+            <div style={DP.coverMeta}>
+              {r.client && <div><b>{t("client")} :</b> {r.client}</div>}
+              {r.location && <div><b>{t("location")} :</b> {r.location}</div>}
+              {r.projectNo && <div><b>{t("projectNo")} :</b> {r.projectNo}</div>}
+              {r.date && <div><b>{t("date")} :</b> {r.date}</div>}
+              {cv.preparedBy && <div style={{marginTop:14}}><b>{t("coverPreparedBy")} :</b> {cv.preparedBy}</div>}
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* TABLE DES MATIÈRES (optionnelle) — sa propre page, hors table en-tête/pied */}
       {r.toc && (r.blocks||[]).length>0 && (
@@ -1857,7 +1987,7 @@ function PrintDoc({ report, logo }){
       </tbody></table>
 
       {/* RÉCAP GLOBAL DES ANOMALIES D'INSPECTION (toutes grilles, trié par gravité) */}
-      {(()=>{
+      {r.anomRecap!==false && (()=>{
         const collected=[];
         (r.blocks||[]).forEach(b=>{ if(b.type==="inspect"){ (b.items||[]).forEach(it=>{ if(it.state==="anomaly"){ collected.push({ section:b.title||"", label:it.label||"", note:it.note||"", severity:it.severity||"minor" }); } }); } });
         if(collected.length===0) return null;
@@ -1971,10 +2101,16 @@ function PrintDoc({ report, logo }){
               </tbody></table>}
             </>;
           })()}
-          {b.type==="photos" && (b.photos||[]).length>0 && <>
-            <div className="secBar-print" style={DP.secBar}>{b.title}</div>
-            <div style={DP.photoGridPrint}>{b.photos.map(p=>(<div key={p.id} style={{breakInside:"avoid"}}><img src={p.data} alt="" style={DP.photoPrint}/>{p.caption && <div style={DP.cap}>{p.caption}</div>}</div>))}</div>
-          </>}
+          {b.type==="photos" && (b.photos||[]).filter(p=>p.data).length>0 && (()=>{
+            const filled=(b.photos||[]).filter(p=>p.data);
+            const cols = b.layout==="1col"?1 : 2;
+            return <>
+              <div className="secBar-print" style={DP.secBar}>{b.title}</div>
+              <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:8}}>
+                {filled.map(p=>(<div key={p.id} style={{breakInside:"avoid"}}><img src={p.data} alt="" style={DP.photoPrint}/>{p.caption && <div style={DP.cap}>{p.caption}</div>}</div>))}
+              </div>
+            </>;
+          })()}
           {b.type==="pdfpage" && (b.pages||[]).map((p,i)=>(
             <div key={i} className="pdf-page-print"><img src={p} alt="" style={DP.pdfPagePrint}/></div>
           ))}
@@ -1993,6 +2129,7 @@ function PrintDoc({ report, logo }){
 const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Spline+Sans:wght@400;500;600&display=swap');
 *{box-sizing:border-box;}
 .cell-menu-btn{ opacity:0.55; transition:opacity .15s; }
+.insert-line-btn:hover{ opacity:1 !important; border-color:#1e293b !important; color:#1e293b !important; }
 .cell-host:hover .cell-menu-btn{ opacity:1; }
 .cell-menu-btn:hover{ color:#9d0208 !important; opacity:1 !important; }
 .print-only{display:none;}
@@ -2085,8 +2222,14 @@ const S = {
   addBtn:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:13, padding:"10px 16px", borderRadius:8, border:"1.5px dashed #cbd5e1", background:"#ffffff", color:"#475569", cursor:"pointer" },
   addBar:{ position:"sticky", bottom:0, zIndex:50, display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", padding:"12px", margin:"0 -24px -28px", background:"linear-gradient(to top, #f1f5f9 70%, rgba(233,221,201,0))", borderTop:"1px solid #e2e8f0" },
   navFab:{ position:"fixed", right:18, bottom:78, zIndex:60, fontFamily:"'Archivo'", fontWeight:700, fontSize:13, cursor:"pointer", border:"none", borderRadius:24, padding:"10px 16px", background:"#1e293b", color:"#fff", boxShadow:"0 3px 12px rgba(0,0,0,.25)" },
+  addFab:{ position:"fixed", left:18, bottom:78, zIndex:60, fontFamily:"'Archivo'", fontWeight:700, fontSize:24, cursor:"pointer", border:"none", borderRadius:"50%", width:52, height:52, background:"#9d0208", color:"#fff", boxShadow:"0 3px 14px rgba(0,0,0,.3)", lineHeight:1 },
+  addPanel:{ position:"fixed", left:18, bottom:140, zIndex:60, width:240, maxWidth:"82vw", background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:14, boxShadow:"0 8px 30px rgba(0,0,0,.25)" },
+  addPanelItem:{ display:"block", width:"100%", textAlign:"left", border:"1px solid #e0d5c2", background:"#faf6ee", cursor:"pointer", padding:"9px 11px", fontSize:13, color:"#1e293b", borderRadius:8, fontFamily:"'Archivo'", fontWeight:700 },
   navPanel:{ position:"fixed", right:18, bottom:120, zIndex:60, width:330, maxWidth:"88vw", background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:14, boxShadow:"0 8px 30px rgba(0,0,0,.25)" },
   navChip:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:10.5, cursor:"pointer", border:"1.5px solid #cbd5e1", borderRadius:14, padding:"3px 9px", background:"#fff", color:"#475569" },
+  insertLine:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11, cursor:"pointer", border:"1px dashed #c3b59c", borderRadius:14, padding:"3px 14px", background:"#fff", color:"#9a8c78", opacity:0.5, transition:"opacity .15s" },
+  insertMenu:{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"center", background:"#fff", border:"1px solid #e2e8f0", borderRadius:10, padding:"6px 8px", boxShadow:"0 4px 16px rgba(0,0,0,.15)" },
+  insertChip:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:11.5, cursor:"pointer", border:"1px solid #cbd5e1", borderRadius:8, padding:"5px 10px", background:"#faf6ee", color:"#1e293b" },
   navItem:{ display:"block", width:"100%", textAlign:"left", border:"none", borderBottom:"1px solid #f1f5f9", background:"transparent", cursor:"pointer", padding:"8px 6px", fontSize:12.5, color:"#1e293b", fontFamily:"'Spline Sans'", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" },
   blockMenu:{ position:"absolute", right:0, top:"110%", zIndex:40, background:"#fff", border:"1px solid #e2e8f0", borderRadius:8, boxShadow:"0 6px 20px rgba(0,0,0,.22)", padding:5, minWidth:210 },
   blockMenuItem:{ display:"block", width:"100%", textAlign:"left", border:"none", background:"transparent", cursor:"pointer", padding:"9px 10px", fontSize:13, color:"#1e293b", borderRadius:6, fontFamily:"'Spline Sans'" },
