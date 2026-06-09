@@ -4,7 +4,6 @@
 // et ajoute ce qui manque (documents, certifications avec expiration, onboarding). Pas de doublon.
 import React, { useEffect, useState } from 'react';
 import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle, ShieldCheck, BookOpen, ChevronDown, Info, UploadCloud, Sparkles, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { uploadReceipt } from '@/lib/transactions';
 
 type Pers = { id: string; name: string; email?: string; role?: string; succursale?: string; niveauAcces?: string; hire_date?: string; current_salary?: number; last_evaluation_date?: string; next_evaluation_date?: string };
@@ -39,27 +38,33 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   const [classifying, setClassifying] = useState(false);
   const [review, setReview] = useState<any | null>(null);
 
+  // Accès RH via routes SERVEUR (service role + vérif niveau + tenant de session) — plus aucune
+  // lecture directe des tables sensibles depuis le navigateur (clé anon fermée).
+  async function hrGet(qs: string): Promise<any> {
+    try { const r = await fetch(`/api/hr/dossier?${qs}`, { credentials: 'include' }); return r.ok ? await r.json() : {}; } catch { return {}; }
+  }
+  async function hrInsert(table: string, row: any): Promise<any> {
+    try { const r = await fetch('/api/hr/dossier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ table, row }) }); const j = await r.json().catch(() => ({})); return j.row || null; } catch { return null; }
+  }
+  async function hrUpdate(table: string, id: string, patch: any): Promise<void> {
+    try { await fetch('/api/hr/dossier', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ table, id, patch }) }); } catch { /* ignore */ }
+  }
+  async function hrDelete(table: string, id: string): Promise<void> {
+    try { await fetch(`/api/hr/dossier?table=${table}&id=${id}`, { method: 'DELETE', credentials: 'include' }); } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase.from('planner_personnel')
-        .select('*')
-        .eq('tenant_id', tenant).order('name');
-      setPers((data || []).filter((p: any) => p.name) as Pers[]);
-      // Accidents / incidents récents (lecture) — surfacés dans le hub RH.
-      try {
-        const { data: inc } = await supabase.from('incident_reports')
-          .select('id, report_number, incident_type, status, created_at')
-          .eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(12);
-        setIncidents((inc || []) as Incident[]);
-      } catch { /* module accidents indisponible */ }
-      // Documents généraux (non rattachés à un employé).
-      try {
-        const { data: gd } = await supabase.from('hr_documents').select('*').eq('tenant_id', tenant).is('personnel_id', null).order('created_at', { ascending: false });
-        setGenDocs((gd || []) as Doc[]);
-      } catch { /* migration 142 non appliquée */ }
+      const list = await hrGet('list=1');
+      setPers(((list.personnel || []) as Pers[]).filter((p: any) => p.name));
+      const inc = await hrGet('incidents=1');
+      setIncidents((inc.incidents || []) as Incident[]);
+      const gen = await hrGet('general=1');
+      setGenDocs((gen.documents || []) as Doc[]);
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant]);
 
   // ── Dépôt + classement automatique par IA (type, catégorie, employé concerné, expiration) ──
@@ -88,41 +93,37 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   }
   async function saveClassified() {
     if (!review || review.error) return;
-    const payload: any = { tenant_id: tenant, personnel_id: review.personnel_id || null, type: review.type, category: review.category, name: review.title, url: review.url, expiry_date: review.expiry_date || null, classified_by: 'ia' };
-    const { data } = await supabase.from('hr_documents').insert(payload).select().single();
+    const row: any = { personnel_id: review.personnel_id || null, type: review.type, category: review.category, name: review.title, url: review.url, expiry_date: review.expiry_date || null, classified_by: 'ia' };
+    const data = await hrInsert('hr_documents', row);
     if (data) {
-      if (!payload.personnel_id) setGenDocs(p => [data as Doc, ...p]);
-      else if (sel && payload.personnel_id === sel.id) setDocs(p => [...p, data as Doc]);
+      if (!row.personnel_id) setGenDocs(p => [data as Doc, ...p]);
+      else if (sel && row.personnel_id === sel.id) setDocs(p => [...p, data as Doc]);
     }
     setReview(null);
   }
 
   async function openFiche(p: Pers) {
     setSel(p); setDocs([]); setCerts([]); setOnb([]);
-    const [d, c, o] = await Promise.all([
-      supabase.from('hr_documents').select('*').eq('tenant_id', tenant).eq('personnel_id', p.id).order('created_at'),
-      supabase.from('hr_certifications').select('*').eq('tenant_id', tenant).eq('personnel_id', p.id).order('expiry_date'),
-      supabase.from('hr_onboarding').select('*').eq('tenant_id', tenant).eq('personnel_id', p.id).order('sort_order'),
-    ]);
-    setDocs((d.data || []) as Doc[]); setCerts((c.data || []) as Cert[]); setOnb((o.data || []) as Onb[]);
+    const j = await hrGet(`personnelId=${p.id}`);
+    setDocs((j.documents || []) as Doc[]); setCerts((j.certifications || []) as Cert[]); setOnb((j.onboarding || []) as Onb[]);
   }
 
   // ── Certifications ──
-  async function addCert() { if (!sel) return; const { data } = await supabase.from('hr_certifications').insert({ tenant_id: tenant, personnel_id: sel.id, name: '', issuer: '', issued_date: null, expiry_date: null }).select().single(); if (data) setCerts(p => [...p, data as Cert]); }
-  async function updCert(i: number, patch: Partial<Cert>) { const c = { ...certs[i], ...patch }; setCerts(p => p.map((x, j) => j === i ? c : x)); if (c.id) { setBusy(`cert${c.id}`); await supabase.from('hr_certifications').update({ name: c.name, issuer: c.issuer, issued_date: c.issued_date || null, expiry_date: c.expiry_date || null, doc_url: c.doc_url || null }).eq('id', c.id); setBusy(null); } }
-  async function delCert(i: number) { const c = certs[i]; if (c.id) await supabase.from('hr_certifications').delete().eq('id', c.id); setCerts(p => p.filter((_, j) => j !== i)); }
+  async function addCert() { if (!sel) return; const data = await hrInsert('hr_certifications', { personnel_id: sel.id, name: '', issuer: '', issued_date: null, expiry_date: null }); if (data) setCerts(p => [...p, data as Cert]); }
+  async function updCert(i: number, patch: Partial<Cert>) { const c = { ...certs[i], ...patch }; setCerts(p => p.map((x, j) => j === i ? c : x)); if (c.id) { setBusy(`cert${c.id}`); await hrUpdate('hr_certifications', c.id, { name: c.name, issuer: c.issuer, issued_date: c.issued_date || null, expiry_date: c.expiry_date || null, doc_url: c.doc_url || null }); setBusy(null); } }
+  async function delCert(i: number) { const c = certs[i]; if (c.id) await hrDelete('hr_certifications', c.id); setCerts(p => p.filter((_, j) => j !== i)); }
   async function certUpload(i: number, f: File) { try { const url = await uploadReceipt(tenant, f); updCert(i, { doc_url: url }); } catch { /* ignore */ } }
 
   // ── Documents ──
-  async function addDoc() { if (!sel) return; const { data } = await supabase.from('hr_documents').insert({ tenant_id: tenant, personnel_id: sel.id, type: 'document', name: '' }).select().single(); if (data) setDocs(p => [...p, data as Doc]); }
-  async function updDoc(i: number, patch: Partial<Doc>) { const d = { ...docs[i], ...patch }; setDocs(p => p.map((x, j) => j === i ? d : x)); if (d.id) await supabase.from('hr_documents').update({ type: d.type, name: d.name, url: d.url || null, expiry_date: d.expiry_date || null }).eq('id', d.id); }
-  async function delDoc(i: number) { const d = docs[i]; if (d.id) await supabase.from('hr_documents').delete().eq('id', d.id); setDocs(p => p.filter((_, j) => j !== i)); }
+  async function addDoc() { if (!sel) return; const data = await hrInsert('hr_documents', { personnel_id: sel.id, type: 'document', name: '' }); if (data) setDocs(p => [...p, data as Doc]); }
+  async function updDoc(i: number, patch: Partial<Doc>) { const d = { ...docs[i], ...patch }; setDocs(p => p.map((x, j) => j === i ? d : x)); if (d.id) await hrUpdate('hr_documents', d.id, { type: d.type, name: d.name, url: d.url || null, expiry_date: d.expiry_date || null }); }
+  async function delDoc(i: number) { const d = docs[i]; if (d.id) await hrDelete('hr_documents', d.id); setDocs(p => p.filter((_, j) => j !== i)); }
   async function docUpload(i: number, f: File) { try { const url = await uploadReceipt(tenant, f); updDoc(i, { url, name: docs[i].name || f.name }); } catch { /* ignore */ } }
 
   // ── Onboarding ──
-  async function addOnb(phase: string) { if (!sel) return; const { data } = await supabase.from('hr_onboarding').insert({ tenant_id: tenant, personnel_id: sel.id, phase, item: '', done: false, sort_order: onb.length }).select().single(); if (data) setOnb(p => [...p, data as Onb]); }
-  async function updOnb(i: number, patch: Partial<Onb>) { const o = { ...onb[i], ...patch }; setOnb(p => p.map((x, j) => j === i ? o : x)); if (o.id) await supabase.from('hr_onboarding').update({ item: o.item, done: o.done }).eq('id', o.id); }
-  async function delOnb(i: number) { const o = onb[i]; if (o.id) await supabase.from('hr_onboarding').delete().eq('id', o.id); setOnb(p => p.filter((_, j) => j !== i)); }
+  async function addOnb(phase: string) { if (!sel) return; const data = await hrInsert('hr_onboarding', { personnel_id: sel.id, phase, item: '', done: false, sort_order: onb.length }); if (data) setOnb(p => [...p, data as Onb]); }
+  async function updOnb(i: number, patch: Partial<Onb>) { const o = { ...onb[i], ...patch }; setOnb(p => p.map((x, j) => j === i ? o : x)); if (o.id) await hrUpdate('hr_onboarding', o.id, { item: o.item, done: o.done }); }
+  async function delOnb(i: number) { const o = onb[i]; if (o.id) await hrDelete('hr_onboarding', o.id); setOnb(p => p.filter((_, j) => j !== i)); }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
@@ -218,7 +219,7 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
                   <span className="min-w-0 flex-1 truncate font-medium text-gray-800 dark:text-gray-100">{d.name}</span>
                   {d.expiry_date && <span className="text-gray-400">{tr('exp.', 'exp.')} {d.expiry_date}</span>}
                   {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="font-semibold text-emerald-600">📎</a>}
-                  <button onClick={async () => { if (d.id) await supabase.from('hr_documents').delete().eq('id', d.id); setGenDocs(p => p.filter((_, j) => j !== i)); }} className="text-gray-300 hover:text-red-500"><Trash2 size={12} /></button>
+                  <button onClick={async () => { if (d.id) await hrDelete('hr_documents', d.id); setGenDocs(p => p.filter((_, j) => j !== i)); }} className="text-gray-300 hover:text-red-500"><Trash2 size={12} /></button>
                 </div>
               ))}
             </div>
