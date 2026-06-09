@@ -2053,7 +2053,7 @@ function SectionEditor({ block, onChange }){
   function delF(id){ onChange({fields:fields.filter(f=>f.id!==id)}); }
   return (
     <div>
-      <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} placeholder={t("sectionTitle")} onChange={e=>onChange({title:e.target.value})}/>
+      <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
       {(()=>{ const emptyN=fields.filter(f=>!String(f.value||"").trim() && !f.validated).length; return emptyN>0 ? (
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,fontSize:11,color:"#9d6b2e",background:"#fffaf0",border:"1px solid #e0a96d",borderRadius:6,padding:"6px 10px"}}>
           ⚠ {emptyN} {LANG==="en"?"empty field(s) — set N/V, N/A, validate, or remove":"champ(s) vide(s) — inscrire N/V, N/A, valider ou retirer"}
@@ -2064,8 +2064,8 @@ function SectionEditor({ block, onChange }){
         const eb={fontFamily:"'Archivo'",fontWeight:700,fontSize:10,padding:"5px 7px",borderRadius:6,border:"1px solid #e0a96d",background:"#fff",color:"#9d6b2e",cursor:"pointer"};
         return (
           <div key={f.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}>
-            <input style={{...S.input,flex:"0 0 38%",minWidth:120}} value={f.label} placeholder={t("fieldLabel")} onChange={e=>setF(f.id,{label:e.target.value})}/>
-            <input style={{...S.input,flex:1,minWidth:120,...(f.uncertain?{borderColor:"#b9a3dd",background:"#faf7ff"}:empty?{borderColor:"#e0a96d",background:"#fffaf0"}:{})}} value={f.value} placeholder={t("fieldValue")} onChange={e=>setF(f.id,{value:e.target.value,uncertain:false,validated:false})}/>
+            <input style={{...S.input,flex:"0 0 38%",minWidth:120}} value={f.label} onChange={e=>setF(f.id,{label:e.target.value})}/>
+            <input style={{...S.input,flex:1,minWidth:120,...(f.uncertain?{borderColor:"#b9a3dd",background:"#faf7ff"}:empty?{borderColor:"#e0a96d",background:"#fffaf0"}:{})}} value={f.value} onChange={e=>setF(f.id,{value:e.target.value,uncertain:false,validated:false})}/>
             {f.uncertain && <span style={S.uncertainTag} title={t("uncertainNote")}>{t("uncertainBadge")}</span>}
             {empty && (
               <span style={{display:"flex",gap:4}}>
@@ -2113,7 +2113,7 @@ function TableEditor({ block, onChange }){
   }
   return (
     <div>
-      <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} placeholder={t("tableTitle")} onChange={e=>onChange({title:e.target.value})}/>
+      <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",marginBottom:8}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
       <div style={{overflowX:"auto"}}>
         <table style={{borderCollapse:"collapse",width:"100%",fontSize:12}}>
           <thead><tr>
@@ -2171,7 +2171,7 @@ function InspectEditor({ block, onChange, onZoom }){
   return (
     <div>
       <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
-        <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:"1 1 200px"}} value={block.title} placeholder={t("inspectTitle")} onChange={e=>onChange({title:e.target.value})}/>
+        <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:"1 1 200px"}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
         <div style={{position:"relative"}}>
           <button style={{...S.btnGhost,fontSize:12,padding:"7px 12px"}} onClick={()=>setShowLib(s=>!s)}>📋 {t("inspLoadList")}</button>
           {showLib && (
@@ -2193,7 +2193,7 @@ function InspectEditor({ block, onChange, onZoom }){
           return (
           <div key={it.id} style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",borderBottom:"1px solid #f1f5f9",paddingBottom:6}}>
             {num!=null && <span style={{...DP.annNum,background:"#9d0208",minWidth:16,height:16,fontSize:9}}>{String(num).padStart(2,"0")}</span>}
-            <input style={{...S.input,flex:"1 1 160px",minWidth:120}} value={it.label} placeholder={t("inspectPoint")} onChange={e=>setItem(i,{label:e.target.value})}/>
+            <input style={{...S.input,flex:"1 1 160px",minWidth:120}} value={it.label} onChange={e=>setItem(i,{label:e.target.value})}/>
             <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
               {INSP_STATES.map(st=>(
                 <button key={st.id} onClick={()=>setItem(i,{state:st.id})}
@@ -2211,7 +2211,7 @@ function InspectEditor({ block, onChange, onZoom }){
                   </button>
                 ))}
               </div>
-              <input style={{...S.input,flex:"1 1 200px",fontSize:12}} value={it.note||""} placeholder={t("inspectNote")} onChange={e=>setItem(i,{note:e.target.value})}/>
+              <input style={{...S.input,flex:"1 1 200px",fontSize:12}} value={it.note||""} onChange={e=>setItem(i,{note:e.target.value})}/>
               {it.photo
                 ? <div style={{position:"relative",flexShrink:0}}>
                     <img src={it.photo} alt="" style={{height:42,width:42,objectFit:"cover",borderRadius:6,border:"1px solid #cbd5e1",cursor:"pointer"}} onClick={()=>onZoom&&onZoom(it.photo)}/>
