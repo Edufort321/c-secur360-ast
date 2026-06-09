@@ -17,7 +17,7 @@ import { effectiveNextDate, worstCondition } from '@/lib/dga/fields';
 import { dueStatusByDate } from '@/lib/dga/catalog';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
-  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'timesheets', 'logbook', 'todo', 'dga'],
+  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'timesheets', 'logbook', 'todo', 'dga', 'conges', 'rapports'],
 };
 
 const money = (n: number) => `${Math.round(n).toLocaleString('fr-CA')} $`;
