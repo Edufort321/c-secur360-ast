@@ -88,7 +88,8 @@ export default function ModulesPage() {
         const pm = { total: 0, active: 0 };
         (permits || []).forEach((x: any) => { pm.total += 1; if (x.status === 'active') pm.active += 1; });
 
-        const { data: events } = await supabase.from('near_miss_events').select('severity_level, incident_date').eq('tenant_id', tenant);
+        // near_miss_events fermée à l'anon -> route serveur scopée à la session.
+        const events: any[] = await fetch('/api/incidents/summary?kind=nearmiss', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).then((j: any) => (j?.nearMiss || [])).catch(() => []);
         const e = { quasi: 0, accident: 0, year: 0, total: 0 };
         const Y = new Date().getFullYear();
         (events || []).forEach((x: any) => {

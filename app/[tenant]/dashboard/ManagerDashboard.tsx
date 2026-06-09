@@ -378,12 +378,13 @@ export default function ManagerDashboard({
     (async () => {
       try {
         const tid = tenant.subdomain;
-        const [astRes, evtRes] = await Promise.all([
+        const [astRes, nmJson] = await Promise.all([
           supabase.from('ast_permits').select('data, created_at').eq('tenant_id', tid),
-          supabase.from('near_miss_events').select('severity_level, incident_date').eq('tenant_id', tid),
+          // near_miss_events fermée à l'anon -> route serveur scopée à la session.
+          fetch('/api/incidents/summary?kind=nearmiss', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
         ]);
         const asts = astRes.data || [];
-        const events = evtRes.data || [];
+        const events = ((nmJson as any)?.nearMiss || []);
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const lc = currentLanguage === 'fr' ? 'fr-CA' : 'en-CA';

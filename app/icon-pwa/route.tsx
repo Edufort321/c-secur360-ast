@@ -10,7 +10,7 @@ const NAVY = '#111827';
 export async function GET(req: Request) {
   const { origin, searchParams } = new URL(req.url);
   const size = Math.min(1024, Math.max(64, Number(searchParams.get('size')) || 512));
-  const logo = Math.round(size * 0.62); // zone de sécurité « maskable » (~62 % du cadre)
+  const logo = Math.round(size * 0.82); // logo BIEN visible, presque pleine pastille
   return new ImageResponse(
     (
       <div
@@ -21,6 +21,7 @@ export async function GET(req: Request) {
           alignItems: 'center',
           justifyContent: 'center',
           background: NAVY,
+          borderRadius: '50%', // PASTILLE RONDE bleu navy
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}

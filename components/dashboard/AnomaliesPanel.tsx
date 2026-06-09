@@ -108,12 +108,12 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
         });
       };
       try {
-        const { data, error } = await supabase.from('incident_reports').select('id, incident_type, status, data, created_at').eq('tenant_id', tenant);
-        if (!error) for (const r of (data || []) as any[]) { if (r.status !== 'closed') pushIncident(r, r.data?.declarant || r.data?.reporter_name || ''); }
-        else {
-          const { data: nm } = await supabase.from('near_miss_events').select('*').eq('tenant_id', tenant);
-          for (const r of (nm || []) as any[]) pushIncident(r, r.reporter_name || '');
-        }
+        // Lecture via route SERVEUR (tables fermées à l'anon) — scopée au tenant de session.
+        const res = await fetch('/api/incidents/summary', { credentials: 'include' });
+        const j: any = res.ok ? await res.json() : {};
+        const incidents = (j.incidents || []) as any[];
+        if (incidents.length) { for (const r of incidents) { if (r.status !== 'closed') pushIncident(r, r.data?.declarant || r.data?.reporter_name || ''); } }
+        else { for (const r of ((j.nearMiss || []) as any[])) pushIncident(r, r.reporter_name || ''); }
       } catch { /* aucune table d'incident */ }
 
       // 5. Filtrage selon visibilité
