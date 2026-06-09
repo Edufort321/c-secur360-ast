@@ -728,6 +728,7 @@ export default function App(){
   const [query,setQuery]=useState("");
   const [statusFilter,setStatusFilter]=useState("all");
   const [showSettings,setShowSettings]=useState(false);
+  const [showAnomDash,setShowAnomDash]=useState(false); // dashboard anomalies/recos consolidé (tous rapports)
   const [importing,setImporting]=useState(false);
   const [importErr,setImportErr]=useState(null);
   const [importPreview,setImportPreview]=useState(null);
@@ -812,6 +813,23 @@ export default function App(){
     persist([r,...db]); pushReport(r); setSelId(r.id); setView("editor");
   }
   function updateReport(id,patch){ const next=db.map(r=>r.id===id?{...r,...patch,updatedAt:Date.now()}:r); persist(next); const upd=next.find(r=>r.id===id); if(upd) pushReport(upd); }
+  // Mise à jour d'une annotation (anomalie/reco) d'un rapport depuis le dashboard consolidé.
+  function updateReportAnnotation(reportId,annId,patch){
+    const rep=db.find(x=>x.id===reportId); if(!rep) return;
+    const anns=(rep.annotations||[]).map(a=>a.id===annId?{...a,...patch}:a);
+    updateReport(reportId,{annotations:anns});
+  }
+  // Met à jour un CONSTAT (depuis le dashboard) qu'il vienne d'une annotation OU d'une grille d'inspection.
+  function updateReportFinding(f,patch){
+    const rep=db.find(x=>x.id===f.reportId); if(!rep) return;
+    if(f.source==="inspect"){
+      const blocks=(rep.blocks||[]).map(b=> b.id===f.blkId ? {...b, items:(b.items||[]).map(it=>it.id===f.id?{...it,...patch}:it)} : b);
+      updateReport(f.reportId,{blocks});
+    } else {
+      const anns=(rep.annotations||[]).map(a=>a.id===f.id?{...a,...patch}:a);
+      updateReport(f.reportId,{annotations:anns});
+    }
+  }
   function deleteReport(id){ if(!confirm(t("confirmDel")))return; persist(db.filter(r=>r.id!==id)); pushDelete(id); if(selId===id){setSelId(null);setView("list");} }
   function duplicateReport(id, asVersion){
     const src=db.find(r=>r.id===id); if(!src)return;
@@ -1050,13 +1068,18 @@ export default function App(){
           </div>
           {tab==="reports" ? (
             <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={(file)=>setHwImport({file,tplId:"",query:""})} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
+              onOpen={(id)=>{setSelId(id);setView("editor");}} onOpenAnomDash={()=>setShowAnomDash(true)} onNew={newReport} onImport={handleImport} onHandwriting={(file)=>setHwImport({file,tplId:"",query:""})} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
           ) : (
             <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
           )}
         </>
       )}
       {view==="editor" && sel && <Editor report={sel} logo={logo} customTpls={customTpls} onUpdate={(patch)=>updateReport(sel.id,patch)} onDuplicate={duplicateReport}/>}
+
+      {/* DASHBOARD ANOMALIES / RECOMMANDATIONS CONSOLIDÉ (tous les rapports) */}
+      {showAnomDash && <AnomalyDashboard db={db} onClose={()=>setShowAnomDash(false)}
+        onOpen={(reportId,blk)=>{ setShowAnomDash(false); setSelId(reportId); setView("editor"); if(blk) setTimeout(()=>{ const el=document.getElementById("blk-"+blk); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } },350); }}
+        onUpdate={updateReportFinding}/>}
     </div>
   );
 }
@@ -1072,7 +1095,22 @@ const TREE_LEVELS = [
   { id:"location", key:"lvlLocation", get:(r)=> (r.location||"").trim() || t("noLocation") },
 ];
 
-function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onNew, onImport, onHandwriting, onPhotos, customTpls, onDelete, onDuplicate }){
+// Agrège les CONSTATS (anomalies + recommandations) d'un rapport : annotations (kind anomaly/reco)
+// + anomalies des grilles d'inspection. Utilisé par le dashboard consolidé et son compteur.
+function collectFindings(report){
+  const out=[];
+  (report.annotations||[]).forEach(a=>{ if(a.kind==="anomaly"||a.kind==="reco"){
+    out.push({ source:"ann", reportId:report.id, reportTitle:report.title||"", id:a.id, kind:a.kind, title:a.title||"", desc:a.desc||"", severity:a.severity||"minor", equipment:a.equipment||"", priceWanted:a.priceWanted, corrected:!!a.corrected });
+  }});
+  (report.blocks||[]).forEach(b=>{ if(b.type==="inspect"){ (b.items||[]).forEach(it=>{ if(it.state==="anomaly"){
+    out.push({ source:"inspect", reportId:report.id, reportTitle:report.title||"", id:it.id, blkId:b.id, kind:"anomaly", title:it.label||"", desc:it.note||"", severity:it.severity||"minor", equipment:b.title||"", corrected:!!it.corrected });
+  }}); }});
+  return out;
+}
+function collectAllFindings(list){ return (list||[]).flatMap(collectFindings); }
+
+function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onOpenAnomDash, onNew, onImport, onHandwriting, onPhotos, customTpls, onDelete, onDuplicate }){
+  const anomTotal=collectAllFindings(all).length;
   const [showTpl,setShowTpl]=useState(false);
   const [rView,setRView]=useState("gallery"); // galerie (cartes) | grille (lignes compactes)
   const [order,setOrder]=useState(["client","job","location"]); // ordre des niveaux
@@ -1148,6 +1186,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onHandwriting(f); e.target.value=""; }}/>
           </label>
           <button style={{...S.btnDark,background:"#0e7490",cursor:"pointer"}} onClick={onPhotos}>📷 {LANG==="en"?"Photos":"Photos"}</button>
+          {anomTotal>0 && <button style={{...S.btnDark,background:"#9d0208",cursor:"pointer"}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations in one place":"Toutes les anomalies et recommandations en un endroit"}>⚠ {LANG==="en"?"Anomalies":"Anomalies"} ({anomTotal})</button>}
           <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
         </div>
         {/* Carte « Tous les rapports + Classement » — alignée avec les actions */}
@@ -2399,6 +2438,83 @@ function SoumissionBuilder({ report, items, onClose }){
             <button style={S.btnGhost} onClick={onClose}>{t("cancel")}</button>
             <button style={S.btnPrimary} onClick={go}>💲 {LANG==="en"?"Open the quote":"Ouvrir la soumission"}</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Dashboard CONSOLIDÉ des anomalies/recommandations de TOUS les rapports — gestion instantanée :
+// filtrer, marquer corrigé, ajuster la gravité, ouvrir le rapport à l'endroit exact.
+function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
+  const all=collectAllFindings(db);
+  const [kind,setKind]=useState("all");     // all | anomaly | reco
+  const [stat,setStat]=useState("open");    // open (à traiter) | corrected | all
+  const [sev,setSev]=useState("all");       // all | critical | major | minor
+  const [q,setQ]=useState("");
+  const filtered=all.filter(f=>{
+    if(kind!=="all" && f.kind!==kind) return false;
+    if(stat==="open" && f.corrected) return false;
+    if(stat==="corrected" && !f.corrected) return false;
+    if(sev!=="all" && f.kind==="anomaly" && (f.severity||"minor")!==sev) return false;
+    const s=(q||"").toLowerCase();
+    if(s && !((f.title+" "+f.desc+" "+f.equipment+" "+f.reportTitle).toLowerCase().includes(s))) return false;
+    return true;
+  });
+  const order={critical:0,major:1,minor:2};
+  filtered.sort((a,b)=>(a.corrected?1:0)-(b.corrected?1:0) || (order[a.severity]??3)-(order[b.severity]??3));
+  const cAnom=all.filter(f=>f.kind==="anomaly").length, cReco=all.filter(f=>f.kind==="reco").length, cCorr=all.filter(f=>f.corrected).length, cOpen=all.length-cCorr;
+  const chip=(on)=>({...S.chip,...(on?S.chipOn:{})});
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={{...S.modal,maxWidth:820,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
+          <h2 style={{...S.h2,margin:0}}>⚠ {LANG==="en"?"Anomalies & recommendations":"Anomalies & recommandations"}</h2>
+          <button style={S.miniBtnDel} onClick={onClose}>✕</button>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",fontSize:11,color:"#64748b",marginBottom:10}}>
+          <span>⚠ {LANG==="en"?"Anomalies":"Anomalies"} : <b>{cAnom}</b></span>
+          <span>➤ {LANG==="en"?"Reco.":"Reco."} : <b>{cReco}</b></span>
+          <span style={{color:"#b45309"}}>○ {LANG==="en"?"Open":"À traiter"} : <b>{cOpen}</b></span>
+          <span style={{color:"#2a9d8f"}}>✓ {LANG==="en"?"Corrected":"Corrigées"} : <b>{cCorr}</b></span>
+        </div>
+        <input style={{...S.input,marginBottom:8}} placeholder={LANG==="en"?"Search…":"Rechercher…"} value={q} onChange={e=>setQ(e.target.value)}/>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+          <button style={chip(kind==="all")} onClick={()=>setKind("all")}>{LANG==="en"?"All types":"Tous"}</button>
+          <button style={chip(kind==="anomaly")} onClick={()=>setKind("anomaly")}>⚠ {LANG==="en"?"Anomalies":"Anomalies"}</button>
+          <button style={chip(kind==="reco")} onClick={()=>setKind("reco")}>➤ {LANG==="en"?"Recommendations":"Recommandations"}</button>
+          <span style={{width:1,height:20,background:"#e2e8f0"}}/>
+          <button style={chip(stat==="open")} onClick={()=>setStat("open")}>○ {LANG==="en"?"To handle":"À traiter"}</button>
+          <button style={chip(stat==="corrected")} onClick={()=>setStat("corrected")}>✓ {LANG==="en"?"Corrected":"Corrigées"}</button>
+          <button style={chip(stat==="all")} onClick={()=>setStat("all")}>{LANG==="en"?"All":"Toutes"}</button>
+          <span style={{width:1,height:20,background:"#e2e8f0"}}/>
+          {["all","critical","major","minor"].map(sv=>(<button key={sv} style={chip(sev===sv)} onClick={()=>setSev(sv)}>{sv==="all"?(LANG==="en"?"All sev.":"Toute grav."):sevLabel(sv)}</button>))}
+        </div>
+        <div style={{fontSize:11,color:"#94a3b8",margin:"4px 0 8px"}}>{filtered.length} {LANG==="en"?"result(s)":"résultat(s)"}</div>
+        <div>
+          {filtered.length===0 ? <div style={{textAlign:"center",color:"#94a3b8",padding:"24px 0"}}>{LANG==="en"?"Nothing here.":"Rien ici."}</div> :
+            filtered.map(f=>(
+              <div key={f.reportId+":"+f.id} style={{border:"1px solid #e2e8f0",borderLeft:`4px solid ${f.kind==="anomaly"?sevColor(f.severity):"#2a6f97"}`,borderRadius:9,padding:"9px 11px",marginBottom:7,background:f.corrected?"#f6faf8":"#fff",opacity:f.corrected?0.75:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                  <div style={{flex:"1 1 280px",minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,textDecoration:f.corrected?"line-through":"none"}}>
+                      {f.kind==="anomaly"?"⚠ ":"➤ "}{f.title||(LANG==="en"?"(untitled)":"(sans titre)")}
+                      {f.kind==="anomaly" && <span style={{...S.uncertainTag,marginLeft:8,color:sevColor(f.severity),background:"#fff",borderColor:sevColor(f.severity)}}>{sevLabel(f.severity)}</span>}
+                    </div>
+                    <div style={{fontSize:11,color:"#64748b",marginTop:2}}>📄 {f.reportTitle||"—"}{f.equipment?`  ·  🔧 ${f.equipment}`:""}{f.source==="inspect"?`  ·  ☑`:""}</div>
+                    {f.desc && <div style={{fontSize:12,color:"#475569",marginTop:3}}>{f.desc}</div>}
+                    {f.correctedAt && <div style={{fontSize:10.5,color:"#2a9d8f",marginTop:2}}>✓ {LANG==="en"?"Corrected":"Corrigée"} {String(f.correctedAt).slice(0,10)}</div>}
+                  </div>
+                  <div style={{display:"flex",gap:5,flexDirection:"column",alignItems:"flex-end"}}>
+                    <button style={{...S.miniBtn}} onClick={()=>onOpen(f.reportId, f.source==="inspect"?f.blkId:undefined)}>{LANG==="en"?"Open ›":"Ouvrir ›"}</button>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      {f.kind==="anomaly" && !f.corrected && SEVERITIES.map(s=>(<button key={s.id} onClick={()=>onUpdate(f,{severity:s.id})} title={sevLabel(s.id)} style={{width:18,height:18,borderRadius:"50%",border:f.severity===s.id?`2px solid ${s.color}`:"1px solid #cbd5e1",background:f.severity===s.id?s.color:"#fff",cursor:"pointer",padding:0}}/>))}
+                      <button style={{...S.miniBtn,...(f.corrected?{color:"#2a9d8f",borderColor:"#9bd4cc",background:"#eef7f3"}:{})}} onClick={()=>onUpdate(f, f.corrected?{corrected:false,correctedAt:null}:{corrected:true,correctedAt:new Date().toISOString()})}>{f.corrected?"✓ "+(LANG==="en"?"Corrected":"Corrigé"):(LANG==="en"?"Mark corrected":"Marquer corrigé")}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     </div>
