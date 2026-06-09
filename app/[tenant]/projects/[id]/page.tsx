@@ -110,12 +110,13 @@ export default function ProjectDetailPage() {
     if (!p?.project_number) { setLinkedPermits([]); return; }
     let active = true;
     (async () => {
-      const [wpRes, csRes] = await Promise.all([
-        supabase.from('work_permits').select('permit_number, type, data, updated_at').eq('tenant_id', tenant),
+      // work_permits fermée à l'anon (RLS) -> route serveur ; confined_space_permits reste lisible (policy).
+      const [wpJson, csRes] = await Promise.all([
+        fetch('/api/work-permits', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
         supabase.from('confined_space_permits').select('permit_number, data, updated_at').eq('tenant_id', tenant),
       ]);
       const pn = p.project_number;
-      const wp = (wpRes.data || [])
+      const wp = (((wpJson as any)?.rows) || [])
         .filter((r: any) => r.data?.projectNumber === pn || r.data?.taskInfo?.projectNumber === pn)
         .map((r: any) => ({ permit_number: r.permit_number, type: r.type || 'work', status: r.data?.status || 'draft', updated_at: r.updated_at }));
       const cs = (csRes.data || [])

@@ -378,12 +378,12 @@ export default function ManagerDashboard({
     (async () => {
       try {
         const tid = tenant.subdomain;
-        const [astRes, nmJson] = await Promise.all([
-          supabase.from('ast_permits').select('data, created_at').eq('tenant_id', tid),
-          // near_miss_events fermée à l'anon -> route serveur scopée à la session.
+        // ast_permits et near_miss_events sont fermées à l'anon (RLS) -> routes serveur (session).
+        const [astJson, nmJson] = await Promise.all([
+          fetch('/api/ast-permits', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
           fetch('/api/incidents/summary?kind=nearmiss', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
         ]);
-        const asts = astRes.data || [];
+        const asts = ((astJson as any)?.rows || []);
         const events = ((nmJson as any)?.nearMiss || []);
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
