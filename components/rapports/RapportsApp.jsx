@@ -1109,12 +1109,12 @@ const TREE_LEVELS = [
 // Agrège les CONSTATS (anomalies + recommandations) d'un rapport : annotations (kind anomaly/reco)
 // + anomalies des grilles d'inspection. Utilisé par le dashboard consolidé et son compteur.
 function collectFindings(report){
-  const out=[];
+  const out=[]; const rd=report.date||""; const rnum=report.num||report.projectNo||"";
   (report.annotations||[]).forEach(a=>{ if(a.kind==="anomaly"||a.kind==="reco"){
-    out.push({ source:"ann", reportId:report.id, reportTitle:report.title||"", id:a.id, kind:a.kind, title:a.title||"", desc:a.desc||"", severity:a.severity||"minor", equipment:a.equipment||"", priceWanted:a.priceWanted, corrected:!!a.corrected });
+    out.push({ source:"ann", reportId:report.id, reportTitle:report.title||"", reportDate:rd, reportNum:rnum, id:a.id, kind:a.kind, title:a.title||"", desc:a.desc||"", severity:a.severity||"minor", equipment:a.equipment||"", priceWanted:a.priceWanted, corrected:!!a.corrected, correctedAt:a.correctedAt||null });
   }});
   (report.blocks||[]).forEach(b=>{ if(b.type==="inspect"){ (b.items||[]).forEach(it=>{ if(it.state==="anomaly"){
-    out.push({ source:"inspect", reportId:report.id, reportTitle:report.title||"", id:it.id, blkId:b.id, kind:"anomaly", title:it.label||"", desc:it.note||"", severity:it.severity||"minor", equipment:b.title||"", corrected:!!it.corrected });
+    out.push({ source:"inspect", reportId:report.id, reportTitle:report.title||"", reportDate:rd, reportNum:rnum, id:it.id, blkId:b.id, kind:"anomaly", title:it.label||"", desc:it.note||"", severity:it.severity||"minor", equipment:b.title||"", corrected:!!it.corrected, correctedAt:it.correctedAt||null });
   }}); }});
   return out;
 }
@@ -1128,6 +1128,8 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
   const [treePath,setTreePath]=useState([]); // ex: ["2025","Hydro","Poste 12"]
   const [narrow,setNarrow]=useState(typeof window!=="undefined" && window.innerWidth<640);
   useEffect(()=>{ const h=()=>setNarrow(window.innerWidth<640); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
+  const [impOpen,setImpOpen]=useState(false); // menu « Importer »
+  const [clsOpen,setClsOpen]=useState(false); // menu « Classement »
   const counts={ all:all.length }; STATUSES.forEach(s=>{ counts[s.id]=all.filter(r=>r.status===s.id).length; });
 
   const levelGet=(id)=> (TREE_LEVELS.find(l=>l.id===id)||{}).get || (()=> "");
@@ -1188,31 +1190,40 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
         ))}
       </div>
 
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:16}}>
-        {/* Actions : sur mobile, rangée compacte défilante horizontalement */}
-        <div style={{display:"flex",gap:8,flexWrap:narrow?"nowrap":"wrap",overflowX:narrow?"auto":"visible",WebkitOverflowScrolling:"touch",maxWidth:"100%",paddingBottom:narrow?4:0}}>
-          {(()=>{ const ab=narrow?{padding:"8px 12px",fontSize:12,flexShrink:0,whiteSpace:"nowrap"}:{}; return (<>
-          <label style={{...S.btnDark,...ab,cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
-            {t("importDoc")}
-            <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onImport(f); e.target.value=""; }}/>
-          </label>
-          <label style={{...S.btnDark,...ab,background:"#6b4e9d",cursor:"pointer",display:"inline-flex",alignItems:"center"}}>
-            {t("handwriting")}
-            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; if(f) onHandwriting(f); e.target.value=""; }}/>
-          </label>
-          <button style={{...S.btnDark,...ab,background:"#0e7490",cursor:"pointer"}} onClick={onPhotos}>📷 {LANG==="en"?"Photos":"Photos"}</button>
-          {anomTotal>0 && <button style={{...S.btnDark,...ab,background:"#9d0208",cursor:"pointer"}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations in one place":"Toutes les anomalies et recommandations en un endroit"}>⚠ {LANG==="en"?"Anomalies":"Anomalies"} ({anomTotal})</button>}
-          <button style={{...S.btnPrimary,...ab}} onClick={()=>setShowTpl(true)}>{t("newReport")}</button>
-          </>); })()}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}>
+        {/* Actions regroupées : Importer ▾ · (Anomalies) · + Nouveau — pas de débordement */}
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{position:"relative"}}>
+            <button style={{...S.btnDark,cursor:"pointer"}} onClick={()=>{setImpOpen(v=>!v);setClsOpen(false);}}>📥 {LANG==="en"?"Import":"Importer"} ▾</button>
+            {impOpen && (
+              <div style={{position:"absolute",left:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:6,minWidth:210}} onMouseLeave={()=>setImpOpen(false)}>
+                <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>📄 {t("importDoc")}
+                  <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onImport(f); e.target.value=""; }}/>
+                </label>
+                <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>✍ {t("handwriting")}
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onHandwriting(f); e.target.value=""; }}/>
+                </label>
+                <button style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{setImpOpen(false);onPhotos();}}>📷 {LANG==="en"?"Photos":"Photos"}</button>
+              </div>
+            )}
+          </div>
+          {anomTotal>0 && <button style={{...S.btnGhost,borderColor:"#e3a0a0",color:"#9d0208"}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations":"Toutes les anomalies et recommandations"}>⚠ {anomTotal}</button>}
+          <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>+ {t("newReport")}</button>
         </div>
-        {/* Carte « Tous les rapports + Classement » — défilante horizontalement sur mobile */}
-        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:narrow?"nowrap":"wrap",overflowX:narrow?"auto":"visible",WebkitOverflowScrolling:"touch",maxWidth:"100%",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"6px 12px"}}>
-          <button onClick={()=>setTreePath([])} style={{display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
-          <span style={{width:1,height:18,background:"#e2e8f0"}}/>
-          <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569"}}>{t("treeOrder")} :</span>
-          {order.map((lvlId,i)=>(
-            <span key={lvlId} style={S.treeOrderChip} onClick={()=>{ const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]); }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</span>
-          ))}
+        {/* Classement : Tous (N) + menu déroulant de l'ordre des niveaux */}
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>setTreePath([])} style={{display:"inline-flex",alignItems:"center",gap:6,border:"1px solid #e2e8f0",background:treePath.length===0?"#1e293b":"#fff",color:treePath.length===0?"#fff":"#1e293b",borderRadius:8,padding:"7px 11px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
+          <div style={{position:"relative"}}>
+            <button style={{...S.btnGhost,padding:"7px 11px"}} onClick={()=>{setClsOpen(v=>!v);setImpOpen(false);}}>⇅ {t("treeOrder")} ▾</button>
+            {clsOpen && (
+              <div style={{position:"absolute",right:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:8,minWidth:200}} onMouseLeave={()=>setClsOpen(false)}>
+                <div style={{fontSize:10.5,color:"#64748b",padding:"0 4px 6px"}}>{LANG==="en"?"Tap a level to move it first":"Touchez un niveau pour le mettre en premier"}</div>
+                {order.map((lvlId,i)=>(
+                  <button key={lvlId} style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{ const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]); }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1239,22 +1250,23 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
         </div>
       )}
 
-      {/* DISPOSITION : arbre à gauche (uniquement s'il y a des rapports), rapports à droite */}
-      <div style={S.treeLayout}>
-        {db.length>0 && (
-        <aside style={S.treePanel}>
-          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:11,color:"#475569",marginBottom:8}}>{t("treeOrder")}</div>
-          <TreeNode node={tree} path={[]}/>
-        </aside>
-        )}
+      {/* CLASSEMENT : barre horizontale compacte (comme la recherche), AU-DESSUS des cartes.
+          Fil d'Ariane + dossiers du niveau courant cliquables. */}
+      <div>
+        {db.length>0 && (()=>{
+          let cur=tree; for(const seg of treePath){ cur=(cur[seg]&&cur[seg].__children)||{}; }
+          const curKeys=Object.keys(cur).sort((a,b)=>b.localeCompare(a));
+          return (
+          <div style={{display:"flex",gap:8,alignItems:"center",overflowX:"auto",WebkitOverflowScrolling:"touch",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"8px 12px",marginBottom:14}}>
+            <button onClick={()=>setTreePath([])} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"5px 11px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
+            {treePath.map((seg,i)=>(<span key={i} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:8}}><span style={{color:"#94a3b8"}}>›</span><button onClick={()=>setTreePath(treePath.slice(0,i+1))} style={{border:"none",background:"transparent",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5,color:"#1e293b",whiteSpace:"nowrap"}}>{seg}</button></span>))}
+            {curKeys.length>0 && <span style={{flexShrink:0,width:1,height:18,background:"#e2e8f0"}}/>}
+            {curKeys.map(k=>(<button key={k} onClick={()=>setTreePath([...treePath,k])} style={{...S.treeOrderChip,flexShrink:0,whiteSpace:"nowrap"}}>{k} <span style={S.treeCount}>{cur[k].__count}</span></button>))}
+          </div>
+          );
+        })()}
 
-        <div style={{flex:1,minWidth:0}}>
-          {treePath.length>0 && (
-            <div style={S.breadcrumb}>
-              <span onClick={()=>setTreePath([])} style={{cursor:"pointer",color:"#1e293b"}}>{t("treeAll")}</span>
-              {treePath.map((seg,i)=>(<span key={i}> › <span onClick={()=>setTreePath(treePath.slice(0,i+1))} style={{cursor:"pointer"}}>{seg}</span></span>))}
-            </div>
-          )}
+        <div style={{minWidth:0}}>
           {treeFiltered.length===0 ? <div style={{textAlign:"center",color:"#64748b",padding:"48px 0"}}>{t("noReports")}</div> : (
             rView==="grid" ? (
               /* GRILLE = lignes compactes */
@@ -2556,6 +2568,7 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
   const [stat,setStat]=useState("open");    // open (à traiter) | corrected | all
   const [sev,setSev]=useState("all");       // all | critical | major | minor
   const [q,setQ]=useState("");
+  const [byEquip,setByEquip]=useState(false); // vue « historique par équipement »
   const filtered=all.filter(f=>{
     if(kind!=="all" && f.kind!==kind) return false;
     if(stat==="open" && f.corrected) return false;
@@ -2593,19 +2606,21 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
           <button style={chip(stat==="all")} onClick={()=>setStat("all")}>{LANG==="en"?"All":"Toutes"}</button>
           <span style={{width:1,height:20,background:"#e2e8f0"}}/>
           {["all","critical","major","minor"].map(sv=>(<button key={sv} style={chip(sev===sv)} onClick={()=>setSev(sv)}>{sv==="all"?(LANG==="en"?"All sev.":"Toute grav."):sevLabel(sv)}</button>))}
+          <span style={{width:1,height:20,background:"#e2e8f0"}}/>
+          <button style={chip(byEquip)} onClick={()=>setByEquip(v=>!v)} title={LANG==="en"?"Group by equipment (history)":"Regrouper par équipement (historique)"}>🔧 {LANG==="en"?"By equipment":"Par équipement"}</button>
         </div>
         <div style={{fontSize:11,color:"#94a3b8",margin:"4px 0 8px"}}>{filtered.length} {LANG==="en"?"result(s)":"résultat(s)"}</div>
-        <div>
-          {filtered.length===0 ? <div style={{textAlign:"center",color:"#94a3b8",padding:"24px 0"}}>{LANG==="en"?"Nothing here.":"Rien ici."}</div> :
-            filtered.map(f=>(
-              <div key={f.reportId+":"+f.id} style={{border:"1px solid #e2e8f0",borderLeft:`4px solid ${f.kind==="anomaly"?sevColor(f.severity):"#2a6f97"}`,borderRadius:9,padding:"9px 11px",marginBottom:7,background:f.corrected?"#f6faf8":"#fff",opacity:f.corrected?0.75:1}}>
+        {(()=>{
+          // Ligne réutilisable (constat).
+          const Row=(f)=>(
+              <div key={f.reportId+":"+f.id} style={{border:"1px solid #e2e8f0",borderLeft:`4px solid ${f.kind==="anomaly"?sevColor(f.severity):"#2a6f97"}`,borderRadius:9,padding:"9px 11px",marginBottom:7,background:f.corrected?"#f6faf8":"#fff",opacity:f.corrected?0.78:1}}>
                 <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
                   <div style={{flex:"1 1 280px",minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:13,textDecoration:f.corrected?"line-through":"none"}}>
                       {f.kind==="anomaly"?"⚠ ":"➤ "}{f.title||(LANG==="en"?"(untitled)":"(sans titre)")}
                       {f.kind==="anomaly" && <span style={{...S.uncertainTag,marginLeft:8,color:sevColor(f.severity),background:"#fff",borderColor:sevColor(f.severity)}}>{sevLabel(f.severity)}</span>}
                     </div>
-                    <div style={{fontSize:11,color:"#64748b",marginTop:2}}>📄 {f.reportTitle||"—"}{f.equipment?`  ·  🔧 ${f.equipment}`:""}{f.source==="inspect"?`  ·  ☑`:""}</div>
+                    <div style={{fontSize:11,color:"#64748b",marginTop:2}}>📄 {f.reportTitle||"—"}{f.reportDate?`  ·  ${f.reportDate}`:""}{!byEquip&&f.equipment?`  ·  🔧 ${f.equipment}`:""}{f.source==="inspect"?`  ·  ☑`:""}</div>
                     {f.desc && <div style={{fontSize:12,color:"#475569",marginTop:3}}>{f.desc}</div>}
                     {f.correctedAt && <div style={{fontSize:10.5,color:"#2a9d8f",marginTop:2}}>✓ {LANG==="en"?"Corrected":"Corrigée"} {String(f.correctedAt).slice(0,10)}</div>}
                   </div>
@@ -2618,8 +2633,28 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
                   </div>
                 </div>
               </div>
-            ))}
-        </div>
+          );
+          if(filtered.length===0) return <div style={{textAlign:"center",color:"#94a3b8",padding:"24px 0"}}>{LANG==="en"?"Nothing here.":"Rien ici."}</div>;
+          if(!byEquip) return <div>{filtered.map(Row)}</div>;
+          // VUE HISTORIQUE PAR ÉQUIPEMENT : groupe par nom d'équipement, trie les constats du + récent
+          // au + ancien (date du rapport). Les corrigés restent visibles = l'historique de l'équipement.
+          const groups={};
+          filtered.forEach(f=>{ const k=(f.equipment||"(—)").trim()||"(—)"; (groups[k]=groups[k]||[]).push(f); });
+          const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+          return <div>{names.map(name=>{
+            const items=groups[name].slice().sort((a,b)=>String(b.reportDate||"").localeCompare(String(a.reportDate||"")));
+            const open=items.filter(f=>!f.corrected).length, corr=items.length-open;
+            return (
+              <div key={name} style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,background:"#f1f5f9",borderRadius:8,padding:"7px 11px",marginBottom:6}}>
+                  <span style={{fontFamily:"'Archivo'",fontWeight:800,fontSize:13}}>🔧 {name}</span>
+                  <span style={{fontSize:11,color:"#64748b"}}>{items.length} {LANG==="en"?"finding(s)":"constat(s)"} · <b style={{color:"#b45309"}}>{open}</b> {LANG==="en"?"open":"à traiter"} · <b style={{color:"#2a9d8f"}}>{corr}</b> {LANG==="en"?"corrected":"corrigé(s)"}</span>
+                </div>
+                {items.map(Row)}
+              </div>
+            );
+          })}</div>;
+        })()}
       </div>
     </div>
   );
@@ -3143,8 +3178,8 @@ const S = {
   tab:{ fontFamily:"'Archivo'", fontWeight:700, fontSize:14, padding:"10px 20px", border:"none", background:"transparent", color:"#64748b", cursor:"pointer", borderBottom:"3px solid transparent", marginBottom:"-2px" },
   tabOn:{ color:"#9d0208", borderBottom:"3px solid #9d0208" },
   tplTag:{ display:"inline-block", background:"#f1f5f9", borderRadius:4, padding:"2px 6px", margin:"2px 3px 0 0", fontSize:10 },
-  treeLayout:{ display:"flex", gap:18, alignItems:"flex-start", flexWrap:"wrap" },
-  treePanel:{ flex:"1 1 220px", minWidth:0, maxWidth:300, background:"#ffffff", borderRadius:12, padding:14, boxShadow:"0 2px 10px rgba(80,60,30,.06)" },
+  treeLayout:{ display:"flex", flexDirection:"column", gap:14, alignItems:"stretch" },
+  treePanel:{ width:"100%", maxHeight:230, overflowY:"auto", background:"#ffffff", borderRadius:12, padding:14, boxShadow:"0 2px 10px rgba(80,60,30,.06)" },
   treeNode:{ display:"flex", alignItems:"center", gap:6, padding:"5px 8px", borderRadius:7, cursor:"pointer", fontSize:13, color:"#1e293b", marginTop:2 },
   treeNodeOn:{ background:"#eef2f5", color:"#1e293b", fontWeight:600 },
   treeCount:{ fontSize:10, background:"rgba(0,0,0,.08)", borderRadius:10, padding:"1px 7px", color:"#475569" },
