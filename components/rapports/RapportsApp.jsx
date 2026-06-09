@@ -201,6 +201,34 @@ function eqid(){ _seq++; return "eq_"+Date.now().toString(36)+"_"+_seq; }
 const PRESENCE_COLORS=["#2a6f97","#9d0208","#2a9d8f","#6b4e9d","#e0a96d","#0e7490","#b45309","#4f46e5"];
 function hashInt(s){ let h=0; const str=String(s||""); for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return h; }
 function initials(name){ const p=String(name||"").trim().split(/\s+/); return ((p[0]?.[0]||"")+(p[1]?.[0]||"")).toUpperCase()||"?"; }
+// Parseur JSON TOLÉRANT pour les réponses IA potentiellement TRONQUÉES (max_tokens) : on tente
+// JSON.parse ; en cas d'échec on répare (retire les virgules traînantes, ferme les chaînes et les
+// crochets/accolades laissés ouverts, retire une clé pendante) puis on réessaie.
+function repairJsonParse(raw){
+  let s=String(raw||"").replace(/```json|```/g,"").trim();
+  const i=s.indexOf("{"); if(i>0) s=s.slice(i);
+  try{ return JSON.parse(s); }catch{}
+  // 1) virgules traînantes
+  try{ return JSON.parse(s.replace(/,\s*([}\]])/g,"$1")); }catch{}
+  // 2) reconstruction depuis une coupure : on rejoue en suivant chaînes et profondeur
+  let out=""; let inStr=false; let esc=false; const stack=[];
+  for(let k=0;k<s.length;k++){ const c=s[k]; out+=c;
+    if(inStr){ if(esc) esc=false; else if(c==="\\") esc=true; else if(c==='"') inStr=false; continue; }
+    if(c==='"'){ inStr=true; continue; }
+    if(c==="{"||c==="[") stack.push(c==="{"?"}":"]");
+    else if(c==="}"||c==="]") stack.pop();
+  }
+  if(inStr) out+='"';                                  // chaîne coupée -> on la ferme
+  out=out.replace(/[\s,]+$/,"");                        // espaces / virgule finale
+  out=out.replace(/,?\s*"[^"]*"\s*:\s*$/,"");           // clé pendante « "k": » sans valeur -> retire
+  out=out.replace(/[\s,]+$/,"");
+  // Dans un OBJET, une chaîne seule sans « : » = clé incomplète -> retire (vs élément de tableau).
+  if(stack[stack.length-1]==="}") out=out.replace(/,?\s*"[^"]*"\s*$/,"");
+  out=out.replace(/[\s,]+$/,"");
+  while(stack.length){ out+=stack.pop(); }             // ferme accolades/crochets ouverts
+  out=out.replace(/,\s*([}\]])/g,"$1");
+  return JSON.parse(out);                               // si ça échoue encore -> erreur remontée
+}
 // Clone profond d'un bloc avec de nouveaux ids partout (pour duplication sûre)
 function cloneBlockFresh(src){
   const copy=JSON.parse(JSON.stringify(src)); copy.id=bid();
@@ -397,7 +425,7 @@ RÈGLES IMPORTANTES :
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
   const clean=txt.replace(/```json|```/g,"").trim();
   const m=clean.match(/\{[\s\S]*\}/);
-  return JSON.parse(m?m[0]:clean);
+  return repairJsonParse(m?m[0]:clean);
 }
 
 // Extraction depuis PLUSIEURS PHOTOS (caméra, prises à la suite) -> UN SEUL rapport structuré
@@ -422,7 +450,7 @@ RÈGLES : recopie fidèlement (verbatim si imprimé) ; pour le manuscrit/illisib
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
   const clean=txt.replace(/```json|```/g,"").trim();
   const m=clean.match(/\{[\s\S]*\}/);
-  const parsed=JSON.parse(m?m[0]:clean);
+  const parsed=repairJsonParse(m?m[0]:clean);
   parsed.__truncated = data.stop_reason==="max_tokens";
   return parsed;
 }
@@ -455,7 +483,7 @@ RÈGLES : conserve EXACTEMENT les mêmes sections, libellés et colonnes que le 
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
   const clean=txt.replace(/```json|```/g,"").trim();
   const m=clean.match(/\{[\s\S]*\}/);
-  const parsed=JSON.parse(m?m[0]:clean);
+  const parsed=repairJsonParse(m?m[0]:clean);
   parsed.__truncated = data.stop_reason==="max_tokens";
   return parsed;
 }
@@ -717,7 +745,7 @@ ${textChunk}`;
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
   const clean=txt.replace(/```json|```/g,"").trim();
   const m=clean.match(/\{[\s\S]*\}/);
-  const parsed=JSON.parse(m?m[0]:clean);
+  const parsed=repairJsonParse(m?m[0]:clean);
   parsed.__truncated = data.stop_reason==="max_tokens";
   return parsed;
 }
