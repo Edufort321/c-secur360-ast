@@ -2507,13 +2507,10 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
 
   async function load() {
     setLoading(true);
-    // Tente avec access_password (migration 079) ; repli sans si la colonne n'existe pas
+    // Liste d'accès via la route SERVEUR (access_password fermé à l'anon).
     let pers: any[] | null = null;
-    const r1 = await supabase.from('planner_personnel').select('id, name, email, niveauAcces, access_password').eq('tenant_id', tenant).order('name');
-    if (r1.error) {
-      const r2 = await supabase.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', tenant).order('name');
-      pers = r2.data;
-    } else pers = r1.data;
+    const accRes = await fetch('/api/hr/personnel?access=1', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    pers = (accRes as any).personnel || [];
     const usersRes = await fetch(`/api/admin/users?tenant=${tenant}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ users: [] }));
     // Fusionne le repli local pour les fiches dont access_password n'est pas (ou plus) en base.
     const merged = (pers || []).filter((p: any) => p.name).map((p: any) => ({ ...p, access_password: p.access_password || readLocalPwd(p.id) }));
@@ -2561,7 +2558,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
     if (!form.password.trim()) { setNotice(tr('Saisissez ou générez un mot de passe.', 'Enter or generate a password.')); return; }
     setBusy(true); setNotice(null);
     try {
-      await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id);
+      await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', id: selected.id, password: form.password }) });
       writeLocalPwd(selected.id, form.password);
       setSelected(s => s ? { ...s, access_password: form.password } : s);
       setPersonnel(list => list.map(p => p.id === selected.id ? { ...p, access_password: form.password } : p));
@@ -2589,7 +2586,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       // Synchronise le courriel (si la fiche n'en avait pas) + le mot de passe dans la fiche,
       // sinon le badge « ✓ compte » ne correspond pas (courriel fiche vide ≠ courriel du compte).
       if (selected?.id) {
-        await supabase.from('planner_personnel').update({ access_password: form.password, email: form.email }).eq('id', selected.id);
+        await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', id: selected.id, password: form.password, email: form.email }) });
         writeLocalPwd(selected.id, form.password);
       }
       setSelected(s => s ? { ...s, access_password: form.password, email: form.email } : s);
@@ -2608,7 +2605,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      if (selected?.id) { await supabase.from('planner_personnel').update({ access_password: form.password, email: form.email }).eq('id', selected.id); writeLocalPwd(selected.id, form.password); }
+      if (selected?.id) { await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', id: selected.id, password: form.password, email: form.email }) }); writeLocalPwd(selected.id, form.password); }
       setSelected(s => s ? { ...s, access_password: form.password, email: form.email } : s);
       setNotice(tr('Mot de passe mis à jour ✓ — enregistré dans la fiche.', 'Password updated ✓ — saved to the record.'));
       load();
@@ -2640,7 +2637,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
       // Conserve le nouveau mot de passe dans la fiche (base + repli local par id du personnel).
-      await supabase.from('planner_personnel').update({ access_password: pwdEditValue }).eq('tenant_id', tenant).ilike('email', pwdEditFor.email);
+      await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', email_match: pwdEditFor.email, password: pwdEditValue }) });
       const matchPers = personnel.find(p => (p.email || '').toLowerCase() === (pwdEditFor.email || '').toLowerCase());
       if (matchPers?.id) writeLocalPwd(matchPers.id, pwdEditValue);
       setNotice(tr(`Mot de passe mis à jour pour ${pwdEditFor.email} ✓`, `Password updated for ${pwdEditFor.email} ✓`));
@@ -3044,12 +3041,11 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         objectives: objectives || null,
         last_evaluation_date: new Date().toISOString().slice(0, 10),
       };
-      let { error: empErr } = await supabase.from('planner_personnel').update(empPayload).eq('id', employee.id);
-      if (empErr && /skill_scores|objectives/i.test(empErr.message || '')) {
-        const { skill_scores, objectives: _o, ...fallback } = empPayload; // migrations 075-076 non exécutées
-        ({ error: empErr } = await supabase.from('planner_personnel').update(fallback).eq('id', employee.id));
-      }
-      if (empErr) throw empErr;
+      // Écriture SALAIRE/ÉVALUATION via la route SERVEUR (colonnes salariales fermées à l'anon ;
+      // fallback colonnes récentes géré côté serveur). Niveau requis : canHr.
+      const evalRes = await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'eval', id: employee.id, payload: empPayload }) });
+      const evalJson = await evalRes.json().catch(() => ({}));
+      if (!evalRes.ok || evalJson.error) throw new Error(evalJson.error || 'DB');
 
       // Crée une entrée d'historique d'évaluation (avec fallback si colonnes 076 absentes)
       const evalPayload: any = {
@@ -3755,20 +3751,13 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       console.log('[Personnel save] payload pour', r.name, ':', base, 'id existant ?', r.id);
 
       try {
-        const exec = (payload: any) => r.id
-          ? supabase.from('planner_personnel').update(payload).eq('id', r.id).select()
-          : supabase.from('planner_personnel').insert(payload).select();
-        let result = await exec(base);
-        // Repli si la colonne next_evaluation_date n'existe pas (migration 071/082 non exécutée)
-        if (result.error && /next_evaluation_date/i.test(result.error.message || '')) {
-          const { next_evaluation_date, ...b2 } = base;
-          result = await exec(b2);
-        }
-        console.log('[Personnel save] résultat pour', r.name, ':', result);
-        if (result.error) throw result.error;
-        if (!result.data || result.data.length === 0) {
-          throw new Error('RLS a bloqué l\'opération (0 ligne retournée — vérifiez les policies)');
-        }
+        // Écriture via la route SERVEUR (canAuth) — niveauAcces non modifiable via la clé anon
+        // (fermeture de l'élévation de privilèges). Fallback de colonnes géré côté serveur.
+        const resp = r.id
+          ? await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'profile', id: r.id, patch: base }) })
+          : await fetch('/api/hr/personnel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ row: base }) });
+        const jr = await resp.json().catch(() => ({}));
+        if (!resp.ok || jr.error) throw new Error(jr.error || 'DB');
         ok++;
       } catch (e: any) {
         const msg = String(e?.message || e?.details || e?.hint || '');
@@ -3784,19 +3773,18 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   // Bouton de diagnostic : insère une ligne test directement
   async function testDirectInsert() {
     setSaving(true); setNotice(null);
-    const testRow = { tenant_id: tenant, name: `TEST ${new Date().toISOString().slice(11, 19)}`, is_active: true, niveauAcces: 'consultation' };
-    console.log('[TEST] tentative insert :', testRow);
-    const { data, error } = await supabase.from('planner_personnel').insert(testRow).select();
-    console.log('[TEST] résultat :', { data, error });
-    if (error) setNotice(`❌ TEST ÉCHEC : ${error.message}\nCode: ${error.code} · Détails: ${error.details || '—'} · Hint: ${error.hint || '—'}`);
-    else if (!data || data.length === 0) setNotice(`❌ TEST BLOQUÉ : RLS a refusé silencieusement (vérifiez les policies de planner_personnel)`);
-    else { setNotice(`✓ TEST RÉUSSI : ligne "${testRow.name}" insérée avec id ${data[0].id}`); await load(); }
+    const testRow = { name: `TEST ${new Date().toISOString().slice(11, 19)}`, is_active: true, niveauAcces: 'consultation' };
+    const resp = await fetch('/api/hr/personnel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ row: testRow }) });
+    const j = await resp.json().catch(() => ({}));
+    if (!resp.ok || j.error) setNotice(`❌ TEST ÉCHEC : ${j.error || resp.status}`);
+    else if (!j.row) setNotice(`❌ TEST BLOQUÉ`);
+    else { setNotice(`✓ TEST RÉUSSI : ligne "${testRow.name}" insérée avec id ${j.row.id}`); await load(); }
     setSaving(false);
   }
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('planner_personnel').delete().eq('id', r.id);
+    if (r.id) await fetch(`/api/hr/personnel?id=${r.id}`, { method: 'DELETE', credentials: 'include' });
     setRows(p => p.filter((_, j) => j !== i));
   }
 

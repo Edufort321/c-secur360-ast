@@ -7,6 +7,8 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Niveaux ayant accès aux renseignements sensibles (salaires, dossiers RH).
 const HR_LEVELS = new Set(['admin_paie', 'rh', 'direction', 'super_user']);
+// Niveaux ayant accès à la gestion des ACCÈS (mots de passe d'accès, niveaux). administration+.
+const AUTH_LEVELS = new Set(['administration', 'rh', 'direction', 'super_user']);
 
 export type Access = { userId: string; email: string; tenant: string; level: string };
 
@@ -33,3 +35,5 @@ export async function resolveAccess(req: NextRequest): Promise<Access | null> {
 
 /** Accès aux dossiers RH / salaires (admin_paie, rh, direction, super_user). */
 export function canHr(level: string): boolean { return HR_LEVELS.has(level); }
+/** Accès à la gestion des accès/mots de passe (administration, rh, direction, super_user). */
+export function canAuth(level: string): boolean { return AUTH_LEVELS.has(level); }
