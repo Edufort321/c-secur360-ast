@@ -292,7 +292,8 @@ function redirectToLogin(request: NextRequest, originalPath: string): NextRespon
 
 export const config = {
   matcher: [
-    // Ne PAS matcher les assets statiques
-    '/((?!_next/static|_next/image|favicon.ico|logo.png|manifest.json).*)',
+    // Ne PAS matcher les assets statiques, les icônes PWA générées, ni les fichiers de
+    // vérification Google Search Console (doivent être accessibles à la racine, sans auth).
+    '/((?!_next/static|_next/image|favicon.ico|logo.png|manifest.json|icon-pwa|google[0-9a-f]+\\.html|robots.txt|sitemap.xml).*)',
   ],
 }
