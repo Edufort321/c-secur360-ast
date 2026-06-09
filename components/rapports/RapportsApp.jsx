@@ -2421,7 +2421,7 @@ const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@
   body *{ visibility:hidden !important; }
   .screen-only{ display:none !important; }
   .print-only, .print-only *{ visibility:visible !important; }
-  .print-only{ display:block !important; position:static; left:auto; top:auto; width:100%; }
+  .print-only{ display:block !important; position:absolute !important; left:0; top:0; width:100%; }
   .cover-page-print{ page: covpage; page-break-after:always; break-after:page; }
   .toc-page-print{ page-break-after:always; break-after:page; }
   .rpt-content{ counter-reset: page 0; }
