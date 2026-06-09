@@ -725,17 +725,20 @@ function shrinkDataUrl(dataUrl, maxDim, q){
     }; img.onerror=()=>resolve(dataUrl); img.src=dataUrl; }catch{ resolve(dataUrl); }
   });
 }
-// Plafonne le POIDS TOTAL des images envoyées à l'IA (limite Vercel ~4,5 Mo) : on réduit
-// progressivement dimensions/qualité jusqu'à passer sous ~3,6 Mo de base64.
+// Garde une RÉSOLUTION ÉLEVÉE (≈1568 px = l'optimum de vision de Claude — ne PAS descendre plus bas
+// que nécessaire, sinon l'IA ne lit plus le manuscrit/les plaques). On reste sous la limite Vercel
+// (~4,5 Mo) en baissant d'abord la QUALITÉ, puis légèrement la dimension, jamais sous ~1100 px.
 async function fitImagesForAi(dataUrls){
-  const LIMIT=3_600_000; let dims=1200, q=0.6, arr=dataUrls||[];
-  for(let attempt=0;attempt<6;attempt++){
-    const shrunk=await Promise.all(arr.map(d=>shrinkDataUrl(d,dims,q)));
+  const LIMIT=3_900_000;
+  const steps=[[1568,0.85],[1568,0.75],[1500,0.68],[1300,0.62],[1100,0.55]];
+  let last=null;
+  for(const [dims,q] of steps){
+    const shrunk=await Promise.all((dataUrls||[]).map(d=>shrinkDataUrl(d,dims,q)));
+    last=shrunk;
     const total=shrunk.reduce((s,d)=>s+(d?d.length:0),0);
-    if(total<LIMIT || (dims<=640 && q<=0.38)) return shrunk;
-    dims=Math.round(dims*0.78); q=Math.max(0.38,q-0.08);
+    if(total<LIMIT) return shrunk;
   }
-  return await Promise.all(arr.map(d=>shrinkDataUrl(d,640,0.4)));
+  return last; // dernier essai (rare : beaucoup de photos) — on tente quand même plutôt que de crasher
 }
 // Construit le tableau {base64,mediaType} attendu par l'IA à partir de data URLs, sous la limite.
 async function aiImagesFrom(dataUrls){
@@ -1028,21 +1031,19 @@ export default function App(){
         setImportErr(null);
       } else {
         const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
-        // PDF trop lourd pour l'envoi binaire (limite Vercel ~4,5 Mo) -> extraction par TEXTE (lots).
-        if(b64.length>4_000_000){
-          out=await extractLargePdf(key, file, (from,to,total)=>{ setImportErr(`${t("importBatch")} ${from}-${to} / ${total}…`); });
-          setImportErr(null);
-        } else {
-          out=await extractDocWithApi(key,b64);
-        }
+        // L'IA lit le PDF binaire directement (OCR fidèle, y compris scanné) — NE PAS dégrader en texte.
+        out=await extractDocWithApi(key,b64);
       }
-      // Joindre une copie visuelle fidèle de chaque page (photos, schémas, mise en page d'origine)
+      // Joindre une copie visuelle fidèle de chaque page (si PDF.js dispo). C'est OPTIONNEL : si ça
+      // échoue, l'extraction (lue directement par l'IA) reste valide -> on n'affiche pas d'erreur.
       let pageImages=[];
-      try{
-        setImportErr(`${t("importSnap")} 0 / ${pages}…`);
-        pageImages=await pdfFileToPageSnapshots(file,(i,tot)=>{ setImportErr(`${t("importSnap")} ${i} / ${tot}…`); });
-        setImportErr(null);
-      }catch(snapErr){ pageImages=[]; }
+      if(pages>0 && typeof window!=="undefined" && window.pdfjsLib){
+        try{
+          setImportErr(`${t("importSnap")} 0 / ${pages}…`);
+          pageImages=await pdfFileToPageSnapshots(file,(i,tot)=>{ setImportErr(`${t("importSnap")} ${i} / ${tot}…`); });
+        }catch(snapErr){ pageImages=[]; }
+      }
+      setImportErr(null); // efface le message de progression dans tous les cas (succès ou snapshot ignoré)
       const blocks=normalizeBlocks(out.blocks);
       if(pageImages.length){
         blocks.push({ type:"pdfpage", id:bid(), name:t("importOriginalPages"), pages:pageImages });
@@ -1078,12 +1079,7 @@ export default function App(){
         setImportErr(null);
       } else {
         const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
-        if(b64.length>4_000_000){
-          out=await extractLargePdf(key, file, (from,to,total)=>{ setImportErr(`${t("importBatch")} ${from}-${to} / ${total}…`); });
-          setImportErr(null);
-        } else {
-          out=await extractDocWithApi(key,b64);
-        }
+        out=await extractDocWithApi(key,b64);
       }
       const blocks=emptyBlockValues(normalizeBlocks(out.blocks));
       const name=(out.title||file.name||"Gabarit").replace(/\.pdf$/i,"");
