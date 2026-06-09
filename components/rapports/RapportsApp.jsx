@@ -966,14 +966,16 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
         </div>
       )}
 
-      {/* DISPOSITION : arbre à gauche, rapports à droite */}
+      {/* DISPOSITION : arbre à gauche (uniquement s'il y a des rapports), rapports à droite */}
       <div style={S.treeLayout}>
+        {db.length>0 && (
         <aside style={S.treePanel}>
           <div style={{...S.treeNode, ...(treePath.length===0?S.treeNodeOn:{}), fontWeight:700}} onClick={()=>setTreePath([])}>
             <span style={{flex:1}}>📁 {t("treeAll")}</span><span style={S.treeCount}>{db.length}</span>
           </div>
-          {db.length>0 ? <TreeNode node={tree} path={[]}/> : <div style={{fontSize:12,color:"#a99",padding:"8px 0"}}>{t("treeEmpty")}</div>}
+          <TreeNode node={tree} path={[]}/>
         </aside>
+        )}
 
         <div style={{flex:1,minWidth:0}}>
           {treePath.length>0 && (
