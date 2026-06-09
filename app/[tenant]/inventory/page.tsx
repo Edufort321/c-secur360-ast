@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { PortalHeader } from '@/components/PortalHeader';
+import { BackButton } from '@/components/BackButton';
 
 // Module Inventaire porté (app Vite) — monté client-only pour éviter tout souci SSR.
 // On affiche le PortalHeader unifié de l'hôte au-dessus (le header interne de l'inventaire a été retiré).
@@ -19,6 +20,7 @@ export default function InventoryPage() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <PortalHeader tenant={tenant} subtitle="Inventaire" />
+      <div className="px-4 pt-3"><BackButton fallback={`/${tenant}/modules`} /></div>
       <InventoryRoot />
     </div>
   );
