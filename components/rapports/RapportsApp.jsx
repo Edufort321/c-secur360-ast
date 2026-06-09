@@ -731,6 +731,7 @@ export default function App(){
   const [importErr,setImportErr]=useState(null);
   const [importPreview,setImportPreview]=useState(null);
   const [photoCap,setPhotoCap]=useState(null); // capture caméra multi-photos : null=fermé, {photos:[],tplId:""}=ouvert
+  const [hwImport,setHwImport]=useState(null);  // import manuscrit : null=fermé, {file,tplId,query}=demande d'association gabarit
   const [customTpls,setCustomTpls]=useState([]);
   const [hiddenTpls,setHiddenTpls]=useState([]);
   const [theme,setTheme]=useState({...DEFAULT_THEME});
@@ -872,21 +873,28 @@ export default function App(){
   function deleteTemplate(id){ if(!confirm(t("tplDelete")))return; persistTpls(customTpls.filter(c=>c.id!==id)); pushTplDelete(id); }
 
   // Importer un BROUILLON MANUSCRIT (image) -> rapport avec valeurs "à vérifier"
-  async function handleHandwriting(file){
-    const key=getApiKey();
-    if(!key){ alert(t("importNoKey")); setShowSettings(true); return; }
+  // Import manuscrit : on demande d'abord (modal) d'associer ou non à un gabarit, puis on extrait.
+  async function runHandwriting(file, tplId){
+    setHwImport(null);
     setImporting(true); setImportErr(null);
     try{
       const dataUrl=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result)); r.onerror=()=>rej(new Error("read")); r.readAsDataURL(file); });
       const b64=dataUrl.split(",")[1];
       const mt=(file.type||"image/jpeg");
-      const out=await extractHandwritingWithApi(key,b64,mt);
-      // marquer les flags d'incertitude dans les blocs normalisés
+      let out;
+      if(tplId){
+        // Associé à un gabarit -> on remplit EXACTEMENT sa structure (standardisation)
+        const tBlocks = customTpls.find(c=>c.id===tplId)?.blocks || tplBlocks(tplId);
+        out=await extractIntoTemplate([{base64:b64,mediaType:mt}], tBlocks);
+        out.suggestedTemplate=tplId;
+      } else {
+        out=await extractHandwritingWithApi("server",b64,mt);
+      }
       const blocks=normalizeBlocks(out.blocks);
       setImportPreview({
         title:out.title||"", client:out.client||"", location:out.location||"", projectNo:out.projectNo||"",
-        template: ["inspection","testing","quote","generic"].includes(out.suggestedTemplate)?out.suggestedTemplate:"generic",
-        blocks, truncated:false, sourceText:"", handwriting:true,
+        template: tplId || (["inspection","testing","quote","generic"].includes(out.suggestedTemplate)?out.suggestedTemplate:"generic"),
+        blocks, truncated:!!out.__truncated, sourceText:"", handwriting:true,
       });
     }catch(e){ setImportErr(e.message); }
     setImporting(false);
@@ -989,6 +997,32 @@ export default function App(){
         </div>
       )}
 
+      {/* Import manuscrit -> associer (ou non) à un gabarit, avec recherche dynamique */}
+      {hwImport!==null && (()=>{
+        const tplRow={display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,textAlign:"left",border:"1px solid #e2e8f0",borderRadius:8,padding:"9px 12px",background:"#fff",cursor:"pointer",fontSize:13};
+        const tplRowOn={border:"2px solid #1e293b",background:"#f1f5f9",fontWeight:700};
+        const opts=[...visTpls().map(tp=>({id:tp.id,name:t(tp.key),num:tp.num})), ...(customTpls||[]).map(c=>({id:c.id,name:"★ "+(c.name||""),num:c.num}))]
+          .filter(o=>{ const q=(hwImport.query||"").toLowerCase(); return !q || (o.name||"").toLowerCase().includes(q) || (o.num||"").toLowerCase().includes(q); });
+        return (
+        <div style={S.overlay} onClick={()=>{ if(!importing) setHwImport(null); }}>
+          <div style={{...S.modal,maxWidth:480,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <h2 style={S.h2}>✍ {LANG==="en"?"Handwritten import":"Import manuscrit"}</h2>
+            <p style={{...S.hint,marginTop:0}}>{LANG==="en"?"Associate this sheet with a template? The AI will fill its exact structure (standardization). Otherwise it auto-detects.":"Associer cette feuille à un gabarit ? L'IA remplira sa structure exacte (standardisation). Sinon, auto-détection."}</p>
+            <input style={{...S.input,marginBottom:8}} placeholder={LANG==="en"?"Search a template…":"Rechercher un gabarit…"} value={hwImport.query} onChange={e=>setHwImport(h=>({...h,query:e.target.value}))}/>
+            <div style={{maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+              <button onClick={()=>setHwImport(h=>({...h,tplId:""}))} style={{...tplRow, ...(hwImport.tplId===""?tplRowOn:{})}}>🔎 {LANG==="en"?"Auto-detect (no template)":"Auto-détecter (aucun gabarit)"}</button>
+              {opts.map(o=>(<button key={o.id} onClick={()=>setHwImport(h=>({...h,tplId:o.id}))} style={{...tplRow, ...(hwImport.tplId===o.id?tplRowOn:{})}}><span>{o.name}</span>{o.num && <span style={{fontSize:11,color:"#94a3b8"}}>{o.num}</span>}</button>))}
+              {opts.length===0 && <div style={{fontSize:12,color:"#94a3b8",padding:"6px 2px"}}>{LANG==="en"?"No template found.":"Aucun gabarit trouvé."}</div>}
+            </div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <button style={S.btnPrimary} disabled={importing} onClick={()=>runHandwriting(hwImport.file, hwImport.tplId)}>{importing?"…":(LANG==="en"?"Continue":"Continuer")}</button>
+              <button style={S.btnGhost} onClick={()=>{ if(!importing) setHwImport(null); }}>{t("cancel")}</button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
       {view==="list" && (
         <>
           <div style={S.tabRow} className="screen-only">
@@ -997,7 +1031,7 @@ export default function App(){
           </div>
           {tab==="reports" ? (
             <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={handleHandwriting} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
+              onOpen={(id)=>{setSelId(id);setView("editor");}} onNew={newReport} onImport={handleImport} onHandwriting={(file)=>setHwImport({file,tplId:"",query:""})} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
           ) : (
             <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
           )}
