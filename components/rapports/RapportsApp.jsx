@@ -1781,6 +1781,14 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
               <input type="checkbox" checked={r.anomRecap!==false} onChange={e=>setField("anomRecap",e.target.checked)}/>
               ⚠ {t("anomRecapShow")}
             </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Each section/equipment starts on its own page (fresh template header)":"Chaque section/équipement commence sur sa propre page (nouvelle entête de gabarit)"}>
+              <input type="checkbox" checked={!!r.sectionPerPage} onChange={e=>setField("sectionPerPage",e.target.checked)}/>
+              📃 {LANG==="en"?"One page per section":"Une page par section"}
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Condensed: tighter spacing to fit more per page":"Condensé : espacement réduit pour densifier la page"}>
+              <input type="checkbox" checked={!!r.condensed} onChange={e=>setField("condensed",e.target.checked)}/>
+              🗜 {LANG==="en"?"Condensed":"Condensé"}
+            </label>
           </div>
           {(r.cover||{}).show!==false && (
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
@@ -1829,8 +1837,16 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
           const icon = b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
           const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : (b.value||"").trim().slice(0,40);
           const fallback = b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
+          const startsNewPage = b.type==="section" && (b.newPage || (r.sectionPerPage && idx!==r.blocks.findIndex(x=>x.type==="section")));
           return (
           <React.Fragment key={b.id}>
+          {startsNewPage && (
+            <div className="screen-only" style={{display:"flex",alignItems:"center",gap:8,margin:"12px 2px 4px",color:"#94a3b8",fontSize:10.5,fontFamily:"'Archivo'",fontWeight:700,letterSpacing:1}}>
+              <span style={{flex:1,height:0,borderTop:"2px dashed #cbd5e1"}}/>
+              📄 {LANG==="en"?"NEW PAGE":"NOUVELLE PAGE"}
+              <span style={{flex:1,height:0,borderTop:"2px dashed #cbd5e1"}}/>
+            </div>
+          )}
           <div id={"blk-"+b.id}
             draggable
             onDragStart={(e)=>{ setDragId(b.id); e.dataTransfer.effectAllowed="move"; }}
@@ -1847,6 +1863,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
                   <button style={S.miniBtn} onClick={()=>duplicateBlock(b.id)} title={t("dupBlock")}>⧉</button>
                   {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>duplicateGroup(b.id)} title={t("dupEquip")}>⧉⧉</button>}
                   {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>convertToInspect(b.id)} title={t("convertInspect")}>☑</button>}
+                  {b.type==="section" && <button style={{...S.miniBtn,...(b.newPage?{color:"#2a6f97",borderColor:"#2a6f97",background:"#eef5fa"}:{})}} onClick={()=>updBlock(b.id,{newPage:!b.newPage})} title={LANG==="en"?"Start this section on a new page":"Commencer cette section sur une nouvelle page"}>📄</button>}
                   {b.type==="inspect" && <button style={{...S.miniBtn,color:"#1e293b",borderColor:"#a9cddc"}} onClick={()=>convertToSection(b.id)} title={t("convertSection")}>§</button>}
                   <button style={S.miniBtnDel} onClick={()=>removeBlock(b.id)}>✕</button>
                 </> : <>
@@ -1858,6 +1875,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
                       <button style={S.blockMenuItem} onClick={()=>{duplicateBlock(b.id);setOpenMenuId(null);}}>⧉ {t("dupBlock")}</button>
                       {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{duplicateGroup(b.id);setOpenMenuId(null);}}>⧉⧉ {t("dupEquip")}</button>}
                       {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{convertToInspect(b.id);setOpenMenuId(null);}}>☑ {t("convertInspect")}</button>}
+                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{newPage:!b.newPage});setOpenMenuId(null);}}>📄 {b.newPage?(LANG==="en"?"No page break":"Sans saut de page"):(LANG==="en"?"Page break before":"Saut de page avant")}</button>}
                       {b.type==="inspect" && <button style={S.blockMenuItem} onClick={()=>{convertToSection(b.id);setOpenMenuId(null);}}>§ {t("convertSection")}</button>}
                       <button style={{...S.blockMenuItem,color:"#9d0208"}} onClick={()=>{removeBlock(b.id);setOpenMenuId(null);}}>✕ {t("removeBlock")}</button>
                     </div>
@@ -2482,7 +2500,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
   const r=report; const today=new Date().toISOString().slice(0,10);
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
   return (
-    <div className={"print-only"+(pale?" pale":"")} style={DP.wrap}>
+    <div className={"print-only"+(pale?" pale":"")+(r.condensed?" cond":"")+(r.sectionPerPage?" secpage":"")} style={DP.wrap}>
       {/* PAGE COUVERTURE (optionnelle) — hors du tableau d'en-tête/pied répété */}
       {(r.cover||{}).show!==false && (()=>{
         const cv=r.cover||{};
@@ -2633,8 +2651,13 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
         </>);
       })()}
 
-      {r.blocks.map(b=>(
-        <div key={b.id} style={{marginTop:12, breakInside:(b.type==="table"&&(b.rows||[]).length>6)?"auto":"avoid"}}>
+      {(()=>{ const firstSecIdx=r.blocks.findIndex(x=>x.type==="section"); return r.blocks.map((b,bi)=>{
+        const isSection=b.type==="section";
+        // Saut de page avant cette section : demande explicite (b.newPage) ou option globale
+        // « une page par section » (sauf la 1re, pour ne pas gaspiller la page de tête).
+        const pageBreak = isSection && (b.newPage || (r.sectionPerPage && bi!==firstSecIdx));
+        return (
+        <div key={b.id} className={(isSection?"section-print ":"")+(pageBreak?"pagebreak-print":"")} style={{marginTop:12, breakInside:(b.type==="table"&&(b.rows||[]).length>6)?"auto":"avoid"}}>
           {b.type==="section" && <>
             <div className="secBar-print" style={{...DP.secBar,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
               <span>{b.title}</span>
@@ -2690,7 +2713,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap }){
             <div key={i} className="pdf-page-print"><img src={p} alt="" style={DP.pdfPagePrint}/></div>
           ))}
         </div>
-      ))}
+        ); }); })()}
         </div>
         </td></tr></tbody>
       </table>
@@ -2731,6 +2754,16 @@ const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@
   .run-head{ display:flex !important; align-items:center; justify-content:space-between; padding:0 1mm 4px; margin-bottom:6px; height:13mm; border-bottom:1.5px solid #1e293b; background:#fff; }
   .run-foot{ display:flex !important; align-items:center; justify-content:space-between; padding:4px 1mm 0; margin-top:6px; height:8mm; font-size:8.5px; color:#888; border-top:1px solid #e2e8f0; background:#fff; }
   .pdf-page-print{ page-break-before:always; break-before:page; page-break-inside:avoid; }
+  /* Un import PDF garde 1 page = 1 page : l'image tient dans la zone utile (≈ Lettre - marges - en-tête/pied). */
+  .pdf-page-print img{ max-width:100% !important; max-height:225mm !important; object-fit:contain; display:block; margin:0 auto; }
+  /* Saut de page avant une section (option « une page par section » ou saut manuel). */
+  .pagebreak-print{ page-break-before:always !important; break-before:page !important; }
+  /* Mode CONDENSÉ : espacements et tailles réduits pour densifier la page Lettre. */
+  .print-only.cond .rpt-content{ font-size:9.5px !important; }
+  .print-only.cond .rpt-content > div{ margin-top:7px !important; }
+  .print-only.cond .secBar-print{ padding:2px 8px !important; font-size:10.5px !important; }
+  .print-only.cond .rpt-content td{ padding:2px 6px !important; }
+  .print-only.cond .run-head{ height:11mm !important; }
   .rpt-content table{ page-break-inside:auto; }
   .rpt-content tr{ page-break-inside:avoid; break-inside:avoid; }
   .rpt-content thead{ display:table-header-group; }
