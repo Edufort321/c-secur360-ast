@@ -1180,51 +1180,34 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
 
   return (
     <div>
-      {/* Bandeau de statistiques (présentation pro, comme les autres modules) */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,110px),1fr))",gap:10,marginBottom:18}}>
+      {/* Bandeau de statistiques. Sur mobile : 5 colonnes compactes sur UNE seule ligne. */}
+      <div style={{display:"grid",gridTemplateColumns:narrow?"repeat(5,1fr)":"repeat(auto-fit,minmax(min(100%,110px),1fr))",gap:narrow?5:10,marginBottom:16}}>
         {[["all",t("filterAll"),counts.all,"#1e293b"], ...STATUSES.map(s=>[s.id,t(s.key),counts[s.id],s.color])].map(([k,lbl,c,col])=>(
-          <button key={k} onClick={()=>setStatusFilter(k)} style={{textAlign:"left",cursor:"pointer",background:"#fff",border:statusFilter===k?`2px solid ${col}`:"1px solid #e2e8f0",borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 2px rgba(0,0,0,.04)"}}>
-            <div style={{fontSize:26,fontWeight:800,color:col,fontFamily:"'Archivo'",lineHeight:1}}>{c}</div>
-            <div style={{fontSize:11,color:"#64748b",marginTop:4,textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>{lbl}</div>
+          <button key={k} onClick={()=>setStatusFilter(k)} style={{textAlign:narrow?"center":"left",cursor:"pointer",background:"#fff",border:statusFilter===k?`2px solid ${col}`:"1px solid #e2e8f0",borderRadius:narrow?9:12,padding:narrow?"7px 3px":"14px 16px",boxShadow:"0 1px 2px rgba(0,0,0,.04)",minWidth:0}}>
+            <div style={{fontSize:narrow?18:26,fontWeight:800,color:col,fontFamily:"'Archivo'",lineHeight:1}}>{c}</div>
+            <div style={{fontSize:narrow?8.5:11,color:"#64748b",marginTop:narrow?2:4,textTransform:"uppercase",letterSpacing:narrow?0:.5,fontWeight:700,lineHeight:1.1,overflow:"hidden"}}>{lbl}</div>
           </button>
         ))}
       </div>
 
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}>
-        {/* Actions regroupées : Importer ▾ · (Anomalies) · + Nouveau — pas de débordement */}
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <div style={{position:"relative"}}>
-            <button style={{...S.btnDark,cursor:"pointer"}} onClick={()=>{setImpOpen(v=>!v);setClsOpen(false);}}>📥 {LANG==="en"?"Import":"Importer"} ▾</button>
-            {impOpen && (
-              <div style={{position:"absolute",left:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:6,minWidth:210}} onMouseLeave={()=>setImpOpen(false)}>
-                <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>📄 {t("importDoc")}
-                  <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onImport(f); e.target.value=""; }}/>
-                </label>
-                <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>✍ {t("handwriting")}
-                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onHandwriting(f); e.target.value=""; }}/>
-                </label>
-                <button style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{setImpOpen(false);onPhotos();}}>📷 {LANG==="en"?"Photos":"Photos"}</button>
-              </div>
-            )}
-          </div>
-          {anomTotal>0 && <button style={{...S.btnGhost,borderColor:"#e3a0a0",color:"#9d0208"}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations":"Toutes les anomalies et recommandations"}>⚠ {anomTotal}</button>}
-          <button style={S.btnPrimary} onClick={()=>setShowTpl(true)}>+ {t("newReport")}</button>
+      {/* Actions : Importer ▾ · (Anomalies) · + Nouveau — UNE seule ligne (icônes compactes sur mobile) */}
+      <div style={{display:"flex",gap:narrow?6:8,alignItems:"center",flexWrap:narrow?"nowrap":"wrap",marginBottom:16}}>
+        <div style={{position:"relative",flexShrink:0}}>
+          <button style={{...S.btnDark,cursor:"pointer",...(narrow?{padding:"9px 12px"}:{})}} onClick={()=>{setImpOpen(v=>!v);setClsOpen(false);}}>📥{narrow?" ▾":` ${LANG==="en"?"Import":"Importer"} ▾`}</button>
+          {impOpen && (
+            <div style={{position:"absolute",left:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:6,minWidth:210}} onMouseLeave={()=>setImpOpen(false)}>
+              <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>📄 {t("importDoc")}
+                <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onImport(f); e.target.value=""; }}/>
+              </label>
+              <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>✍ {t("handwriting")}
+                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onHandwriting(f); e.target.value=""; }}/>
+              </label>
+              <button style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{setImpOpen(false);onPhotos();}}>📷 {LANG==="en"?"Photos":"Photos"}</button>
+            </div>
+          )}
         </div>
-        {/* Classement : Tous (N) + menu déroulant de l'ordre des niveaux */}
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={()=>setTreePath([])} style={{display:"inline-flex",alignItems:"center",gap:6,border:"1px solid #e2e8f0",background:treePath.length===0?"#1e293b":"#fff",color:treePath.length===0?"#fff":"#1e293b",borderRadius:8,padding:"7px 11px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
-          <div style={{position:"relative"}}>
-            <button style={{...S.btnGhost,padding:"7px 11px"}} onClick={()=>{setClsOpen(v=>!v);setImpOpen(false);}}>⇅ {t("treeOrder")} ▾</button>
-            {clsOpen && (
-              <div style={{position:"absolute",right:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:8,minWidth:200}} onMouseLeave={()=>setClsOpen(false)}>
-                <div style={{fontSize:10.5,color:"#64748b",padding:"0 4px 6px"}}>{LANG==="en"?"Tap a level to move it first":"Touchez un niveau pour le mettre en premier"}</div>
-                {order.map((lvlId,i)=>(
-                  <button key={lvlId} style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{ const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]); }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {anomTotal>0 && <button style={{...S.btnGhost,borderColor:"#e3a0a0",color:"#9d0208",flexShrink:0,...(narrow?{padding:"9px 12px"}:{})}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations":"Toutes les anomalies et recommandations"}>⚠ {anomTotal}</button>}
+        <button style={{...S.btnPrimary,flexShrink:0,...(narrow?{padding:"9px 14px"}:{})}} onClick={()=>setShowTpl(true)}>+{narrow?"":` ${t("newReport")}`}</button>
       </div>
 
       {/* Recherche pleine largeur (le filtrage par statut se fait via les cartes de stats ci-dessus) */}
@@ -1258,6 +1241,17 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
           const curKeys=Object.keys(cur).sort((a,b)=>b.localeCompare(a));
           return (
           <div style={{display:"flex",gap:8,alignItems:"center",overflowX:"auto",WebkitOverflowScrolling:"touch",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"8px 12px",marginBottom:14}}>
+            <div style={{position:"relative",flexShrink:0}}>
+              <button style={{border:"1px solid #e2e8f0",background:"#fff",borderRadius:7,padding:"5px 10px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5,color:"#475569"}} onClick={()=>{setClsOpen(v=>!v);setImpOpen(false);}} title={t("treeOrder")}>⇅ ▾</button>
+              {clsOpen && (
+                <div style={{position:"absolute",left:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:8,minWidth:200}} onMouseLeave={()=>setClsOpen(false)}>
+                  <div style={{fontSize:10.5,color:"#64748b",padding:"0 4px 6px"}}>{LANG==="en"?"Tap a level to move it first":"Touchez un niveau pour le mettre en premier"}</div>
+                  {order.map((lvlId,i)=>(
+                    <button key={lvlId} style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{ const next=[lvlId,...order.filter(x=>x!==lvlId)]; setOrder(next); setTreePath([]); setClsOpen(false); }}>{i+1}. {t((TREE_LEVELS.find(l=>l.id===lvlId)||{}).key)}</button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button onClick={()=>setTreePath([])} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"5px 11px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
             {treePath.map((seg,i)=>(<span key={i} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:8}}><span style={{color:"#94a3b8"}}>›</span><button onClick={()=>setTreePath(treePath.slice(0,i+1))} style={{border:"none",background:"transparent",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5,color:"#1e293b",whiteSpace:"nowrap"}}>{seg}</button></span>))}
             {curKeys.length>0 && <span style={{flexShrink:0,width:1,height:18,background:"#e2e8f0"}}/>}
