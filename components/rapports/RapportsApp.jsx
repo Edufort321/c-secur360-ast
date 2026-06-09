@@ -2489,6 +2489,7 @@ function LinkPanel({ report, onSet, onClose }){
 function ShareModal({ report, onClose }){
   const [mode,setMode]=useState("review");
   const [exp,setExp]=useState("0"); // jours ; 0 = sans expiration
+  const [startD,setStartD]=useState(""); const [endD,setEndD]=useState(""); // fenêtre (mode édition)
   const [busy,setBusy]=useState(false);
   const [link,setLink]=useState(null);
   const [copied,setCopied]=useState(false);
@@ -2503,8 +2504,11 @@ function ShareModal({ report, onClose }){
   async function create(){
     setBusy(true); setErr(null); setLink(null);
     try{
+      const payload={ reportId:report.id, mode };
+      if(mode==="edit" && (startD||endD)){ if(startD) payload.startsAt=startD; if(endD) payload.endsAt=endD; }
+      else { payload.expiresInDays = exp==="0"?null:Number(exp); }
       const r=await fetch("/api/rapports/share",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
-        body:JSON.stringify({ reportId:report.id, mode, expiresInDays: exp==="0"?null:Number(exp) }) });
+        body:JSON.stringify(payload) });
       const j=await r.json();
       if(!r.ok){ setErr(j.error||(LANG==="en"?"Error (save the report first?)":"Erreur (enregistrer le rapport d'abord ?)")); }
       else { setLink(j.url); load(); }
@@ -2525,22 +2529,31 @@ function ShareModal({ report, onClose }){
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",marginBottom:10}}>
           <div>
             <label style={S.label}>{LANG==="en"?"Access":"Accès"}</label>
-            <div style={{display:"flex",gap:6}}>
-              <button style={{...S.chip,...(mode==="view"?S.chipOn:{})}} onClick={()=>setMode("view")}>👁 {LANG==="en"?"Read only":"Lecture seule"}</button>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <button style={{...S.chip,...(mode==="view"?S.chipOn:{})}} onClick={()=>setMode("view")}>👁 {LANG==="en"?"Read":"Lecture"}</button>
               <button style={{...S.chip,...(mode==="review"?S.chipOn:{})}} onClick={()=>setMode("review")}>✍ {LANG==="en"?"Review":"Révision"}</button>
+              <button style={{...S.chip,...(mode==="edit"?S.chipOn:{})}} onClick={()=>setMode("edit")} title={LANG==="en"?"External subcontractor can fill values within the allowed window":"Le sous-traitant externe peut saisir les valeurs dans la fenêtre autorisée"}>🛠 {LANG==="en"?"Edit (values)":"Édition (valeurs)"}</button>
             </div>
           </div>
-          <div>
-            <label style={S.label}>{LANG==="en"?"Expiry":"Expiration"}</label>
-            <select style={{...S.input,width:"auto"}} value={exp} onChange={e=>setExp(e.target.value)}>
-              <option value="0">{LANG==="en"?"No expiry":"Sans expiration"}</option>
-              <option value="7">7 {LANG==="en"?"days":"jours"}</option>
-              <option value="30">30 {LANG==="en"?"days":"jours"}</option>
-              <option value="90">90 {LANG==="en"?"days":"jours"}</option>
-            </select>
-          </div>
+          {mode==="edit" ? (
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <div><label style={S.label}>{LANG==="en"?"From":"Du"}</label><input type="date" style={{...S.input,width:"auto"}} value={startD} onChange={e=>setStartD(e.target.value)}/></div>
+              <div><label style={S.label}>{LANG==="en"?"To":"Au"}</label><input type="date" style={{...S.input,width:"auto"}} value={endD} onChange={e=>setEndD(e.target.value)}/></div>
+            </div>
+          ) : (
+            <div>
+              <label style={S.label}>{LANG==="en"?"Expiry":"Expiration"}</label>
+              <select style={{...S.input,width:"auto"}} value={exp} onChange={e=>setExp(e.target.value)}>
+                <option value="0">{LANG==="en"?"No expiry":"Sans expiration"}</option>
+                <option value="7">7 {LANG==="en"?"days":"jours"}</option>
+                <option value="30">30 {LANG==="en"?"days":"jours"}</option>
+                <option value="90">90 {LANG==="en"?"days":"jours"}</option>
+              </select>
+            </div>
+          )}
           <button style={S.btnPrimary} onClick={create} disabled={busy}>{busy?"…":(LANG==="en"?"Create link":"Créer le lien")}</button>
         </div>
+        {mode==="edit" && <div style={{fontSize:11,color:"#64748b",marginTop:-4,marginBottom:8}}>{LANG==="en"?"The external user can only fill field/inspection values during the window — never change the structure.":"L'externe ne peut que saisir les valeurs (champs/inspections) pendant la fenêtre — jamais modifier la structure."}</div>}
         {err && <div style={{fontSize:12,color:"#9d0208",marginBottom:8}}>{err}</div>}
         {link && (
           <div style={{background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:12}}>
@@ -2554,7 +2567,7 @@ function ShareModal({ report, onClose }){
             <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>{LANG==="en"?"Active links":"Liens actifs"} ({active.length})</div>
             {active.map(s=>(
               <div key={s.token} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,border:"1px solid #e2e8f0",borderRadius:8,padding:"7px 10px",marginBottom:6,fontSize:12}}>
-                <span>{s.mode==="review"?"✍":"👁"} {s.mode==="review"?(LANG==="en"?"Review":"Révision"):(LANG==="en"?"Read":"Lecture")} · {String(s.created_at).slice(0,10)}{s.expires_at?` · ${LANG==="en"?"exp.":"exp."} ${String(s.expires_at).slice(0,10)}`:""}</span>
+                <span>{s.mode==="edit"?"🛠":s.mode==="review"?"✍":"👁"} {s.mode==="edit"?(LANG==="en"?"Edit":"Édition"):s.mode==="review"?(LANG==="en"?"Review":"Révision"):(LANG==="en"?"Read":"Lecture")} · {String(s.created_at).slice(0,10)}{s.expires_at?` · ${LANG==="en"?"until":"jusqu'au"} ${String(s.expires_at).slice(0,10)}`:""}</span>
                 <button style={S.miniBtnDel} onClick={()=>revoke(s.token)}>{LANG==="en"?"Revoke":"Révoquer"}</button>
               </div>
             ))}
