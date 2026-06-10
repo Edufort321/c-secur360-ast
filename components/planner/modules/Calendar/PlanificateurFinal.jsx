@@ -54,12 +54,14 @@ export function PlanificateurFinal({
     const [travailleurSelectionne, setTravailleurSelectionne] = useState('');
     const [selectedJob, setSelectedJob] = useState(null);
     const [conflictJob, setConflictJob] = useState(null); // Job en conflit ouvert en parallèle
-    const [isMobile, setIsMobile] = useState(false);
-    // Vue calendrier mensuelle conventionnelle (grille du mois + détail du jour cliqué)
-    const [calendarMode, setCalendarMode] = useState('month'); // defaut: vue Mois (acces aux autres modes via les boutons) | 'grid' (ressources)
+    const _initMobile = (typeof window !== 'undefined' && window.innerWidth < 768);
+    const [isMobile, setIsMobile] = useState(_initMobile);
+    // Vue par défaut : STATION DESK -> grille (ressources) ; MOBILE -> mois (plus lisible sur petit écran).
+    const [calendarMode, setCalendarMode] = useState(_initMobile ? 'month' : 'grid');
     const [monthCursor, setMonthCursor] = useState(new Date()); // mois affiché en vue 'month'
     const [selectedCalDay, setSelectedCalDay] = useState(null); // 'YYYY-MM-DD' du jour cliqué
-    const [mineOnly, setMineOnly] = useState(true); // defaut: seulement les taches de l'utilisateur connecte (basculable)
+    // MOBILE -> seulement les événements de l'utilisateur connecté ; DESKTOP -> tout (vue planification).
+    const [mineOnly, setMineOnly] = useState(_initMobile); // basculable via le filtre
     const [controleOnly, setControleOnly] = useState(false); // R9 : n'afficher que les mandats a controler
 
     // R9 — Contrôle intelligent : un mandat est « à contrôler » si l'effectif/les heures/les dates
