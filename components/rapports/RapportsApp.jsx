@@ -2385,14 +2385,14 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             </div>
           )}
           <div id={"blk-"+b.id}
-            draggable
-            onDragStart={(e)=>{ setDragId(b.id); e.dataTransfer.effectAllowed="move"; }}
-            onDragOver={(e)=>{ e.preventDefault(); if(overId!==b.id) setOverId(b.id); }}
+            onDragOver={(e)=>{ if(!dragId) return; e.preventDefault(); if(overId!==b.id) setOverId(b.id); }}
             onDragEnd={()=>{ setDragId(null); setOverId(null); }}
-            onDrop={(e)=>{ e.preventDefault(); if(dragId) reorderBlocks(dragId,b.id); setDragId(null); setOverId(null); }}
+            onDrop={(e)=>{ if(!dragId) return; e.preventDefault(); reorderBlocks(dragId,b.id); setDragId(null); setOverId(null); }}
             style={{...S.blockCard, ...(dragId===b.id?{opacity:.4}:{}), ...(overId===b.id&&dragId&&dragId!==b.id?{borderTop:"3px solid #1e293b"}:{})}}>
             <div style={S.blockToolbar}>
-              <span style={S.blockType}><span style={S.dragHandle} title={t("dragHint")}>⠿</span> {icon} {label||fallback}
+              {/* Seule la POIGNÉE ⠿ est draggable -> on peut sélectionner/copier le texte des champs
+                  sans que la carte entière ne se déplace. */}
+              <span style={S.blockType}><span style={{...S.dragHandle,cursor:"grab"}} draggable onDragStart={(e)=>{ setDragId(b.id); e.dataTransfer.effectAllowed="move"; }} title={t("dragHint")}>⠿</span> {icon} {label||fallback}
                 {(()=>{ const on=peers.filter(p=>p.blockId===b.id); return on.length>0 ? (
                   <span style={{marginLeft:8,display:"inline-flex",alignItems:"center",gap:4,fontSize:10.5,fontWeight:800,fontFamily:"'Archivo'",color:on[0].color||"#9d0208",background:"#fff",border:`1.5px solid ${on[0].color||"#9d0208"}`,borderRadius:20,padding:"1px 8px"}} title={on.map(p=>p.name).join(", ")}>
                     🔒 {on.map(p=>p.name.split(" ")[0]).join(", ")} {LANG==="en"?"editing":"édite"}
