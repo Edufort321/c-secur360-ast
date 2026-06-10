@@ -159,6 +159,8 @@ export function JobModal({
     const [projectSearch, setProjectSearch] = useState('');
     const [prefilling, setPrefilling] = useState(false);
     const [crewSize, setCrewSize] = useState(''); // nb de personnes -> recalcule les durées (heures-homme ÷ personnes)
+    const [ganttAi, setGanttAi] = useState(null);   // résultat de l'analyse IA du Gantt
+    const [ganttAiBusy, setGanttAiBusy] = useState(false);
     const [ganttFullscreen, setGanttFullscreen] = useState(false);
     const [ganttMenuOpen, setGanttMenuOpen] = useState(false); // menu Actions (hamburger) de la barre Gantt
     const [ganttCompactMode, setGanttCompactMode] = useState(false);
@@ -2685,6 +2687,42 @@ export function JobModal({
         else addNotification?.(`Durées recalculées pour ${p} personne(s)${bigCrew ? ' — ⚠ effectif élevé : gains décroissants (loi de Brooks), vérifiez la faisabilité' : ''}.`, bigCrew ? 'info' : 'success');
     };
 
+    // Assistant IA du Gantt : valide et propose une optimisation (séquençage, durées, effectif, chemin critique).
+    const dayHours = () => { const d = (parseFloat(formData.heuresFinJour) - parseFloat(formData.heuresDebutJour)); return d > 0 ? d : 8; };
+    const runGanttAi = async () => {
+        if (!(formData.etapes || []).some(e => e.parentId)) { addNotification?.(L('Ajoutez des étapes (ou « Pré-remplir depuis soumission ») avant d\'optimiser.', 'Add steps (or "Pre-fill from quote") before optimizing.'), 'info'); return; }
+        setGanttAiBusy(true); setGanttAi(null);
+        try {
+            const res = await fetch('/api/planner/gantt-ai', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ etapes: formData.etapes, hoursPerDay: dayHours(), lang: currentLanguage === 'en' ? 'en' : 'fr' }),
+            });
+            const j = await res.json();
+            if (!res.ok) addNotification?.(j.error || 'Erreur IA', 'error');
+            else setGanttAi(j);
+        } catch { addNotification?.('Erreur réseau', 'error'); }
+        setGanttAiBusy(false);
+    };
+    const applyGanttOptimized = () => {
+        const opt = (ganttAi?.optimized) || [];
+        if (!opt.length) { addNotification?.(L('Aucune optimisation à appliquer.', 'No optimization to apply.'), 'info'); return; }
+        const byId = {}; opt.forEach(o => { if (o && o.id != null) byId[String(o.id)] = o; });
+        setFormData(prev => ({
+            ...prev,
+            etapes: (prev.etapes || []).map(e => {
+                const o = byId[String(e.id)]; if (!o) return e;
+                const next = { ...e };
+                if (o.duration != null) next.duration = Math.max(1, Math.round(Number(o.duration)));
+                if (o.personnesRequises != null) next.personnesRequises = Math.max(1, Math.round(Number(o.personnesRequises)));
+                if (Array.isArray(o.dependencies)) next.dependencies = o.dependencies.filter(d => d && d.id != null).map(d => ({ id: d.id, type: d.type || 'FS', lag: Number(d.lag) || 0 }));
+                if (Array.isArray(o.parallelWith)) next.parallelWith = o.parallelWith.filter(x => x != null);
+                return next;
+            }),
+        }));
+        addNotification?.(`Optimisations IA appliquées (${opt.length} tâche(s)).`, 'success');
+        setGanttAi(g => (g ? { ...g, applied: true } : g));
+    };
+
     // Handler pour la soumission du formulaire
     const handleSubmit = async () => {
         setSubmitError('');
@@ -3902,8 +3940,41 @@ export function JobModal({
                                                 <button type="button" onClick={() => applyBuildMode('suite')} className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">{L('En suite', 'Sequential')}</button>
                                                 <button type="button" onClick={() => applyBuildMode('parallele')} className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">{L('Parallèle', 'Parallel')}</button>
                                                 <button type="button" onClick={() => applyBuildMode('custom')} className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">Custom</button>
+                                                <button type="button" onClick={runGanttAi} disabled={ganttAiBusy}
+                                                    className="rounded bg-violet-600 px-3 py-1 font-semibold text-white hover:bg-violet-700 disabled:opacity-40"
+                                                    title={L('Valider et optimiser le Gantt avec l\'IA (séquençage, durées, effectif, chemin critique)', 'Validate & optimize the Gantt with AI (sequencing, durations, crew, critical path)')}>
+                                                    {ganttAiBusy ? '…' : `🤖 ${L('Optimiser (IA)', 'Optimize (AI)')}`}
+                                                </button>
                                             </div>
                                         </div>
+
+                                        {/* Résultat de l'analyse IA du Gantt */}
+                                        {ganttAi && (
+                                            <div className="mb-3 rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm dark:border-violet-900/40 dark:bg-violet-900/20">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-bold">🤖 {L('Analyse IA du planning', 'AI schedule analysis')}{ganttAi.totalDays != null ? ` — ${L('durée estimée', 'estimated')} : ${ganttAi.totalDays} ${L('j ouvrables', 'working days')}` : ''}</span>
+                                                    <button type="button" onClick={() => setGanttAi(null)} className="text-gray-400 hover:text-gray-700">✕</button>
+                                                </div>
+                                                {ganttAi.summary && <p className="mt-1 text-gray-700 dark:text-gray-200">{ganttAi.summary}</p>}
+                                                {Array.isArray(ganttAi.issues) && ganttAi.issues.length > 0 && (
+                                                    <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                                                        {ganttAi.issues.map((it, i) => (
+                                                            <li key={i} className="flex gap-2">
+                                                                <span>{it.severity === 'critical' ? '🔴' : it.severity === 'warn' ? '🟠' : '🔵'}</span>
+                                                                <span>{it.message}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                                {Array.isArray(ganttAi.optimized) && ganttAi.optimized.length > 0 && !ganttAi.applied && (
+                                                    <button type="button" onClick={applyGanttOptimized}
+                                                        className="mt-2 rounded bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700">
+                                                        ⚡ {L(`Appliquer les optimisations (${ganttAi.optimized.length})`, `Apply optimizations (${ganttAi.optimized.length})`)}
+                                                    </button>
+                                                )}
+                                                {ganttAi.applied && <div className="mt-2 text-xs font-semibold text-emerald-600">✓ {L('Optimisations appliquées', 'Optimizations applied')}</div>}
+                                            </div>
+                                        )}
 
                                         {/* Affichage différent selon l'état d'expansion */}
                                         {expandedSections.etapes ? (
