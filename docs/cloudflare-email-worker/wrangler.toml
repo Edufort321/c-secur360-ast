@@ -1,0 +1,8 @@
+name = "csecur360-dga-email"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+# IMPORT_URL est public (l'endpoint du webhook). Le secret se pose en SECRET (pas ici) :
+#   npx wrangler secret put INBOUND_SECRET
+[vars]
+IMPORT_URL = "https://www.c-secur360.ca/api/dga/email-inbound"

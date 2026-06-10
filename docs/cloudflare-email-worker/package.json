@@ -1,0 +1,12 @@
+{
+  "name": "csecur360-dga-email-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Email Worker — reception des rapports DGA et POST vers /api/dga/email-inbound",
+  "dependencies": {
+    "postal-mime": "^2.4.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

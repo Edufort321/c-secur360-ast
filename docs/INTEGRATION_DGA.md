@@ -31,9 +31,10 @@ dépendance payante pour recevoir.
    (DNS sur Cloudflare — gratuit).
 2. Cloudflare → **Email → Email Routing** : activer, puis règle **catch-all** de `in.c-secur360.ca`
    → **Send to a Worker**.
-3. Déployer le Worker `docs/cloudflare-email-worker.js` (Wrangler ; dépendance npm `postal-mime`).
-   Variables du Worker : `IMPORT_URL=https://www.c-secur360.ca/api/dga/email-inbound` et
-   `INBOUND_SECRET=<même valeur que DGA_INBOUND_WEBHOOK_SECRET>`.
+3. Déployer le Worker du dossier **`docs/cloudflare-email-worker/`** (`npm install` + `wrangler deploy` ;
+   voir son `README.md`). Variables : `IMPORT_URL=https://www.c-secur360.ca/api/dga/email-inbound`
+   (dans `wrangler.toml`) et `INBOUND_SECRET` en **secret** (`wrangler secret put`, = même valeur que
+   `DGA_INBOUND_WEBHOOK_SECRET`).
 
 Le Worker parse le courriel et **POST** les pièces jointes (PDF/Excel/CSV) en base64 au webhook avec
 l'en-tête `x-cs-inbound-secret`. Gratuit (Email Routing + Workers free tier).
