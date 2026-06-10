@@ -158,6 +158,7 @@ export function JobModal({
     // S4 : pré-montage du Gantt depuis une soumission transférée en projet
     const [projectSearch, setProjectSearch] = useState('');
     const [prefilling, setPrefilling] = useState(false);
+    const [crewSize, setCrewSize] = useState(''); // nb de personnes -> recalcule les durées (heures-homme ÷ personnes)
     const [ganttFullscreen, setGanttFullscreen] = useState(false);
     const [ganttMenuOpen, setGanttMenuOpen] = useState(false); // menu Actions (hamburger) de la barre Gantt
     const [ganttCompactMode, setGanttCompactMode] = useState(false);
@@ -2660,6 +2661,30 @@ export function JobModal({
         addNotification?.(mode === 'suite' ? 'Étapes en séquence (l\'une après l\'autre).' : 'Étapes en parallèle (selon le personnel disponible).', 'info');
     };
 
+    // Recalcule la DURÉE de chaque sous-tâche selon l'effectif : durée(heures) = heures-homme ÷ personnes.
+    // (Le Gantt convertit ensuite en jours via la plage horaire jour.) Met aussi à jour personnesRequises.
+    // Bonne pratique (loi de Brooks / congestion) : au-delà d'un effectif optimal, les gains diminuent —
+    // on avertit si l'effectif paraît irréaliste pour la tâche.
+    const recalcDurationsForCrew = (peopleRaw) => {
+        const p = Math.max(1, Math.round(Number(peopleRaw) || 0));
+        if (!p) { addNotification?.('Indiquez un nombre de personnes (≥ 1).', 'error'); return; }
+        let touched = 0, bigCrew = false;
+        setFormData(prev => ({
+            ...prev,
+            etapes: (prev.etapes || []).map(e => {
+                const mh = Number(e.manHours) || (e.parentId ? (Number(e.duration) || 0) * (Number(e.personnesRequises) || 1) : 0);
+                if (e.parentId && mh > 0) {
+                    touched++;
+                    if (p > mh) bigCrew = true; // plus de personnes que d'heures-homme -> sous-occupation
+                    return { ...e, personnesRequises: p, manHours: mh, duration: Math.max(1, Math.round(mh / p)) };
+                }
+                return e;
+            }),
+        }));
+        if (!touched) addNotification?.('Aucune tâche avec des heures-homme à recalculer (pré-remplir depuis la soumission d\'abord).', 'info');
+        else addNotification?.(`Durées recalculées pour ${p} personne(s)${bigCrew ? ' — ⚠ effectif élevé : gains décroissants (loi de Brooks), vérifiez la faisabilité' : ''}.`, bigCrew ? 'info' : 'success');
+    };
+
     // Handler pour la soumission du formulaire
     const handleSubmit = async () => {
         setSubmitError('');
@@ -3851,6 +3876,25 @@ export function JobModal({
                                                     title={L('Pré-remplir le Gantt à partir des items de la soumission/projet', 'Pre-fill the Gantt from quote/project items')}
                                                 >
                                                     {prefilling ? '…' : '⤵ Pré-remplir depuis soumission'}
+                                                </button>
+                                            </div>
+                                            {/* Effectif -> recalcule les durées (heures-homme ÷ personnes) ; le Gantt suit. */}
+                                            <div className="flex items-center gap-1" title={L('Durée = heures-homme ÷ personnes. Le Gantt s\'ajuste à la plage horaire du jour.', 'Duration = man-hours ÷ people. The Gantt adjusts to the daily schedule.')}>
+                                                <span className="text-xs text-gray-600 dark:text-gray-300">👥 {L('Personnes', 'People')}</span>
+                                                <input
+                                                    type="number" min="1" value={crewSize}
+                                                    onChange={(e) => setCrewSize(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); recalcDurationsForCrew(crewSize); } }}
+                                                    placeholder="6"
+                                                    className="w-16 rounded border border-gray-300 dark:border-gray-600 px-2 py-1"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => recalcDurationsForCrew(crewSize)}
+                                                    className="rounded bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
+                                                    title={L('Recalculer les durées selon l\'effectif', 'Recompute durations from crew size')}
+                                                >
+                                                    ⚖ {L('Ajuster durées', 'Adjust durations')}
                                                 </button>
                                             </div>
                                             <div className="ml-auto flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
