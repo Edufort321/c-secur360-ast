@@ -46,9 +46,26 @@ const OILQ_ALIASES: Record<string, string[]> = {
 const SERIAL_ALIASES = ['serial', 'serialno', 'serialnumber', 'serie', 'serienumber', 'noserie', 'nserie', 'numeroserie', 'sn', 'nodeserie', 'noserieequipement'];
 const ASSET_ALIASES = ['assetname', 'asset', 'name', 'equipment', 'equipement', 'identification', 'ident', 'nom', 'tag', 'transformer', 'transformateur', 'appareil'];
 const DATE_ALIASES = ['sampledate', 'sampleddate', 'date', 'dateprelevement', 'datedeprelevement', 'samplingdate', 'dateechantillon', 'sampledon', 'datesample'];
+// Champs d'EQUIPEMENT (entete du rapport) : entete -> cle "style IA" lue par mapEquip (importServer).
+const EQUIP_ALIASES: Record<string, string[]> = {
+  company: ['company', 'client', 'customer', 'compagnie', 'societe', 'owner', 'proprietaire', 'utility', 'clientname'],
+  location: ['location', 'substation', 'soussstation', 'poste', 'site', 'lieu', 'emplacement', 'station'],
+  manufacturer: ['manufacturer', 'fabricant', 'maker', 'oem', 'marque', 'brand', 'mfr'],
+  year: ['year', 'annee', 'yom', 'yearofmanufacture', 'manufactureyear'],
+  kvClass: ['kvclass', 'voltage', 'tension', 'classekv', 'kvrating', 'voltageclass', 'kvlevel', 'kv'],
+  maxMVA: ['maxmva', 'mvarating', 'puissancemva', 'ratingmva', 'mva'],
+  oilVolumeL: ['oilvolume', 'oilvol', 'volumehuile', 'huilevolume', 'oillitres', 'litreshuile', 'volumeoil'],
+  oilType: ['oiltype', 'typehuile', 'fluidtype', 'typedhuile', 'insulatingfluid', 'typeoil'],
+  equipNo: ['equipmentno', 'equipno', 'noequipement', 'numeroequipement', 'assetno', 'assetid', 'unitno', 'equipmentid', 'equipementno'],
+  apparatusType: ['apparatustype', 'equipmenttype', 'devicetype', 'typeappareil', 'typedequipement', 'apparatus'],
+  description: ['description', 'typedescription', 'equipmentdescription'],
+  contact: ['contact', 'contactname', 'personnecontact'],
+  email: ['email', 'courriel', 'mail', 'adressecourriel'],
+};
 const TEXT_KEYS = new Set(['visual', 'color']);
+const NUM_EQUIP = new Set(['kvClass', 'maxMVA', 'oilVolumeL']); // champs equipement numeriques
 
-type Res = { kind: 'gas' | 'oil'; key: string } | { kind: 'serial' | 'asset' | 'date' } | null;
+type Res = { kind: 'gas' | 'oil' | 'equip'; key: string } | { kind: 'serial' | 'asset' | 'date' } | null;
 function resolveHeader(hn: string): Res {
   const test = (h: string): Res => {
     for (const [k, al] of Object.entries(GAS_ALIASES)) if (al.includes(h)) return { kind: 'gas', key: k };
@@ -56,6 +73,7 @@ function resolveHeader(hn: string): Res {
     if (SERIAL_ALIASES.includes(h)) return { kind: 'serial' };
     if (ASSET_ALIASES.includes(h)) return { kind: 'asset' };
     if (DATE_ALIASES.includes(h)) return { kind: 'date' };
+    for (const [k, al] of Object.entries(EQUIP_ALIASES)) if (al.includes(h)) return { kind: 'equip', key: k };
     return null;
   };
   return test(hn) || test(hn.replace(UNIT_RE, '')) || null;
@@ -94,7 +112,7 @@ export function parseLimsRows(rows: any[]): { transformers: any[] } | null {
   const groups = new Map<string, { equipment: any; measurements: any[] }>();
   rows.forEach((r0, i) => {
     let serial = '', asset = '', date: string | null = null, gasHits = 0;
-    const m: any = {};
+    const m: any = {}; const eq: any = {};
     for (const [raw, v] of Object.entries(colmap)) {
       const val = r0[raw]; if (val == null || val === '') continue;
       if (v.kind === 'serial') serial = String(val).trim();
@@ -102,6 +120,7 @@ export function parseLimsRows(rows: any[]): { transformers: any[] } | null {
       else if (v.kind === 'date') date = normDate(val);
       else if (v.kind === 'gas') { const n = numOrNull(val); if (n != null) { m[(v as any).key] = n; gasHits++; } }
       else if (v.kind === 'oil') { const key = (v as any).key; m[key] = TEXT_KEYS.has(key) ? String(val) : numOrNull(val); }
+      else if (v.kind === 'equip') { const key = (v as any).key; const value = NUM_EQUIP.has(key) ? numOrNull(val) : String(val).trim(); if (value != null && value !== '') eq[key] = value; }
     }
     if (gasHits < 1) return; // ligne sans aucune valeur de gaz -> ignoree
     m.date = date;
@@ -112,6 +131,8 @@ export function parseLimsRows(rows: any[]): { transformers: any[] } | null {
     const g = groups.get(key)!;
     if (!g.equipment.serialNo && serial) g.equipment.serialNo = serial;
     if ((!g.equipment.identification || /^Import|^SN /.test(g.equipment.identification)) && asset) g.equipment.identification = asset;
+    // Complete les CHAMPS D'EQUIPEMENT (client, localisation, fabricant, kV, MVA, huile...) sans ecraser.
+    for (const [k, value] of Object.entries(eq)) { if (g.equipment[k] == null || g.equipment[k] === '') g.equipment[k] = value; }
     g.measurements.push(m);
   });
   if (!groups.size) return null;
