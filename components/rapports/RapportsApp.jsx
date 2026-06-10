@@ -194,9 +194,6 @@ function tplNumOf(tplId, customTpls){
 // ---------- IDs ----------
 let _seq=0;
 function bid(){ _seq++; return "b_"+Date.now().toString(36)+"_"+_seq; }
-// Identité d'ÉQUIPEMENT stable (cible des QR de section). Contrairement à l'id de bloc, l'eqId
-// persiste à travers les éditions ; une étiquette QR collée sur un équipement reste donc valide.
-function eqid(){ _seq++; return "eq_"+Date.now().toString(36)+"_"+_seq; }
 // Présence temps réel : couleur stable par utilisateur + petit hash.
 const PRESENCE_COLORS=["#2a6f97","#9d0208","#2a9d8f","#6b4e9d","#e0a96d","#0e7490","#b45309","#4f46e5"];
 function hashInt(s){ let h=0; const str=String(s||""); for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return h; }
@@ -232,7 +229,6 @@ function repairJsonParse(raw){
 // Clone profond d'un bloc avec de nouveaux ids partout (pour duplication sûre)
 function cloneBlockFresh(src){
   const copy=JSON.parse(JSON.stringify(src)); copy.id=bid();
-  if(copy.type==="section") copy.eqId=eqid(); // une copie = un AUTRE équipement -> nouvelle identité QR
   if(copy.fields) copy.fields=copy.fields.map(f=>({...f,id:bid()}));
   if(copy.photos) copy.photos=copy.photos.map(p=>({...p,id:bid()}));
   if(copy.items) copy.items=copy.items.map(it=>({...it,id:bid()}));
@@ -324,7 +320,7 @@ async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.
 // Vide toutes les valeurs d'un ensemble de blocs (pour transformer un rapport en gabarit)
 function emptyBlockValues(blocks){
   return (blocks||[]).map(b=>{
-    if(b.type==="section"){ const {eqId,...rest}=b; return {...rest, id:bid(), fields:(b.fields||[]).map(f=>({...f,id:bid(),value:""}))}; } // gabarit = pas d'eqId (assigné par instance)
+    if(b.type==="section"){ const rest={...b}; delete rest.eqId; return {...rest, id:bid(), fields:(b.fields||[]).map(f=>({...f,id:bid(),value:""}))}; } // gabarit = nettoie tout eqId hérité (legacy)
     if(b.type==="table") return {...b, id:bid(), rows:(b.rows||[]).map(r=>r.map(()=>""))};
     if(b.type==="inspect") return {...b, id:bid(), items:(b.items||[]).map(it=>({...it,id:bid(),state:"good",note:"",severity:"minor",photo:null}))};
     if(b.type==="text") return {...b, id:bid(), value:""};
@@ -961,25 +957,20 @@ export default function App(){
     setLoaded(true);
   })(); },[]);
 
-  // Deep-link QR : ?r=<id> (scan d'un QR de page) ouvre directement le rapport dans l'éditeur.
-  // Un rapport = un seul QR (couvre toutes ses pages) ; ?blk=<id> permet de viser une page.
+  // Deep-link QR : ?r=<id> (scan du QR de la feuille de test) ouvre directement le rapport complet
+  // dans l'éditeur. Un seul QR par feuille — il couvre toutes les pages. ?blk=<id> (optionnel,
+  // rétro-compat) vise une page précise. Les anciennes URL de section portaient déjà ?r= -> elles
+  // ouvrent toujours le bon rapport.
   const [deepDone,setDeepDone]=useState(false);
   useEffect(()=>{
     if(!loaded||deepDone) return; setDeepDone(true);
     try{
       const sp=new URLSearchParams(window.location.search);
-      const rid=sp.get("r"); const eq=sp.get("eq"); const blk=sp.get("blk");
-      // Résolution du rapport cible : r=<id> si présent, sinon par identité d'équipement (eq) —
-      // on ouvre le rapport le PLUS RÉCENT qui contient cet équipement (étiquette réutilisable).
-      let target=null;
-      if(rid && db.find(x=>x.id===rid)) target=db.find(x=>x.id===rid);
-      else if(eq){ const cands=db.filter(x=>(x.blocks||[]).some(b=>b.type==="section"&&b.eqId===eq)); cands.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)); target=cands[0]||null; }
+      const rid=sp.get("r"); const blk=sp.get("blk");
+      const target = rid ? db.find(x=>x.id===rid) : null;
       if(target){
         setSelId(target.id); setView("editor");
-        // Saut vers la bonne section : par bloc (blk) ou par équipement (eq).
-        let jumpBlk=blk;
-        if(!jumpBlk && eq){ const sec=(target.blocks||[]).find(b=>b.type==="section"&&b.eqId===eq); if(sec) jumpBlk=sec.id; }
-        if(jumpBlk) setTimeout(()=>{ const el=document.getElementById("blk-"+jumpBlk); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } },400);
+        if(blk) setTimeout(()=>{ const el=document.getElementById("blk-"+blk); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } },400);
         const u=new URL(window.location.href); u.searchParams.delete("r"); u.searchParams.delete("blk"); u.searchParams.delete("eq"); window.history.replaceState({},"",u.pathname+u.search);
       }
     }catch{}
@@ -1093,10 +1084,16 @@ export default function App(){
   function applyImport(){
     if(!importPreview)return;
     const ip=importPreview;
+    // Import = on CONDENSE la feuille de test sur une seule page : mode condensé, AUCUNE rupture de
+    // page forcée (on neutralise newPage), pas de page couverture, et les pages originales du PDF
+    // restent archivées (bloc pdfpage) mais MASQUÉES à l'impression (showOriginal=false). Le rapport
+    // ne déborde que si l'utilisateur ajoute des sections/anomalies/photos par-dessus.
+    const srcBlocks=(ip.blocks.length?ip.blocks:tplBlocks(ip.template)).map(b=> b.type==="pdfpage"?b:{...b,newPage:false});
     const r={ id:"r_"+Date.now(), title:ip.title, client:ip.client, location:ip.location, projectNo:ip.projectNo,
       date:new Date().toISOString().slice(0,10), template:ip.template, status:"in_progress", version:1, createdFrom:"import",
       num:tplNumOf(ip.template, customTpls),
-      blocks: ip.blocks.length?ip.blocks:tplBlocks(ip.template), annotations:[], cover:{show:true,subtitle:""}, sourceText:ip.sourceText||"", updatedAt:Date.now() };
+      blocks: srcBlocks, annotations:[], cover:{show:false,subtitle:""}, sourceText:ip.sourceText||"",
+      condensed:true, sectionPerPage:false, showOriginal:false, updatedAt:Date.now() };
     persist([r,...db]); pushReport(r); setSelId(r.id); setImportPreview(null); setView("editor");
   }
 
@@ -1740,8 +1737,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showLink,setShowLink]=useState(false);   // panneau "Lier au projet / événement"
   const [showSoum,setShowSoum]=useState(false);   // constructeur de soumission depuis anomalies/recos
   const [showTools,setShowTools]=useState(false); // menu "⋯" (actions repliées sur mobile)
-  const [qr,setQr]=useState(null);                // { url, data } QR du rapport (deep-link ?r=)
-  const [qrMap,setQrMap]=useState({});            // { sectionId: {url,data} } QR par section/équipement
+  const [qr,setQr]=useState(null);                // { url, data } QR unique de la feuille de test (deep-link ?r=)
   const [showQr,setShowQr]=useState(false);
   const [showShare,setShowShare]=useState(false); // partage au vérificateur (lien tokenisé)
   const [showNav,setShowNav]=useState(false);
@@ -1775,37 +1771,19 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   useEffect(()=>{ const h=()=>setNarrow(window.innerWidth<640); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
   const [pdfBusy,setPdfBusy]=useState(false);
   useEffect(()=>{ setR(report); },[report.id]);
-  // Identité d'équipement stable : toute section sans eqId en reçoit un (création gabarit, import,
-  // ajout manuel, anciens rapports). C'est la cible « logique » des QR — l'étiquette reste valide.
-  useEffect(()=>{
-    const secs=(report.blocks||[]).filter(b=>b.type==="section");
-    if(secs.length && secs.some(b=>!b.eqId)){
-      const blocks=(report.blocks||[]).map(b=> (b.type==="section"&&!b.eqId)?{...b,eqId:eqid()}:b);
-      commit({...report, blocks});
-    }
-  // eslint-disable-next-line
-  },[report.id]);
-  // QR codes du rapport. DEUX niveaux (comme les étiquettes d'équipement DGA) :
-  //  • QR RAPPORT  -> /{tenant}/rapports?r=<id>            (ouvre le rapport complet)
-  //  • QR SECTION  -> /{tenant}/rapports?r=<id>&blk=<sec>  (ouvre DIRECTEMENT cette section/équipement)
-  // Le client colle le QR de section sur l'équipement ; le scan ouvre la bonne page à remplir, en
-  // direct, et tout s'assemble dans le rapport complet. Généré client-only (import dynamique).
-  const sectionIds=(r.blocks||[]).filter(b=>b.type==="section").map(b=>b.id).join(",");
+  // UN SEUL QR par feuille de test (rapport) -> /{tenant}/rapports?r=<id> : ouvre le rapport complet
+  // (toutes ses pages). Haute correction d'erreur (H = 30 %) + zone de silence large (margin 4) et
+  // image source haute résolution (512 px) : reconnaissance fiable même imprimé petit, photocopié,
+  // plié ou légèrement abîmé. Pas de QR par section (un équipement = une feuille). Client-only.
   useEffect(()=>{ let on=true; (async()=>{
     try{
       const QR=(await import("qrcode")).default;
       const tn=(window.location.pathname.split("/").filter(Boolean)[0])||"";
       const base=`${window.location.origin}/${tn}/rapports?r=${report.id}`;
-      const data=await QR.toDataURL(base,{margin:1,width:240});
-      const map={};
-      for(const b of (r.blocks||[]).filter(x=>x.type==="section")){
-        // Cible l'identité d'équipement STABLE (eqId) ; repli sur l'id de bloc si pas encore assigné.
-        const target = b.eqId ? `${base}&eq=${b.eqId}` : `${base}&blk=${b.id}`;
-        map[b.id]={ url:target, data: await QR.toDataURL(target,{margin:1,width:200}) };
-      }
-      if(on){ setQr({url:base,data}); setQrMap(map); }
-    }catch(e){ if(on){ setQr(null); setQrMap({}); } }
-  })(); return ()=>{on=false;}; },[report.id, sectionIds]);
+      const data=await QR.toDataURL(base,{margin:4,width:512,errorCorrectionLevel:"H"});
+      if(on) setQr({url:base,data});
+    }catch(e){ if(on) setQr(null); }
+  })(); return ()=>{on=false;}; },[report.id]);
 
   // PRÉSENCE TEMPS RÉEL (Supabase Realtime) : qui est sur ce rapport + quelle section il édite.
   const presenceChan=useRef(null);
@@ -2199,7 +2177,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {showLink && <LinkPanel report={r} onSet={setLink} onClose={()=>setShowLink(false)}/>}
 
       {/* MODALE QR (un seul QR pour tout le rapport + navigation par page/section) */}
-      {showQr && <QrPanel report={r} qr={qr} qrMap={qrMap} onJump={(bid)=>{ setShowQr(false); const el=document.getElementById("blk-"+bid); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.transition="box-shadow .3s"; el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } }} onClose={()=>setShowQr(false)}/>}
+      {showQr && <QrPanel report={r} qr={qr} onClose={()=>setShowQr(false)}/>}
 
       {/* MODALE PARTAGE AU VÉRIFICATEUR (lien lecture/révision) */}
       {showShare && <ShareModal report={r} onClose={()=>setShowShare(false)}/>}
@@ -2282,10 +2260,16 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
               <input type="checkbox" checked={!!r.condensed} onChange={e=>setField("condensed",e.target.checked)}/>
               🗜 {LANG==="en"?"Condensed":"Condensé"}
             </label>
-            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Include QR codes in the exported PDF (footer + per section)":"Inclure les QR codes dans le PDF exporté (pied de page + par section)"}>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Include the test-sheet QR in the exported PDF (page footer)":"Inclure le QR de la feuille de test dans le PDF exporté (pied de page)"}>
               <input type="checkbox" checked={r.qrShow!==false} onChange={e=>setField("qrShow",e.target.checked)}/>
               🔳 {LANG==="en"?"QR in export":"QR à l'export"}
             </label>
+            {(r.blocks||[]).some(b=>b.type==="pdfpage") && (
+              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Also print the original imported PDF pages (one extra page each). Off = condensed structured sheet.":"Imprimer aussi les pages originales du PDF importé (une page de plus chacune). Désactivé = feuille structurée condensée."}>
+                <input type="checkbox" checked={!!r.showOriginal} onChange={e=>setField("showOriginal",e.target.checked)}/>
+                📄 {LANG==="en"?"Original pages":"Pages originales"}
+              </label>
+            )}
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Attach a presentation letter as the first page":"Joindre une lettre de présentation en première page"}>
               <input type="checkbox" checked={!!(r.letter&&r.letter.show)} onChange={e=>{
                 const on=e.target.checked; const base=r.letter||{};
@@ -2541,7 +2525,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
       {lightbox && <div style={S.overlay} className="screen-only" onClick={()=>setLightbox(null)}><img src={lightbox} alt="" style={{maxWidth:"92vw",maxHeight:"92vh",borderRadius:8}}/></div>}
 
       {/* RAPPORT IMPRIMABLE */}
-      <PrintDoc report={r} logo={logo} pale={paleExport} qr={qr&&qr.data} qrMap={qrMap} updatesOnly={updatesExport}/>
+      <PrintDoc report={r} logo={logo} pale={paleExport} qr={qr&&qr.data} updatesOnly={updatesExport}/>
     </div>
   );
 }
@@ -3193,95 +3177,46 @@ function ShareModal({ report, onClose }){
 // Modale QR : un SEUL QR couvre tout le rapport (toutes ses pages). Le scan ouvre le rapport dans
 // l'éditeur (deep-link ?r=). On liste les « pages » (sections/équipements) pour sauter directement
 // à l'une d'elles — logique terrain : même QR, on choisit / on passe à la page suivante.
-function QrPanel({ report, qr, qrMap, onJump, onClose }){
-  const sections=(report.blocks||[]).filter(b=>b.type==="section");
-  const [copied,setCopied]=useState(null);
-  const [sel,setSel]=useState(()=>{ const o={report:true}; sections.forEach(b=>o[b.id]=true); return o; });
-  const [size,setSize]=useState("M"); // taille d'étiquette : S | M | L
-  function copy(url,key){ try{ navigator.clipboard.writeText(url||""); setCopied(key); setTimeout(()=>setCopied(null),1500); }catch(e){} }
-  // Planche d'étiquettes QR (impression groupée) — comme les étiquettes du module Inventaire.
-  function printSheet(){
-    const px = size==="S"?120 : size==="L"?230 : 170;
-    const labels=[];
-    if(sel.report && qr) labels.push({ t:(LANG==="en"?"Full report":"Rapport complet")+" — "+(report.title||""), d:qr.data, u:qr.url });
-    sections.forEach((b,k)=>{ const q=(qrMap||{})[b.id]; if(sel[b.id] && q) labels.push({ t:`#${k+1} ${b.title||""}`, d:q.data, u:q.url }); });
-    if(labels.length===0){ alert(LANG==="en"?"Select at least one QR.":"Sélectionnez au moins un QR."); return; }
+function QrPanel({ report, qr, onClose }){
+  const [copied,setCopied]=useState(false);
+  const [size,setSize]=useState("M"); // taille d'étiquette imprimée : S | M | L
+  function copy(url){ try{ navigator.clipboard.writeText(url||""); setCopied(true); setTimeout(()=>setCopied(false),1500); }catch(e){} }
+  // Imprime l'étiquette QR de la feuille de test (à coller sur l'équipement / le dossier).
+  function printLabel(){
+    if(!qr) return;
+    const px = size==="S"?180 : size==="L"?320 : 250;
     const sub=(report.num?(report.num+" · "):"")+(report.client||"");
-    const cells=labels.map(l=>`<div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;text-align:center;break-inside:avoid;page-break-inside:avoid">
-      <div style="font-weight:700;font-size:12px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(l.t||"").replace(/</g,"")}</div>
-      <div style="font-size:9px;color:#777;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(sub||"").replace(/</g,"")}</div>
-      <img src="${l.d}" style="width:${px}px;height:${px}px"/>
-      <div style="font-size:7.5px;color:#999;margin-top:4px;word-break:break-all">${(l.u||"").replace(/</g,"")}</div>
-    </div>`).join("");
-    const w=window.open("","_blank","width=900,height=1000"); if(!w) return;
+    const w=window.open("","_blank","width=460,height=580"); if(!w) return;
     w.document.write(`<html><head><title>QR — ${(report.title||"").replace(/</g,"")}</title>
-      <style>@page{size:letter portrait;margin:10mm} body{font-family:Archivo,Arial,sans-serif;margin:0;padding:8mm}
-      .grid{display:grid;grid-template-columns:repeat(${size==="L"?2:size==="S"?4:3},1fr);gap:8px}</style></head>
-      <body><div class="grid">${cells}</div><script>setTimeout(function(){window.print();},300);</script></body></html>`);
-    w.document.close();
-  }
-  const selCount=(sel.report?1:0)+sections.filter(b=>sel[b.id]).length;
-  // Imprime une seule étiquette QR (à coller sur l'équipement) dans une fenêtre dédiée.
-  function printLabel(title,dataUrl,url){
-    const w=window.open("","_blank","width=420,height=520"); if(!w) return;
-    w.document.write(`<html><head><title>QR — ${(title||"").replace(/</g,"")}</title></head>
+      <style>@page{size:letter portrait;margin:12mm}</style></head>
       <body style="font-family:Archivo,Arial,sans-serif;text-align:center;padding:24px;margin:0">
-      <div style="font-weight:900;font-size:18px;margin-bottom:6px">${(title||"").replace(/</g,"")||"Équipement"}</div>
-      <div style="font-size:11px;color:#555;margin-bottom:12px">${(report.title||"").replace(/</g,"")} ${report.num?("· "+report.num):""}</div>
-      <img src="${dataUrl}" style="width:280px;height:280px"/>
-      <div style="font-size:9px;color:#888;margin-top:10px;word-break:break-all">${(url||"").replace(/</g,"")}</div>
+      <div style="font-weight:900;font-size:18px;margin-bottom:6px">${(report.title||"").replace(/</g,"")||"Rapport"}</div>
+      <div style="font-size:11px;color:#555;margin-bottom:14px">${(sub||"").replace(/</g,"")}</div>
+      <img src="${qr.data}" style="width:${px}px;height:${px}px"/>
+      <div style="font-size:9px;color:#888;margin-top:12px;word-break:break-all">${(qr.url||"").replace(/</g,"")}</div>
       <script>setTimeout(function(){window.print();},250);</script></body></html>`);
     w.document.close();
   }
   return (
     <div style={S.overlay} onClick={onClose}>
-      <div style={{...S.modal,maxWidth:600,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+      <div style={{...S.modal,maxWidth:460,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🔳 {LANG==="en"?"QR codes":"QR codes"}</h2>
+          <h2 style={{...S.h2,margin:0}}>🔳 {LANG==="en"?"Report QR":"QR de la feuille"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
-        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"One QR for the whole report, plus one per section/equipment. Stick the equipment QR on the equipment: scanning opens that exact section to fill in — live — and everything assembles into the full report.":"Un QR pour le rapport complet, et un par section/équipement. Collez le QR d'un équipement dessus : le scan ouvre directement cette section à remplir — en direct — et tout s'assemble dans le rapport complet."}</p>
+        <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"One QR per test sheet. Scanned, it opens the full report (all pages). Print it as a label or keep it in the export footer.":"Un seul QR par feuille de test. Scanné, il ouvre le rapport complet (toutes les pages). Imprimez-le en étiquette ou gardez-le dans le pied de page de l'export."}</p>
 
-        {/* Planche d'étiquettes : imprimer les QR cochés d'un coup (taille réglable) */}
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:9,padding:"8px 10px",marginBottom:12}}>
-          <span style={{fontSize:12,fontWeight:700,color:"#475569"}}>🖨 {LANG==="en"?"Label sheet":"Planche d'étiquettes"}</span>
-          <span style={{fontSize:11,color:"#64748b"}}>{LANG==="en"?"Size":"Taille"}:</span>
+        {/* QR DE LA FEUILLE DE TEST */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #1e293b",borderRadius:12,padding:16,marginBottom:12}}>
+          {qr ? <img src={qr.data||qr} alt="QR" style={{width:180,height:180}}/> : <div style={{width:180,height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8"}}>…</div>}
+        </div>
+        <div style={{fontSize:10.5,color:"#64748b",wordBreak:"break-all",marginBottom:12,textAlign:"center"}}>{qr?qr.url:""}</div>
+
+        <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,color:"#64748b"}}>{LANG==="en"?"Label size":"Taille étiquette"}:</span>
           {["S","M","L"].map(s=>(<button key={s} onClick={()=>setSize(s)} style={{...S.miniBtn,...(size===s?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}}>{s}</button>))}
-          <button style={{...S.btnPrimary,padding:"6px 12px",fontSize:12}} onClick={printSheet}>🖨 {LANG==="en"?"Print sheet":"Imprimer la planche"} ({selCount})</button>
-          <button style={{...S.miniBtn}} onClick={()=>{ const o={report:true}; sections.forEach(b=>o[b.id]=true); setSel(o); }}>{LANG==="en"?"All":"Tout"}</button>
-          <button style={{...S.miniBtn}} onClick={()=>{ const o={report:false}; sections.forEach(b=>o[b.id]=false); setSel(o); }}>{LANG==="en"?"None":"Aucun"}</button>
-        </div>
-
-        {/* QR RAPPORT COMPLET */}
-        <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",border:"1.5px solid #1e293b",borderRadius:12,padding:12,marginBottom:14}}>
-          {qr ? <img src={qr.data||qr} alt="QR" style={{width:120,height:120}}/> : <div style={{width:120,height:120,display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8"}}>…</div>}
-          <div style={{flex:"1 1 200px",minWidth:170}}>
-            <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}><input type="checkbox" checked={!!sel.report} onChange={e=>setSel(s=>({...s,report:e.target.checked}))}/><span style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:14}}>{LANG==="en"?"Full report":"Rapport complet"}</span></label>
-            <div style={{fontSize:10.5,color:"#64748b",wordBreak:"break-all",margin:"4px 0 8px"}}>{qr?qr.url:""}</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button style={{...S.miniBtn}} onClick={()=>copy(qr&&qr.url,"rep")}>{copied==="rep"?"✓":(LANG==="en"?"Copy":"Copier")}</button>
-              {qr && <button style={{...S.miniBtn}} onClick={()=>printLabel(report.title||(LANG==="en"?"Full report":"Rapport complet"),qr.data,qr.url)}>🖨 {LANG==="en"?"Label":"Étiquette"}</button>}
-            </div>
-          </div>
-        </div>
-
-        {/* QR PAR SECTION / ÉQUIPEMENT */}
-        <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>{LANG==="en"?"Per section / equipment":"Par section / équipement"} ({sections.length})</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:10}}>
-          {sections.length===0 ? <div style={{fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No section yet.":"Aucune section."}</div> :
-            sections.map((b,k)=>{ const q=(qrMap||{})[b.id];
-              return (
-              <div key={b.id} style={{border:`1px solid ${sel[b.id]?"#1e293b":"#e2e8f0"}`,borderRadius:10,padding:10,textAlign:"center",background:"#fff",position:"relative"}}>
-                <input type="checkbox" checked={!!sel[b.id]} onChange={e=>setSel(s=>({...s,[b.id]:e.target.checked}))} style={{position:"absolute",left:8,top:8}}/>
-                {q ? <img src={q.data} alt="QR" style={{width:100,height:100}}/> : <div style={{width:100,height:100,margin:"0 auto",color:"#cbd5e1"}}>…</div>}
-                <div style={{fontWeight:700,fontSize:12,marginTop:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={b.title||""}>{LANG==="en"?"Page":"Page"} {k+1} · {b.title||(LANG==="en"?"(untitled)":"(sans titre)")}</div>
-                <div style={{display:"flex",gap:5,justifyContent:"center",marginTop:7,flexWrap:"wrap"}}>
-                  <button style={{...S.miniBtn,fontSize:10.5,padding:"3px 7px"}} onClick={()=>onJump(b.id)}>{LANG==="en"?"Edit":"Éditer"}</button>
-                  {q && <button style={{...S.miniBtn,fontSize:10.5,padding:"3px 7px"}} onClick={()=>copy(q.url,b.id)}>{copied===b.id?"✓":(LANG==="en"?"Copy":"Copier")}</button>}
-                  {q && <button style={{...S.miniBtn,fontSize:10.5,padding:"3px 7px"}} onClick={()=>printLabel(b.title,q.data,q.url)}>🖨</button>}
-                </div>
-              </div>
-            ); })}
+          <button style={{...S.miniBtn}} onClick={()=>copy(qr&&qr.url)} disabled={!qr}>{copied?"✓":(LANG==="en"?"Copy link":"Copier le lien")}</button>
+          <button style={{...S.btnPrimary,padding:"6px 12px",fontSize:12}} onClick={printLabel} disabled={!qr}>🖨 {LANG==="en"?"Print label":"Imprimer l'étiquette"}</button>
         </div>
       </div>
     </div>
@@ -3593,11 +3528,14 @@ function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
 // ============================================================
 //  RAPPORT IMPRIMABLE
 // ============================================================
-function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
+function PrintDoc({ report, logo, pale, qr, updatesOnly }){
   const r=report; const today=new Date().toISOString().slice(0,10);
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
+  // Pages originales (image fidèle du PDF importé) : EXCLUES par défaut pour CONDENSER la feuille
+  // de test sur la reproduction structurée. Réactivables via l'option « Pages originales ».
+  const visible = r.showOriginal ? (r.blocks||[]) : (r.blocks||[]).filter(b=>b.type!=="pdfpage");
   // Export « mises à jour seulement » : ne garder que les blocs marqués 🔁 (addendum).
-  const printBlocks = updatesOnly ? (r.blocks||[]).filter(b=>b.updated) : (r.blocks||[]);
+  const printBlocks = updatesOnly ? visible.filter(b=>b.updated) : visible;
   return (
     <div className={"print-only"+(pale?" pale":"")+(r.condensed?" cond":"")+(r.sectionPerPage?" secpage":"")} style={DP.wrap}>
       {/* LETTRE DE PRÉSENTATION (optionnelle) — tout en première page. Champs vides repliés sur
@@ -3717,7 +3655,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
             <span>{tplLabel} · {r.num || (TEMPLATES.find(x=>x.id===r.template)||{}).num || ""}{r.projectNo?` · ${t("projectNo")} ${r.projectNo}`:""}</span>
             <span style={{display:"flex",alignItems:"center",gap:8}}>
               <span>{t("version")}{r.version} · {t("status")} {statusLabel(r.status)}</span>
-              {qr && r.qrShow!==false && <img src={qr} alt="QR" style={{height:30,width:30}}/>}
+              {qr && r.qrShow!==false && <img src={qr} alt="QR" title={LANG==="en"?"Scan to open the report":"Scanner pour ouvrir le rapport"} style={{height:40,width:40,background:"#fff",padding:1.5,borderRadius:2,objectFit:"contain"}}/>}
             </span>
           </div>
         </td></tr></tfoot>
@@ -3828,10 +3766,7 @@ function PrintDoc({ report, logo, pale, qr, qrMap, updatesOnly }){
             </div>
           )}
           {b.type==="section" && <>
-            <div className="secBar-print" style={{...DP.secBar,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-              <span>{b.title}</span>
-              {r.qrShow!==false && qrMap&&qrMap[b.id] && <img src={qrMap[b.id].data} alt="QR" title={b.title||""} style={{height:34,width:34,background:"#fff",padding:2,borderRadius:3,flexShrink:0}}/>}
-            </div>
+            <div className="secBar-print" style={DP.secBar}>{b.title}</div>
             <table style={DP.fieldTable}><tbody>{(b.fields||[]).map(f=>(<tr key={f.id}><td style={DP.fLbl}>{f.label}</td><td style={DP.fVal}>{f.value||"—"}</td></tr>))}</tbody></table>
           </>}
           {b.type==="table" && (b.columns||[]).length>0 && <>
@@ -3926,7 +3861,7 @@ const CSS = `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@
   .rpt-runtable tfoot{ display:table-footer-group; }
   .rpt-runtable > tbody > tr > td, .rpt-runtable > thead > tr > td, .rpt-runtable > tfoot > tr > td{ padding:0; border:none; }
   .run-head{ display:flex !important; align-items:center; justify-content:space-between; padding:0 1mm 4px; margin-bottom:6px; height:13mm; border-bottom:1.5px solid #1e293b; background:#fff; }
-  .run-foot{ display:flex !important; align-items:center; justify-content:space-between; padding:4px 1mm 0; margin-top:6px; height:8mm; font-size:8.5px; color:#888; border-top:1px solid #e2e8f0; background:#fff; }
+  .run-foot{ display:flex !important; align-items:center; justify-content:space-between; padding:4px 1mm 0; margin-top:6px; height:12mm; font-size:8.5px; color:#888; border-top:1px solid #e2e8f0; background:#fff; }
   .pdf-page-print{ page-break-before:always; break-before:page; page-break-inside:avoid; }
   /* Un import PDF garde 1 page = 1 page : l'image tient dans la zone utile (≈ Lettre - marges - en-tête/pied). */
   .pdf-page-print img{ max-width:100% !important; max-height:225mm !important; object-fit:contain; display:block; margin:0 auto; }
