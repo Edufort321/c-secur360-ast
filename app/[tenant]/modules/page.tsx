@@ -37,7 +37,7 @@ export default function ModulesPage() {
   const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
   const [permit, setPermit] = useState({ total: 0, active: 0 });
   const [evt, setEvt] = useState({ quasi: 0, accident: 0, year: 0, total: 0 });
-  const [plan, setPlan] = useState({ en_cours: 0, planifies: 0, occ: 0, occCount: 0, roster: 0 });
+  const [plan, setPlan] = useState({ actifs: 0, aVenir: 0, occ: 0, occCount: 0, roster: 0 });
   const [invCount, setInvCount] = useState(0);
   const [userCount, setUserCount] = useState(0);
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
@@ -105,24 +105,28 @@ export default function ModulesPage() {
           supabase.from('planner_jobs').select('statut, status, dateDebut, dateFin, start_date, end_date, personnelAssigne, nombrePersonnelRequis').eq('tenant_id', tenant),
           supabase.from('planner_personnel').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
         ]);
-        const pl = { en_cours: 0, planifies: 0, occ: 0, occCount: 0, roster: 0 };
+        const yearEnd = todayStr.slice(0, 4) + '-12-31';
+        const pl = { actifs: 0, aVenir: 0, occ: 0, occCount: 0, roster: 0 };
         const occupied = new Set<string>(); let occFallback = 0;
         (jobs || []).forEach((j: any) => {
-          // Statut tolérant : 'en_cours'/'en-cours'/'in_progress' désignent tous « en cours ».
           const st = String(j.statut || j.status || '').toLowerCase().replace(/_/g, '-');
-          const enCours = st === 'en-cours' || st === 'in-progress';
-          if (enCours) pl.en_cours += 1;
-          if (st === 'planifie' || st === 'planned') pl.planifies += 1;
-          // Dates en JOUR (10 car.) : les colonnes peuvent être au format datetime
-          // (« 2026-06-09T00:00:00Z ») — sans tronquer, « ...T00:00:00Z » <= « 2026-06-09 » est faux
-          // et les mandats commençant aujourd'hui étaient exclus (occupation sous-évaluée).
+          const termine = st === 'termine' || st === 'completed' || st === 'done' || st === 'annule' || st === 'cancelled';
+          // Dates en JOUR (10 car.) : colonnes parfois au format datetime (« 2026-06-09T00:00:00Z »).
           const start = String(j.dateDebut || j.start_date || '').slice(0, 10);
           const end = String(j.dateFin || j.end_date || start || '').slice(0, 10) || start;
-          // Occupent l'effectif AUJOURD'HUI : tout mandat « en cours », ou actif (dates encadrant le jour).
-          const activeToday = enCours || (st !== 'termine' && !!start && start <= todayStr && todayStr <= (end || start));
+          if (termine || !start) return;
+          // (1) RÉEL en cours aujourd'hui : la date du jour tombe dans la plage du mandat.
+          const activeToday = start <= todayStr && todayStr <= (end || start);
+          // (2) PLANIFIÉ à venir (cette année) : se termine aujourd'hui ou plus tard, commence avant la fin d'année.
+          const upcoming = (end || start) >= todayStr && start <= yearEnd;
+          if (activeToday) pl.actifs += 1;
+          if (upcoming) pl.aVenir += 1;
+          // (3) Taux d'occupation RÉEL du jour : personnes réellement affectées aux mandats actifs aujourd'hui.
           if (activeToday) {
-            const pa = Array.isArray(j.personnelAssigne) ? j.personnelAssigne : [];
-            if (pa.length) pa.forEach((id: any) => occupied.add(String(id)));
+            // Le champ d'affectation réel est `personnel` (liste d'ids) ; `personnelAssigne` est souvent vide.
+            const people = (Array.isArray(j.personnel) && j.personnel.length) ? j.personnel
+              : (Array.isArray(j.personnelAssigne) ? j.personnelAssigne : []);
+            if (people.length) people.forEach((id: any) => occupied.add(String(id)));
             else occFallback += Number(j.nombrePersonnelRequis) || 0;
           }
         });
@@ -203,7 +207,7 @@ export default function ModulesPage() {
   const has = (k: ModuleKey) => enabledKeys.includes(k);
   if (has('admin')) cards.push({ key: 'admin', title: tr('Administration', 'Administration'), href: `/${tenant}/admin`, big: String(userCount), sub: tr('utilisateurs', 'users'), available: true });
   if (has('projects')) cards.push({ key: 'projects', title: t('projects'), href: `/${tenant}/projects`, big: String(proj.soumission + proj.encours + proj.facture), sub: `${proj.soumission} ${tr('soum.', 'quotes')} · ${proj.encours} ${tr('cours', 'active')} · ${proj.facture} ${tr('fact.', 'inv.')} · ${money(proj.amount)}`, available: true });
-  if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.en_cours), sub: `${tr('en cours', 'wip')} · ${plan.planifies} ${tr('planifiés', 'planned')} · ${plan.roster > 0 ? `${plan.occCount}/${plan.roster} ${tr('occupés auj.', 'busy today')} (${plan.occ}%)` : `${plan.occ}% ${tr('occupé auj.', 'busy today')}`}`, available: true });
+  if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.actifs), sub: `${tr('en cours auj.', 'active today')} · ${plan.aVenir} ${tr('à venir', 'upcoming')} · ${plan.roster > 0 ? `${plan.occCount}/${plan.roster} ${tr('occupés auj.', 'busy today')} (${plan.occ}%)` : `${plan.occ}% ${tr('occupé auj.', 'busy today')}`}`, available: true });
   if (has('ast')) cards.push({ key: 'ast', title: tr('AST / Sécurité', 'JSA / Safety'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft} ${tr('brouillon', 'draft')} · ${ast.in_progress} ${tr('cours', 'wip')} · ${ast.completed} ${tr('terminé', 'done')} · ${ast.approved} ${tr('approuvé', 'appr.')}` , available: true });
   if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')}`, available: true });
   if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });

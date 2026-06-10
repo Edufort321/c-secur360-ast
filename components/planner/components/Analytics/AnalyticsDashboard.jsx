@@ -49,18 +49,37 @@ export function AnalyticsDashboard({
             filteredJobs = jobs.filter(job => job.bureau === filterBureau);
         }
 
-        // Filtrer par période si spécifiée
-        if (dateDebut && dateFin) {
-            filteredJobs = filteredJobs.filter(job => {
-                const jobDate = new Date(job.dateDebut);
-                return jobDate >= dateDebut && jobDate <= dateFin;
-            });
+        // Jour local (YYYY-MM-DD) sans décalage de fuseau (toISOString convertit en UTC -> -1 jour).
+        const ymd = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+
+        // Période EFFECTIVE pilotée par le sélecteur « Cette semaine / Ce mois / Cette année »
+        // (auparavant non branché -> les cartes tombaient à 0). Repli sur les bornes reçues en props.
+        const _now = new Date();
+        let periodStart, periodEnd;
+        if (filterPeriode === 'semaine') {
+            const monday = new Date(_now); monday.setDate(_now.getDate() - ((_now.getDay() + 6) % 7)); monday.setHours(0, 0, 0, 0);
+            periodStart = monday; periodEnd = new Date(monday.getTime() + 7 * 86400000 - 1);
+        } else if (filterPeriode === 'annee') {
+            periodStart = new Date(_now.getFullYear(), 0, 1); periodEnd = new Date(_now.getFullYear(), 11, 31, 23, 59, 59);
+        } else {
+            periodStart = new Date(_now.getFullYear(), _now.getMonth(), 1); periodEnd = new Date(_now.getFullYear(), _now.getMonth() + 1, 0, 23, 59, 59);
         }
+        // Repli : si aucune période sélectionnée n'est pertinente, on accepte les bornes props.
+        const pStartStr = ymd(periodStart), pEndStr = ymd(periodEnd);
+
+        // Filtrer par CHEVAUCHEMENT (un mandat 9-12 juin compte pour juin même si on regarde le mois).
+        filteredJobs = filteredJobs.filter(job => {
+            const js = String(job.dateDebut || '').slice(0, 10);
+            const je = String(job.dateFin || job.dateDebut || '').slice(0, 10) || js;
+            if (!js) return false;
+            return je >= pStartStr && js <= pEndStr;
+        });
 
         // Calculer les métriques de base
         const totalJobs = filteredJobs.length;
+        const _norm = (s) => String(s || '').toLowerCase().replace(/_/g, '-');
         const jobsActifs = filteredJobs.filter(job =>
-            ['planifie', 'en-cours', 'tentatif'].includes(job.statut)
+            ['planifie', 'en-cours', 'tentatif'].includes(_norm(job.statut || job.status))
         ).length;
 
         const totalHeuresPlanifiees = filteredJobs.reduce((sum, job) => {
@@ -117,11 +136,13 @@ export function AnalyticsDashboard({
         for (let i = 29; i >= 0; i--) {
             const date = new Date(maintenant);
             date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = ymd(date);
 
+            // Chevauchement : un mandat couvre TOUS les jours de sa plage (dateDebut -> dateFin).
             const jobsJour = jobs.filter(job => {
-                const jobDate = new Date(job.dateDebut);
-                return jobDate.toISOString().split('T')[0] === dateStr;
+                const js = String(job.dateDebut || '').slice(0, 10);
+                const je = String(job.dateFin || job.dateDebut || '').slice(0, 10) || js;
+                return js && js <= dateStr && dateStr <= (je || js);
             });
 
             // Travailleurs distincts occupes ce jour-la (un meme tech sur 2 jobs = 1)
