@@ -1737,6 +1737,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
   const [showLink,setShowLink]=useState(false);   // panneau "Lier au projet / événement"
   const [showSoum,setShowSoum]=useState(false);   // constructeur de soumission depuis anomalies/recos
   const [showTools,setShowTools]=useState(false); // menu "⋯" (actions repliées sur mobile)
+  const [showExportMenu,setShowExportMenu]=useState(false); // menu du bouton Export (QR sur la feuille : oui/non)
   const [qr,setQr]=useState(null);                // { url, data } QR unique de la feuille de test (deep-link ?r=)
   const [showQr,setShowQr]=useState(false);
   const [showShare,setShowShare]=useState(false); // partage au vérificateur (lien tokenisé)
@@ -2143,10 +2144,25 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"hw", label:`🖊 ${LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}`, on:doExportHandwrite, title:LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main" },
             updatedCount>0 && { key:"upd", label:`🔁 ${LANG==="en"?"Export updates":"Export MAJ"} (${updatedCount})`, on:doExportUpdates, style:{borderColor:"#e0a96d",color:"#b45309"}, title:LANG==="en"?"Export only the blocks marked as updated":"Exporter uniquement les blocs marqués comme mis à jour" },
           ].filter(Boolean);
+          // Bouton d'export scindé : action principale + menu « QR sur la feuille : oui/non »
+          // (le choix est mémorisé dans r.qrShow, donc synchro avec l'option de mise en page).
+          const exportControl=(
+            <div style={{position:"relative",display:"inline-flex"}}>
+              <button style={{...S.btnDark,borderTopRightRadius:0,borderBottomRightRadius:0}} onClick={doExport}>🖨 {t("export")}</button>
+              <button style={{...S.btnDark,borderTopLeftRadius:0,borderBottomLeftRadius:0,borderLeft:"1px solid rgba(255,255,255,.3)",padding:"9px 10px"}} onClick={()=>setShowExportMenu(v=>!v)} title={LANG==="en"?"Export options (QR on the sheet)":"Options d'export (QR sur la feuille)"}>▾</button>
+              {showExportMenu && (
+                <div style={{position:"absolute",right:0,top:"110%",zIndex:60,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.22)",padding:6,minWidth:220}} onMouseLeave={()=>setShowExportMenu(false)}>
+                  <div style={{fontSize:11,fontWeight:700,fontFamily:"'Archivo'",color:"#64748b",textTransform:"uppercase",letterSpacing:.4,padding:"4px 8px 6px"}}>{LANG==="en"?"QR code on the sheet":"QR code sur la feuille"}</div>
+                  <button style={{...S.blockMenuItem,fontWeight:700,...(r.qrShow!==false?{color:"#1e293b"}:{})}} onClick={()=>{ setShowExportMenu(false); setField("qrShow",true); setTimeout(()=>doExport(),60); }} title={LANG==="en"?"Print the report QR in the footer of each page":"Imprimer le QR du rapport dans le pied de chaque page"}>{r.qrShow!==false?"✓ ":""}🔳 {LANG==="en"?"Export WITH QR":"Exporter AVEC QR"}</button>
+                  <button style={{...S.blockMenuItem,fontWeight:700,...(r.qrShow===false?{color:"#1e293b"}:{})}} onClick={()=>{ setShowExportMenu(false); setField("qrShow",false); setTimeout(()=>doExport(),60); }} title={LANG==="en"?"Export the PDF without any QR code on the sheet":"Exporter le PDF sans aucun QR code sur la feuille"}>{r.qrShow===false?"✓ ":""}🚫 {LANG==="en"?"Export WITHOUT QR":"Exporter SANS QR"}</button>
+                </div>
+              )}
+            </div>
+          );
           if(narrow){
             return (
               <div style={{display:"flex",gap:8,position:"relative"}}>
-                <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
+                {exportControl}
                 <button style={{...S.btnGhost,padding:"9px 14px"}} onClick={()=>setShowTools(v=>!v)} title={LANG==="en"?"More actions":"Plus d'actions"}>⋯</button>
                 {showTools && (
                   <div style={{position:"absolute",right:0,top:"110%",zIndex:60,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.22)",padding:6,minWidth:230,maxHeight:"60vh",overflowY:"auto"}} onMouseLeave={()=>setShowTools(false)}>
@@ -2163,7 +2179,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
               {actions.map(a=>(
                 <button key={a.key} style={{...S.btnGhost,...(a.style||{})}} disabled={a.disabled} onClick={a.on} title={a.title||""}>{a.label}</button>
               ))}
-              <button style={S.btnDark} onClick={doExport}>🖨 {t("export")}</button>
+              {exportControl}
             </div>
           );
         })()}
