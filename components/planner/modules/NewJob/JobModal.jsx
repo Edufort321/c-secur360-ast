@@ -2575,18 +2575,23 @@ export function JobModal({
     // monte le Gantt : chaque Item = tâche parent, chaque ligne MO = étape enfant
     // (durée = Rég+Supp+Maj, personnes = Tech). Décision-free (4 décisions tranchées).
     const prefillFromProject = async () => {
-        const num = (projectSearch || '').trim();
-        if (!num) return;
+        // Résout le projet par n° saisi/lié OU par projectId (formulaire ouvert depuis un projet) —
+        // jamais de sortie silencieuse : on notifie toujours le résultat.
+        const num = (projectSearch || formData.numeroJob || '').trim();
+        const pid = formData.projectId || '';
+        if (!num && !pid) { addNotification?.('Liez ou recherchez d\'abord un projet (issu d\'une soumission acceptée).', 'error'); return; }
         setPrefilling(true);
         try {
             const tenant = window.location.pathname.split('/')[1] || 'cerdia';
-            const { data: proj } = await supabase.from('projects')
-                .select('*').eq('tenant_id', tenant).eq('project_number', num).maybeSingle();
-            if (!proj) { addNotification?.(`Projet introuvable : ${num}`, 'error'); setPrefilling(false); return; }
+            let proj = null;
+            if (num) { const { data } = await supabase.from('projects').select('*').eq('tenant_id', tenant).eq('project_number', num).maybeSingle(); proj = data; }
+            if (!proj && pid) { const { data } = await supabase.from('projects').select('*').eq('tenant_id', tenant).eq('id', pid).maybeSingle(); proj = data; }
+            if (!proj) { addNotification?.(`Projet introuvable : ${num || pid}`, 'error'); setPrefilling(false); return; }
             const est = proj.estimate || {};
+            const items = est.items || [];
             const newEtapes = [];
             let baseId = Date.now();
-            (est.items || []).forEach((it, ii) => {
+            items.forEach((it, ii) => {
                 const parentId = baseId++;
                 newEtapes.push({
                     id: parentId, text: it.name || `Item ${ii + 1}`, description: '', completed: false,
@@ -2594,11 +2599,15 @@ export function JobModal({
                     level: 0, order: ii, progress: 0, assignedResources: { personnel: [], equipements: [], equipes: [], sousTraitants: [] },
                 });
                 (it.lignes || []).filter(l => l.categorie === 'mo_bureau' || l.categorie === 'mo_chantier').forEach((l, li) => {
-                    const dur = (Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0);
+                    // Heures de la SOUMISSION : reg/supp/maj = heures PAR PERSONNE ; tech = nb de personnes.
+                    const perPerson = (Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0);
+                    const crew = Number(l.tech) || 1;
+                    const manHours = (perPerson || 1) * crew;        // heures-homme TOTALES (charge de travail)
+                    const dur = Math.max(1, Math.round(manHours / crew)); // durée calendaire = heures-homme / personnes
                     newEtapes.push({
                         id: baseId++, text: l.description || 'Travail', description: '', completed: false,
-                        duration: dur || 1, priority: 'normal', dependencies: [], parallelWith: [], parentId,
-                        level: 1, order: li, progress: 0, personnesRequises: Number(l.tech) || 1,
+                        duration: dur, manHours, priority: 'normal', dependencies: [], parallelWith: [], parentId,
+                        level: 1, order: li, progress: 0, personnesRequises: crew,
                         assignedResources: { personnel: [], equipements: [], equipes: [], sousTraitants: [] },
                     });
                 });
@@ -2613,7 +2622,12 @@ export function JobModal({
                 projectId: proj.id,
                 etapes: newEtapes.length ? newEtapes : prev.etapes,
             }));
-            addNotification?.(`Pré-rempli depuis ${proj.project_number} — ${newEtapes.length} étape(s) générée(s).`, 'success');
+            if (!items.length)
+                addNotification?.(`Projet ${proj.project_number} lié, mais aucune soumission/devis à pré-remplir (acceptez d'abord une soumission pour ce projet).`, 'info');
+            else if (!newEtapes.some(e => e.parentId))
+                addNotification?.(`Pré-rempli depuis ${proj.project_number} — ${newEtapes.length} item(s), mais aucune ligne de main-d'œuvre (heures) à planifier.`, 'info');
+            else
+                addNotification?.(`Pré-rempli depuis ${proj.project_number} — ${newEtapes.length} étape(s) ; durée = heures-homme ÷ personnes (ajuste le nb de personnes pour recalculer).`, 'success');
         } catch (e) {
             addNotification?.(e?.message || 'Erreur de pré-remplissage', 'error');
         }
