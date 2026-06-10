@@ -113,10 +113,13 @@ export default function ModulesPage() {
           const enCours = st === 'en-cours' || st === 'in-progress';
           if (enCours) pl.en_cours += 1;
           if (st === 'planifie' || st === 'planned') pl.planifies += 1;
-          const start = j.dateDebut || j.start_date || '';
-          const end = j.dateFin || j.end_date || start;
+          // Dates en JOUR (10 car.) : les colonnes peuvent être au format datetime
+          // (« 2026-06-09T00:00:00Z ») — sans tronquer, « ...T00:00:00Z » <= « 2026-06-09 » est faux
+          // et les mandats commençant aujourd'hui étaient exclus (occupation sous-évaluée).
+          const start = String(j.dateDebut || j.start_date || '').slice(0, 10);
+          const end = String(j.dateFin || j.end_date || start || '').slice(0, 10) || start;
           // Occupent l'effectif AUJOURD'HUI : tout mandat « en cours », ou actif (dates encadrant le jour).
-          const activeToday = enCours || (st !== 'termine' && start && start <= todayStr && todayStr <= (end || start));
+          const activeToday = enCours || (st !== 'termine' && !!start && start <= todayStr && todayStr <= (end || start));
           if (activeToday) {
             const pa = Array.isArray(j.personnelAssigne) ? j.personnelAssigne : [];
             if (pa.length) pa.forEach((id: any) => occupied.add(String(id)));
