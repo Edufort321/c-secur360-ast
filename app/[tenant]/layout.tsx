@@ -17,10 +17,12 @@ export function generateMetadata({ params }: { params: { tenant: string } }): Me
     // Securite/SEO (#25) : espace tenant prive -> jamais indexe.
     robots: { index: false, follow: false },
     manifest: `/${params.tenant}/manifest.webmanifest`,
+    // Icône PWA = pastille navy générée (logo bien gros), PAS le logo brut (sinon iOS affiche un
+    // petit logo carré). Doit rester cohérent avec /{tenant}/manifest.webmanifest. v= : anti-cache.
     icons: {
-      icon: '/c-secur360-logo.png',
-      apple: '/c-secur360-logo.png',
-      shortcut: '/c-secur360-logo.png',
+      icon: '/icon-pwa?size=192&v=2',
+      apple: '/icon-pwa?size=180&v=2',
+      shortcut: '/icon-pwa?size=192&v=2',
     },
   }
 }

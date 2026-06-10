@@ -1,8 +1,9 @@
 import { ImageResponse } from 'next/og';
 
-// Icône PWA générée dynamiquement : le logo C-Secur360 centré sur une PASTILLE BLEU NAVY (#111827),
-// la couleur du header principal (bg-gray-900). Plein cadre -> compatible « maskable » (l'OS recadre
-// en cercle/squircle, on garde donc du navy partout). Utilisée par les manifests (192 et 512).
+// Icône PWA générée dynamiquement : le logo C-Secur360 sur une PASTILLE RONDE bleu navy (#111827),
+// le logo occupant ~90 % de la pastille. Cercle plein (borderRadius 50 %). Sur Android « maskable »
+// l'OS recadre en cercle (la pastille est déjà ronde -> parfait) ; sur iOS le coin transparent se
+// fond dans le navy. Utilisée par les manifests + apple-touch-icon (192 / 512 / 180).
 export const runtime = 'nodejs';
 
 const NAVY = '#111827';
@@ -10,7 +11,7 @@ const NAVY = '#111827';
 export async function GET(req: Request) {
   const { origin, searchParams } = new URL(req.url);
   const size = Math.min(1024, Math.max(64, Number(searchParams.get('size')) || 512));
-  const logo = Math.round(size * 0.8); // logo bien visible, sur fond navy pleine surface
+  const logo = Math.round(size * 0.9); // logo = 90 % de la pastille (bien gros)
   return new ImageResponse(
     (
       <div
@@ -21,9 +22,7 @@ export async function GET(req: Request) {
           alignItems: 'center',
           justifyContent: 'center',
           background: NAVY,
-          // Pastille navy ARRONDIE (squircle), pleine surface -> navy partout (pas de coins
-          // transparents), look rond, et le logo peut rester gros sans déborder d'un cercle.
-          borderRadius: `${Math.round(size * 0.28)}px`,
+          borderRadius: '50%', // PASTILLE RONDE (cercle plein)
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}

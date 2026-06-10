@@ -19,10 +19,10 @@ export function GET(_req: Request, { params }: { params: { tenant: string } }) {
     background_color: '#111827',
     theme_color: '#111827',
     icons: [
-      { src: '/icon-pwa?size=192', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icon-pwa?size=192', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: '/icon-pwa?size=512', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icon-pwa?size=512', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-pwa?size=192&v=2', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-pwa?size=192&v=2', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-pwa?size=512&v=2', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-pwa?size=512&v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
   return new NextResponse(JSON.stringify(manifest), {
