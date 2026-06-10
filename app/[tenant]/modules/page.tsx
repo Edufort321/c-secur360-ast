@@ -191,6 +191,12 @@ export default function ModulesPage() {
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <PortalHeader tenant={tenant} />
 
+      <div className="px-4 pt-3 lg:px-6">
+        <Link href={`/${tenant}/guide`} className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
+          📖 Guide / Mode d&apos;emploi des modules
+        </Link>
+      </div>
+
       <div className="flex w-full flex-col gap-6 px-4 py-6 md:flex-row lg:px-6">
         {/* Sidebar */}
         <aside className="hidden shrink-0 md:block md:w-64 md:sticky md:top-[60px] md:self-start md:h-[calc(100vh-60px)]">
