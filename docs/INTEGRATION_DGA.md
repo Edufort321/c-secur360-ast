@@ -14,25 +14,42 @@ exports Excel/CSV LIMS InsideView / Morgan Schaffer** (mappage déterministe, sa
 
 ## A. Configuration OPÉRATEUR (une seule fois)
 
+**Une adresse par tenant = automatique.** Le domaine de réception est en **catch-all** : *toute*
+adresse `dga.<tenant>@<domaine>` arrive au même webhook, qui résout le tenant depuis l'adresse.
+Aucune boîte à créer par tenant (la config s'auto-crée quand le tenant ouvre le panneau « Import
+par courriel » dans l'app).
+
 ### A.1 Migration base de données
 Appliquer `supabase/migrations/153_dga_email_inbound.sql` dans le **bon** projet Supabase
 (`NEXT_PUBLIC_SUPABASE_URL`). Elle crée `dga_inbound` + `dga_inbound_log`, ajoute la colonne
 `seen` à `dga_measures`, et publie `dga_dossiers`/`dga_measures` en temps réel.
 
-### A.2 Domaine de réception (Resend Inbound)
-1. Dans Resend → **Receiving**, ajouter un domaine de réception, ex. `in.c-secur360.ca`.
-2. Configurer les enregistrements **DNS MX** fournis par Resend sur ce sous-domaine.
-3. Créer un **webhook** Resend (event **`email.received`**) pointant vers :
-   `https://www.c-secur360.ca/api/dga/email-inbound`
-4. Récupérer le **secret de signature** du webhook (`whsec_…`).
+### A.2 Réception — Option 1 : Cloudflare Email Routing (GRATUIT, recommandé)
+Le webhook accepte une **passerelle générique** (pièces jointes en ligne + secret partagé) : aucune
+dépendance payante pour recevoir.
+1. Domaine `c-secur360.ca` (ou au moins le sous-domaine `in.c-secur360.ca`) géré par **Cloudflare**
+   (DNS sur Cloudflare — gratuit).
+2. Cloudflare → **Email → Email Routing** : activer, puis règle **catch-all** de `in.c-secur360.ca`
+   → **Send to a Worker**.
+3. Déployer le Worker `docs/cloudflare-email-worker.js` (Wrangler ; dépendance npm `postal-mime`).
+   Variables du Worker : `IMPORT_URL=https://www.c-secur360.ca/api/dga/email-inbound` et
+   `INBOUND_SECRET=<même valeur que DGA_INBOUND_WEBHOOK_SECRET>`.
+
+Le Worker parse le courriel et **POST** les pièces jointes (PDF/Excel/CSV) en base64 au webhook avec
+l'en-tête `x-cs-inbound-secret`. Gratuit (Email Routing + Workers free tier).
+
+### A.2 bis — Option 2 : Resend Inbound (alternative)
+1. Resend → **Receiving** : ajouter le domaine `in.c-secur360.ca` + enregistrements **MX**.
+2. Webhook Resend (event **`email.received`**) → `https://www.c-secur360.ca/api/dga/email-inbound`.
+3. `DGA_INBOUND_WEBHOOK_SECRET` = secret de signature Svix (`whsec_…`).
 
 ### A.3 Variables d'environnement (Vercel)
 | Variable | Rôle |
 |---|---|
-| `RESEND_API_KEY` | Clé API Resend (envoi + lecture des courriels reçus / pièces jointes). Déjà utilisée. |
-| `DGA_INBOUND_WEBHOOK_SECRET` | Secret de signature Svix du webhook Resend (`whsec_…`). **Obligatoire en prod** : sans lui, le webhook refuse tout. |
+| `DGA_INBOUND_WEBHOOK_SECRET` | **Obligatoire.** Cloudflare : secret partagé (valeur libre, même que `INBOUND_SECRET` du Worker). Resend : secret de signature Svix (`whsec_…`). |
 | `DGA_INBOUND_DOMAIN` | Domaine de réception, ex. `in.c-secur360.ca`. Détermine l'adresse de chaque tenant : `dga.<tenant>@<domaine>`. |
-| `EMAIL_FROM` | Expéditeur des courriels de confirmation. Déjà utilisée. |
+| `RESEND_API_KEY` | Clé API Resend — **uniquement pour ENVOYER** les courriels de confirmation (gratuit ≤ 3 000/mois). Aussi nécessaire si on utilise Resend pour la réception (Option 2). |
+| `EMAIL_FROM` | Expéditeur des courriels de confirmation. |
 
 ### A.4 Sécurité (intégrée)
 - **Signature Svix** vérifiée sur chaque appel (HMAC-SHA256). En prod, secret absent ⇒ 401/503.
