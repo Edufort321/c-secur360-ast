@@ -14,16 +14,18 @@ const INBOUND_DOMAIN = process.env.DGA_INBOUND_DOMAIN || 'in.c-secur360.ca';
 const inboundAddress = (tenant: string) => `dga.${tenant}@${INBOUND_DOMAIN}`;
 const isAdmin = (role?: string) => role === 'super_admin' || role === 'client_admin';
 
-async function ensureConfig(tenant: string) {
-  const { data } = await supabaseAdmin.from('dga_inbound').select('*').eq('tenant_id', tenant).maybeSingle();
-  if (data) {
-    // Repli : s'assure que l'adresse reflete le domaine courant.
-    if (!data.address) { await supabaseAdmin.from('dga_inbound').update({ address: inboundAddress(tenant) }).eq('tenant_id', tenant); data.address = inboundAddress(tenant); }
-    return data;
+// Renvoie { config } ou { error } (ex. table absente si la migration 153 n'est pas appliquee).
+async function ensureConfig(tenant: string): Promise<{ config?: any; error?: string }> {
+  const sel = await supabaseAdmin.from('dga_inbound').select('*').eq('tenant_id', tenant).maybeSingle();
+  if (sel.error) return { error: sel.error.message };
+  if (sel.data) {
+    if (!sel.data.address) { await supabaseAdmin.from('dga_inbound').update({ address: inboundAddress(tenant) }).eq('tenant_id', tenant); sel.data.address = inboundAddress(tenant); }
+    return { config: sel.data };
   }
   const row = { tenant_id: tenant, address: inboundAddress(tenant), enabled: false, allow_senders: [], auto_create: true };
-  await supabaseAdmin.from('dga_inbound').insert(row);
-  return row;
+  const ins = await supabaseAdmin.from('dga_inbound').insert(row).select().single();
+  if (ins.error) return { error: ins.error.message };
+  return { config: ins.data };
 }
 
 export async function GET(req: NextRequest) {
@@ -33,9 +35,10 @@ export async function GET(req: NextRequest) {
   const tenant = user.role === 'super_admin' && qsTenant ? qsTenant : user.tenant_id;
   if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
 
-  const config = await ensureConfig(tenant);
+  const ec = await ensureConfig(tenant);
+  if (ec.error) return NextResponse.json({ error: ec.error }, { status: 500 });
   const { data: log } = await supabaseAdmin.from('dga_inbound_log').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(25);
-  return NextResponse.json({ ok: true, config, log: log || [], domain: INBOUND_DOMAIN, canEdit: isAdmin(user.role) });
+  return NextResponse.json({ ok: true, config: ec.config, log: log || [], domain: INBOUND_DOMAIN, canEdit: isAdmin(user.role) });
 }
 
 export async function POST(req: NextRequest) {
@@ -55,7 +58,8 @@ export async function POST(req: NextRequest) {
   if (Array.isArray(body.allow_senders)) {
     patch.allow_senders = body.allow_senders.map((s: any) => String(s || '').toLowerCase().trim()).filter(Boolean).slice(0, 200);
   }
-  await ensureConfig(tenant); // garantit l'existence avant update
+  const ec = await ensureConfig(tenant); // garantit l'existence (et remonte une table manquante)
+  if (ec.error) return NextResponse.json({ error: ec.error }, { status: 500 });
   const { data, error } = await supabaseAdmin.from('dga_inbound').update(patch).eq('tenant_id', tenant).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, config: data });

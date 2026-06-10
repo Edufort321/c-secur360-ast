@@ -26,26 +26,38 @@ export function InboundSetup({ onClose }: { onClose: () => void }) {
   const [canEdit, setCanEdit] = useState(false);
   const [copied, setCopied] = useState(false);
   const [senders, setSenders] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Indice si l'API echoue parce que les tables n'existent pas encore (migration 153 non appliquee).
+  const migHint = (e: string) => /(relation|exist|table|schema|column|dga_inbound)/i.test(e || '') ? tr(' — la migration 153 est-elle appliquée dans Supabase ?', ' — is migration 153 applied in Supabase?') : '';
 
   async function load() {
-    setLoading(true);
+    setLoading(true); setMsg(null);
     try {
       const r = await fetch('/api/dga/inbound', { credentials: 'include' });
-      const j = await r.json();
-      if (j.config) { setCfg(j.config); setSenders((j.config.allow_senders || []).join('\n')); }
-      setLog(j.log || []); setCanEdit(!!j.canEdit);
-    } catch { /* ignore */ }
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.config) { setCfg(j.config); setSenders((j.config.allow_senders || []).join('\n')); setLog(j.log || []); setCanEdit(!!j.canEdit); }
+      else setMsg({ ok: false, text: tr('Chargement impossible : ', 'Load failed: ') + (j.error || `HTTP ${r.status}`) + migHint(j.error) });
+    } catch (e: any) { setMsg({ ok: false, text: tr('Erreur réseau au chargement.', 'Network error on load.') }); }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   async function save(patch: any) {
-    setSaving(true);
+    setSaving(true); setMsg(null);
     try {
       const r = await fetch('/api/dga/inbound', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
-      const j = await r.json();
-      if (j.config) { setCfg(j.config); setSenders((j.config.allow_senders || []).join('\n')); }
-    } catch { /* ignore */ }
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.config) {
+        setCfg(j.config); setSenders((j.config.allow_senders || []).join('\n'));
+        setMsg({ ok: true, text: tr('Réglages enregistrés ✓', 'Settings saved ✓') });
+        setTimeout(() => setMsg(null), 3000);
+      } else {
+        const e = j.error || `HTTP ${r.status}`;
+        const extra = r.status === 403 ? tr(' (rôle administrateur requis)', ' (admin role required)') : migHint(e);
+        setMsg({ ok: false, text: tr('Échec de l’enregistrement : ', 'Save failed: ') + e + extra });
+      }
+    } catch (e: any) { setMsg({ ok: false, text: tr('Erreur réseau : ', 'Network error: ') + (e?.message || '') }); }
     setSaving(false);
   }
   function saveAll() {
@@ -71,6 +83,13 @@ export function InboundSetup({ onClose }: { onClose: () => void }) {
           </h2>
           <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><X size={18} /></button>
         </div>
+
+        {/* Drapeau de confirmation / erreur d'enregistrement */}
+        {msg && (
+          <div className={`mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${msg.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'}`}>
+            {msg.ok ? <Check size={16} /> : <span>⚠</span>}{msg.text}
+          </div>
+        )}
 
         {loading ? <div className="grid place-items-center py-16 text-slate-400"><Loader2 className="animate-spin" /></div> : (
           <>
