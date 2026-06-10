@@ -112,14 +112,18 @@ export interface ImportResult { created: number; merged: number; measures: numbe
 // autoCreate=false : ne cree PAS de nouveau transformateur (n'ajoute des mesures qu'aux existants).
 export async function importTransformers(tenant: string, transformers: any[], opts: { autoCreate?: boolean } = {}): Promise<ImportResult> {
   const autoCreate = opts.autoCreate !== false;
-  const { data: existing } = await supabaseAdmin.from('dga_dossiers').select('id,ident,serie').eq('tenant_id', tenant);
+  const { data: existing } = await supabaseAdmin.from('dga_dossiers').select('id,ident,serie,updated_at,created_at').eq('tenant_id', tenant);
   const dossiers: any[] = existing || [];
 
+  const ts = (d: any) => Date.parse(d?.updated_at || d?.created_at || '') || 0;
+  const mostRecent = (list: any[]) => [...list].sort((a, b) => ts(b) - ts(a))[0];
+  // Le N° DE SERIE fait foi : meme si le nom de la compagnie/identification change, on fusionne dans
+  // la fiche existante du meme n° de serie — et s'il y en a plusieurs, dans la PLUS RECENTE.
   const match = (eq: any): any | null => {
     const serie = normf(eq.serialNo);
-    if (serie) { const b = dossiers.find(d => normf(d.serie) === serie); if (b) return b; }
+    if (serie) { const c = dossiers.filter(d => normf(d.serie) === serie); if (c.length) return mostRecent(c); }
     const name = normf(eq.identification || eq.equipment);
-    if (name) { const b = dossiers.find(d => normf(d.ident) === name); if (b) return b; }
+    if (name) { const c = dossiers.filter(d => normf(d.ident) === name); if (c.length) return mostRecent(c); }
     return null;
   };
 

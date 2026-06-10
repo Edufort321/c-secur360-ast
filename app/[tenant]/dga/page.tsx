@@ -367,13 +367,24 @@ export default function DgaPage() {
       }
       if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le fichier.', 'No transformer detected in the file.'));
       // Un PDF peut contenir PLUSIEURS transformateurs -> un item par transformateur (séparés).
+      const NAME_FIELDS: { key: keyof Dossier; fr: string; en: string }[] = [
+        { key: 'company', fr: 'Compagnie', en: 'Company' },
+        { key: 'ident', fr: 'Équipement', en: 'Equipment' },
+        { key: 'client', fr: 'Localisation', en: 'Location' },
+      ];
       const items = transformers.map((t: any) => {
         const rawEq = t.equipment || {};
+        const eq = mapEquip(rawEq);
         const measuresN = (t.measurements || []).map(mapMeasure).sort((a: Measure, b: Measure) => String(a.sample_date).localeCompare(String(b.sample_date)));
         const match = matchDossier(dossiers, { serialNo: rawEq.serialNo, identification: rawEq.identification, equipment: rawEq.equipment });
         let newMeasures = measuresN, dupCount = 0;
         if (match?.id) { const existing = new Set((measuresByDossier[match.id] || []).filter(m => m.sample_date).map(m => m.sample_date)); newMeasures = measuresN.filter((m: Measure) => !existing.has(m.sample_date)); dupCount = measuresN.length - newMeasures.length; }
-        return { rawEq, eq: mapEquip(rawEq), measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create' };
+        // Conflits de NOM : même n° de série mais libellé différent -> on demandera quel nom garder.
+        const conflicts = match ? NAME_FIELDS.map(f => {
+          const ex = String((match as any)[f.key] || '').trim(); const nw = String((eq as any)[f.key] || '').trim();
+          return (ex && nw && ex.toLowerCase() !== nw.toLowerCase()) ? { key: f.key, label: tr(f.fr, f.en), existing: ex, incoming: nw } : null;
+        }).filter(Boolean) : [];
+        return { rawEq, eq, measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create', conflicts, useNew: {} as Record<string, boolean> };
       });
       setImportPreview({ items });
     } catch (e: any) { setImportErr(e?.message || String(e)); }
@@ -392,6 +403,8 @@ export default function DgaPage() {
           did = it.match.id;
           const patch: any = { ...it.match };
           for (const k of Object.keys(it.eq) as (keyof Dossier)[]) { if ((it.match as any)[k] == null || (it.match as any)[k] === '') (patch as any)[k] = (it.eq as any)[k]; }
+          // Conflits de nom : si l'utilisateur a choisi le NOUVEAU libellé, on l'applique (sinon on garde l'existant).
+          for (const c of (it.conflicts || [])) { if (it.useNew?.[c.key]) (patch as any)[c.key] = c.incoming; }
           await saveDossier(tenant, patch); merged++;
         } else {
           const saved = await saveDossier(tenant, it.eq);
@@ -636,6 +649,7 @@ function ImportPreview({ tr, lang, importPreview, setImportPreview, applyImport 
   const items: any[] = importPreview.items || [];
   const multi = items.length > 1;
   const setMode = (i: number, mode: 'merge' | 'create') => setImportPreview({ ...importPreview, items: items.map((it, idx) => (idx === i ? { ...it, mode } : it)) });
+  const setUseNew = (i: number, key: string, val: boolean) => setImportPreview({ ...importPreview, items: items.map((it, idx) => (idx === i ? { ...it, useNew: { ...(it.useNew || {}), [key]: val } } : it)) });
   const oilRows = (measures: Measure[]) => OIL_FIELDS.filter(f => measures.some(m => m.oil_quality?.[f.key] != null));
   const furanRows = (measures: Measure[]) => FURAN_FIELDS.filter(f => measures.some(m => m.oil_quality?.[f.key] != null));
   return (
@@ -658,6 +672,18 @@ function ImportPreview({ tr, lang, importPreview, setImportPreview, applyImport 
                 )}
               </div>
               {it.match && merging && <div className="mb-2 text-xs text-emerald-700 dark:text-emerald-300">🔗 {tr('Fusion avec', 'Merge with')} <b>{it.match.ident}</b> — <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span className="text-amber-600"> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}</div>}
+              {merging && (it.conflicts || []).length > 0 && (
+                <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <div className="mb-1 text-[11px] font-bold text-amber-800 dark:text-amber-300">⚠ {tr('Le n° de série correspond, mais ces noms diffèrent — choisis lequel garder :', 'Serial matches, but these names differ — choose which to keep:')}</div>
+                  {(it.conflicts || []).map((c: any) => { const useNew = !!it.useNew?.[c.key]; return (
+                    <div key={c.key} className="flex flex-wrap items-center gap-2 py-0.5 text-[11px]">
+                      <span className="font-semibold text-gray-600 dark:text-gray-300">{c.label} :</span>
+                      <button onClick={() => setUseNew(i, c.key, false)} className={`rounded-full px-2 py-0.5 font-semibold ${!useNew ? 'bg-emerald-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`} title={tr('Garder l\'existant', 'Keep existing')}>{c.existing}</button>
+                      <button onClick={() => setUseNew(i, c.key, true)} className={`rounded-full px-2 py-0.5 font-semibold ${useNew ? 'bg-rose-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`} title={tr('Utiliser le nouveau', 'Use new')}>{c.incoming} <span className="opacity-70">({tr('nouveau', 'new')})</span></button>
+                    </div>
+                  ); })}
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead><tr><th className="px-2 py-1 text-left font-semibold">{tr('Paramètre', 'Parameter')}</th>{measures.map((m, k) => <th key={k} className="px-2 py-1 text-right font-semibold">{m.sample_date}</th>)}</tr></thead>

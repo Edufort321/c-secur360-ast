@@ -189,10 +189,14 @@ export async function deleteMeasure(id: string) { await supabase.from('dga_measu
 // Assemblage intelligent : retrouve un dossier existant correspondant (par n° série, sinon par nom).
 export function matchDossier(dossiers: Dossier[], eq: { serialNo?: string; identification?: string; equipment?: string }): Dossier | null {
   const norm = (s?: string) => (s || '').trim().toLowerCase();
+  const ts = (d: Dossier) => Date.parse((d.updated_at || d.created_at || '') as string) || 0;
+  const mostRecent = (list: Dossier[]) => [...list].sort((a, b) => ts(b) - ts(a))[0];
+  // Le N° DE SERIE fait foi (même si la compagnie/identification a changé de nom) ; s'il y a
+  // plusieurs fiches du même n° de série, on retient la PLUS RECENTE.
   const serie = norm(eq.serialNo);
-  if (serie) { const bySerie = dossiers.find(d => norm(d.serie) === serie); if (bySerie) return bySerie; }
+  if (serie) { const c = dossiers.filter(d => norm(d.serie) === serie); if (c.length) return mostRecent(c); }
   const name = norm(eq.identification || eq.equipment);
-  if (name) { const byName = dossiers.find(d => norm(d.ident) === name); if (byName) return byName; }
+  if (name) { const c = dossiers.filter(d => norm(d.ident) === name); if (c.length) return mostRecent(c); }
   return null;
 }
 
