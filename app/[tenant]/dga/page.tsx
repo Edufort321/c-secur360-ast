@@ -14,7 +14,7 @@ import { BackButton } from '@/components/BackButton';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 import { supabase } from '@/lib/supabase';
-import { FlaskConical, Lock, Loader2, Plus, Search, Upload, Trash2, ArrowLeft } from 'lucide-react';
+import { FlaskConical, Lock, Loader2, Plus, Search, Upload, Trash2, ArrowLeft, Mail } from 'lucide-react';
 import {
   EQUIP_GROUPS, EQUIP_FIELDS, listDossiers, listAllMeasures, listMeasures, saveDossier, deleteDossier,
   saveMeasure, deleteMeasure, matchDossier, type Dossier, type Measure,
@@ -27,6 +27,8 @@ import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
 import { voltageClass } from '@/lib/dga/oil';
 import { TransfoView } from '@/components/dga/TransfoView';
 import { SampleEntry, type SamplePayload } from '@/components/dga/SampleEntry';
+import { InboundSetup } from '@/components/dga/InboundSetup';
+import { parseLimsBuffer, isPdf, isSpreadsheet } from '@/lib/dga/insideview';
 
 const num = (v: any) => (v == null || v === '' ? 0 : Number(v) || 0);
 const norm = (s?: string) => (s || '').trim().toLowerCase();
@@ -60,6 +62,7 @@ export default function DgaPage() {
   const [importPreview, setImportPreview] = useState<any>(null);
   const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null); // lots (gros PDF)
   const [dragOver, setDragOver] = useState(false);
+  const [showInbound, setShowInbound] = useState(false); // panneau « Import par courriel »
   const [logoUrl, setLogoUrl] = useState<string | null>('/c-secur360-logo.png');
   const [tenantName, setTenantName] = useState<string>('');
   // Confirmation in-app (window.confirm() est supprimé dans une PWA installée -> suppression sans avertissement).
@@ -79,6 +82,16 @@ export default function DgaPage() {
   async function reload() {
     const [ds, ms] = await Promise.all([listDossiers(tenant), listAllMeasures(tenant)]);
     setDossiers(ds); setAllMeasures(ms);
+  }
+  // Marque comme « vues » les mesures d'un transformateur (efface le badge « Nouveau » des
+  // résultats reçus par courriel) dès que le tenant ouvre sa fiche.
+  async function markDossierSeen(id: string) {
+    if (!id) return;
+    try { await supabase.from('dga_measures').update({ seen: true }).eq('tenant_id', tenant).eq('dossier_id', id).eq('seen', false); } catch { /* tolère (colonne seen via migration 153) */ }
+  }
+  function openFiche(d: Dossier) {
+    setSelId(d.id!); setView('fiche');
+    if (d.id && (measuresByDossier[d.id] || []).some(m => (m as any).seen === false)) markDossierSeen(d.id).then(reload);
   }
   useEffect(() => { if (access === 'enabled') reload(); /* eslint-disable-next-line */ }, [access, tenant]);
   useEffect(() => { if (tenant) getSitesTree(tenant).then(setSitesTree); }, [tenant]);
@@ -256,14 +269,17 @@ export default function DgaPage() {
   // comme l'import Excel de l'inventaire découpe en lots. Petit fichier = 1 seul lot (fichier brut).
   async function splitPdfForUpload(file: File): Promise<Blob[]> {
     const SAFE = 3.5 * 1024 * 1024; // marge sous la limite multipart (~4,5 Mo)
-    if (file.size <= SAFE) return [file];
+    const MAX_PAGES = 4; // borne le temps d'extraction IA par appel -> evite le FUNCTION_INVOCATION_TIMEOUT
     try {
       const { PDFDocument } = await import('pdf-lib');
       const bytes = new Uint8Array(await file.arrayBuffer());
       const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
       const n = src.getPageCount();
       if (n <= 1) return [file]; // 1 page indivisible -> on tente l'envoi direct
-      const perBatch = Math.max(1, Math.floor((n * SAFE) / Math.max(bytes.length, 1)));
+      // Petit fichier ET peu de pages -> un seul appel. Sinon on decoupe (par taille ET par nb de pages).
+      if (file.size <= SAFE && n <= MAX_PAGES) return [file];
+      const perBySize = Math.max(1, Math.floor((n * SAFE) / Math.max(bytes.length, 1)));
+      const perBatch = Math.max(1, Math.min(perBySize, MAX_PAGES));
       const out: Blob[] = [];
       for (let i = 0; i < n; i += perBatch) {
         const sub = await PDFDocument.create();
@@ -323,25 +339,33 @@ export default function DgaPage() {
     if (!file) return;
     setImporting(true); setImportErr(null); setNotice(null); setImportProgress(null);
     try {
-      // 1) Découpe le PDF en lots (sous la limite plateforme), comme l'import Excel inventaire.
-      const blobs = await splitPdfForUpload(file);
-      setImportProgress({ done: 0, total: blobs.length });
-      // 2) Traite les lots en parallèle (pool de 2), avec progression.
-      const results: any[] = new Array(blobs.length);
-      let nextIdx = 0, done = 0;
-      const worker = async () => {
-        while (nextIdx < blobs.length) {
-          const idx = nextIdx++;
-          results[idx] = await extractBatch(blobs[idx], blobs.length, idx);
-          done++; setImportProgress({ done, total: blobs.length });
-        }
-      };
-      await Promise.all(Array.from({ length: Math.min(2, blobs.length) }, () => worker()));
-      // 3) Fusionne tous les transformateurs de tous les lots.
-      const all: any[] = [];
-      results.forEach(r => { if (Array.isArray(r)) all.push(...r); });
-      const transformers = mergeTransformers(all);
-      if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le PDF.', 'No transformer detected in the PDF.'));
+      let transformers: any[];
+      if (isSpreadsheet(file.name, file.type) && !isPdf(file.name, file.type)) {
+        // Export Excel/CSV LIMS (InsideView / Morgan Schaffer) : mappage DIRECT, sans IA.
+        const parsed = parseLimsBuffer(new Uint8Array(await file.arrayBuffer()));
+        if (!parsed || !parsed.transformers.length) throw new Error(tr('Fichier Excel/CSV non reconnu comme un export DGA (InsideView/LIMS).', 'Excel/CSV file not recognized as a DGA export (InsideView/LIMS).'));
+        transformers = parsed.transformers;
+      } else {
+        // 1) Découpe le PDF en lots (sous la limite plateforme), comme l'import Excel inventaire.
+        const blobs = await splitPdfForUpload(file);
+        setImportProgress({ done: 0, total: blobs.length });
+        // 2) Traite les lots en parallèle (pool de 2), avec progression.
+        const results: any[] = new Array(blobs.length);
+        let nextIdx = 0, done = 0;
+        const worker = async () => {
+          while (nextIdx < blobs.length) {
+            const idx = nextIdx++;
+            results[idx] = await extractBatch(blobs[idx], blobs.length, idx);
+            done++; setImportProgress({ done, total: blobs.length });
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(2, blobs.length) }, () => worker()));
+        // 3) Fusionne tous les transformateurs de tous les lots.
+        const all: any[] = [];
+        results.forEach(r => { if (Array.isArray(r)) all.push(...r); });
+        transformers = mergeTransformers(all);
+      }
+      if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le fichier.', 'No transformer detected in the file.'));
       // Un PDF peut contenir PLUSIEURS transformateurs -> un item par transformateur (séparés).
       const items = transformers.map((t: any) => {
         const rawEq = t.equipment || {};
@@ -405,7 +429,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true) }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -439,6 +463,8 @@ export default function DgaPage() {
           </div>
         </div>
       )}
+
+      {showInbound && <InboundSetup onClose={() => setShowInbound(false)} />}
     </Shell>
   );
 }
@@ -453,9 +479,12 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound } = p;
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
+  // Transformateurs avec des résultats reçus par courriel non encore consultés (badge « Nouveau »).
+  const unseenFor = (d: Dossier) => (measuresByDossier?.[d.id!] || []).filter((m: any) => m.seen === false).length;
+  const newDossiers = dossiers.filter((d: Dossier) => unseenFor(d) > 0);
   const filterTabs: [string, string, number, string][] = [
     ['all', tr('Tous', 'All'), dossiers.length, '#6b5d4f'],
     ['overdue', tr('En retard', 'Overdue'), dueCounts.overdue, '#e63946'],
@@ -468,6 +497,7 @@ function ListView(p: any) {
         <h2 className="text-lg font-bold">{tr('Base de données', 'Database')} ({dossiers.length})</h2>
         <div className="flex flex-wrap gap-2">
           {!delMode && dossiers.length > 0 && <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setDelMode(true)}>🗑 {tr('Gérer', 'Manage')}</button>}
+          {!delMode && <button onClick={openInbound} className="relative inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"><Mail size={15} /> {tr('Import par courriel', 'Email import')}{newDossiers.length > 0 && <span className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">{newDossiers.length}</span>}</button>}
           {!delMode && <button onClick={startNewT} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Nouveau transformateur', 'New transformer')}</button>}
           {delMode && (<>
             <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={selectAllFiltered}>{filtered.length > 0 && filtered.every((x: Dossier) => selected[x.id!]) ? tr('Tout désélectionner', 'Deselect all') : tr('Tout sélectionner', 'Select all')}</button>
@@ -477,6 +507,13 @@ function ListView(p: any) {
         </div>
       </div>
 
+      {/* Bannière : nouveaux résultats reçus par courriel à valider (cliquable -> panneau d'import). */}
+      {newDossiers.length > 0 && (
+        <button onClick={openInbound} className="flex w-full items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-left text-sm font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <Mail size={16} /> {tr(`${newDossiers.length} transformateur(s) avec de nouveaux résultats reçus par courriel — à valider.`, `${newDossiers.length} transformer(s) with new results received by email — to review.`)}
+        </button>
+      )}
+
       {/* Import PDF (drag) */}
       <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
         onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleImport(f); }}
@@ -484,9 +521,9 @@ function ListView(p: any) {
         {importing ? <Loader2 className="animate-spin text-rose-500" /> : <Upload className="text-gray-400" />}
         {importing && importProgress && importProgress.total > 1
           ? <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{tr(`Extraction IA… lot ${importProgress.done}/${importProgress.total}`, `AI extraction… batch ${importProgress.done}/${importProgress.total}`)}</p>
-          : <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo (DGA) ici — gros fichier découpé en lots, extraction IA, fusion par date', 'Drop a lab PDF (DGA) here — large files split into batches, AI extraction, merge by date')}</p>}
-        <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.currentTarget.value = ''; }} />
-        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF', 'Import PDF')}</button>
+          : <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo OU un export Excel/CSV (InsideView/LIMS) ici — PDF : extraction IA par lots ; Excel : mappage direct, fusion par date', 'Drop a lab PDF OR an Excel/CSV export (InsideView/LIMS) here — PDF: batched AI extraction; Excel: direct mapping, merge by date')}</p>}
+        <input ref={fileRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.currentTarget.value = ''; }} />
+        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF / Excel', 'Import PDF / Excel')}</button>
       </div>
 
       {/* Recherche + filtres */}
@@ -553,6 +590,7 @@ function ListView(p: any) {
           // BPC : flag de conformité (la valeur ppm la plus récente connue).
           const pcb = pcbStatus(latestPcb(measuresByDossier?.[d.id!] || (last ? [last] : [])), lang);
           const isOltc = !!d.extra?.is_oltc;
+          const newCount = (measuresByDossier?.[d.id!] || []).filter((m: any) => m.seen === false).length; // résultats reçus par courriel non vus
           const parentSerie = d.extra?.parent_serie || '';
           const parentName = parentSerie ? (dossiers.find((x: Dossier) => x.serie === parentSerie)?.ident || `SN ${parentSerie}`) : '';
           return (
@@ -569,6 +607,7 @@ function ListView(p: any) {
                   : worst != null && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</span>}
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
+                {newCount > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">✦ {tr('Nouveau', 'New')}{newCount > 1 ? ` ×${newCount}` : ''}</span>}
                 {nextD && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: dueColor + '22', color: dueColor, borderColor: dueColor }}>
                   {due.code === 'overdue' ? '⚠ ' : due.code === 'soon' ? '◷ ' : '✓ '}{dueLabel} · {nextD}{due.days != null ? ` (${due.days < 0 ? `${-due.days} ${tr('j. de retard', 'days late')}` : `${due.days} ${tr('j. restants', 'days left')}`})` : ''}
                 </span>}
