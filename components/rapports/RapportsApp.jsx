@@ -924,6 +924,8 @@ export default function App(){
   const [photoCap,setPhotoCap]=useState(null); // capture caméra multi-photos : null=fermé, {photos:[],tplId:""}=ouvert
   const [hwImport,setHwImport]=useState(null);  // import manuscrit : null=fermé, {file,tplId,query}=demande d'association gabarit
   const [customTpls,setCustomTpls]=useState([]);
+  const [tplFlash,setTplFlash]=useState(null); // toast de confirmation (gabarit enregistré)
+  function flashTpl(msg){ setTplFlash(msg); setTimeout(()=>setTplFlash(null),2600); }
   const [hiddenTpls,setHiddenTpls]=useState([]);
   const [theme,setTheme]=useState({...DEFAULT_THEME});
 
@@ -1013,6 +1015,38 @@ export default function App(){
     const r={ id:"r_"+Date.now(), title:"", client:"", location:"", projectNo:"", date:new Date().toISOString().slice(0,10),
       template:tplId, num:tplNumOf(tplId, customTpls), status:"in_progress", version:1, createdFrom:null, blocks:blocksForTemplate(tplId), annotations:[], cover:{show:true,subtitle:""}, updatedAt:Date.now() };
     persist([r,...db]); pushReport(r); setSelId(r.id); setView("editor");
+  }
+  // Ouvre un GABARIT dans l'éditeur de blocs (rapport de travail temporaire marqué createdFromTpl).
+  // « Enregistrer le gabarit » réécrira ensuite ce gabarit (voir saveTemplateFromReport).
+  function editTemplate(tplId){
+    const tpl=customTpls.find(c=>c.id===tplId); if(!tpl) return;
+    const r={ id:"r_"+Date.now(), title:tpl.name||"", client:"", location:"", projectNo:"",
+      date:new Date().toISOString().slice(0,10), template:tplId, num:tpl.num||tplNumOf(tplId,customTpls),
+      status:"in_progress", version:1, createdFrom:null, createdFromTpl:tplId,
+      blocks:JSON.parse(JSON.stringify(tpl.blocks||[])).map(b=>({...b,id:bid()})), annotations:[], cover:{show:false,subtitle:""}, updatedAt:Date.now() };
+    persist([r,...db]); pushReport(r); setSelId(r.id); setView("editor");
+  }
+  // Enregistre la structure d'un rapport comme GABARIT (valeurs vidées). Si le rapport vient de
+  // « Modifier le gabarit » (createdFromTpl), on RÉÉCRIT ce gabarit puis on nettoie le rapport de
+  // travail. Sinon on crée un NOUVEAU gabarit (et on garde le rapport).
+  function saveTemplateFromReport(report){
+    if(!report) return;
+    const blocks=emptyBlockValues(JSON.parse(JSON.stringify(report.blocks||[])));
+    const tplId=report.createdFromTpl;
+    const existing=tplId && customTpls.find(c=>c.id===tplId);
+    if(existing){
+      const next=customTpls.map(c=> c.id===tplId ? {...c, name:(report.title||c.name), blocks} : c);
+      persistTpls(next); const upd=next.find(c=>c.id===tplId); if(upd) pushTpl(upd);
+      // Nettoie le rapport de travail et retourne à l'onglet Gabarits.
+      persist(db.filter(r=>r.id!==report.id)); pushDelete(report.id);
+      setSelId(null); setView("list"); setTab("templates");
+      flashTpl(LANG==="en"?"Template saved ✓":"Gabarit enregistré ✓");
+    } else {
+      const id="ct_"+Date.now();
+      const tpl={ id, name:(report.title||(LANG==="en"?"Template":"Gabarit")), blocks, num:"GAB-"+id.slice(-5).toUpperCase() };
+      persistTpls([tpl,...customTpls]); pushTpl(tpl);
+      flashTpl(LANG==="en"?"Saved as new template ✓":"Enregistré comme nouveau gabarit ✓");
+    }
   }
   function updateReport(id,patch){ const next=db.map(r=>r.id===id?{...r,...patch,updatedAt:Date.now()}:r); persist(next); const upd=next.find(r=>r.id===id); if(upd) pushReport(upd); }
   // Mise à jour d'une annotation (anomalie/reco) d'un rapport depuis le dashboard consolidé.
@@ -1287,16 +1321,18 @@ export default function App(){
             <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               onOpen={(id)=>{setSelId(id);setView("editor");}} onOpenAnomDash={()=>setShowAnomDash(true)} onNew={newReport} onImport={handleImport} onHandwriting={(file)=>setHwImport({file,tplId:"",query:""})} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
           ) : (
-            <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
+            <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onEdit={editTemplate} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
           )}
         </>
       )}
-      {view==="editor" && sel && <Editor report={sel} logo={logo} customTpls={customTpls} onUpdate={(patch)=>updateReport(sel.id,patch)} onDuplicate={duplicateReport}/>}
+      {view==="editor" && sel && <Editor report={sel} logo={logo} customTpls={customTpls} onUpdate={(patch)=>updateReport(sel.id,patch)} onDuplicate={duplicateReport} onSaveTemplate={saveTemplateFromReport}/>}
 
       {/* DASHBOARD ANOMALIES / RECOMMANDATIONS CONSOLIDÉ (tous les rapports) */}
       {showAnomDash && <AnomalyDashboard db={db} onClose={()=>setShowAnomDash(false)}
         onOpen={(reportId,blk)=>{ setShowAnomDash(false); setSelId(reportId); setView("editor"); if(blk) setTimeout(()=>{ const el=document.getElementById("blk-"+blk); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.style.boxShadow="0 0 0 3px #1e293b"; setTimeout(()=>{el.style.boxShadow="";},900); } },350); }}
         onUpdate={updateReportFinding}/>}
+
+      {tplFlash && <div style={{position:"fixed",bottom:18,left:"50%",transform:"translateX(-50%)",zIndex:80,background:"#1e293b",color:"#fff",padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:13,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>{tplFlash}</div>}
     </div>
   );
 }
@@ -1522,15 +1558,16 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
 // ============================================================
 //  VUE GABARITS (modèles)
 // ============================================================
-function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore, hiddenCount }){
+function TemplatesView({ custom, onImportPdf, onDelete, onUse, onEdit, onHide, onRestore, hiddenCount }){
   const [preview,setPreview]=useState(null); // {kind:'default'|'custom', id}
   const [tView,setTView]=useState("gallery"); // galerie (cartes) | grille (lignes)
   // Ligne compacte (mode grille) — réutilisée pour custom et défauts.
-  const Row=({ id, name, count, onName, onDel })=>(
+  const Row=({ id, name, count, onName, onDel, onEditRow })=>(
     <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"8px 14px"}}>
       <div style={{minWidth:160,flex:1,cursor:"pointer",fontWeight:700,color:"#0f172a"}} onClick={onName}>{name}</div>
       <span style={{fontSize:12,color:"#64748b"}}>{count} {LANG==="en"?"blocks":"blocs"}</span>
       <span style={{display:"flex",gap:8,marginLeft:"auto"}}>
+        {onEditRow && <button style={{...S.miniBtn}} onClick={onEditRow}>✏️ {t("tplEdit")}</button>}
         <button style={{...S.btnPrimary,fontSize:12,padding:"5px 12px"}} onClick={()=>onUse(id)}>{t("tplUse")}</button>
         <button style={S.miniBtnDel} onClick={onDel}>{t("del")}</button>
       </span>
@@ -1558,7 +1595,7 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore
       <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:8}}>{t("tplCustom")}</div>
       {custom.length===0 ? <div style={{color:"#64748b",fontSize:13,marginBottom:18}}>{t("tplNoCustom")}</div> : tView==="grid" ? (
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-          {custom.map(c=>(<Row key={c.id} id={c.id} name={c.name||"(gabarit)"} count={(c.blocks||[]).length} onName={()=>setPreview({kind:"custom",id:c.id})} onDel={()=>onDelete(c.id)}/>))}
+          {custom.map(c=>(<Row key={c.id} id={c.id} name={c.name||"(gabarit)"} count={(c.blocks||[]).length} onName={()=>setPreview({kind:"custom",id:c.id})} onDel={()=>onDelete(c.id)} onEditRow={onEdit?()=>onEdit(c.id):null}/>))}
         </div>
       ) : (
         <div style={{...S.grid,marginBottom:20}}>
@@ -1572,7 +1609,10 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore
               <div style={{marginTop:8,fontSize:11,color:"#64748b"}}>
                 {(c.blocks||[]).slice(0,8).map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?"🖼":"¶"}</span>))}
               </div>
-              <button style={{...S.btnPrimary,marginTop:10,fontSize:12,padding:"7px 14px"}} onClick={()=>onUse(c.id)}>{t("tplUse")}</button>
+              <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+                <button style={{...S.btnPrimary,fontSize:12,padding:"7px 14px"}} onClick={()=>onUse(c.id)}>{t("tplUse")}</button>
+                {onEdit && <button style={{...S.btnGhost,fontSize:12,padding:"7px 14px"}} onClick={()=>onEdit(c.id)}>✏️ {t("tplEdit")}</button>}
+              </div>
             </div>
           ))}
         </div>
@@ -1618,7 +1658,10 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onHide, onRestore
                 {b.type==="table" && <div style={{fontSize:12,color:"#475569",marginTop:4}}>{(b.columns||[]).join(" | ")}</div>}
               </div>
             ))}
-            <button style={S.btnGhost} onClick={()=>setPreview(null)}>{t("cancel")}</button>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {preview.kind==="custom" && onEdit && <button style={{...S.btnPrimary}} onClick={()=>{ const id=preview.id; setPreview(null); onEdit(id); }}>✏️ {t("tplEdit")}</button>}
+              <button style={S.btnGhost} onClick={()=>setPreview(null)}>{t("cancel")}</button>
+            </div>
           </div>
         </div>
       ); })()}
@@ -1722,7 +1765,7 @@ function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
 // ============================================================
 //  ÉDITEUR DE RAPPORT
 // ============================================================
-function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
+function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplate }){
   const [r,setR]=useState(report);
   const tplLabel=t((TEMPLATES.find(x=>x.id===r.template)||{}).key||"");
   const [lightbox,setLightbox]=useState(null);
@@ -2141,6 +2184,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate }){
             { key:"tr", label:t("translateReport"), on:doTranslate, disabled:fixing },
             { key:"dup", label:t("duplicate"), on:()=>onDuplicate(r.id,false) },
             { key:"ver", label:t("newVersion"), on:()=>onDuplicate(r.id,true) },
+            { key:"savetpl", label:`💾 ${r.createdFromTpl?(LANG==="en"?"Save template":"Enregistrer le gabarit"):(LANG==="en"?"Save as template":"Comme gabarit")}`, on:()=>onSaveTemplate&&onSaveTemplate(r), style:r.createdFromTpl?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Save this structure as a reusable template (values emptied)":"Enregistrer cette structure comme gabarit réutilisable (valeurs vidées)" },
             { key:"hw", label:`🖊 ${LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}`, on:doExportHandwrite, title:LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main" },
             updatedCount>0 && { key:"upd", label:`🔁 ${LANG==="en"?"Export updates":"Export MAJ"} (${updatedCount})`, on:doExportUpdates, style:{borderColor:"#e0a96d",color:"#b45309"}, title:LANG==="en"?"Export only the blocks marked as updated":"Exporter uniquement les blocs marqués comme mis à jour" },
           ].filter(Boolean);
