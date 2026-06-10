@@ -37,7 +37,7 @@ export default function ModulesPage() {
   const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
   const [permit, setPermit] = useState({ total: 0, active: 0 });
   const [evt, setEvt] = useState({ quasi: 0, accident: 0, year: 0, total: 0 });
-  const [plan, setPlan] = useState({ en_cours: 0, planifies: 0 });
+  const [plan, setPlan] = useState({ en_cours: 0, planifies: 0, occ: 0 });
   const [invCount, setInvCount] = useState(0);
   const [userCount, setUserCount] = useState(0);
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
@@ -98,9 +98,30 @@ export default function ModulesPage() {
           if (x.incident_date && new Date(x.incident_date).getFullYear() === Y) e.year += 1;
         });
 
-        const { data: assigns } = await supabase.from('planned_assignments').select('status').eq('tenant_id', tenant);
-        const pl = { en_cours: 0, planifies: 0 };
-        (assigns || []).forEach((x: any) => { if (x.status === 'in_progress') pl.en_cours += 1; if (x.status === 'planned') pl.planifies += 1; });
+        // Source de vérité = planner_jobs (statut français). + % d'occupation du JOUR (personnes
+        // assignées à des mandats actifs aujourd'hui ÷ effectif du roster).
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const [{ data: jobs }, { count: rosterCount }] = await Promise.all([
+          supabase.from('planner_jobs').select('statut, status, dateDebut, dateFin, start_date, end_date, personnelAssigne, nombrePersonnelRequis').eq('tenant_id', tenant),
+          supabase.from('planner_personnel').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
+        ]);
+        const pl = { en_cours: 0, planifies: 0, occ: 0 };
+        const occupied = new Set<string>(); let occFallback = 0;
+        (jobs || []).forEach((j: any) => {
+          const st = j.statut || j.status || '';
+          if (st === 'en-cours' || st === 'in_progress') pl.en_cours += 1;
+          if (st === 'planifie' || st === 'planned') pl.planifies += 1;
+          const start = j.dateDebut || j.start_date || '';
+          const end = j.dateFin || j.end_date || start;
+          if (st !== 'termine' && start && start <= todayStr && todayStr <= (end || start)) {
+            const pa = Array.isArray(j.personnelAssigne) ? j.personnelAssigne : [];
+            if (pa.length) pa.forEach((id: any) => occupied.add(String(id)));
+            else occFallback += Number(j.nombrePersonnelRequis) || 0;
+          }
+        });
+        const roster = rosterCount || 0;
+        const occCount = occupied.size + occFallback;
+        pl.occ = roster > 0 ? Math.round(Math.min(occCount, roster) / roster * 100) : 0;
 
         // Inventaire : la source de vérité du module est le snapshot inventory_state (jsonb),
         // pas l'ancienne table inv_items. Repli sur la table items si le snapshot est absent.
@@ -173,7 +194,7 @@ export default function ModulesPage() {
   const has = (k: ModuleKey) => enabledKeys.includes(k);
   if (has('admin')) cards.push({ key: 'admin', title: tr('Administration', 'Administration'), href: `/${tenant}/admin`, big: String(userCount), sub: tr('utilisateurs', 'users'), available: true });
   if (has('projects')) cards.push({ key: 'projects', title: t('projects'), href: `/${tenant}/projects`, big: String(proj.soumission + proj.encours + proj.facture), sub: `${proj.soumission} ${tr('soum.', 'quotes')} · ${proj.encours} ${tr('cours', 'active')} · ${proj.facture} ${tr('fact.', 'inv.')} · ${money(proj.amount)}`, available: true });
-  if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.en_cours), sub: `${tr('jobs en cours', 'jobs wip')} · ${plan.planifies} ${tr('planifiés', 'planned')}`, available: true });
+  if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.en_cours), sub: `${tr('en cours', 'wip')} · ${plan.planifies} ${tr('planifiés', 'planned')} · ${plan.occ}% ${tr('occupé auj.', 'busy today')}`, available: true });
   if (has('ast')) cards.push({ key: 'ast', title: tr('AST / Sécurité', 'JSA / Safety'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft} ${tr('brouillon', 'draft')} · ${ast.in_progress} ${tr('cours', 'wip')} · ${ast.completed} ${tr('terminé', 'done')} · ${ast.approved} ${tr('approuvé', 'appr.')}` , available: true });
   if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')}`, available: true });
   if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });
