@@ -98,6 +98,17 @@ function AppContent({ tenant = 'cerdia' }) {
 
             <NotificationContainer notifications={notifications} />
 
+            {/* Flèche de retour vers le portail des modules (cohérent avec les autres modules). */}
+            <div className="flex items-center px-3 sm:px-4 pt-3">
+                <a
+                    href={`/${tenant || 'cerdia'}/modules`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Retour aux modules"
+                >
+                    <span aria-hidden>←</span> Modules
+                </a>
+            </div>
+
             <PlanificateurFinal
                 jobs={appData.jobs}
                 personnel={appData.personnel}

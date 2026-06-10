@@ -306,11 +306,14 @@ export function JobModal({
     };
 
     // Somme des heures des tâches FEUILLES (évite de compter les parents auto-calculés deux fois).
+    // Total des HEURES-HOMME (charge de travail) des tâches feuilles : manHours si présent, sinon
+    // durée × personnes. C'est cette charge qui pilote « heures planifiées », la date de fin (÷ effectif)
+    // et le personnel requis — pour une logique cohérente de bout en bout.
     const getLeafProjectHours = () => {
         const eta = formData.etapes || [];
         return eta
             .filter(e => !eta.some(c => String(c.parentId) === String(e.id)))
-            .reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
+            .reduce((s, e) => s + (Number(e.manHours) || (parseFloat(e.duration) || 0) * (Number(e.personnesRequises) || 1)), 0);
     };
 
     // Heures <-> durée : ajoute des heures à une heure HH:MM (borné 0..23:59).
@@ -367,6 +370,18 @@ export function JobModal({
         if (newFin !== formData.dateFin) setFormData(prev => ({ ...prev, dateFin: newFin }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin, formData.modeContinu]);
+
+    // INTERCONNEXION : le Gantt (étapes) est la source de vérité des HEURES-HOMME. Dès que les étapes
+    // changent (ajout, durée, effectif), « heures planifiées » se synchronise -> la date de fin et le
+    // personnel requis se recalculent (plus de « Total : 0 h »). On ne touche pas si l'utilisateur n'a
+    // pas d'étapes (le champ reste saisissable à la main).
+    useEffect(() => {
+        const total = getLeafProjectHours();
+        if (total > 0 && Math.abs((parseFloat(formData.heuresPlanifiees) || 0) - total) > 0.01) {
+            setFormData(prev => ({ ...prev, heuresPlanifiees: String(Math.round(total * 100) / 100) }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.etapes]);
 
     // Remplit automatiquement « heures planifiées » + « date de fin » à partir des étapes créées.
     // La date de fin répartit les heures sur les jours ouvrables (selon heures/jour et fins de semaine).
@@ -1276,6 +1291,20 @@ export function JobModal({
     // Fonction pour générer le contenu d'impression
     const generatePrintContent = () => {
         const hierarchicalTasks = generateHierarchicalGanttData();
+        // Étendue totale (heures) pour tracer une vraie barre de timeline par tâche à l'impression.
+        const _spanH = Math.max(1, hierarchicalTasks.reduce((m, t) => Math.max(m, t.endHours || 0), 0));
+        const _palette = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#14b8a6', '#ec4899', '#6366f1', '#eab308'];
+        const _parentRoots = hierarchicalTasks.filter(t => !t.parentId);
+        const _barFor = (task) => {
+            const left = Math.max(0, ((task.startHours || 0) / _spanH) * 100);
+            const width = Math.max(1.5, ((task.duration || 1) / _spanH) * 100);
+            const rootId = task.parentId || task.id;
+            const ci = Math.max(0, _parentRoots.findIndex(t => String(t.id) === String(rootId)));
+            const color = task.isCritical ? '#ef4444' : (_palette[ci % _palette.length]);
+            return `<div style="position:relative;height:14px;background:#f1f5f9;border-radius:3px;min-width:220px;">
+                <div style="position:absolute;top:0;left:${left}%;width:${width}%;height:14px;background:${color};opacity:${task.hasChildren ? 0.55 : 1};border-radius:3px;"></div>
+            </div>`;
+        };
 
         return `
             <div class="header">
@@ -1297,6 +1326,7 @@ export function JobModal({
                         <tr>
                             <th>${L('Tâche', 'Task')}</th>
                             <th>${L('Durée', 'Duration')}</th>
+                            <th style="min-width:240px">${L('Échéancier', 'Timeline')}</th>
                             <th>${L('Ressources', 'Resources')}</th>
                             <th>${L('État', 'Status')}</th>
                         </tr>
@@ -1308,6 +1338,7 @@ export function JobModal({
                                     ${task.hasChildren ? '📁' : '📄'} ${task.displayName || task.text || `Étape ${task.order + 1}`}
                                 </td>
                                 <td>${task.duration}h</td>
+                                <td style="min-width:240px">${_barFor(task)}</td>
                                 <td>
                                     ${Object.values(task.assignedResources || {}).flat().length} ressource(s)
                                 </td>
@@ -2259,11 +2290,14 @@ export function JobModal({
         // Étendue basée sur les DATES réelles de l'événement (dateDebut -> dateFin), pas la somme des heures.
         const endDate = formData.dateFin ? new Date(formData.dateFin) : startDate;
         const spanDays = Math.max(1, Math.round((endDate - startDate) / 86400000) + 1);
+        // Étendue horaire RÉELLE de l'événement : on génère assez de colonnes d'1 h pour couvrir
+        // toute la durée (scroll horizontal), avec un minimum (6/12/24) comme fenêtre par défaut.
+        const spanHours = Math.max(1, Math.round((endDate - startDate) / 3600000) + 1);
 
         switch (currentViewMode) {
             case '6h':
-                // Vue 6 heures fixe - toujours 6 cellules d'1h chacune
-                for (let hour = 0; hour < 6; hour++) {
+                // Vue 6 h : colonnes d'1 h couvrant TOUTE la durée (min. 6), défilables horizontalement.
+                for (let hour = 0; hour < Math.max(6, spanHours); hour++) {
                     const currentTime = new Date(startDate.getTime() + (hour * 60 * 60 * 1000));
                     const timeLabel = currentTime.toLocaleTimeString('fr-FR', {
                         hour: '2-digit',
@@ -2279,8 +2313,8 @@ export function JobModal({
                 break;
 
             case '12h':
-                // Vue 12 heures fixe - toujours 12 cellules d'1h chacune
-                for (let hour = 0; hour < 12; hour++) {
+                // Vue 12 h : colonnes d'1 h couvrant TOUTE la durée (min. 12), défilables horizontalement.
+                for (let hour = 0; hour < Math.max(12, spanHours); hour++) {
                     const currentTime = new Date(startDate.getTime() + (hour * 60 * 60 * 1000));
                     const timeLabel = currentTime.toLocaleTimeString('fr-FR', {
                         hour: '2-digit',
@@ -2296,8 +2330,8 @@ export function JobModal({
                 break;
 
             case '24h':
-                // Vue 24 heures fixe - toujours 24 cellules d'1h chacune
-                for (let hour = 0; hour < 24; hour++) {
+                // Vue 24 h : colonnes d'1 h couvrant TOUTE la durée (min. 24), défilables horizontalement.
+                for (let hour = 0; hour < Math.max(24, spanHours); hour++) {
                     const currentTime = new Date(startDate.getTime() + (hour * 60 * 60 * 1000));
                     const timeLabel = currentTime.toLocaleTimeString('fr-FR', {
                         hour: '2-digit',
@@ -2673,6 +2707,8 @@ export function JobModal({
         let touched = 0, bigCrew = false;
         setFormData(prev => ({
             ...prev,
+            // L'effectif du mandat suit le réglage -> la date de fin et le « personnel requis » se recalculent.
+            nombrePersonnelRequis: String(p),
             etapes: (prev.etapes || []).map(e => {
                 const mh = Number(e.manHours) || (e.parentId ? (Number(e.duration) || 0) * (Number(e.personnesRequises) || 1) : 0);
                 if (e.parentId && mh > 0) {
@@ -5030,9 +5066,15 @@ export function JobModal({
                                             const hierarchicalTasks = generateHierarchicalGanttData();
                                             const dependencyArrows = renderDependencyArrows(hierarchicalTasks);
                                             // R2 : largeurs fixes + scroll horizontal unifié (en-tête + barres alignés ; colonne tâche figée) + zoom
-                                            const G_NAME_W = 220, G_PERIOD_W = Math.round(56 * ganttZoom), G_DUR_W = 80;
-                                            const gScaleLen = Math.max(1, generateTimeScale(formData.ganttViewMode || getDefaultViewMode()).length);
+                                            const G_NAME_W = 260, G_PERIOD_W = Math.round(56 * ganttZoom), G_DUR_W = 80;
+                                            const _ganttVM = formData.ganttViewMode || getDefaultViewMode();
+                                            const gScaleLen = Math.max(1, generateTimeScale(_ganttVM).length);
                                             const ganttMinW = G_NAME_W + gScaleLen * G_PERIOD_W + G_DUR_W;
+                                            // Heures représentées par CHAQUE colonne de l'échelle -> le total des barres
+                                            // est calé sur l'échelle (alignement parfait en-tête/barres + scroll horizontal).
+                                            const HOURS_PER_COL = { '6h': 1, '12h': 1, '24h': 1, 'day': 24, 'week': 168, 'month': 720, 'year': 8760 };
+                                            const ganttHoursPerCol = HOURS_PER_COL[_ganttVM] || 24;
+                                            const ganttTotalHours = Math.max(1, gScaleLen * ganttHoursPerCol);
 
                                             return (
                                                 <div className="space-y-1" style={{ minWidth: `${ganttMinW}px` }}>
@@ -5146,17 +5188,18 @@ export function JobModal({
                                                                 className={`flex items-center ${ganttCompactMode ? 'py-1' : 'py-2'} border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-all ${
                                                                     task.isCritical ? 'bg-red-50 border-red-200' : ''
                                                                 }`}
-                                                                style={{ height: ganttCompactMode ? '24px' : '38px' }}
+                                                                style={{ minHeight: ganttCompactMode ? '24px' : '38px' }}
                                                             >
-                                                                {/* Nom de la tâche avec hiérarchie (colonne figée) */}
+                                                                {/* Nom de la tâche avec hiérarchie (colonne figée) — texte complet (retour à la ligne) */}
                                                                 <div
-                                                                    className={`flex-shrink-0 sticky left-0 z-10 bg-white dark:bg-gray-800 ${ganttCompactMode ? 'text-xs' : 'text-sm'} font-medium truncate flex items-center`}
+                                                                    className={`flex-shrink-0 sticky left-0 z-10 bg-white dark:bg-gray-800 ${ganttCompactMode ? 'text-xs' : 'text-sm'} font-medium flex items-center`}
                                                                     style={{ width: G_NAME_W, paddingLeft: `${task.indent}px` }}
+                                                                    title={task.displayName || task.text || ''}
                                                                 >
                                                                     <span className={`${ganttCompactMode ? 'mr-1 text-xs' : 'mr-2'}`}>
                                                                         {task.hasChildren ? '📁' : '📄'}
                                                                     </span>
-                                                                    <span className={`${task.hasChildren ? 'font-bold' : ''} ${task.isCritical ? 'text-red-700' : ''}`}>
+                                                                    <span className={`min-w-0 break-words leading-tight ${task.hasChildren ? 'font-bold' : ''} ${task.isCritical ? 'text-red-700' : ''}`}>
                                                                         {task.displayName || task.text || `Étape ${task.order + 1}`}
                                                                     </span>
                                                                     {task.autoCalculated && (
@@ -5181,23 +5224,10 @@ export function JobModal({
                                                                         // Calcul simple basé sur les dates calculées
                                                                         const projectStart = new Date(formData.dateDebut || new Date());
 
-                                                                        // Calculer la durée de référence selon le mode de vue sélectionné
-                                                                        const currentViewMode = formData.ganttViewMode || getDefaultViewMode();
-                                                                        const getViewDurationHours = (viewMode) => {
-                                                                            // Étendue de l'événement (dates) + extension si une tâche dépasse, pour que TOUT tienne sur 0-100%.
-                                                                            const pEnd = formData.dateFin ? new Date(formData.dateFin) : projectStart;
-                                                                            const spanH = Math.max(24, Math.round((pEnd - projectStart) / 3600000) + 24);
-                                                                            const maxEnd = hierarchicalTasks.reduce((m, t) => Math.max(m, t.endHours || 0), 0);
-                                                                            switch(viewMode) {
-                                                                                case '6h': return 6;
-                                                                                case '12h': return 12;
-                                                                                case '24h': return 24;
-                                                                                // jour/semaine/mois/année/auto : sur l'étendue RÉELLE de l'événement
-                                                                                default: return Math.max(1, spanH, maxEnd);
-                                                                            }
-                                                                        };
-
-                                                                        const totalViewHours = getViewDurationHours(currentViewMode);
+                                                                        // Total calé sur l'échelle (mêmes heures/colonne) -> barres alignées sur l'en-tête,
+                                                                        // toute la timeline visible par scroll horizontal (enfants compris).
+                                                                        const currentViewMode = _ganttVM;
+                                                                        const totalViewHours = ganttTotalHours;
 
                                                                         // Position et largeur de cette tâche - utiliser les heures calculées directement
                                                                         const taskStartHours = task.startHours || 0;
