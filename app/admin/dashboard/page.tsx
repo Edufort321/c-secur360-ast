@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PortalHeader } from '@/components/PortalHeader';
 import LandingSlidesTab from '@/components/admin/LandingSlidesTab';
 import ModuleSlidesTab from '@/components/admin/ModuleSlidesTab';
+import AdminAccountsTab from '@/components/admin/AdminAccountsTab';
 import PriceManager from '../../../components/admin/PriceManager';
 import RevenueForecast from '../../../components/admin/RevenueForecast';
 import { computeSubState } from '@/lib/subscription';
@@ -1226,6 +1227,11 @@ export default function AdminDashboard() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Section : comptes administrateurs (accès /admin + tenant cerdia) */}
+      <div style={{ padding: '40px 32px 0' }}>
+        <AdminAccountsTab />
       </div>
 
       {/* Section : gestion slides page d'accueil */}
