@@ -25,7 +25,8 @@ self.addEventListener('activate', event => {
   );
 });
 
-self.addEventListener('fetch', () => { /* pass-through — pas de cache agressif */ });
+// PAS de handler 'fetch' : on ne met rien en cache (anti contenu périmé). Un handler no-op était
+// signalé par Chrome comme overhead inutile ; l'installabilité PWA repose sur le manifeste.
 `;
 
 export function GET() {

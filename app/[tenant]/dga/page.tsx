@@ -453,10 +453,19 @@ export default function DgaPage() {
         )}
 
         {view === 'fiche' && selected_d && (
-          <TransfoView
-            tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl} allDossiers={dossiers}
-            onSave={saveDossierFromView} onNewMeasure={() => { setEditMeasure(null); setView('newMeasure'); }} onEditMeasure={(m: Measure) => { setEditMeasure(m); setView('newMeasure'); }} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
-          />
+          <>
+            <div className="mb-2 flex justify-end print:hidden">
+              <button onClick={() => toggleTreated(selected_d.id!, selected_d.treated === false)}
+                title={selected_d.treated !== false ? tr('Marquer à traiter', 'Mark as to-do') : tr('Marquer comme traité', 'Mark as treated')}
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${selected_d.treated !== false ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-500 text-white'}`}>
+                {selected_d.treated !== false ? `✓ ${tr('Traité', 'Treated')}` : `◦ ${tr('À traiter', 'To treat')}`}
+              </button>
+            </div>
+            <TransfoView
+              tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl} allDossiers={dossiers}
+              onSave={saveDossierFromView} onNewMeasure={() => { setEditMeasure(null); setView('newMeasure'); }} onEditMeasure={(m: Measure) => { setEditMeasure(m); setView('newMeasure'); }} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
+            />
+          </>
         )}
 
         {view === 'newMeasure' && selected_d && (
