@@ -51,6 +51,15 @@ utilisateurs ; les montants $ ne s'affichent pas dans la feuille — la paie est
 - **P4 — Remontée projet** : vue « Heures du projet » + bloc stats temps dans le dashboard projet.
 - **P5 — Facturation** : heures (× taux) + dépenses refacturables par projet → factures.
 
+## Conditions/frais (subsistance) — catalogue → poste → prix employé (Point 2, à bâtir)
+**Existant (mappé)** : `catalogue_taux.extras` (sub_h5/sub_h12/sub_h15/sub_nuitee/hebergement…) + `custom_rates` `[{label,value,categorie}]` = **prix VENDANT** du tenant. Les postes ont `poste_salary_grids` avec `discretionary_bonuses` JSONB `[{label,amount,unit}]`. La feuille de temps charge les conditions via `/api/hr/salary-grid?gridConditions=<empId>` (retourne `discretionary_bonuses`) + `timesheet_allowances` (niveau tenant). **AUCUN mécanisme prix-vendant vs prix-employé n'existe.**
+
+**À bâtir** :
+1. **Catalogue** = source des conditions (frais subsistance/hébergement) avec **prix vendant**.
+2. **Poste (grille)** : nouvelle colonne `poste_salary_grids.grid_conditions` JSONB `[{key,label,sell_price,employee_price,applies}]`. Dans l'éditeur de grille (PosteSalaryGridPanel), section « Frais/conditions » : liste des conditions du catalogue, **case « s'applique à ce poste »** + colonne **« prix donné à l'employé »** = `sell_price × 0,8` (−20 %) par défaut, **éditable** (custom).
+3. **API** `/api/hr/salary-grid?gridConditions=` : retourner aussi `grid_conditions` (conditions applicables + prix employé).
+4. **Feuille de temps** : les conditions applicables de la grille de l'employé apparaissent en cases à cocher par jour ; cochée → l'employé reçoit le **prix employé** (pas le prix vendant). Le prix vendant sert à la facturation projet.
+
 ## Décisions à confirmer avec Eric
 - **Taux pour facturation** : `catalogue_taux` (devis) vs `labor_rates` (paie réel) — lequel pour
   refacturer le temps au client ? (par défaut : taux de facturation du projet/soumission.)
