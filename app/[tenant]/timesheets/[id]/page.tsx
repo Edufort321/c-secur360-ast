@@ -66,12 +66,12 @@ function NumCell({ value, disabled, step, onCommit }: { value: number; disabled?
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft !== null ? draft : (value === 0 ? '' : String(value));
   return (
-    <input type="number" step={step || '0.5'} disabled={disabled} inputMode="decimal"
+    <input type="number" step={step || '0.5'} disabled={disabled} inputMode="decimal" placeholder="0"
       onFocus={ev => ev.target.select()}
       value={shown}
       onChange={ev => setDraft(ev.target.value)}
       onBlur={() => { onCommit(draft === null || draft.trim() === '' ? 0 : (Number(draft) || 0)); setDraft(null); }}
-      className="inp w-16 text-center" />
+      className="w-16 rounded-lg border-2 border-slate-300 bg-white px-2 py-1.5 text-center text-sm font-bold text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100" />
   );
 }
 
@@ -276,7 +276,18 @@ export default function TimesheetDetailPage() {
 
   function addEntry(date?: string) {
     const d = date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
-    setEntries(p => [...p, newEntry(d)]);
+    setEntries(p => {
+      const ne = newEntry(d);
+      // Insère la nouvelle ligne JUSTE APRÈS la dernière ligne du MÊME jour (regroupement par jour).
+      let lastIdx = -1;
+      p.forEach((x, i) => { if (x.date === d) lastIdx = i; });
+      const next = [...p];
+      if (lastIdx >= 0) { next.splice(lastIdx + 1, 0, ne); return next; }
+      // Aucun jour identique : insère en position triée par date.
+      const idx = p.findIndex(x => String(x.date) > String(d));
+      next.splice(idx < 0 ? p.length : idx, 0, ne);
+      return next;
+    });
   }
 
   // ── Dépenses (avec reçu) ───────────────────────────────────────────────────
@@ -725,19 +736,24 @@ export default function TimesheetDetailPage() {
                 </div>
 
                 {/* Ligne 2: heures + km + véhicule + matériel */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {[
-                    { label: 'Rég', k: 'hrs_regular' as keyof Entry },
-                    { label: 'Supp', k: 'hrs_overtime' as keyof Entry },
-                    { label: 'Maj', k: 'hrs_premium' as keyof Entry },
-                  ].map(({ label, k }) => (
-                    <label key={k} className="flex flex-col items-center">
-                      <span className="mb-1 text-xs text-slate-400">{label}</span>
-                      <NumCell value={e[k] as number} disabled={isReadOnly} step="0.5" onCommit={n => updEntry(e.id, k, n)} />
-                    </label>
-                  ))}
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/40">
+                    <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">⏱ Heures travaillées (h)</div>
+                    <div className="flex items-end gap-2">
+                      {[
+                        { label: 'Régulier', k: 'hrs_regular' as keyof Entry },
+                        { label: 'Supp.', k: 'hrs_overtime' as keyof Entry },
+                        { label: 'Majoré', k: 'hrs_premium' as keyof Entry },
+                      ].map(({ label, k }) => (
+                        <label key={k} className="flex flex-col items-center">
+                          <span className="mb-1 text-[11px] font-semibold text-slate-500">{label}</span>
+                          <NumCell value={e[k] as number} disabled={isReadOnly} step="0.5" onCommit={n => updEntry(e.id, k, n)} />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                   <label className="flex flex-col items-center">
-                    <span className="mb-1 text-xs text-slate-400">Km</span>
+                    <span className="mb-1 text-[11px] font-semibold text-slate-500">Km</span>
                     <NumCell value={e.km} disabled={isReadOnly} step="1" onCommit={n => updEntry(e.id, 'km', n)} />
                   </label>
                   <label className="flex flex-col">
