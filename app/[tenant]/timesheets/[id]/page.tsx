@@ -337,6 +337,31 @@ export default function TimesheetDetailPage() {
     });
   }
 
+  // Suppression d'une LIGNE : confirmation si elle contient des données. On ne supprime JAMAIS une
+  // journée entière — si c'est la dernière ligne du jour, on la VIDE (le jour reste visible).
+  function removeEntry(entry: Entry) {
+    if (isReadOnly) return;
+    const hasData = !!(Number(entry.hrs_regular) || Number(entry.hrs_overtime) || Number(entry.hrs_premium) ||
+      Number(entry.km) || Number(entry.materiel) || (entry.allowances && entry.allowances.length) ||
+      entry.project_id || (entry.description && entry.description.trim()) || entry.recurring_task_id);
+    const sameDay = entries.filter(x => x.date === entry.date);
+    const isLastOfDay = sameDay.length <= 1;
+    if (hasData || isLastOfDay) {
+      const msg = isLastOfDay
+        ? 'Vider cette journée ? La ligne sera remise à zéro (la journée reste dans la feuille). Action enregistrée automatiquement.'
+        : 'Supprimer cette ligne de temps ? Action définitive (enregistrée automatiquement).';
+      if (!confirm(msg)) return;
+    }
+    if (isLastOfDay) {
+      // On garde l'identité de la ligne (id + date) mais on remet tous les champs à vide -> le JOUR reste.
+      setEntries(p => p.map(x => x.id === entry.id ? { ...newEntry(entry.date), id: entry.id } : x));
+    } else {
+      setEntries(p => p.filter(x => x.id !== entry.id));
+    }
+    // Les dépenses rattachées à cette ligne disparaissent avec elle.
+    setExpenses(p => p.filter(x => x.entry_id !== entry.id));
+  }
+
   // ── Dépenses (avec reçu) ───────────────────────────────────────────────────
   function addExpense(entry?: Entry) {
     const d = entry?.date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
@@ -927,7 +952,7 @@ export default function TimesheetDetailPage() {
                         className="rounded-lg p-1.5 text-slate-400 hover:text-blue-600"><Plus size={15} /></button>
                     )}
                     {!isReadOnly && (
-                      <button onClick={() => setEntries(p => p.filter(x => x.id !== e.id))} title="Supprimer la ligne"
+                      <button onClick={() => removeEntry(e)} title={group.items.length <= 1 ? 'Vider cette journée' : 'Supprimer cette ligne'}
                         className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
                     )}
                   </div>
