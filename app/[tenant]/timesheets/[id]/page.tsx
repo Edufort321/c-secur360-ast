@@ -12,10 +12,12 @@ import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { uploadReceipt } from '@/lib/transactions';
+import { listRecurringTasks, type RecurringTask } from '@/lib/recurringTasks';
 
 type Entry = {
   id: string; date: string;
-  category: 'project' | 'admin' | 'atelier' | 'autre';
+  category: string; // 'project' | 'task' (les tâches viennent du catalogue admin) ; legacy: admin/atelier/autre
+  recurring_task_id?: string; recurring_task_name?: string;
   project_id: string; project_number: string; project_title: string; client_name: string;
   description: string; hrs_regular: number; hrs_overtime: number; hrs_premium: number;
   km: number; vehicle_id: string; vehicle_type: string; vehicle_name: string; materiel: number;
@@ -98,7 +100,7 @@ async function writeStripRetry(table: string, op: 'insert' | 'update', payload: 
 }
 
 function newEntry(date: string): Entry {
-  return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
+  return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', recurring_task_id: '', recurring_task_name: '', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
 }
 
 export default function TimesheetDetailPage() {
@@ -110,6 +112,8 @@ export default function TimesheetDetailPage() {
   const [sheet, setSheet]       = useState<Sheet | null>(null);
   const [forbidden, setForbidden] = useState(false); // feuille d'un AUTRE utilisateur (non superviseur) -> accès refusé
   const [notOwner, setNotOwner]   = useState(false); // superviseur consultant la feuille d'un autre -> lecture seule
+  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]); // catalogue admin (bureau/atelier/…)
+  useEffect(() => { if (tenant) listRecurringTasks(tenant).then(setRecurringTasks).catch(() => {}); }, [tenant]);
   const [entries, setEntries]   = useState<Entry[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -279,6 +283,15 @@ export default function TimesheetDetailPage() {
 
   function updEntry(id: string, k: keyof Entry, v: any) {
     setEntries(prev => prev.map(e => e.id !== id ? e : { ...e, [k]: v }));
+  }
+
+  // Type d'une ligne : PROJET (avec sélecteur de projet) ou TÂCHE récurrente (catalogue admin).
+  function setEntryType(id: string, type: 'project' | RecurringTask) {
+    setEntries(prev => prev.map(e => {
+      if (e.id !== id) return e;
+      if (type === 'project') return { ...e, category: 'project', recurring_task_id: '', recurring_task_name: '' };
+      return { ...e, category: 'task', recurring_task_id: type.id || '', recurring_task_name: type.name || '', project_id: '', project_number: '', project_title: '', client_name: '' };
+    }));
   }
 
   function updVehicle(id: string, vehicleId: string) {
@@ -486,6 +499,8 @@ export default function TimesheetDetailPage() {
           timesheet_id: sheetId, tenant_id: tenant, sort_order: i,
           date: e.date,
           category: e.category || 'project',
+          recurring_task_id: e.recurring_task_id || null,
+          recurring_task_name: e.recurring_task_name || '',
           project_id: e.project_id || null,
           project_number: e.project_number || '',
           project_title: e.project_title || '',
@@ -711,17 +726,22 @@ export default function TimesheetDetailPage() {
                     onChange={ev => updEntry(e.id, 'date', ev.target.value)}
                     className="inp w-36 shrink-0" />
                   <div className="flex flex-wrap gap-1">
-                    {CATS.map(c => {
-                      const Icon = c.icon;
-                      return (
-                        <button key={c.k} type="button" disabled={isReadOnly}
-                          onClick={() => updEntry(e.id, 'category', c.k)}
-                          title={c.label}
-                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${e.category === c.k ? 'bg-violet-600 text-white' : 'border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-                          <Icon size={12} /> <span className="hidden sm:inline">{c.label}</span>
-                        </button>
-                      );
-                    })}
+                    {/* PROJET (avec sélecteur) OU une TÂCHE du catalogue admin (Tâches récurrentes). */}
+                    <button type="button" disabled={isReadOnly} onClick={() => setEntryType(e.id, 'project')} title="Projet"
+                      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${e.category === 'project' ? 'bg-violet-600 text-white' : 'border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                      <Briefcase size={12} /> <span className="hidden sm:inline">Projet</span>
+                    </button>
+                    {recurringTasks.map(t => (
+                      <button key={t.id} type="button" disabled={isReadOnly} onClick={() => setEntryType(e.id, t)} title={t.name}
+                        className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${e.category === 'task' && e.recurring_task_id === t.id ? 'bg-violet-600 text-white' : 'border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                        <Timer size={12} /> <span>{t.name}</span>
+                      </button>
+                    ))}
+                    {recurringTasks.length === 0 && (
+                      <Link href={`/${tenant}/admin`} className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50" title="Créer des tâches dans Admin → Employés & Accès → Tâches récurrentes">
+                        + Tâches (admin)
+                      </Link>
+                    )}
                   </div>
                   {e.category === 'project' && (
                     <div ref={el => { projRefs.current[e.id] = el; }} className="relative min-w-[200px] flex-1">
