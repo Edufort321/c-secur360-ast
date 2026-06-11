@@ -80,8 +80,9 @@ export default function TimesheetDetailPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [notice, setNotice]     = useState<string | null>(null);
-  // L'employé ne voit AUCUN montant $ ; seul un superviseur/admin (qui fait la paie) les voit.
-  const [canSeeMoney, setCanSeeMoney] = useState(false);
+  // La feuille de temps n'affiche AUCUN montant $ (heures seulement) — la paie/les montants se font
+  // dans le module Paie. Les totaux restent calculés et enregistrés (pour la paie), mais non affichés ici.
+  const canSeeMoney = false;
 
   // Payroll profile + allowances + bonuses
   const [profile, setProfile]         = useState<EmployeeProfile | null>(null);
@@ -101,11 +102,6 @@ export default function TimesheetDetailPage() {
   const [projOpen, setProjOpen]     = useState<Record<string, boolean>>({});
   const projRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(({ user }) => {
-      if (user) setCanSeeMoney(user.role === 'client_admin' || user.role === 'super_admin');
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -414,18 +410,39 @@ export default function TimesheetDetailPage() {
     }
     setSaving(true); setNotice(null);
     try {
-      await supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
-      // Ne persiste que les lignes RENSEIGNÉES (on ignore les 7 jours amorcés restés vides),
-      // et on laisse la base générer l'id (les lignes neuves ont un id temporaire non-UUID).
+      const { error: delErr } = await supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
+      if (delErr) throw new Error('Suppression des lignes : ' + delErr.message);
+      // Ne persiste que les lignes RENSEIGNÉES (on ignore les 7 jours amorcés restés vides).
       const toInsert = entries.filter(e =>
         Number(e.hrs_regular) || Number(e.hrs_overtime) || Number(e.hrs_premium) ||
         Number(e.km) || Number(e.materiel) || (e.allowances && e.allowances.length) ||
         e.project_id || (e.description && e.description.trim())
       );
       if (toInsert.length) {
-        await supabase.from('timesheet_entries').insert(
-          toInsert.map((e, i) => { const { id, ...rest } = e as any; return { ...rest, timesheet_id: sheetId, tenant_id: tenant, sort_order: i }; })
-        );
+        // Whitelist STRICT des colonnes + coercition des types. CRUCIAL : vehicle_id est une colonne
+        // UUID -> une chaine vide '' fait ECHOUER l'INSERT ; comme l'erreur n'etait pas verifiee et
+        // que le DELETE precede l'INSERT, les donnees etaient perdues (faux « Enregistre »).
+        const rows = toInsert.map((e: any, i) => ({
+          timesheet_id: sheetId, tenant_id: tenant, sort_order: i,
+          date: e.date,
+          category: e.category || 'project',
+          project_id: e.project_id || null,
+          project_number: e.project_number || '',
+          project_title: e.project_title || '',
+          client_name: e.client_name || '',
+          description: e.description || '',
+          hrs_regular: Number(e.hrs_regular) || 0,
+          hrs_overtime: Number(e.hrs_overtime) || 0,
+          hrs_premium: Number(e.hrs_premium) || 0,
+          km: Number(e.km) || 0,
+          vehicle_id: e.vehicle_id || null,
+          vehicle_type: e.vehicle_type || '',
+          vehicle_name: e.vehicle_name || '',
+          materiel: Number(e.materiel) || 0,
+          allowances: e.allowances || [],
+        }));
+        const { error: insErr } = await supabase.from('timesheet_entries').insert(rows);
+        if (insErr) throw new Error('Enregistrement des lignes : ' + insErr.message);
       }
       // Dépenses avec reçu (table 108 ; ignore en silence si absente)
       try {
@@ -447,7 +464,8 @@ export default function TimesheetDetailPage() {
         updated_at: new Date().toISOString(),
       };
       if (submit) { update.status = 'submitted'; update.submitted_at = new Date().toISOString(); }
-      await supabase.from('timesheets').update(update).eq('id', sheetId);
+      const { error: upErr } = await supabase.from('timesheets').update(update).eq('id', sheetId);
+      if (upErr) throw new Error('Enregistrement des totaux : ' + upErr.message);
       setNotice(submit ? 'Feuille soumise au superviseur ✓' : 'Enregistré ✓');
       if (submit) router.push(`/${tenant}/timesheets`);
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
@@ -803,7 +821,7 @@ export default function TimesheetDetailPage() {
                 <span className="text-xs font-medium text-amber-700">{new Date(date + 'T00:00').toLocaleDateString('fr-CA', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                 <span className="text-xs text-amber-600">{(dailyHours[date] || 0).toFixed(1)}h travaillées</span>
                 {bonuses.map(b => (
-                  <span key={b.id} className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800">{b.name} +{money(b.bonus_amount)}</span>
+                  <span key={b.id} className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800">{b.name}{canSeeMoney ? ` +${money(b.bonus_amount)}` : ''}</span>
                 ))}
               </div>
             ))}
