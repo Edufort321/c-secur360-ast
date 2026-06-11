@@ -17,6 +17,13 @@ import PostalMime from "postal-mime";
 //   - attachment : la route lit `content` (BASE64) et `contentType` (PAS `mimeType`) et `filename`.
 //     -> on mappe donc att.mimeType -> contentType.
 
+// Limite de corps Vercel ~4,5 Mo. On reste sous ~3 Mo de base64 par POST (et on envoie en
+// PLUSIEURS POST si besoin) pour eviter le 413 quand il y a plusieurs/grosses pieces jointes.
+const MAX_BATCH_B64 = 3_000_000;
+const isDgaDoc = (a) =>
+  /pdf|spreadsheet|excel|sheet|csv|ms-excel/i.test(a.contentType || "") ||
+  /\.(pdf|xlsx|xls|csv)$/i.test(a.filename || "");
+
 export default {
   async email(message, env, ctx) {
     const rawEmail = new Response(message.raw);
@@ -24,31 +31,31 @@ export default {
     const parser = new PostalMime();
     const email = await parser.parse(arrayBuffer);
 
-    const payload = {
-      to: message.to,        // destinataire d'enveloppe = dga.<tenant>@in.c-secur360.ca
-      from: message.from,    // expediteur d'enveloppe (verifie contre la liste blanche)
-      subject: email.subject || "",
-      text: email.text || "",
-      html: email.html || "",
-      attachments: (email.attachments || []).map((att) => ({
-        filename: att.filename,
-        contentType: att.mimeType, // <-- la route lit `contentType` (et non `mimeType`)
-        content: arrayBufferToBase64(att.content), // <-- la route lit `content` en base64
-      })),
+    // 1) Ne garder QUE les rapports (PDF / Excel / CSV) ; ignorer logos, signatures, images...
+    const docs = (email.attachments || [])
+      .map((att) => ({ filename: att.filename, contentType: att.mimeType, content: arrayBufferToBase64(att.content) }))
+      .filter(isDgaDoc);
+    if (docs.length === 0) return; // rien d'exploitable -> on laisse tomber
+
+    const meta = { to: message.to, from: message.from, subject: email.subject || "" };
+
+    // 2) Envoi par LOTS sous la limite (text/html volontairement omis : la route les ignore).
+    const post = async (attachments) => {
+      const resp = await fetch(env.IMPORT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-cs-inbound-secret": env.INBOUND_SECRET },
+        body: JSON.stringify({ ...meta, attachments }),
+      });
+      if (!resp.ok) throw new Error(`API a repondu ${resp.status}`);
     };
 
-    const resp = await fetch(env.IMPORT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-cs-inbound-secret": env.INBOUND_SECRET,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!resp.ok) {
-      throw new Error(`API a repondu ${resp.status}`);
+    let batch = [], size = 0;
+    for (const d of docs) {
+      // Une piece seule trop grosse part quand meme dans son propre POST (cas limite).
+      if (batch.length && size + d.content.length > MAX_BATCH_B64) { await post(batch); batch = []; size = 0; }
+      batch.push(d); size += d.content.length;
     }
+    if (batch.length) await post(batch);
   },
 };
 
