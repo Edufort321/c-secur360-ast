@@ -75,6 +75,28 @@ function NumCell({ value, disabled, step, onCommit }: { value: number; disabled?
   );
 }
 
+// Écriture TOLÉRANTE : si une colonne n'existe pas dans le schéma Supabase (migrations incomplètes),
+// on la retire du payload et on réessaie -> l'enregistrement persiste ce que le schéma supporte au
+// lieu d'échouer en bloc (et, avec le DELETE-puis-INSERT, de perdre les lignes).
+async function writeStripRetry(table: string, op: 'insert' | 'update', payload: any, eq?: { col: string; val: any }, keep: string[] = []): Promise<{ error?: string }> {
+  let body: any = Array.isArray(payload) ? payload.map((r: any) => ({ ...r })) : { ...payload };
+  for (let guard = 0; guard < 18; guard++) {
+    let q: any = op === 'insert' ? supabase.from(table).insert(body) : supabase.from(table).update(body);
+    if (op === 'update' && eq) q = q.eq(eq.col, eq.val);
+    const { error } = await q;
+    if (!error) return {};
+    const m = (error.message || '').match(/column "?([a-z_0-9]+)"?.*does not exist|could not find the '([a-z_0-9]+)'|'([a-z_0-9]+)' column/i);
+    const col = m ? (m[1] || m[2] || m[3]) : null;
+    if (col && !keep.includes(col)) {
+      if (Array.isArray(body)) body = body.map((r: any) => { const c = { ...r }; delete c[col]; return c; });
+      else delete body[col];
+      continue;
+    }
+    return { error: error.message };
+  }
+  return { error: 'trop de colonnes manquantes (appliquer la migration 156)' };
+}
+
 function newEntry(date: string): Entry {
   return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
 }
@@ -479,8 +501,8 @@ export default function TimesheetDetailPage() {
           materiel: Number(e.materiel) || 0,
           allowances: e.allowances || [],
         }));
-        const { error: insErr } = await supabase.from('timesheet_entries').insert(rows);
-        if (insErr) throw new Error('Enregistrement des lignes : ' + insErr.message);
+        const ins = await writeStripRetry('timesheet_entries', 'insert', rows, undefined, ['timesheet_id', 'tenant_id', 'date']);
+        if (ins.error) throw new Error('Enregistrement des lignes : ' + ins.error);
       }
       // Dépenses avec reçu (table 108 ; ignore en silence si absente)
       try {
@@ -502,8 +524,8 @@ export default function TimesheetDetailPage() {
         updated_at: new Date().toISOString(),
       };
       if (submit) { update.status = 'submitted'; update.submitted_at = new Date().toISOString(); }
-      const { error: upErr } = await supabase.from('timesheets').update(update).eq('id', sheetId);
-      if (upErr) throw new Error('Enregistrement des totaux : ' + upErr.message);
+      const up = await writeStripRetry('timesheets', 'update', update, { col: 'id', val: sheetId });
+      if (up.error) throw new Error('Enregistrement des totaux : ' + up.error);
       setNotice(submit ? 'Feuille soumise au superviseur ✓' : 'Enregistré ✓');
       if (submit) router.push(`/${tenant}/timesheets`);
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
