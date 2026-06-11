@@ -42,7 +42,7 @@ export default function ModulesPage() {
   const [userCount, setUserCount] = useState(0);
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
   const [logbookStats, setLogbookStats] = useState({ vehicles: 0, kmWeek: 0, kmYear: 0 });
-  const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0 });
+  const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0, todo: 0 });
   const [inspStats, setInspStats] = useState({ total: 0, nonConf: 0 });
   const [tsStats, setTsStats] = useState({ total: 0, pending: 0 });
   // Rapports terrain : données en localStorage (rpt_reports_v1) — comptées côté client.
@@ -163,9 +163,9 @@ export default function ModulesPage() {
         };
 
         // DGA — mêmes compteurs qu'à l'ouverture du module + niveau critique (cond > 3) + inspections dues.
-        const dga = { all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0 };
+        const dga = { all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0, todo: 0 };
         try {
-          const { data: dgaD } = await supabase.from('dga_dossiers').select('id, extra').eq('tenant_id', tenant);
+          const { data: dgaD } = await supabase.from('dga_dossiers').select('id, extra, treated').eq('tenant_id', tenant);
           const { data: dgaM } = await supabase.from('dga_measures').select('dossier_id, sample_date, h2, ch4, c2h2, c2h4, c2h6, co, tdcg, condition').eq('tenant_id', tenant).order('sample_date', { ascending: true });
           const lastBy: Record<string, any> = {};
           (dgaM || []).forEach((m: any) => { if (m.dossier_id) lastBy[m.dossier_id] = m; });
@@ -178,6 +178,7 @@ export default function ModulesPage() {
             // OLTC exclu du compteur critique : ses gaz d'arc de commutation sont normaux (seuils de cuve non applicables).
             if (last && !d.extra?.is_oltc && worstCondition(last) >= 3) dga.critical += 1; // niveau 4 (Condition 4)
             if (d.extra?.next_inspection && d.extra.next_inspection <= today) dga.inspDue += 1; // inspection de routine due
+            if (d.treated === false) dga.todo += 1; // nouveaux résultats à traiter (drapeau manuel)
           });
         } catch { /* dégradé */ }
 
@@ -216,7 +217,7 @@ export default function ModulesPage() {
   if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: String(tsStats.total), sub: tsStats.pending ? `${tsStats.pending} ${tr('à approuver', 'to approve')}` : tr('aucune en attente', 'none pending'), available: true });
   if (has('logbook')) cards.push({ key: 'logbook', title: tr('Logbook véhicules', 'Vehicle logbook'), href: `/${tenant}/logbook`, big: `${Math.round(logbookStats.kmWeek).toLocaleString('fr-CA')} km`, sub: `${logbookStats.vehicles} ${tr('véhicules actifs', 'active vehicles')} · ${Math.round(logbookStats.kmYear).toLocaleString('fr-CA')} km ${tr('cette année', 'this year')}`, available: true });
   if (has('todo')) cards.push({ key: 'todo', title: 'To-Do', href: `/${tenant}/todo`, big: String(todoStats.total), sub: `${todoStats.todo} ${tr('à faire', 'to do')} · ${todoStats.in_progress} ${tr('en cours', 'wip')} · ${todoStats.done} ${tr('terminé', 'done')}`, available: true });
-  if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}${dgaStats.inspDue ? ` · ${dgaStats.inspDue} ${tr('insp. dues', 'insp. due')}` : ''}`, available: true });
+  if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.todo ? `⚠ ${dgaStats.todo} ${tr('à traiter', 'to treat')} · ` : ''}${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}${dgaStats.inspDue ? ` · ${dgaStats.inspDue} ${tr('insp. dues', 'insp. due')}` : ''}`, available: true });
   if (has('rapports')) cards.push({ key: 'rapports', title: tr('Rapports terrain', 'Field reports'), href: `/${tenant}/rapports`, big: String(rapStats.total), sub: `${rapStats.in_progress} ${tr('en cours', 'wip')} · ${rapStats.review} ${tr('révision', 'review')} · ${rapStats.approved} ${tr('approuvé', 'appr.')} · ${rapStats.sent} ${tr('envoyé', 'sent')}`, available: true });
 
   const iconFor = (k: string) => (MODULES.find(m => m.key === k || (k === 'events' && m.key === 'accidents'))?.icon) || LayoutGrid;
