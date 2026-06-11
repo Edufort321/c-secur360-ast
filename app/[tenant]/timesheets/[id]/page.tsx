@@ -126,6 +126,12 @@ export default function TimesheetDetailPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [notice, setNotice]     = useState<string | null>(null);
+  // Auto-enregistrement : toute saisie est persistée automatiquement (débounce), même en quittant la semaine.
+  const [autoSaving, setAutoSaving]     = useState(false);
+  const [lastAutoSaved, setLastAutoSaved] = useState<Date | null>(null);
+  const savingRef      = useRef(false); // une écriture est en cours
+  const pendingSaveRef = useRef(false); // une modif est arrivée pendant l'écriture -> relancer
+  const lastSavedSig   = useRef<string>(''); // signature de l'état déjà persisté (anti-écriture inutile)
   // La feuille de temps n'affiche AUCUN montant $ (heures seulement) — la paie/les montants se font
   // dans le module Paie. Les totaux restent calculés et enregistrés (pour la paie), mais non affichés ici.
   const canSeeMoney = false;
@@ -480,14 +486,21 @@ export default function TimesheetDetailPage() {
     } finally { setSavingOdo(false); }
   }
 
-  async function save(submit = false) {
+  // Signature de l'état saisissable -> détecte s'il y a vraiment quelque chose de neuf à enregistrer.
+  function currentSig() { return JSON.stringify({ e: entries, x: expenses }); }
+
+  async function save(submit = false, opts: { silent?: boolean } = {}) {
+    const silent = !!opts.silent;
     if (!sheet) return;
+    if (isReadOnly) return; // jamais d'écriture en lecture seule (feuille d'un autre / approuvée)
     // Warn if odo_end missing at submission
     if (submit && assignedVehicle && (!logEntry || Number(logEntry.odometer_end) === 0)) {
       const ok = confirm('⚠️ Vous n\'avez pas entré votre odomètre de fin de semaine. La déduction véhicule ne peut pas être calculée. Voulez-vous quand même soumettre ?');
       if (!ok) return;
     }
-    setSaving(true); setNotice(null);
+    if (savingRef.current) { pendingSaveRef.current = true; return; } // évite les sauvegardes concurrentes
+    savingRef.current = true;
+    if (silent) setAutoSaving(true); else { setSaving(true); setNotice(null); }
     try {
       const { error: delErr } = await supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
       if (delErr) throw new Error('Suppression des lignes : ' + delErr.message);
@@ -562,14 +575,55 @@ export default function TimesheetDetailPage() {
       if (submit) { update.status = 'submitted'; update.submitted_at = new Date().toISOString(); }
       const up = await writeStripRetry('timesheets', 'update', update, { col: 'id', val: sheetId });
       if (up.error) throw new Error('Enregistrement des totaux : ' + up.error);
-      setNotice(submit ? 'Feuille soumise au superviseur ✓' : 'Enregistré ✓');
+      lastSavedSig.current = currentSig(); // baseline après écriture réussie
+      if (silent) { setLastAutoSaved(new Date()); }
+      else { setNotice(submit ? 'Feuille soumise au superviseur ✓' : 'Enregistré ✓'); }
       if (submit) router.push(`/${tenant}/timesheets`);
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
-    finally { setSaving(false); }
+    } catch (e: any) {
+      if (silent) setNotice('Auto-enregistrement : ' + (e?.message || 'DB'));
+      else setNotice('Erreur : ' + (e?.message || 'DB'));
+    }
+    finally {
+      savingRef.current = false;
+      if (silent) setAutoSaving(false); else setSaving(false);
+      // Une modif est survenue pendant la sauvegarde -> on relance pour ne rien perdre.
+      if (pendingSaveRef.current) { pendingSaveRef.current = false; setTimeout(() => save(false, { silent: true }), 50); }
+    }
   }
 
   const isReadOnly = sheet?.status === 'approved' || sheet?.status === 'paid' || notOwner;
   const canSubmit  = sheet?.status === 'draft' || sheet?.status === 'rejected';
+
+  // Baseline : une fois la feuille chargée, on mémorise l'état initial comme « déjà enregistré »
+  // (sinon l'autosave réécrirait inutilement les données chargées au montage).
+  useEffect(() => {
+    if (!loading && sheet) lastSavedSig.current = currentSig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, sheet?.id]);
+
+  // AUTOSAVE : dès qu'une saisie change, on persiste automatiquement (débounce 1,2 s). Plus besoin de
+  // cliquer « Enregistrer » ni de rester sur la semaine — le temps n'est jamais perdu.
+  useEffect(() => {
+    if (loading || isReadOnly || !sheet) return;
+    if (savingRef.current) { pendingSaveRef.current = true; return; }
+    if (currentSig() === lastSavedSig.current) return; // rien de neuf
+    const t = setTimeout(() => { save(false, { silent: true }); }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, expenses, loading, isReadOnly, sheet?.id]);
+
+  // Flush : si on quitte la page/la semaine avant la fin du débounce, on tente une dernière écriture
+  // avec l'état le plus récent (flushRef est réassigné à chaque rendu pour éviter une closure périmée).
+  const flushRef = useRef<() => void>(() => {});
+  flushRef.current = () => {
+    if (!isReadOnly && sheet && !savingRef.current && currentSig() !== lastSavedSig.current) save(false, { silent: true });
+  };
+  useEffect(() => {
+    const onHide = () => flushRef.current();
+    window.addEventListener('beforeunload', onHide);
+    return () => { window.removeEventListener('beforeunload', onHide); flushRef.current(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (forbidden) return (
     <div className="min-h-screen bg-slate-50"><PortalHeader tenant={tenant} />
@@ -620,7 +674,14 @@ export default function TimesheetDetailPage() {
             )}
           </div>
           {!isReadOnly && (
-            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <span className="flex items-center gap-1 text-xs font-medium text-slate-400" title="Vos saisies sont enregistrées automatiquement">
+                {autoSaving
+                  ? <><Loader2 size={12} className="animate-spin" /> Enregistrement…</>
+                  : lastAutoSaved
+                    ? <><CheckCircle2 size={12} className="text-emerald-500" /> Auto ✓ {lastAutoSaved.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}</>
+                    : <>Auto-enregistrement activé</>}
+              </span>
               <button onClick={() => save(false)} disabled={saving}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 sm:flex-none">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
@@ -735,17 +796,36 @@ export default function TimesheetDetailPage() {
 
         {/* Entrées — bloquées si gate odomètre non passé */}
         <div className={`space-y-3 ${needsOdometer && !isReadOnly ? 'pointer-events-none opacity-40' : ''}`}>
-          {[...entries].sort((a, b) => String(a.date).localeCompare(String(b.date))).map((e) => {
-            const CatIcon = CATS.find(c => c.k === e.category)?.icon || Briefcase;
-            const fps = filteredProjects(projSearch[e.id] || '');
-            const dayHrs = dailyHours[e.date] || 0;
-            return (
-              <div key={e.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                {/* Ligne 1: date + catégorie + projet */}
+          {(() => {
+            // Regroupement PAR JOUR : un seul en-tête de date par journée, et plusieurs LIGNES (tâches)
+            // dessous. Le « + » d'un jour ajoute une ligne au MÊME jour (plus de fausse « nouvelle journée »).
+            const sorted = [...entries].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+            const groups: { date: string; items: Entry[] }[] = [];
+            sorted.forEach(e => { const g = groups.find(x => x.date === e.date); if (g) g.items.push(e); else groups.push({ date: e.date, items: [e] }); });
+            const fmtDay = (d: string) => { try { return new Date(d + 'T00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }); } catch { return d; } };
+            return groups.map((group) => {
+              const dayHrs = dailyHours[group.date] || 0;
+              return (
+                <div key={group.date} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  {/* En-tête du JOUR (une date par journée) */}
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+                    <span className="text-sm font-bold capitalize text-slate-700">{fmtDay(group.date)}</span>
+                    <span className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-slate-500">{dayHrs.toFixed(1)} h</span>
+                      {!isReadOnly && (
+                        <button onClick={() => addEntry(group.date)} title="Ajouter une ligne pour ce jour"
+                          className="inline-flex items-center gap-1 rounded-lg border border-violet-200 px-2 py-1 text-xs font-semibold text-violet-600 hover:bg-violet-50">
+                          <Plus size={13} /> Ligne
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                  {group.items.map((e, idx) => {
+                    const fps = filteredProjects(projSearch[e.id] || '');
+                    return (
+              <div key={e.id} className={`p-4 ${idx > 0 ? 'border-t border-dashed border-slate-200' : ''}`}>
+                {/* Ligne 1: catégorie + projet (la date est dans l'en-tête du jour) */}
                 <div className="mb-3 flex flex-wrap items-start gap-3">
-                  <input type="date" value={e.date} disabled={isReadOnly}
-                    onChange={ev => updEntry(e.id, 'date', ev.target.value)}
-                    className="inp w-36 shrink-0" />
                   <div className="flex flex-wrap gap-1">
                     {/* PROJET (avec sélecteur) OU une TÂCHE du catalogue admin (Tâches récurrentes). */}
                     <button type="button" disabled={isReadOnly} onClick={() => setEntryType(e.id, 'project')} title="Projet"
@@ -876,8 +956,8 @@ export default function TimesheetDetailPage() {
                   </div>
                 )}
 
-                {/* Indication primes du jour */}
-                {hourBonuses.length > 0 && dayHrs > 0 && (
+                {/* Indication primes du jour (une seule fois par journée) */}
+                {idx === 0 && hourBonuses.length > 0 && dayHrs > 0 && (
                   <div className="mt-2 text-xs text-slate-400">
                     {dayHrs.toFixed(1)}h ce jour
                     {hourBonuses.filter(b => dayHrs >= b.trigger_hours).map(b => (
@@ -917,13 +997,17 @@ export default function TimesheetDetailPage() {
                   ))}
                 </div>
               </div>
-            );
-          })}
+                    );
+                  })}
+                </div>
+              );
+            });
+          })()}
 
           {!isReadOnly && !needsOdometer && (
             <button onClick={() => addEntry()}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 py-4 text-sm font-semibold text-slate-400 transition hover:border-violet-400 hover:text-violet-600">
-              <Plus size={18} /> Ajouter une ligne
+              <Plus size={18} /> Ajouter une journée / ligne
             </button>
           )}
         </div>
