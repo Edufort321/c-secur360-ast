@@ -132,22 +132,16 @@ export async function importTransformers(tenant: string, transformers: any[], op
     const rawEq = t.equipment || {};
     const eq = mapEquip(rawEq);
     const measuresN = (t.measurements || []).map(mapMeasure);
-    const m = match(rawEq);
+    let m = match(rawEq);
+    // GARDE ANTI-DOUBLON : si le cache en memoire ne trouve rien, on RE-VERIFIE en base juste avant
+    // de creer. Capte un dossier cree par un POST/une relance precedente du MEME courriel -> on
+    // fusionne au lieu de creer un doublon.
+    if (!m && autoCreate) { const fresh = await findExistingDossier(tenant, rawEq); if (fresh) m = fresh; }
     let did: string;
 
     if (m?.id) {
       did = m.id;
-      // Fusion : ne complete QUE les champs vides du dossier existant (n'ecrase jamais).
-      const { data: full } = await supabaseAdmin.from('dga_dossiers').select('*').eq('id', did).maybeSingle();
-      const patch: any = { ...(full || {}) };
-      for (const k of Object.keys(eq)) { if (patch[k] == null || patch[k] === '') patch[k] = (eq as any)[k]; }
-      delete patch.id; patch.updated_at = new Date().toISOString();
-      await supabaseAdmin.from('dga_dossiers').update(patch).eq('id', did);
-      // Dedup des mesures par date.
-      const { data: exM } = await supabaseAdmin.from('dga_measures').select('sample_date').eq('tenant_id', tenant).eq('dossier_id', did);
-      const seen = new Set((exM || []).map((x: any) => x.sample_date).filter(Boolean));
-      const toAdd = measuresN.filter((mm: any) => !mm.sample_date || !seen.has(mm.sample_date));
-      measures += await insertMeasures(tenant, did, toAdd);
+      measures += await mergeIntoDossier(tenant, did, eq, measuresN);
       merged++;
     } else {
       if (!autoCreate) continue; // auto-creation desactivee : on ignore les transformateurs inconnus
@@ -163,6 +157,37 @@ export async function importTransformers(tenant: string, transformers: any[], op
     dossierIds.push(did); idents.push(eq.ident);
   }
   return { created, merged, measures, dossierIds, idents };
+}
+
+// Recherche FRAICHE en base d'un dossier correspondant (n° de serie d'abord, puis nom), insensible
+// a la casse. Sert de garde anti-doublon au-dela du cache en memoire (POST/relances multiples).
+async function findExistingDossier(tenant: string, rawEq: any): Promise<{ id: string } | null> {
+  const esc = (s: string) => s.replace(/[%_]/g, '\\$&'); // neutralise les jokers ilike
+  const serie = (rawEq.serialNo || '').toString().trim();
+  if (serie) {
+    const { data } = await supabaseAdmin.from('dga_dossiers').select('id').eq('tenant_id', tenant).ilike('serie', esc(serie)).order('updated_at', { ascending: false }).limit(1);
+    if (data && data.length) return data[0] as any;
+  }
+  const name = (rawEq.identification || rawEq.equipment || '').toString().trim();
+  if (name) {
+    const { data } = await supabaseAdmin.from('dga_dossiers').select('id').eq('tenant_id', tenant).ilike('ident', esc(name)).order('updated_at', { ascending: false }).limit(1);
+    if (data && data.length) return data[0] as any;
+  }
+  return null;
+}
+
+// Fusionne dans un dossier existant : complete les champs vides (jamais d'ecrasement) + ajoute les
+// mesures dont la date n'existe pas deja. Renvoie le nombre de mesures ajoutees.
+async function mergeIntoDossier(tenant: string, did: string, eq: any, measuresN: any[]): Promise<number> {
+  const { data: full } = await supabaseAdmin.from('dga_dossiers').select('*').eq('id', did).maybeSingle();
+  const patch: any = { ...(full || {}) };
+  for (const k of Object.keys(eq)) { if (patch[k] == null || patch[k] === '') patch[k] = eq[k]; }
+  delete patch.id; patch.updated_at = new Date().toISOString();
+  await supabaseAdmin.from('dga_dossiers').update(patch).eq('id', did);
+  const { data: exM } = await supabaseAdmin.from('dga_measures').select('sample_date').eq('tenant_id', tenant).eq('dossier_id', did);
+  const seen = new Set((exM || []).map((x: any) => x.sample_date).filter(Boolean));
+  const toAdd = measuresN.filter((mm: any) => !mm.sample_date || !seen.has(mm.sample_date));
+  return insertMeasures(tenant, did, toAdd);
 }
 
 // Insere des mesures avec diagnostic IEEE/Duval calcule (source='email'). Renvoie le nombre insere.
