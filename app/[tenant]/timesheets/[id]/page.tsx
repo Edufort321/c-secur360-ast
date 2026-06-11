@@ -32,7 +32,7 @@ type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
 type AssignedVehicle = { id: string; name: string; make: string; model: string; regime?: string; km_rate_override?: number | null; is_sales_employee?: boolean };
 type LogEntry = { id?: string; odometer_start: number; odometer_end: number; km_personal: number };
-type Expense = { id: string; date: string; category: string; supplier: string; description: string; subtotal: number; gst: number; qst: number; total: number; receipt_url: string; reimbursable: boolean; project_id: string };
+type Expense = { id: string; entry_id?: string; date: string; category: string; supplier: string; description: string; subtotal: number; gst: number; qst: number; total: number; receipt_url: string; reimbursable: boolean; project_id: string; project_number?: string; recurring_task_id?: string; recurring_task_name?: string };
 
 const EXPENSE_CATS = [
   { k: 'carburant',    label: 'Carburant' },
@@ -46,8 +46,8 @@ const EXPENSE_CATS = [
 ];
 // TPS 5 % + TVQ 9,975 % (QC) — pré-remplissage par défaut, ajustable selon le reçu.
 const TPS = 0.05, TVQ = 0.09975;
-function newExpense(date: string): Expense {
-  return { id: `x_${Date.now()}_${Math.random()}`, date, category: 'autre', supplier: '', description: '', subtotal: 0, gst: 0, qst: 0, total: 0, receipt_url: '', reimbursable: true, project_id: '' };
+function newExpense(date: string, entryId = ''): Expense {
+  return { id: `x_${Date.now()}_${Math.random()}`, entry_id: entryId, date, category: 'autre', supplier: '', description: '', subtotal: 0, gst: 0, qst: 0, total: 0, receipt_url: '', reimbursable: true, project_id: '', project_number: '', recurring_task_id: '', recurring_task_name: '' };
 }
 
 const CATS = [
@@ -100,7 +100,9 @@ async function writeStripRetry(table: string, op: 'insert' | 'update', payload: 
 }
 
 function newEntry(date: string): Entry {
-  return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', recurring_task_id: '', recurring_task_name: '', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
+  // UUID stable (et non plus un id temporaire) -> le lien dépense→ligne (entry_id) survit à
+  // l'enregistrement (on insère AVEC l'id, voir save()).
+  return { id: (globalThis.crypto?.randomUUID?.() || `e_${Date.now()}_${Math.random()}`), date, category: 'project', recurring_task_id: '', recurring_task_name: '', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
 }
 
 export default function TimesheetDetailPage() {
@@ -326,9 +328,9 @@ export default function TimesheetDetailPage() {
   }
 
   // ── Dépenses (avec reçu) ───────────────────────────────────────────────────
-  function addExpense(date?: string) {
-    const d = date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
-    setExpenses(p => [...p, newExpense(d)]);
+  function addExpense(entry?: Entry) {
+    const d = entry?.date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
+    setExpenses(p => [...p, newExpense(d, entry?.id || '')]);
   }
   function updExpense(id: string, patch: Partial<Expense>) {
     setExpenses(prev => prev.map(x => {
@@ -496,6 +498,7 @@ export default function TimesheetDetailPage() {
         // UUID -> une chaine vide '' fait ECHOUER l'INSERT ; comme l'erreur n'etait pas verifiee et
         // que le DELETE precede l'INSERT, les donnees etaient perdues (faux « Enregistre »).
         const rows = toInsert.map((e: any, i) => ({
+          id: e.id, // id stable (UUID) -> préserve le lien dépense→ligne d'un enregistrement à l'autre
           timesheet_id: sheetId, tenant_id: tenant, sort_order: i,
           date: e.date,
           category: e.category || 'project',
@@ -519,14 +522,28 @@ export default function TimesheetDetailPage() {
         const ins = await writeStripRetry('timesheet_entries', 'insert', rows, undefined, ['timesheet_id', 'tenant_id', 'date']);
         if (ins.error) throw new Error('Enregistrement des lignes : ' + ins.error);
       }
-      // Dépenses avec reçu (table 108 ; ignore en silence si absente)
+      // Dépenses : rattachées à LEUR ligne (entry_id) et héritant du PROJET/TÂCHE de cette ligne
+      // (project_id/number, recurring_task) -> remontée à la facturation du projet. strip-retry pour
+      // tolérer un schéma incomplet (migration 158).
       try {
         await supabase.from('timesheet_expenses').delete().eq('timesheet_id', sheetId);
         const expToInsert = expenses.filter(x => Number(x.total) > 0 || (x.description && x.description.trim()) || x.receipt_url);
         if (expToInsert.length) {
-          await supabase.from('timesheet_expenses').insert(
-            expToInsert.map(x => { const { id, ...rest } = x as any; return { ...rest, timesheet_id: sheetId, tenant_id: tenant }; })
-          );
+          const entryById: Record<string, Entry> = {}; entries.forEach(en => { entryById[en.id] = en; });
+          const expRows = expToInsert.map((x: any) => {
+            const parent: Entry | undefined = x.entry_id ? entryById[x.entry_id] : undefined;
+            return {
+              timesheet_id: sheetId, tenant_id: tenant, entry_id: x.entry_id || null,
+              date: x.date, category: x.category || 'autre', supplier: x.supplier || '', description: x.description || '',
+              subtotal: Number(x.subtotal) || 0, gst: Number(x.gst) || 0, qst: Number(x.qst) || 0, total: Number(x.total) || 0,
+              receipt_url: x.receipt_url || '', reimbursable: x.reimbursable !== false,
+              project_id: (parent?.project_id || x.project_id) || null,
+              project_number: parent?.project_number || x.project_number || '',
+              recurring_task_id: (parent?.recurring_task_id || x.recurring_task_id) || null,
+              recurring_task_name: parent?.recurring_task_name || x.recurring_task_name || '',
+            };
+          });
+          await writeStripRetry('timesheet_expenses', 'insert', expRows, undefined, ['timesheet_id', 'tenant_id', 'date']);
         }
       } catch { /* table 108 non exécutée */ }
       const update: any = {
@@ -870,10 +887,10 @@ export default function TimesheetDetailPage() {
                 {/* Dépenses du jour (avec reçu) — sur la ligne de la journée */}
                 <div className="mt-3 border-t border-slate-100 pt-3">
                   <div className="mb-1.5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500"><Receipt size={12} /> Dépenses du jour</span>
-                    {!isReadOnly && <button type="button" onClick={() => addExpense(e.date)} className="text-xs font-semibold text-violet-600 hover:underline">+ Dépense</button>}
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500"><Receipt size={12} /> Dépenses de cette ligne{e.category === 'project' && e.project_number ? ` · ${e.project_number}` : e.category === 'task' && e.recurring_task_name ? ` · ${e.recurring_task_name}` : ''}</span>
+                    {!isReadOnly && <button type="button" onClick={() => addExpense(e)} className="text-xs font-semibold text-violet-600 hover:underline">+ Dépense</button>}
                   </div>
-                  {expenses.filter(x => x.date === e.date).map(x => (
+                  {expenses.filter(x => x.entry_id ? x.entry_id === e.id : x.date === e.date).map(x => (
                     <div key={x.id} className="mb-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2">
                       <select value={x.category} disabled={isReadOnly} onChange={ev => updExpense(x.id, { category: ev.target.value })} className="inp w-32 text-xs">
                         {EXPENSE_CATS.map(c => <option key={c.k} value={c.k}>{c.label}</option>)}
