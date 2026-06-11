@@ -15,6 +15,7 @@ import React, { useEffect, useState } from 'react';
 import { BadgeCheck, Download, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
+import type { ProjectActuals } from '@/lib/projectActuals';
 
 const money = (n: number) =>
   `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -29,6 +30,7 @@ interface FactureData {
   mode: 'soumission' | 'temps';
   extras: Extra[];
   surcharge_km_billable: boolean;  // inclure la surcharge carburant km dans la facture
+  expenses_billable: boolean;      // inclure les dépenses refacturables des feuilles de temps
   tps: boolean;
   tvq: boolean;
   notes: string;
@@ -42,6 +44,7 @@ const defaultFacture = (projectType?: string): FactureData => ({
   mode: projectType === 'forfaitaire' ? 'soumission' : 'temps',
   extras: [],
   surcharge_km_billable: true,
+  expenses_billable: true,
   tps: true,
   tvq: true,
   notes: '',
@@ -57,11 +60,12 @@ function genInvoiceNumber(tenant: string, projectNumber: string): string {
 }
 
 export function FactureTab({
-  tenant, projectId, project,
+  tenant, projectId, project, liveActuals,
 }: {
   tenant: string;
   projectId: string;
   project: any;
+  liveActuals?: ProjectActuals | null;
 }) {
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
@@ -91,12 +95,19 @@ export function FactureTab({
   const surchargeKmAmount = facture.surcharge_km_billable ? kmSurchargeFromActuals : 0;
 
   // ── Calcul de la base ────────────────────────────────────────────────────
+  // Mode « temps » : on privilégie le rollup LIVE des feuilles de temps (coût réel agrégé en direct)
+  // et on retombe sur l'actuals stocké du projet si le live n'est pas disponible.
+  const hasLive = !!liveActuals && liveActuals.count > 0;
   const baseFromSoumission = Number(project?.estimate?.total || 0);
-  const baseFromTemps = Number(project?.actuals?.total || 0);
+  const baseFromTemps = hasLive ? Number(liveActuals!.total || 0) : Number(project?.actuals?.total || 0);
   const base = facture.mode === 'soumission' ? baseFromSoumission : baseFromTemps;
 
+  // Dépenses refacturables pointées sur le projet (feuilles de temps) — seulement en mode « temps ».
+  const expensesBillableAmount = (facture.mode === 'temps' && hasLive && facture.expenses_billable)
+    ? Number(liveActuals!.expensesBillable || 0) : 0;
+
   const extrasTotal = facture.extras.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const subtotal = base + extrasTotal + surchargeKmAmount;
+  const subtotal = base + extrasTotal + surchargeKmAmount + expensesBillableAmount;
   const tpsMnt = facture.tps ? subtotal * TPS : 0;
   const tvqMnt = facture.tvq ? subtotal * TVQ : 0;
   const total = subtotal + tpsMnt + tvqMnt;
@@ -149,7 +160,20 @@ export function FactureTab({
     setExporting(true);
     try {
       const { exportProjectPdf } = await import('@/lib/pdf/projectPdf');
-      await exportProjectPdf({ tab: 'facture', project: { ...project, facture }, tenant });
+      // Le générateur PDF calcule base = actuals.total + extras. On injecte la base LIVE et on
+      // ajoute la surcharge km + les dépenses refacturables comme lignes (extras) pour que le PDF
+      // corresponde exactement à l'écran (total identique, détail visible).
+      const pdfExtras = [
+        ...facture.extras,
+        ...(surchargeKmAmount > 0 ? [{ id: 'km_surcharge', desc: `Surcharge carburant km (${kmSurchargePct}%)`, amount: surchargeKmAmount }] : []),
+        ...(expensesBillableAmount > 0 ? [{ id: 'ts_expenses', desc: tr('Dépenses refacturables', 'Billable expenses'), amount: expensesBillableAmount }] : []),
+      ];
+      const pdfProject = {
+        ...project,
+        actuals: facture.mode === 'temps' ? { ...(project?.actuals || {}), total: baseFromTemps } : project?.actuals,
+        facture: { ...facture, extras: pdfExtras },
+      };
+      await exportProjectPdf({ tab: 'facture', project: pdfProject, tenant });
     } finally { setExporting(false); }
   }
 
@@ -222,6 +246,12 @@ export function FactureTab({
                 Surcharge carburant km ({kmSurchargePct}%)
               </label>
             )}
+            {facture.mode === 'temps' && hasLive && Number(liveActuals!.expensesBillable || 0) > 0 && (
+              <label className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                <input type="checkbox" checked={facture.expenses_billable} onChange={e => set('expenses_billable', e.target.checked)} disabled={facture.approved} />
+                {tr('Dépenses refacturables', 'Billable expenses')} ({money(Number(liveActuals!.expensesBillable || 0))})
+              </label>
+            )}
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
               <input type="checkbox" checked={facture.tps} onChange={e => set('tps', e.target.checked)} disabled={facture.approved} />
               TPS (5%)
@@ -274,6 +304,21 @@ export function FactureTab({
                 </div>
               </div>
               <span className="font-bold tabular-nums text-orange-700 dark:text-orange-300">{money(surchargeKmAmount)}</span>
+            </div>
+          )}
+
+          {/* Dépenses refacturables (feuilles de temps) */}
+          {expensesBillableAmount > 0 && (
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <div className="font-semibold text-emerald-700 dark:text-emerald-300">
+                  {tr('Dépenses refacturables', 'Billable expenses')}
+                </div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                  {tr('Pointées sur le projet (feuilles de temps)', 'Logged on the project (timesheets)')}
+                </div>
+              </div>
+              <span className="font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{money(expensesBillableAmount)}</span>
             </div>
           )}
 

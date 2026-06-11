@@ -401,7 +401,7 @@ export default function ProjectDetailPage() {
 
             {tab === 'temps' && (tsActuals ? <ProjectTimesheetSummary actuals={tsActuals} tenant={tenant} /> : <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>)}
             {tab === 'couts' && <CoutsTab estimate={p.estimate} actuals={(tsActuals && tsActuals.count > 0) ? tsActuals : p.actuals} poAmount={p.po_amount} />}
-            {tab === 'facture' && <FactureTab tenant={tenant} projectId={id} project={p} />}
+            {tab === 'facture' && <FactureTab tenant={tenant} projectId={id} project={p} liveActuals={tsActuals} />}
           </>
         )}
       </div>

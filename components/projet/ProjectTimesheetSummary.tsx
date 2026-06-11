@@ -45,8 +45,8 @@ export function ProjectTimesheetSummary({ actuals, tenant }: { actuals: ProjectA
         <Stat label={tr('Kilométrage', 'Mileage')} value={money(actuals.km)} />
         <Stat label={tr('Matériel', 'Materials')} value={money(actuals.materiel)} />
         <Stat label={tr('Indemnités', 'Allowances')} value={money(actuals.allowances)} />
+        <Stat label={tr('Dépenses (refact.)', 'Expenses (billable)')} value={money(actuals.expensesBillable)} tone="text-emerald-600 dark:text-emerald-400" />
         <Stat label={tr('Heures', 'Hours')} value={`${totalHours.toFixed(1)} h`} tone="text-gray-700 dark:text-gray-200" />
-        <Stat label={tr('Lignes', 'Entries')} value={String(actuals.count)} tone="text-gray-700 dark:text-gray-200" />
       </div>
 
       {actuals.count === 0 ? (
@@ -80,6 +80,45 @@ export function ProjectTimesheetSummary({ actuals, tenant }: { actuals: ProjectA
                     <td className="px-3 py-1.5 text-right tabular-nums">{e.km || ''}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{e.materiel ? money(e.materiel) : ''}</td>
                     <td className="px-3 py-1.5 text-right font-medium tabular-nums">{money(e.cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Dépenses pointées sur le projet (refacturables → facture) */}
+      {actuals.expenseEntries.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+            <span className="text-sm font-bold">{tr('Dépenses pointées', 'Logged expenses')}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {tr('Refacturables', 'Billable')} : <span className="font-semibold text-emerald-600 dark:text-emerald-400">{money(actuals.expensesBillable)}</span>
+              {actuals.expensesTotal !== actuals.expensesBillable && <> · {tr('Total', 'Total')} {money(actuals.expensesTotal)}</>}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900/40">
+                <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
+                  <th className="px-3 py-2">{tr('Date', 'Date')}</th>
+                  <th className="px-3 py-2">{tr('Catégorie', 'Category')}</th>
+                  <th className="px-3 py-2">{tr('Description', 'Description')}</th>
+                  <th className="px-3 py-2">{tr('Fournisseur', 'Supplier')}</th>
+                  <th className="px-3 py-2 text-center">{tr('Refact.', 'Billable')}</th>
+                  <th className="px-3 py-2 text-right">{tr('Total', 'Total')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {actuals.expenseEntries.map((x) => (
+                  <tr key={x.id}>
+                    <td className="px-3 py-1.5 whitespace-nowrap">{x.date || '—'}</td>
+                    <td className="px-3 py-1.5">{x.category}</td>
+                    <td className="px-3 py-1.5">{x.description || '—'}</td>
+                    <td className="px-3 py-1.5">{x.supplier || '—'}</td>
+                    <td className="px-3 py-1.5 text-center">{x.reimbursable ? '✓' : '—'}</td>
+                    <td className="px-3 py-1.5 text-right font-medium tabular-nums">{money(x.total)}</td>
                   </tr>
                 ))}
               </tbody>
