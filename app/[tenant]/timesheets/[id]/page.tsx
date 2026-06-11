@@ -70,6 +70,8 @@ export default function TimesheetDetailPage() {
   const sheetId = params?.id as string;
 
   const [sheet, setSheet]       = useState<Sheet | null>(null);
+  const [forbidden, setForbidden] = useState(false); // feuille d'un AUTRE utilisateur (non superviseur) -> accès refusé
+  const [notOwner, setNotOwner]   = useState(false); // superviseur consultant la feuille d'un autre -> lecture seule
   const [entries, setEntries]   = useState<Entry[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -106,6 +108,9 @@ export default function TimesheetDetailPage() {
   useEffect(() => {
     let active = true;
     (async () => {
+      // Identité de l'utilisateur courant — pour empêcher la contamination entre utilisateurs.
+      const meJson = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+      const me = meJson?.user; const isSup = !!me && (me.role === 'client_admin' || me.role === 'super_admin');
       const [{ data: sh }, { data: ents }, { data: r }, { data: p }, { data: v }, { data: s }] = await Promise.all([
         supabase.from('timesheets').select('*').eq('id', sheetId).single(),
         supabase.from('timesheet_entries').select('*').eq('timesheet_id', sheetId).order('sort_order').order('date'),
@@ -115,6 +120,12 @@ export default function TimesheetDetailPage() {
         supabase.from('rate_settings').select('category,key,value').eq('tenant_id', tenant),
       ]);
       if (!active) return;
+      // Garde de propriété : on ne voit/édite QUE sa propre feuille. Un superviseur peut consulter
+      // celle d'un autre, mais en LECTURE SEULE (approbation). Sinon -> accès refusé.
+      if (sh && me && String(sh.employee_id) !== String(me.id)) {
+        if (!isSup) { setForbidden(true); setLoading(false); return; }
+        setNotOwner(true);
+      }
       setSheet(sh);
       // Charge les lignes existantes + amorce les 7 jours de la période (lun→dim) manquants,
       // pour que TOUS les jours apparaissent comme lignes. Les jours vides ne sont pas persistés.
@@ -472,8 +483,21 @@ export default function TimesheetDetailPage() {
     finally { setSaving(false); }
   }
 
-  const isReadOnly = sheet?.status === 'approved' || sheet?.status === 'paid';
+  const isReadOnly = sheet?.status === 'approved' || sheet?.status === 'paid' || notOwner;
   const canSubmit  = sheet?.status === 'draft' || sheet?.status === 'rejected';
+
+  if (forbidden) return (
+    <div className="min-h-screen bg-slate-50"><PortalHeader tenant={tenant} />
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <div className="text-4xl">🔒</div>
+        <h1 className="mt-3 text-xl font-bold text-slate-800">Accès refusé</h1>
+        <p className="mt-2 text-sm text-slate-500">Cette feuille de temps appartient à un autre utilisateur.</p>
+        <button onClick={() => router.push(`/${tenant}/timesheets`)} className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+          <ArrowLeft size={16} /> Mes feuilles de temps
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50"><PortalHeader tenant={tenant} />
