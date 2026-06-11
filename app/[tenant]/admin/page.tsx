@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload, Zap } from 'lucide-react';
+import { listRecurringTasks, saveRecurringTask, deleteRecurringTask, type RecurringTask } from '@/lib/recurringTasks';
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
@@ -3617,7 +3618,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
 
 function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: string) => string; perms: typeof PERMS[AccessLevel] }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-  const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'sousclasses' | 'comptes'>('personnel');
+  const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'sousclasses' | 'comptes' | 'taches'>('personnel');
   const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclass_ids?: string[] }[]>([]);
   const [sharedSubclasses, setSharedSubclasses] = useState<{ id: string; name: string; code?: string; color?: string; category?: string }[]>([]);
   const [postesTick, setPostesTick] = useState(0);
@@ -3656,6 +3657,7 @@ function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: st
           { k: 'postes',      label: tr('Postes',                    'Positions'),         icon: Layers },
           { k: 'sousclasses', label: tr('Sous-classes',              'Sub-classes'),       icon: Wrench },
           { k: 'comptes',     label: tr('Comptes d\'accès',          'Access accounts'),    icon: UserCog },
+          { k: 'taches',      label: tr('Tâches récurrentes',        'Recurring tasks'),    icon: Timer },
         ].map(x => {
           const Icon = x.icon as any;
           return (
@@ -3670,6 +3672,62 @@ function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: st
       {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} sharedSubclasses={sharedSubclasses} onPostesChanged={reloadPostes} goToSubclasses={() => setSubTab('sousclasses')} perms={perms} />}
       {subTab === 'sousclasses' && <SousClassesPlanner tenant={tenant} tr={tr} inp={inp} onSubclassesChanged={reloadSubclasses} />}
       {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} canReveal={perms.viewSalary} />}
+      {subTab === 'taches'      && <RecurringTasksPlanner tenant={tenant} tr={tr} inp={inp} />}
+    </div>
+  );
+}
+
+// Catalogue de tâches récurrentes du tenant (bureau/atelier/soumission/administration…).
+// Sert à associer une ligne de feuille de temps ou une tâche planifiée quand ce n'est pas un projet.
+function RecurringTasksPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+  const [tasks, setTasks] = useState<RecurringTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState<RecurringTask>({ name: '', code: '', billable: false, active: true });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const reload = useCallback(async () => { setLoading(true); setTasks(await listRecurringTasks(tenant, false)); setLoading(false); }, [tenant]);
+  useEffect(() => { reload(); }, [reload]);
+
+  async function add() {
+    if (!draft.name.trim()) return;
+    setBusy(true);
+    const res = await saveRecurringTask(tenant, { ...draft, sort_order: tasks.length });
+    setBusy(false);
+    if (res.error) { setMsg(res.error); return; }
+    setDraft({ name: '', code: '', billable: false, active: true }); setMsg(null); reload();
+  }
+  async function patch(t: RecurringTask, p: Partial<RecurringTask>) { await saveRecurringTask(tenant, { ...t, ...p }); reload(); }
+  async function remove(id?: string) { if (!id) return; if (!confirm(tr('Supprimer cette tâche ?', 'Delete this task?'))) return; await deleteRecurringTask(id); reload(); }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500">{tr("Définissez vos tâches récurrentes (ex. bureau, atelier, soumission, administration). Elles servent à associer une ligne de feuille de temps ou une tâche planifiée quand ce n'est pas un projet.", 'Define your recurring tasks (e.g. office, shop, quote, admin). They tag a timesheet line or a planned task when it is not a project.')}</p>
+      <div className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+        <div><label className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Nom', 'Name')}</label><input className={`${inp} w-48`} value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} placeholder={tr('ex. Atelier', 'e.g. Shop')} /></div>
+        <div><label className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Code', 'Code')}</label><input className={`${inp} w-24`} value={draft.code} onChange={e => setDraft(d => ({ ...d, code: e.target.value }))} placeholder="ATL" /></div>
+        <label className="flex items-center gap-1.5 pb-1.5 text-sm font-medium text-gray-600 dark:text-gray-300"><input type="checkbox" checked={!!draft.billable} onChange={e => setDraft(d => ({ ...d, billable: e.target.checked }))} />{tr('Facturable', 'Billable')}</label>
+        <button onClick={add} disabled={busy || !draft.name.trim()} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+        {msg && <span className="pb-1.5 text-xs text-red-600">{msg}</span>}
+      </div>
+      {loading ? <div className="py-8 text-center text-gray-400"><Loader2 className="mx-auto animate-spin" /></div> : tasks.length === 0 ? <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune tâche récurrente.', 'No recurring task yet.')}</div> : (
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 dark:bg-gray-800"><tr><th className="px-3 py-2 text-left">{tr('Nom', 'Name')}</th><th className="px-3 py-2 text-left">{tr('Code', 'Code')}</th><th className="px-3 py-2">{tr('Facturable', 'Billable')}</th><th className="px-3 py-2">{tr('Actif', 'Active')}</th><th className="px-3 py-2"></th></tr></thead>
+            <tbody>
+              {tasks.map(t => (
+                <tr key={t.id} className="border-t border-gray-100 dark:border-gray-800">
+                  <td className="px-3 py-2"><input className={`${inp} w-44`} value={t.name} onChange={e => setTasks(ts => ts.map(x => x.id === t.id ? { ...x, name: e.target.value } : x))} onBlur={e => patch(t, { name: e.target.value })} /></td>
+                  <td className="px-3 py-2"><input className={`${inp} w-20`} value={t.code || ''} onChange={e => setTasks(ts => ts.map(x => x.id === t.id ? { ...x, code: e.target.value } : x))} onBlur={e => patch(t, { code: e.target.value })} /></td>
+                  <td className="px-3 py-2 text-center"><input type="checkbox" checked={!!t.billable} onChange={e => patch(t, { billable: e.target.checked })} /></td>
+                  <td className="px-3 py-2 text-center"><input type="checkbox" checked={t.active !== false} onChange={e => patch(t, { active: e.target.checked })} /></td>
+                  <td className="px-3 py-2 text-right"><button onClick={() => remove(t.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={15} /></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
