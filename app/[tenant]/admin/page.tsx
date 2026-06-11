@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload, Zap } from 'lucide-react';
 import { listRecurringTasks, saveRecurringTask, deleteRecurringTask, type RecurringTask } from '@/lib/recurringTasks';
+import { getCatalogueConditions, DEFAULT_EMPLOYEE_FACTOR, type CatalogueCondition, type GridCondition } from '@/lib/catalogueConditions';
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
@@ -4233,7 +4234,7 @@ type SkillItem = { id: string; name: string; weight: number };
 type SkillTypeDef = { id: string; name: string; weight: number; mode: 'note' | 'pct'; max: number; skills: SkillItem[] };
 type SkillForm = { types: SkillTypeDef[] };
 type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_score?: number; min_months_experience: number; commission_pct?: number | null; notes?: string };
-type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; use_skill_grid?: boolean; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; discretionary_bonuses?: DiscretionaryBonus[]; skill_form?: SkillForm; notes?: string };
+type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; use_skill_grid?: boolean; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; discretionary_bonuses?: DiscretionaryBonus[]; grid_conditions?: GridCondition[]; skill_form?: SkillForm; notes?: string };
 
 // Génère un identifiant court côté client pour les types/compétences du formulaire.
 const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10));
@@ -4355,6 +4356,23 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
       .then(({ data }) => setAllPostes((data || []).filter((p: any) => p.name)));
   }, [tenant, poste.id]);
 
+  // Conditions/frais du catalogue des taux (prix vendant) — pour la section « Frais applicables ».
+  const [catConditions, setCatConditions] = useState<CatalogueCondition[]>([]);
+  useEffect(() => { getCatalogueConditions(tenant).then(setCatConditions).catch(() => {}); }, [tenant]);
+  // Récupère la config (applies + prix employé) d'une condition pour ce poste (défaut : non, vendant×0,8).
+  const condOf = (key: string): GridCondition | undefined => (grid?.grid_conditions || []).find(c => c.key === key);
+  const setCond = (cc: CatalogueCondition, patch: Partial<GridCondition>) => {
+    setGrid(g => {
+      if (!g) return g;
+      const list = [...(g.grid_conditions || [])];
+      const i = list.findIndex(c => c.key === cc.key);
+      const base: GridCondition = i >= 0 ? list[i] : { key: cc.key, label: cc.label, sell_price: cc.sell_price, employee_price: Math.round(cc.sell_price * DEFAULT_EMPLOYEE_FACTOR * 100) / 100, applies: false };
+      const next = { ...base, label: cc.label, sell_price: cc.sell_price, ...patch };
+      if (i >= 0) list[i] = next; else list.push(next);
+      return { ...g, grid_conditions: list };
+    });
+  };
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -4362,13 +4380,13 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
       const sg = await fetch(`/api/hr/salary-grid?posteId=${poste.id}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
       const g = (sg as any).grid;
       const gridTiers = (sg as any).tiers || [];
-      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, use_skill_grid: true, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null, discretionary_bonuses: [], skill_form: { types: [] } };
+      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, use_skill_grid: true, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null, discretionary_bonuses: [], grid_conditions: [], skill_form: { types: [] } };
       // Normalise le formulaire (poids de compétence par défaut pour les anciennes données)
       const normForm = (sf: any): SkillForm => (sf && Array.isArray(sf.types))
         ? { types: sf.types.map((t: any) => ({ ...t, skills: (t.skills || []).map((s: any) => ({ weight: 1, ...s })) })) }
         : { types: [] };
       if (g) {
-        setGrid({ ...defaultGrid, ...g, use_skill_grid: (g as any).use_skill_grid !== false, discretionary_bonuses: (g as any).discretionary_bonuses || [], skill_form: normForm((g as any).skill_form) });
+        setGrid({ ...defaultGrid, ...g, use_skill_grid: (g as any).use_skill_grid !== false, discretionary_bonuses: (g as any).discretionary_bonuses || [], grid_conditions: (g as any).grid_conditions || [], skill_form: normForm((g as any).skill_form) });
         const ts = (gridTiers || []).map((x: any) => ({ ...x, required_skills: x.required_skills || [] }));
         setTiers(ts.length ? ts : computeTiers({ ...defaultGrid, ...g }));
       } else {
@@ -4693,6 +4711,38 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section Frais / conditions (subsistance, hébergement…) du catalogue — prix vendant vs employé */}
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/5 p-3">
+          <h4 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+            🧾 {tr('Frais / conditions applicables', 'Applicable allowances')}
+          </h4>
+          <p className="mb-2 text-[11px] text-gray-500">{tr("Du catalogue des taux (prix vendant). Cochez ce qui s'applique à ce poste ; le « prix employé » par défaut = vendant −20 %, éditable. Le prix vendant sert à la facturation du projet.", 'From the rate catalog (selling price). Check what applies to this position; default employee price = selling −20%, editable. Selling price feeds project billing.')}</p>
+          {catConditions.length === 0 ? (
+            <div className="text-[11px] text-gray-400">{tr('Aucune condition (subsistance/hébergement) dans le catalogue des taux. Ajoutez-les dans le catalogue.', 'No conditions in the rate catalog yet.')}</div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-emerald-100 dark:border-emerald-500/20">
+              <table className="w-full text-xs">
+                <thead className="bg-emerald-100/50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200"><tr>
+                  <th className="px-2 py-1.5 text-left">{tr('Applique', 'Applies')}</th>
+                  <th className="px-2 py-1.5 text-left">{tr('Condition', 'Condition')}</th>
+                  <th className="px-2 py-1.5 text-right">{tr('Prix vendant', 'Selling')}</th>
+                  <th className="px-2 py-1.5 text-right">{tr('Prix employé', 'Employee')}</th>
+                </tr></thead>
+                <tbody>
+                  {catConditions.map(cc => { const c = condOf(cc.key); const applies = !!c?.applies; const empPrice = c?.employee_price ?? Math.round(cc.sell_price * DEFAULT_EMPLOYEE_FACTOR * 100) / 100; return (
+                    <tr key={cc.key} className="border-t border-emerald-50 dark:border-emerald-500/10">
+                      <td className="px-2 py-1.5"><input type="checkbox" disabled={!canEdit} checked={applies} onChange={e => setCond(cc, { applies: e.target.checked })} /></td>
+                      <td className="px-2 py-1.5 font-medium text-gray-700 dark:text-gray-200">{cc.label}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-500">{money(cc.sell_price)}</td>
+                      <td className="px-2 py-1.5 text-right"><input type="number" step="0.01" disabled={!canEdit || !applies} value={empPrice} onFocus={selectOnFocus} onChange={e => setCond(cc, { employee_price: Number(e.target.value) })} className={`${inp2} inline-block w-24 text-right`} /></td>
+                    </tr>
+                  ); })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -215,6 +215,10 @@ export default function TimesheetDetailPage() {
           const gc = await fetch(`/api/hr/salary-grid?gridConditions=${sh.employee_id}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
           const db = Array.isArray((gc as any)?.bonuses) ? (gc as any).bonuses : [];
           gridConds = db.map((b: any, i: number) => ({ id: `grid_${i}`, name: b.label || `Prime ${i + 1}`, amount: b.unit === 'fixed' ? (Number(b.amount) || 0) : 0, is_taxable: true }));
+          // Frais/conditions du catalogue applicables à ce poste : l'employé reçoit le PRIX EMPLOYÉ
+          // (= vendant −20 % par défaut, défini dans la grille du poste). Cases à cocher par jour.
+          const conds = Array.isArray((gc as any)?.conditions) ? (gc as any).conditions : [];
+          gridConds = [...gridConds, ...conds.map((c: any, i: number) => ({ id: `cond_${c.key || i}`, name: c.label || `Frais ${i + 1}`, amount: Number(c.employee_price) || 0, is_taxable: false }))];
         } catch { /* grille absente */ }
         // Fusion : conditions de la grille d'abord, puis avantages globaux (sans doublon de nom).
         const globals = (allws || []) as Allowance[];

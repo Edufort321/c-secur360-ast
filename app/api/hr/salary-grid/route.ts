@@ -36,10 +36,15 @@ async function gridConditions(req: NextRequest, personnelId: string) {
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   try {
     const { data: pers } = await supabaseAdmin.from('planner_personnel').select('current_grid_id').eq('tenant_id', acc.tenant).eq('id', personnelId).maybeSingle();
-    if (!(pers as any)?.current_grid_id) return NextResponse.json({ ok: true, bonuses: [] });
-    const { data: grid } = await supabaseAdmin.from('poste_salary_grids').select('discretionary_bonuses').eq('id', (pers as any).current_grid_id).eq('tenant_id', acc.tenant).maybeSingle();
-    return NextResponse.json({ ok: true, bonuses: Array.isArray((grid as any)?.discretionary_bonuses) ? (grid as any).discretionary_bonuses : [] });
-  } catch { return NextResponse.json({ ok: true, bonuses: [] }); }
+    if (!(pers as any)?.current_grid_id) return NextResponse.json({ ok: true, bonuses: [], conditions: [] });
+    const gid = (pers as any).current_grid_id;
+    const { data: grid } = await supabaseAdmin.from('poste_salary_grids').select('discretionary_bonuses').eq('id', gid).eq('tenant_id', acc.tenant).maybeSingle();
+    const bonuses = Array.isArray((grid as any)?.discretionary_bonuses) ? (grid as any).discretionary_bonuses : [];
+    // Conditions/frais applicables (prix employé) — séparé pour rester résilient si colonne absente (migration 159).
+    let conditions: any[] = [];
+    try { const { data: gc } = await supabaseAdmin.from('poste_salary_grids').select('grid_conditions').eq('id', gid).maybeSingle(); conditions = Array.isArray((gc as any)?.grid_conditions) ? (gc as any).grid_conditions.filter((c: any) => c?.applies) : []; } catch { /* colonne absente */ }
+    return NextResponse.json({ ok: true, bonuses, conditions });
+  } catch { return NextResponse.json({ ok: true, bonuses: [], conditions: [] }); }
 }
 
 // GET ?posteId=X -> { grid, tiers } de ce poste (tenant de session).
@@ -78,10 +83,11 @@ export async function POST(req: NextRequest) {
       commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross',
       commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null,
       discretionary_bonuses: grid.discretionary_bonuses || [], skill_form: grid.skill_form || { types: [] },
+      grid_conditions: grid.grid_conditions || [],
       notes: grid.notes || null, updated_at: new Date().toISOString(),
     };
-    const isMissingCol = (e: any) => /discretionary_bonuses|skill_form|use_skill_grid/i.test(e?.message || '') || e?.code === 'PGRST204';
-    const stripNew = (p: any) => { const { discretionary_bonuses, skill_form, use_skill_grid, ...rest } = p; return rest; };
+    const isMissingCol = (e: any) => /discretionary_bonuses|skill_form|use_skill_grid|grid_conditions/i.test(e?.message || '') || e?.code === 'PGRST204';
+    const stripNew = (p: any) => { const { discretionary_bonuses, skill_form, use_skill_grid, grid_conditions, ...rest } = p; return rest; };
 
     let gridId = grid.id as string | undefined;
     if (gridId) {
