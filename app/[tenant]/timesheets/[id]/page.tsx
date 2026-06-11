@@ -80,10 +80,12 @@ function NumCell({ value, disabled, step, onCommit }: { value: number; disabled?
 // Écriture TOLÉRANTE : si une colonne n'existe pas dans le schéma Supabase (migrations incomplètes),
 // on la retire du payload et on réessaie -> l'enregistrement persiste ce que le schéma supporte au
 // lieu d'échouer en bloc (et, avec le DELETE-puis-INSERT, de perdre les lignes).
-async function writeStripRetry(table: string, op: 'insert' | 'update', payload: any, eq?: { col: string; val: any }, keep: string[] = []): Promise<{ error?: string }> {
+async function writeStripRetry(table: string, op: 'insert' | 'update' | 'upsert', payload: any, eq?: { col: string; val: any }, keep: string[] = []): Promise<{ error?: string }> {
   let body: any = Array.isArray(payload) ? payload.map((r: any) => ({ ...r })) : { ...payload };
   for (let guard = 0; guard < 18; guard++) {
-    let q: any = op === 'insert' ? supabase.from(table).insert(body) : supabase.from(table).update(body);
+    let q: any = op === 'insert' ? supabase.from(table).insert(body)
+      : op === 'upsert' ? supabase.from(table).upsert(body, { onConflict: 'id' })
+      : supabase.from(table).update(body);
     if (op === 'update' && eq) q = q.eq(eq.col, eq.val);
     const { error } = await q;
     if (!error) return {};
@@ -93,6 +95,11 @@ async function writeStripRetry(table: string, op: 'insert' | 'update', payload: 
       if (Array.isArray(body)) body = body.map((r: any) => { const c = { ...r }; delete c[col]; return c; });
       else delete body[col];
       continue;
+    }
+    // Cache de schéma PostgREST périmé (PGRST204) sur une colonne pourtant essentielle (date…) :
+    // message explicite et actionnable plutôt qu'un échec opaque.
+    if (col && keep.includes(col) && /schema cache/i.test(error.message || '')) {
+      return { error: `Cache de schéma Supabase périmé (colonne « ${col} »). Dans Supabase → SQL : NOTIFY pgrst, 'reload schema';` };
     }
     return { error: error.message };
   }
@@ -527,43 +534,47 @@ export default function TimesheetDetailPage() {
     savingRef.current = true;
     if (silent) setAutoSaving(true); else { setSaving(true); setNotice(null); }
     try {
-      const { error: delErr } = await supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
-      if (delErr) throw new Error('Suppression des lignes : ' + delErr.message);
       // Ne persiste que les lignes RENSEIGNÉES (on ignore les 7 jours amorcés restés vides).
-      const toInsert = entries.filter(e =>
+      const toKeep = entries.filter(e =>
         Number(e.hrs_regular) || Number(e.hrs_overtime) || Number(e.hrs_premium) ||
         Number(e.km) || Number(e.materiel) || (e.allowances && e.allowances.length) ||
-        e.project_id || (e.description && e.description.trim())
+        e.project_id || e.recurring_task_id || (e.description && e.description.trim())
       );
-      if (toInsert.length) {
-        // Whitelist STRICT des colonnes + coercition des types. CRUCIAL : vehicle_id est une colonne
-        // UUID -> une chaine vide '' fait ECHOUER l'INSERT ; comme l'erreur n'etait pas verifiee et
-        // que le DELETE precede l'INSERT, les donnees etaient perdues (faux « Enregistre »).
-        const rows = toInsert.map((e: any, i) => ({
-          id: e.id, // id stable (UUID) -> préserve le lien dépense→ligne d'un enregistrement à l'autre
-          timesheet_id: sheetId, tenant_id: tenant, sort_order: i,
-          date: e.date,
-          category: e.category || 'project',
-          recurring_task_id: e.recurring_task_id || null,
-          recurring_task_name: e.recurring_task_name || '',
-          project_id: e.project_id || null,
-          project_number: e.project_number || '',
-          project_title: e.project_title || '',
-          client_name: e.client_name || '',
-          description: e.description || '',
-          hrs_regular: Number(e.hrs_regular) || 0,
-          hrs_overtime: Number(e.hrs_overtime) || 0,
-          hrs_premium: Number(e.hrs_premium) || 0,
-          km: Number(e.km) || 0,
-          vehicle_id: e.vehicle_id || null,
-          vehicle_type: e.vehicle_type || '',
-          vehicle_name: e.vehicle_name || '',
-          materiel: Number(e.materiel) || 0,
-          allowances: e.allowances || [],
-        }));
-        const ins = await writeStripRetry('timesheet_entries', 'insert', rows, undefined, ['timesheet_id', 'tenant_id', 'date']);
+      // Whitelist STRICT des colonnes + coercition des types. CRUCIAL : vehicle_id est une colonne
+      // UUID -> une chaine vide '' fait ECHOUER l'INSERT ; on coerce ''→null.
+      const rows = toKeep.map((e: any, i) => ({
+        id: e.id, // id stable (UUID) -> préserve le lien dépense→ligne + sert de clé d'upsert
+        timesheet_id: sheetId, tenant_id: tenant, sort_order: i,
+        date: e.date,
+        category: e.category || 'project',
+        recurring_task_id: e.recurring_task_id || null,
+        recurring_task_name: e.recurring_task_name || '',
+        project_id: e.project_id || null,
+        project_number: e.project_number || '',
+        project_title: e.project_title || '',
+        client_name: e.client_name || '',
+        description: e.description || '',
+        hrs_regular: Number(e.hrs_regular) || 0,
+        hrs_overtime: Number(e.hrs_overtime) || 0,
+        hrs_premium: Number(e.hrs_premium) || 0,
+        km: Number(e.km) || 0,
+        vehicle_id: e.vehicle_id || null,
+        vehicle_type: e.vehicle_type || '',
+        vehicle_name: e.vehicle_name || '',
+        materiel: Number(e.materiel) || 0,
+        allowances: e.allowances || [],
+      }));
+      // NON DESTRUCTIF : on UPSERT d'abord (si ça échoue, rien n'est perdu), PUIS on supprime
+      // seulement les lignes de cette feuille qui ne sont plus présentes (supprimées/vidées).
+      if (rows.length) {
+        const ins = await writeStripRetry('timesheet_entries', 'upsert', rows, undefined, ['timesheet_id', 'tenant_id', 'date']);
         if (ins.error) throw new Error('Enregistrement des lignes : ' + ins.error);
       }
+      const keepIds = rows.map(r => r.id);
+      let delQ: any = supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
+      if (keepIds.length) delQ = delQ.not('id', 'in', `(${keepIds.join(',')})`);
+      const { error: delErr } = await delQ;
+      if (delErr) throw new Error('Nettoyage des lignes : ' + delErr.message);
       // Dépenses : rattachées à LEUR ligne (entry_id) et héritant du PROJET/TÂCHE de cette ligne
       // (project_id/number, recurring_task) -> remontée à la facturation du projet. strip-retry pour
       // tolérer un schéma incomplet (migration 158).
