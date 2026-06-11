@@ -17,7 +17,7 @@ import { supabase } from '@/lib/supabase';
 import { FlaskConical, Lock, Loader2, Plus, Search, Upload, Trash2, ArrowLeft, Mail } from 'lucide-react';
 import {
   EQUIP_GROUPS, EQUIP_FIELDS, listDossiers, listAllMeasures, listMeasures, saveDossier, deleteDossier,
-  saveMeasure, deleteMeasure, matchDossier, type Dossier, type Measure,
+  saveMeasure, deleteMeasure, matchDossier, setTreated, type Dossier, type Measure,
 } from '@/lib/dga/dossiers';
 import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import { duvalPct, duvalZone } from '@/lib/dga/duval';
@@ -50,6 +50,7 @@ export default function DgaPage() {
   const [editMeasure, setEditMeasure] = useState<Measure | null>(null); // mesure en cours d'édition (null = nouveau prélèvement)
   const [query, setQuery] = useState('');
   const [dueFilter, setDueFilter] = useState<'all' | 'overdue' | 'soon' | 'ok'>('all');
+  const [treatFilter, setTreatFilter] = useState<'all' | 'todo' | 'done'>('all'); // traité / à traiter
   const [sortBy, setSortBy] = useState<'due' | 'alert'>('due'); // défaut : reprise à venir
   const [sitesTree, setSitesTree] = useState<SiteNode[]>([]);
   const [siteFilter, setSiteFilter] = useState(''); // classer les transfos par site (admin)
@@ -89,6 +90,8 @@ export default function DgaPage() {
     if (!id) return;
     try { await supabase.from('dga_measures').update({ seen: true }).eq('tenant_id', tenant).eq('dossier_id', id).eq('seen', false); } catch { /* tolère (colonne seen via migration 153) */ }
   }
+  // Bascule le drapeau manuel « traité / à traiter » (persiste, sert au filtre).
+  async function toggleTreated(id: string, val: boolean) { await setTreated(id, val); reload(); }
   function openFiche(d: Dossier) {
     setSelId(d.id!); setView('fiche');
     if (d.id && (measuresByDossier[d.id] || []).some(m => (m as any).seen === false)) markDossierSeen(d.id).then(reload);
@@ -148,6 +151,8 @@ export default function DgaPage() {
     };
     const arr = dossiers.filter(d => {
       if (siteFilter && d.extra?.site_id !== siteFilter) return false;
+      if (treatFilter === 'todo' && d.treated !== false) return false;
+      if (treatFilter === 'done' && d.treated === false) return false;
       if (q && ![d.ident, d.client, d.serie, d.apparatus, d.description, d.company, d.equip_no].some(v => (v || '').toLowerCase().includes(q))) return false;
       if (dueFilter !== 'all') { const last = d.id ? lastByDossier[d.id] : undefined; if (dueStatusByDate(effectiveNextDate(d.extra, last)).code !== dueFilter) return false; }
       return true;
@@ -173,7 +178,9 @@ export default function DgaPage() {
       if (d.serie && oltcByParent.has(d.serie)) grouped.push(...oltcByParent.get(d.serie)!);
     });
     return grouped;
-  }, [dossiers, query, dueFilter, sortBy, lastByDossier, siteFilter]);
+  }, [dossiers, query, dueFilter, treatFilter, sortBy, lastByDossier, siteFilter]);
+
+  const todoCount = useMemo(() => dossiers.filter(d => d.treated === false).length, [dossiers]);
 
   const selected_d = dossiers.find(d => d.id === selId) || null;
 
@@ -442,7 +449,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true) }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, todoCount, onToggleTreated: toggleTreated }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -492,7 +499,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, todoCount, onToggleTreated } = p;
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   // Transformateurs avec des résultats reçus par courriel non encore consultés (badge « Nouveau »).
@@ -545,6 +552,12 @@ function ListView(p: any) {
         {filterTabs.map(([k, lbl, cnt, col]) => (
           <button key={k} onClick={() => setDueFilter(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={dueFilter === k ? { background: col, color: '#fff', borderColor: col } : { color: col, borderColor: col }}>
             {lbl} <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span>
+          </button>
+        ))}
+        <span className="mx-0.5 h-4 w-px bg-gray-300 dark:bg-gray-600" />
+        {([['all', tr('Tous', 'All'), null], ['todo', tr('À traiter', 'To treat'), todoCount], ['done', tr('Traités', 'Treated'), null]] as const).map(([k, lbl, cnt]) => (
+          <button key={k} onClick={() => setTreatFilter(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={treatFilter === k ? { background: '#f4a261', color: '#fff', borderColor: '#f4a261' } : { color: '#b45309', borderColor: '#e0a96d' }}>
+            {lbl}{cnt != null ? <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span> : null}
           </button>
         ))}
         {sitesTree.length > 0 && (
@@ -604,6 +617,7 @@ function ListView(p: any) {
           const pcb = pcbStatus(latestPcb(measuresByDossier?.[d.id!] || (last ? [last] : [])), lang);
           const isOltc = !!d.extra?.is_oltc;
           const newCount = (measuresByDossier?.[d.id!] || []).filter((m: any) => m.seen === false).length; // résultats reçus par courriel non vus
+          const treated = d.treated !== false; // drapeau manuel persistant (false = à traiter)
           const parentSerie = d.extra?.parent_serie || '';
           const parentName = parentSerie ? (dossiers.find((x: Dossier) => x.serie === parentSerie)?.ident || `SN ${parentSerie}`) : '';
           return (
@@ -620,6 +634,7 @@ function ListView(p: any) {
                   : worst != null && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</span>}
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
+                <button onClick={(e) => { e.stopPropagation(); onToggleTreated(d.id!, !treated); }} title={treated ? tr('Marquer à traiter', 'Mark as to-do') : tr('Marquer comme traité', 'Mark as treated')} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${treated ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-500 text-white'}`}>{treated ? `✓ ${tr('Traité', 'Treated')}` : `◦ ${tr('À traiter', 'To treat')}`}</button>
                 {newCount > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">✦ {tr('Nouveau', 'New')}{newCount > 1 ? ` ×${newCount}` : ''}</span>}
                 {nextD && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: dueColor + '22', color: dueColor, borderColor: dueColor }}>
                   {due.code === 'overdue' ? '⚠ ' : due.code === 'soon' ? '◷ ' : '✓ '}{dueLabel} · {nextD}{due.days != null ? ` (${due.days < 0 ? `${-due.days} ${tr('j. de retard', 'days late')}` : `${due.days} ${tr('j. restants', 'days left')}`})` : ''}

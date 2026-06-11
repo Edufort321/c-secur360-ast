@@ -157,6 +157,9 @@ export async function importTransformers(tenant: string, transformers: any[], op
       did = row.id; dossiers.push(row); created++;
       measures += await insertMeasures(tenant, did, measuresN);
     }
+    // Nouveaux résultats reçus par courriel -> « à traiter » (drapeau manuel persistant).
+    // Best-effort : si la colonne `treated` n'existe pas encore (migration 154), l'erreur est ignorée.
+    await supabaseAdmin.from('dga_dossiers').update({ treated: false }).eq('id', did);
     dossierIds.push(did); idents.push(eq.ident);
   }
   return { created, merged, measures, dossierIds, idents };

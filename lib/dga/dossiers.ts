@@ -9,6 +9,7 @@ export interface Dossier {
   manufacturer?: string; year?: string; phone?: string;
   preservation?: string; paper_at?: string; category?: string; cooling?: string;
   sample_point?: string; reason?: string; authorized_by?: string; analyzed_by?: string;
+  treated?: boolean; // drapeau manuel « traité / à traiter » (false = nouveaux résultats à traiter)
   // extra (jsonb) — suivi par transformateur, repris du prototype : analyses (string[]),
   // interval_id, next_date_manual, targeted_analyses (string[]), targeted_months, full_next_date,
   // project_no, manual_reco, global_note.
@@ -67,7 +68,7 @@ export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip' | 'sam
 
 // Colonnes de la liste — on EXCLUT `photos` (base64 volumineux) pour garder la liste légère.
 // Repli sur '*' si une colonne récente (migrations 119/120) n'est pas encore appliquée.
-const LIST_COLS = 'id,tenant_id,company,contact,email,sample_id,report_id,po_no,client,ident,serie,equip_no,apparatus,description,alarm,kv,mva,oil_vol,oil_type,manufacturer,year,phone,preservation,paper_at,category,cooling,sample_point,reason,authorized_by,analyzed_by,extra,flag,notes,created_at,updated_at';
+const LIST_COLS = 'id,tenant_id,company,contact,email,sample_id,report_id,po_no,client,ident,serie,equip_no,apparatus,description,alarm,kv,mva,oil_vol,oil_type,manufacturer,year,phone,preservation,paper_at,category,cooling,sample_point,reason,authorized_by,analyzed_by,treated,extra,flag,notes,created_at,updated_at';
 export async function listDossiers(tenant: string): Promise<Dossier[]> {
   let res = await supabase.from('dga_dossiers').select(LIST_COLS).eq('tenant_id', tenant).order('ident');
   if (res.error) res = await supabase.from('dga_dossiers').select('*').eq('tenant_id', tenant).order('ident');
@@ -173,6 +174,12 @@ export async function saveDossier(tenant: string, d: Dossier): Promise<{ data?: 
   return res.error ? { error: res.error.message } : { data: res.data as Dossier };
 }
 export async function deleteDossier(id: string) { await supabase.from('dga_dossiers').delete().eq('id', id); }
+
+// Drapeau manuel « traité / à traiter » (persiste ; sert au filtre de la liste).
+export async function setTreated(id: string, treated: boolean): Promise<{ error?: string }> {
+  const { error } = await supabase.from('dga_dossiers').update({ treated }).eq('id', id);
+  return error ? { error: error.message } : {};
+}
 
 export async function saveMeasure(tenant: string, dossierId: string, m: Measure): Promise<{ data?: Measure; error?: string }> {
   const payload: any = { ...m, tenant_id: tenant, dossier_id: dossierId };
