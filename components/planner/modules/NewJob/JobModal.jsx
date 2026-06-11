@@ -61,6 +61,8 @@ export function JobModal({
         lieuLng: null,
         responsableId: '',
         projectId: '',
+        recurring_task_id: '',
+        recurring_task_name: '',
         clientId: '',
         astId: '',
         priorite: 'normale',
@@ -152,6 +154,21 @@ export function JobModal({
           const { data } = await supabase.from('projects').select('id, project_number, title, client_name, end_client_id, location, status').eq('tenant_id', t).order('project_number', { ascending: false }).limit(500);
           if (alive && Array.isArray(data)) setAllProjects(data.filter(p => p.project_number));
         } catch { /* ignore */ }
+      })();
+      return () => { alive = false; };
+    }, []);
+
+    // Catalogue des tâches récurrentes du tenant (admin → Employés & Accès). Permet de planifier un
+    // mandat « hors projet » (bureau/atelier/administration…) — même interconnexion que la feuille de temps.
+    const [recurringTasks, setRecurringTasks] = useState([]);
+    useEffect(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const t = window.location.pathname.split('/')[1] || 'cerdia';
+          const { data } = await supabase.from('tenant_recurring_tasks').select('id, name, code, active, sort_order').eq('tenant_id', t).eq('active', true).order('sort_order', { ascending: true });
+          if (alive && Array.isArray(data)) setRecurringTasks(data.filter(r => r.name));
+        } catch { /* table absente — ignore */ }
       })();
       return () => { alive = false; };
     }, []);
@@ -691,6 +708,8 @@ export function JobModal({
                 client:     item.client_name || prev.client,
                 clientId:   item.end_client_id || prev.clientId,
                 projectId:  item.id          || prev.projectId,
+                recurring_task_id: '',
+                recurring_task_name: '',
                 nom:        prev.nom || item.title || '',
                 lieu:       item.location  || prev.lieu,
                 numeroJob:  prev.numeroJob  || item.project_number || '',
@@ -3356,6 +3375,8 @@ export function JobModal({
                                                                     ...prev,
                                                                     numeroJob: p.project_number,
                                                                     projectId: p.id,
+                                                                    recurring_task_id: '',
+                                                                    recurring_task_name: '',
                                                                     client: p.client_name || prev.client,
                                                                     clientId: p.end_client_id || prev.clientId,
                                                                     lieu: p.location || prev.lieu,
@@ -3370,6 +3391,33 @@ export function JobModal({
                                                 );
                                             })()}
                                         </div>
+
+                                        {/* 1b. OU tâche récurrente (mandat hors projet : bureau/atelier/administration…) */}
+                                        {recurringTasks.length > 0 && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('Ou tâche récurrente (hors projet)', 'Or recurring task (no project)')}</label>
+                                                <select
+                                                    value={formData.recurring_task_id || ''}
+                                                    onChange={(e) => {
+                                                        const rid = e.target.value;
+                                                        const rt = recurringTasks.find(r => String(r.id) === rid);
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            recurring_task_id: rid,
+                                                            recurring_task_name: rt ? rt.name : '',
+                                                            // Tâche récurrente = mandat hors projet -> on détache le projet.
+                                                            ...(rid ? { projectId: '', numeroJob: '', nom: prev.nom || (rt ? rt.name : prev.nom) } : {}),
+                                                        }));
+                                                    }}
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-800"
+                                                >
+                                                    <option value="">{L('— Aucune (projet) —', '— None (project) —')}</option>
+                                                    {recurringTasks.map(r => (
+                                                        <option key={r.id} value={String(r.id)}>{r.name}{r.code ? ` (${r.code})` : ''}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
 
                                         {/* 2. Nom du client (autocomplete clients + projets) */}
                                         <div className="relative">
@@ -3839,13 +3887,19 @@ export function JobModal({
                                     </div>
 
                                     {/* P4 : liens d'interconnexion actifs (modules reliés au mandat) */}
-                                    {(formData.projectId || formData.clientId || formData.astId) && (
+                                    {(formData.projectId || formData.recurring_task_id || formData.clientId || formData.astId) && (
                                         <div className="flex flex-wrap items-center gap-2 text-xs">
                                             <span className="font-semibold text-gray-500 dark:text-gray-400">🔗 Liens :</span>
                                             {formData.projectId && (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">
                                                     Projet {formData.numeroJob ? `#${formData.numeroJob}` : ''}
                                                     <button type="button" onClick={() => setFormData(prev => ({ ...prev, projectId: '' }))} className="hover:text-blue-900" title={L('Détacher le projet', 'Detach project')}>×</button>
+                                                </span>
+                                            )}
+                                            {formData.recurring_task_id && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-700">
+                                                    {L('Tâche', 'Task')} : {formData.recurring_task_name || '—'}
+                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, recurring_task_id: '', recurring_task_name: '' }))} className="hover:text-amber-900" title={L('Détacher la tâche', 'Detach task')}>×</button>
                                                 </span>
                                             )}
                                             {formData.clientId && (
