@@ -59,6 +59,22 @@ const CATS = [
 
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
+// Champ numérique à BROUILLON LOCAL : on garde la saisie texte telle quelle pendant la frappe
+// (permet « 7. », « 0.5 », champ vidé…) et on ne convertit en nombre qu'au blur. Évite le glitch
+// d'un input number contrôlé où `value={nombre}` réécrit la valeur à chaque frappe.
+function NumCell({ value, disabled, step, onCommit }: { value: number; disabled?: boolean; step?: string; onCommit: (n: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft !== null ? draft : (value === 0 ? '' : String(value));
+  return (
+    <input type="number" step={step || '0.5'} disabled={disabled} inputMode="decimal"
+      onFocus={ev => ev.target.select()}
+      value={shown}
+      onChange={ev => setDraft(ev.target.value)}
+      onBlur={() => { onCommit(draft === null || draft.trim() === '' ? 0 : (Number(draft) || 0)); setDraft(null); }}
+      className="inp w-16 text-center" />
+  );
+}
+
 function newEntry(date: string): Entry {
   return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
 }
@@ -113,7 +129,7 @@ export default function TimesheetDetailPage() {
       const me = meJson?.user; const isSup = !!me && (me.role === 'client_admin' || me.role === 'super_admin');
       const [{ data: sh }, { data: ents }, { data: r }, { data: p }, { data: v }, { data: s }] = await Promise.all([
         supabase.from('timesheets').select('*').eq('id', sheetId).single(),
-        supabase.from('timesheet_entries').select('*').eq('timesheet_id', sheetId).order('sort_order').order('date'),
+        supabase.from('timesheet_entries').select('*').eq('timesheet_id', sheetId).order('date'),
         supabase.from('labor_rates').select('code,rate_regular,rate_overtime,rate_premium').eq('tenant_id', tenant).order('code'),
         supabase.from('projects').select('id,project_number,title,client_name').eq('tenant_id', tenant).order('created_at', { ascending: false }),
         supabase.from('vehicles').select('id,name,make,model,type').eq('tenant_id', tenant).eq('active', true),
@@ -258,9 +274,9 @@ export default function TimesheetDetailPage() {
     }));
   }
 
-  function addEntry() {
-    const date = sheet ? sheet.period_start : new Date().toISOString().slice(0, 10);
-    setEntries(p => [...p, newEntry(date)]);
+  function addEntry(date?: string) {
+    const d = date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
+    setEntries(p => [...p, newEntry(d)]);
   }
 
   // ── Dépenses (avec reçu) ───────────────────────────────────────────────────
@@ -650,7 +666,7 @@ export default function TimesheetDetailPage() {
 
         {/* Entrées — bloquées si gate odomètre non passé */}
         <div className={`space-y-3 ${needsOdometer && !isReadOnly ? 'pointer-events-none opacity-40' : ''}`}>
-          {entries.map((e) => {
+          {[...entries].sort((a, b) => String(a.date).localeCompare(String(b.date))).map((e) => {
             const CatIcon = CATS.find(c => c.k === e.category)?.icon || Briefcase;
             const fps = filteredProjects(projSearch[e.id] || '');
             const dayHrs = dailyHours[e.date] || 0;
@@ -717,16 +733,12 @@ export default function TimesheetDetailPage() {
                   ].map(({ label, k }) => (
                     <label key={k} className="flex flex-col items-center">
                       <span className="mb-1 text-xs text-slate-400">{label}</span>
-                      <input type="number" step="0.5" disabled={isReadOnly} onFocus={ev => ev.target.select()}
-                        value={e[k] as number} onChange={ev => updEntry(e.id, k, +ev.target.value)}
-                        className="inp w-16 text-center" />
+                      <NumCell value={e[k] as number} disabled={isReadOnly} step="0.5" onCommit={n => updEntry(e.id, k, n)} />
                     </label>
                   ))}
                   <label className="flex flex-col items-center">
                     <span className="mb-1 text-xs text-slate-400">Km</span>
-                    <input type="number" disabled={isReadOnly} onFocus={ev => ev.target.select()}
-                      value={e.km} onChange={ev => updEntry(e.id, 'km', +ev.target.value)}
-                      className="inp w-16 text-center" />
+                    <NumCell value={e.km} disabled={isReadOnly} step="1" onCommit={n => updEntry(e.id, 'km', n)} />
                   </label>
                   <label className="flex flex-col">
                     <span className="mb-1 text-xs text-slate-400">Véhicule</span>
@@ -752,7 +764,11 @@ export default function TimesheetDetailPage() {
                   <div className="ml-auto flex items-end gap-2">
                     {canSeeMoney && <span className="text-base font-bold text-slate-700">{money(entryCost(e))}</span>}
                     {!isReadOnly && (
-                      <button onClick={() => setEntries(p => p.filter(x => x.id !== e.id))}
+                      <button onClick={() => addEntry(e.date)} title="Ajouter une ligne pour ce jour"
+                        className="rounded-lg p-1.5 text-slate-400 hover:text-blue-600"><Plus size={15} /></button>
+                    )}
+                    {!isReadOnly && (
+                      <button onClick={() => setEntries(p => p.filter(x => x.id !== e.id))} title="Supprimer la ligne"
                         className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
                     )}
                   </div>
@@ -826,7 +842,7 @@ export default function TimesheetDetailPage() {
           })}
 
           {!isReadOnly && !needsOdometer && (
-            <button onClick={addEntry}
+            <button onClick={() => addEntry()}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 py-4 text-sm font-semibold text-slate-400 transition hover:border-violet-400 hover:text-violet-600">
               <Plus size={18} /> Ajouter une ligne
             </button>
