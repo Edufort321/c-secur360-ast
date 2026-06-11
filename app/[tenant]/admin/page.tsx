@@ -21,6 +21,7 @@ import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } f
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
+import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
@@ -375,12 +376,21 @@ export default function AdminPage() {
 // FEUILLES DE TEMPS — admin payroll view + export
 // ============================================================
 
+// Année ISO d'une semaine (le jeudi de la semaine détermine l'année) — cohérent avec la numérotation
+// des semaines : une semaine peut commencer en déc. (année civile N-1) et appartenir à l'année ISO N.
+function isoYearOf(dateStr: string): number {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
+}
+
 function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [sheets, setSheets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
   const [empFilter, setEmpFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -389,19 +399,45 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+  // Réactif : si un employé soumet / un superviseur valide, la table paie se met à jour en direct.
+  useRealtime(['timesheets'], tenant, () => load()); // eslint-disable-line
 
   const employees = useMemo(() => [...new Set(sheets.map((s: any) => s.employee_name))].sort(), [sheets]);
   const years = useMemo(() => {
-    const ys = [...new Set(sheets.map((s: any) => new Date(s.period_start).getFullYear()))].sort((a: any, b: any) => b - a) as number[];
+    const ys = [...new Set(sheets.map((s: any) => isoYearOf(s.period_start)))].sort((a: any, b: any) => b - a) as number[];
     return ys.length ? ys : [new Date().getFullYear()];
   }, [sheets]);
 
   const filtered = useMemo(() => sheets.filter((s: any) => {
-    if (new Date(s.period_start).getFullYear() !== yearFilter) return false;
+    if (isoYearOf(s.period_start) !== yearFilter) return false;
     if (empFilter && s.employee_name !== empFilter) return false;
     if (statusFilter && s.status !== statusFilter) return false;
     return true;
   }), [sheets, yearFilter, empFilter, statusFilter]);
+
+  // Transitions paie : validée → vérifiée → payée. Mise à jour DB + horodatage de traçabilité.
+  async function setStatus(id: string, status: 'verified' | 'paid' | 'approved') {
+    const patch: any = { status };
+    if (status === 'verified') patch.verified_at = new Date().toISOString();
+    if (status === 'paid') { patch.paid_at = new Date().toISOString(); }
+    const { error } = await supabase.from('timesheets').update(patch).eq('id', id).eq('tenant_id', tenant);
+    if (error) { alert(tr('Erreur : ', 'Error: ') + error.message); return; }
+    load();
+  }
+  // « Traiter la paie » : marque PAYÉES toutes les feuilles validées/vérifiées de la sélection courante.
+  async function processPayroll() {
+    const ids = filtered.filter((s: any) => isPayrollProcessable(s.status)).map((s: any) => s.id);
+    if (!ids.length) { alert(tr('Aucune feuille validée/vérifiée à payer dans la sélection.', 'No approved/verified sheet to pay in selection.')); return; }
+    if (!confirm(tr(`Marquer ${ids.length} feuille(s) comme PAYÉES ? (paie traitée)`, `Mark ${ids.length} sheet(s) as PAID? (payroll processed)`))) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from('timesheets').update({ status: 'paid', paid_at: new Date().toISOString() }).in('id', ids).eq('tenant_id', tenant);
+      if (error) throw error;
+      load();
+    } catch (e: any) { alert(tr('Erreur : ', 'Error: ') + (e?.message || 'DB')); }
+    finally { setBusy(false); }
+  }
+  const payableCount = useMemo(() => filtered.filter((s: any) => isPayrollProcessable(s.status)).length, [filtered]);
 
   const totals = useMemo(() => filtered.reduce((acc: any, s: any) => ({
     hrs: acc.hrs + Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium),
@@ -418,8 +454,8 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   }
 
   function exportCSV() {
-    const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'paid');
-    if (!toExport.length) { alert(tr('Aucune feuille approuvée dans la sélection.', 'No approved sheet in selection.')); return; }
+    const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'verified' || s.status === 'paid' || s.status === 'exported');
+    if (!toExport.length) { alert(tr('Aucune feuille validée/payée dans la sélection.', 'No approved/paid sheet in selection.')); return; }
     const rows = [
       [tr('Employé', 'Employee'), 'Email', tr('Période #', 'Period #'), tr('Période début', 'Period start'), tr('Période fin', 'Period end'), tr('Hrs rég', 'Reg hrs'), tr('Hrs supp', 'OT hrs'), tr('Hrs maj', 'DT hrs'), tr('Km pers.', 'Personal km'), tr('Déduction véhicule', 'Vehicle deduction'), tr('Montant total', 'Total amount'), tr('Statut', 'Status')].join(','),
       ...toExport.map((s: any) => [`"${s.employee_name}"`, s.employee_email, `P.${weekNum(s.period_start)}`, s.period_start, s.period_end,
@@ -434,12 +470,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
 
   const mny = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
   const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' });
-
-  const STATUS_CLS: Record<string, string> = {
-    draft: 'bg-slate-100 text-slate-600', submitted: 'bg-amber-100 text-amber-700',
-    approved: 'bg-emerald-100 text-emerald-700', rejected: 'bg-red-100 text-red-700', paid: 'bg-blue-100 text-blue-700',
-  };
-  const STATUS_LBL: Record<string, string> = { draft: tr('Brouillon','Draft'), submitted: tr('Soumis','Submitted'), approved: tr('Approuvé','Approved'), rejected: tr('Refusé','Rejected'), paid: tr('Payé','Paid') };
+  const en = false; // labels FR par défaut dans cet onglet (tr() gère déjà le reste)
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
@@ -480,13 +511,19 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
           className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
           <option value="">{tr('Tous les statuts', 'All statuses')}</option>
-          <option value="draft">{tr('Brouillon', 'Draft')}</option>
-          <option value="submitted">{tr('Soumis', 'Submitted')}</option>
-          <option value="approved">{tr('Approuvé', 'Approved')}</option>
-          <option value="paid">{tr('Payé', 'Paid')}</option>
-          <option value="rejected">{tr('Refusé', 'Rejected')}</option>
+          <option value="draft">{tr('En cours', 'In progress')}</option>
+          <option value="submitted">{tr('Soumise', 'Submitted')}</option>
+          <option value="approved">{tr('Validée', 'Approved')}</option>
+          <option value="verified">{tr('Vérifiée', 'Verified')}</option>
+          <option value="paid">{tr('Payée', 'Paid')}</option>
+          <option value="rejected">{tr('Refusée', 'Rejected')}</option>
         </select>
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          <button onClick={processPayroll} disabled={busy || payableCount === 0}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            title={tr('Marquer payées les feuilles validées/vérifiées de la sélection', 'Mark approved/verified sheets as paid')}>
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Banknote size={15} />} {tr('Traiter la paie', 'Process payroll')}{payableCount > 0 ? ` (${payableCount})` : ''}
+          </button>
           <button onClick={exportCSV}
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700">
             <DollarSign size={15} /> {tr('Export paie CSV', 'Export payroll CSV')}
@@ -536,9 +573,20 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                     </td>
                     <td className="px-4 py-3 font-semibold text-violet-700" data-label={tr('Montant', 'Amount')}>{mny(Number(s.total_amount))}</td>
                     <td className="px-4 py-3" data-label={tr('Statut', 'Status')}>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLS[s.status] || STATUS_CLS.draft}`}>
-                        {STATUS_LBL[s.status] || s.status}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tsCls(s.status)}`}>
+                          {tsLabel(s.status)}
+                        </span>
+                        {s.status === 'submitted' && (
+                          <button onClick={() => setStatus(s.id, 'approved')} className="rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50">{tr('Valider', 'Approve')}</button>
+                        )}
+                        {s.status === 'approved' && (
+                          <button onClick={() => setStatus(s.id, 'verified')} className="rounded-lg border border-teal-300 px-2 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50">{tr('Vérifier', 'Verify')}</button>
+                        )}
+                        {(s.status === 'approved' || s.status === 'verified') && (
+                          <button onClick={() => setStatus(s.id, 'paid')} className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">{tr('Payer', 'Pay')}</button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

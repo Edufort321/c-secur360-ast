@@ -13,6 +13,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { uploadReceipt } from '@/lib/transactions';
 import { listRecurringTasks, type RecurringTask } from '@/lib/recurringTasks';
+import { isLocked } from '@/lib/timesheetStatus';
 
 type Entry = {
   id: string; date: string;
@@ -627,7 +628,7 @@ export default function TimesheetDetailPage() {
     }
   }
 
-  const isReadOnly = sheet?.status === 'approved' || sheet?.status === 'paid' || notOwner;
+  const isReadOnly = (sheet ? isLocked(sheet.status) : false) || notOwner; // validée/vérifiée/payée = verrouillée
   const canSubmit  = sheet?.status === 'draft' || sheet?.status === 'rejected';
 
   // Baseline : une fois la feuille chargée, on mémorise l'état initial comme « déjà enregistré »

@@ -21,11 +21,13 @@ type Sheet = {
 };
 
 const STATUS: Record<string, { label: string; cls: string; icon: any }> = {
-  draft:     { label: 'Brouillon',  cls: 'bg-slate-100 text-slate-600',    icon: Clock },
-  submitted: { label: 'Soumis',     cls: 'bg-amber-100 text-amber-700',    icon: Send },
-  approved:  { label: 'Approuvé',   cls: 'bg-emerald-100 text-emerald-700',icon: CheckCircle },
-  rejected:  { label: 'Refusé',     cls: 'bg-red-100 text-red-700',        icon: XCircle },
-  paid:      { label: 'Payé',       cls: 'bg-blue-100 text-blue-700',      icon: DollarSign },
+  draft:     { label: 'En cours',  cls: 'bg-slate-100 text-slate-600',    icon: Clock },
+  submitted: { label: 'Soumise',   cls: 'bg-amber-100 text-amber-700',    icon: Send },
+  approved:  { label: 'Validée',   cls: 'bg-emerald-100 text-emerald-700',icon: CheckCircle },
+  verified:  { label: 'Vérifiée',  cls: 'bg-teal-100 text-teal-700',      icon: CheckCircle },
+  rejected:  { label: 'Refusée',   cls: 'bg-red-100 text-red-700',        icon: XCircle },
+  paid:      { label: 'Payée',     cls: 'bg-blue-100 text-blue-700',      icon: DollarSign },
+  exported:  { label: 'Payée',     cls: 'bg-blue-100 text-blue-700',      icon: DollarSign },
 };
 
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -45,6 +47,14 @@ function isoWeek(dateStr: string): number {
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
   const w1 = new Date(d.getFullYear(), 0, 4);
   return 1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
+}
+// Année ISO de la semaine (le jeudi décide l'année). Une semaine débutant le 29 déc. 2025 appartient à
+// l'année ISO 2026 -> on filtre là-dessus (et non sur l'année civile du lundi) pour rester cohérent
+// avec la grille des semaines, sinon les feuilles de fin/début d'année « disparaissent » du dashboard.
+function isoWeekYear(dateStr: string): number {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  return d.getFullYear();
 }
 function isoW1Monday(year: number): Date {
   const jan4 = new Date(year, 0, 4);
@@ -151,10 +161,10 @@ export default function TimesheetsPage() {
   }
 
   const employees = useMemo(() => [...new Set(sheets.map(s => s.employee_name))].sort(), [sheets]);
-  const years = useMemo(() => [...new Set(sheets.map(s => new Date(s.period_start).getFullYear()))].sort((a, b) => b - a), [sheets]);
+  const years = useMemo(() => [...new Set(sheets.map(s => isoWeekYear(s.period_start)))].sort((a, b) => b - a), [sheets]);
 
   const filtered = useMemo(() => sheets.filter(s => {
-    if (new Date(s.period_start).getFullYear() !== yearFilter) return false;
+    if (isoWeekYear(s.period_start) !== yearFilter) return false;
     if (employeeFilter && s.employee_name !== employeeFilter) return false;
     return true;
   }), [sheets, yearFilter, employeeFilter]);
@@ -174,7 +184,7 @@ export default function TimesheetsPage() {
     // Grille PERSONNELLE : seulement les feuilles de l'utilisateur courant (un superviseur charge toutes
     // les feuilles de l'équipe, mais sa grille ne doit montrer que les siennes).
     sheets.forEach(s => {
-      if (new Date(s.period_start).getFullYear() !== yearFilter) return;
+      if (isoWeekYear(s.period_start) !== yearFilter) return;
       if (currentUserId && s.employee_id && String(s.employee_id) !== String(currentUserId)) return;
       byStart[s.period_start] = s;
     });
