@@ -2347,7 +2347,12 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
-  const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const upd = (i: number, k: keyof VRow, v: any) => {
+    setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+    // Les véhicules sont groupés par régime (onglets). Changer le régime d'une ligne la déplacerait
+    // hors de l'onglet courant -> on SUIT la ligne vers son nouvel onglet (sinon elle « s'éjecte »).
+    if (k === 'regime') setActiveRegime(v as VRegime);
+  };
 
   function addVehicle(regime: VRegime) {
     setRows(p => [...p, {
@@ -2372,7 +2377,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
           unit_number: r.unit_number || '',
           make: r.make || '', model: r.model || '',
           year: r.year ? Number(r.year) : null,
-          plate: r.plate || '', employee_name: r.employee_name || '',
+          plate: r.plate || '', plate_number: r.plate || '', employee_name: r.employee_name || '',
           assigned_to: r.assigned_to || null, engine_type: r.engine_type || 'thermique',
           km_rate_override:   r.km_rate_override   !== '' ? Number(r.km_rate_override)                              : null,
           purchase_price:     r.purchase_price     !== '' ? parseFloat(r.purchase_price.replace(/,/g, '.'))         : null,
