@@ -36,6 +36,15 @@ export const maxDuration = 60;
 
 const DID = 'https://api.d-id.com';
 
+// Rend un texte plus facile à PRONONCER par la voix de synthèse (TTS). Reformate surtout la marque
+// « C-Secur360 » → « C Sécur 360 » (sinon la voix la prononce mal). Filet de sécurité même si l'IA
+// ou l'utilisateur a tapé le nom collé.
+function ttsFriendly(t: string): string {
+  return String(t || '')
+    .replace(/\bC[\s.\-]*S[ée]cur[\s.\-]*360\b/gi, 'C Sécur 360')
+    .replace(/\bCSecur360\b/gi, 'C Sécur 360');
+}
+
 function auth() {
   const key = (process.env.DID_API_KEY || '').trim();
   if (!key) return null;
@@ -66,7 +75,7 @@ export async function POST(req: NextRequest) {
       method: 'POST', headers,
       body: JSON.stringify({
         source_url,
-        script: { type: 'text', input: text, provider: { type: 'microsoft', voice_id: voice } },
+        script: { type: 'text', input: ttsFriendly(text), provider: { type: 'microsoft', voice_id: voice } },
         config: { stitch: true },
       }),
     });
