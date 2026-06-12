@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MODULES as MODULE_REGISTRY } from '@/lib/modules/registry';
 import MarketingComposer from '@/components/admin/MarketingComposer';
+import { supabase as sbBrowser } from '@/lib/supabase';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -35,7 +36,13 @@ const SCRIPT_TEMPLATES: { k: string; label: string; ideas: string }[] = [
 
 // Source UNIQUE et réelle des modules = le registre (lib/modules/registry.ts). Pas de liste recopiée :
 // quand un module est ajouté au produit, il apparaît automatiquement ici. (On exclut 'admin', interne.)
-const MODULES = MODULE_REGISTRY.filter(m => m.key !== 'admin').map(m => m.labelFr);
+// Deux sujets transverses en tête (au-delà des modules) : la présentation GLOBALE de l'app et le
+// programme d'AFFILIATION/vendeur — pour générer du marketing sur l'offre entière et le recrutement de vendeurs.
+const MODULES = [
+  "Présentation globale de l'app (toutes les fonctionnalités)",
+  "Programme d'affiliation / vendeur",
+  ...MODULE_REGISTRY.filter(m => m.key !== 'admin').map(m => m.labelFr),
+];
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
 const PLAT_ICON: Record<string, string> = { LinkedIn: '💼', Facebook: '📘', Instagram: '📸', TikTok: '🎵', 'X (Twitter)': '𝕏', X: '𝕏', Twitter: '𝕏', YouTube: '▶️' };
 
@@ -219,12 +226,16 @@ export default function MarketingTab() {
   // La voix suit l'avatar choisi (modifiable ensuite).
   useEffect(() => { if (selectedAvatar?.voice) setAvaVoice(selectedAvatar.voice); }, [selectedAvatarId]); // eslint-disable-line
 
-  // Upload via le SERVEUR (service_role, requireAdmin) — la clé anon ne peut pas écrire (sécurité).
+  // Upload DIRECT navigateur -> Supabase via une URL signée par le serveur (service_role, requireAdmin).
+  // Contourne la limite de 4,5 Mo des fonctions serverless Vercel (images HD, vidéos de fond, rendus).
+  // Sécurité conservée : la signature est réservée super-admin ; le jeton n'autorise QUE ce chemin.
   async function uploadToMarketing(file: File, prefix: string): Promise<string> {
-    const fd = new FormData(); fd.append('file', file); fd.append('prefix', prefix);
-    const r = await fetch('/api/admin/marketing/upload', { method: 'POST', credentials: 'include', body: fd });
+    const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+    const r = await fetch('/api/admin/marketing/sign-upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ prefix, ext }) });
     const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Upload échoué');
-    return j.url as string;
+    const { error } = await sbBrowser.storage.from('marketing').uploadToSignedUrl(j.path, j.token, file, { contentType: file.type || undefined });
+    if (error) throw new Error(error.message);
+    return j.publicUrl as string;
   }
   async function uploadAvatarModel(file: File) {
     setUploading(true); setNotice(null);

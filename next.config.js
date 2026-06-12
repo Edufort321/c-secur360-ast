@@ -8,6 +8,13 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
+  // Inclut le binaire ffmpeg-static dans le bundle serverless de la route de conversion vidéo
+  // (sinon le file-tracing de Next ne l'embarque pas et la conversion échoue sur Vercel).
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/admin/marketing/convert': ['./node_modules/ffmpeg-static/ffmpeg*'],
+    },
+  },
   images: {
     domains: ['localhost', 'mdl.ca', 'vercel.app'],
   },
@@ -32,7 +39,7 @@ const nextConfig = {
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://calendly.com",
       "worker-src 'self' blob:",
       "manifest-src 'self'",
-      "media-src 'self' blob: data:",
+      "media-src 'self' blob: data: https://*.supabase.co",
       'upgrade-insecure-requests',
     ].join('; ');
 

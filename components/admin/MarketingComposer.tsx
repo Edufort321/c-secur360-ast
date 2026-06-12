@@ -54,6 +54,8 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
   const [playing, setPlaying] = useState(false);
   const [recording, setRecording] = useState(false);
   const [resultUrl, setResultUrl] = useState('');
+  const [mp4Url, setMp4Url] = useState('');
+  const [converting, setConverting] = useState(false);
   const [corsBlocked, setCorsBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -304,6 +306,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
       rec.ondataavailable = e => { if (e.data && e.data.size) chunksRef.current.push(e.data); };
       rec.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        setMp4Url('');
         setResultUrl(URL.createObjectURL(blob));
         recorderRef.current = null; setRecording(false); setPlaying(false); stopLoop();
         onNotice({ msg: '✓ Vidéo assemblée. Tu peux la visionner, la télécharger ou la ranger dans la galerie.', ok: true });
@@ -324,6 +327,23 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
       const msg = String(e?.message || e);
       onNotice({ msg: 'Enregistrement impossible : ' + (msg.includes('tainted') || msg.includes('SecurityError') ? 'un média est en cross-origin sans CORS (lien temporaire). Active le bucket public (migration 165).' : msg), ok: false });
     }
+  }
+
+  // Convertit le .webm en .mp4 côté serveur : on téléverse d'abord le webm (URL stockée), puis ffmpeg.
+  async function convertToMp4() {
+    if (!resultUrl || converting) return;
+    setConverting(true);
+    try {
+      const blob = await fetch(resultUrl).then(r => r.blob());
+      const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
+      const webmUrl = await uploadFile(file, 'composition');
+      const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: webmUrl }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setMp4Url(j.url);
+      onNotice({ msg: '✓ Vidéo convertie en .mp4 (H.264) — prête pour TikTok/Meta.', ok: true });
+    } catch (e: any) {
+      onNotice({ msg: 'Conversion .mp4 : ' + (e?.message || 'échec'), ok: false });
+    } finally { setConverting(false); }
   }
 
   async function saveResultToGallery() {
@@ -355,7 +375,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
   const stageH = Math.round(stageW * dims.h / dims.w);
 
   return (
-    <div className="card">
+    <div className="card cmp">
       <h2>🎬 Assembler la vidéo <span className="chip">aperçu + enregistrement</span></h2>
       <p className="hint">Compose ici la vidéo finale : un <b>fond</b> (tes slides qui défilent <i>ou</i> une vidéo) + l'<b>avatar</b> qui parle, incrusté dans un coin ou plein cadre, avec sous-titres. L'aperçu à droite est <b>exactement</b> ce qui sera enregistré. Aucun outil externe.</p>
 
@@ -475,11 +495,15 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
 
           {resultUrl && (
             <div style={{ marginTop: 12 }}>
-              <video src={resultUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
+              <video src={mp4Url || resultUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
               <div className="actions" style={{ justifyContent: 'center' }}>
-                <a className="btn btn-ghost" href={resultUrl} download={`composition-${aspect.replace(':', 'x')}.webm`}>↧ Télécharger</a>
-                <button className="btn btn-signal" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Ranger en galerie'}</button>
+                <a className="btn btn-ghost" href={resultUrl} download={`composition-${aspect.replace(':', 'x')}.webm`}>↧ .webm</a>
+                {mp4Url
+                  ? <a className="btn btn-signal" href={mp4Url} target="_blank" rel="noreferrer" download>↧ .mp4</a>
+                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion…' : '🎞 Convertir en .mp4'}</button>}
+                <button className="btn btn-ghost" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Galerie'}</button>
               </div>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>{mp4Url ? '✓ .mp4 H.264 prêt (TikTok/Meta).' : 'Le .webm est lisible partout ; convertis en .mp4 si la plateforme l\'exige.'}</p>
             </div>
           )}
         </div>
@@ -489,9 +513,29 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
       <video ref={avatarVidRef} playsInline preload="auto" style={{ display: 'none' }} />
       <video ref={bgVidRef} playsInline preload="auto" loop muted style={{ display: 'none' }} />
 
+      {/* Styles propres au composeur (scopés). Reprennent les tokens de l'app (variables CSS héritées
+          de .mktwrap) car les classes du studio sont scopées au composant parent et ne descendent pas. */}
       <style jsx>{`
+        .cmp { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 18px; }
+        .cmp :global(h2) { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 9px; margin: 0 0 3px; }
+        .cmp :global(.hint) { font-size: 12px; color: var(--mist); margin-bottom: 14px; }
+        .cmp :global(.chip) { font-size: 10px; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line); color: var(--mist); font-weight: 500; }
+        .cmp :global(label) { display: block; font-size: 11.5px; color: var(--mist); margin: 11px 0 5px; font-weight: 500; }
+        .cmp :global(.addbox) { margin: 0 0 12px; border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 13px; }
+        .cmp :global(.row2) { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+        .cmp :global(.actions) { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .cmp :global(.btn) { border: none; border-radius: 8px; padding: 10px 15px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+        .cmp :global(.btn:disabled) { opacity: .5; cursor: not-allowed; }
+        .cmp :global(.btn-reel) { background: var(--reel); color: #2a1006; }
+        .cmp :global(.btn-violet) { background: var(--violet); color: #0a1030; }
+        .cmp :global(.btn-signal) { background: var(--signal); color: #04241a; }
+        .cmp :global(.btn-ghost) { background: transparent; border: 1px solid var(--line); color: var(--paper); }
+        .cmp :global(.copy) { background: none; border: 1px solid var(--line); color: var(--mist); border-radius: 6px; padding: 4px 9px; font-size: 11px; cursor: pointer; }
+        .cmp :global(.copy:hover) { color: var(--paper); border-color: var(--steel); }
+        .cmp :global(.warnbox) { border: 1px solid var(--amber); background: rgba(245,185,69,.08); border-radius: 9px; padding: 10px 13px; font-size: 12px; color: var(--amber); }
+        .cmp :global(.cmp-note) { font-size: 11px; color: var(--steel); }
         @media (max-width: 760px) {
-          .composer-grid { grid-template-columns: 1fr !important; }
+          .cmp :global(.composer-grid) { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
