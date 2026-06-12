@@ -70,11 +70,12 @@ interface Props {
   equipmentId?: string;
   onClose: () => void;
   onSaved?: (id: string, type?: string) => void;
+  onDeleted?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }: Props) {
+export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved, onDeleted }: Props) {
   const { lang } = useLanguage();
   const fr = lang === 'fr';
 
@@ -86,6 +87,8 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
   const [copied,    setCopied]    = useState(false);
   const [lightbox,  setLightbox]  = useState<string | null>(null);
   const [sites,     setSites]     = useState<SiteNode[]>([]);
+  const [deleting,  setDeleting]  = useState(false);
+  const [inspectionCount, setInspectionCount] = useState(0);
 
   // Load logo
   useEffect(() => {
@@ -120,6 +123,8 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
           notes:               r.notes ?? '',
         });
       });
+    supabase.from('equipment_inspections').select('id', { count: 'exact', head: true }).eq('equipment_id', equipmentId)
+      .then(({ count }) => setInspectionCount(count ?? 0), () => {});
   }, [equipmentId]);
 
   async function handleSave() {
@@ -168,6 +173,33 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
       setTimeout(() => setMsg(''), 6000);
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Supprime l'équipement ET ses inspections liées (la FK equipment_inspections.equipment_id
+  // bloquerait sinon la suppression). Demande confirmation, puis revient à la liste.
+  async function handleDelete() {
+    if (deleting || !supabase || !equipmentId) return;
+    const n = inspectionCount;
+    const warn = fr
+      ? `Supprimer cet équipement${n ? ` et ses ${n} inspection(s)` : ''} ? Cette action est irréversible.`
+      : `Delete this equipment${n ? ` and its ${n} inspection(s)` : ''}? This action cannot be undone.`;
+    if (!confirm(warn)) return;
+    setDeleting(true);
+    setMsg('');
+    try {
+      // 1. Inspections enfants d'abord (contrainte de clé étrangère).
+      const delIns = await supabase.from('equipment_inspections').delete().eq('equipment_id', equipmentId).eq('tenant_id', tenant);
+      if (delIns.error) throw delIns.error;
+      // 2. L'équipement.
+      const delEq = await supabase.from('equipment').delete().eq('id', equipmentId).eq('tenant_id', tenant);
+      if (delEq.error) throw delEq.error;
+      (onDeleted ?? onClose)();
+    } catch (err: unknown) {
+      const m = err instanceof Error ? err.message : String(err);
+      setMsg(fr ? `Erreur : ${m}` : `Error: ${m}`);
+      setTimeout(() => setMsg(''), 6000);
+      setDeleting(false);
     }
   }
 
@@ -450,6 +482,30 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
                 <ClipboardCheck size={13} />
                 {fr ? 'Démarrer une inspection →' : 'Start inspection →'}
               </a>
+            </div>
+          </section>
+        )}
+
+        {/* Zone de danger — suppression (mode édition seulement) */}
+        {equipmentId && (
+          <section className="bg-white rounded-xl border border-red-200 overflow-hidden">
+            <div className="px-5 py-3 bg-red-50 border-b border-red-100 text-sm font-semibold text-red-700">
+              {fr ? 'Zone de danger' : 'Danger zone'}
+            </div>
+            <div className="p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-gray-500">
+                {fr
+                  ? `Supprime définitivement cet équipement${inspectionCount ? ` et ses ${inspectionCount} inspection(s)` : ''}.`
+                  : `Permanently deletes this equipment${inspectionCount ? ` and its ${inspectionCount} inspection(s)` : ''}.`}
+              </p>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex shrink-0 items-center justify-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg disabled:opacity-60"
+              >
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {deleting ? (fr ? 'Suppression…' : 'Deleting…') : (fr ? 'Supprimer l\'équipement' : 'Delete equipment')}
+              </button>
             </div>
           </section>
         )}

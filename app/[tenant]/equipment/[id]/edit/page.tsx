@@ -11,6 +11,7 @@ export default function EquipmentEditPage() {
       equipmentId={id}
       onClose={() => router.push(`/${tenant}/equipment/${id}`)}
       onSaved={() => {/* rester sur le formulaire — le Code QR reste visible */}}
+      onDeleted={() => router.push(`/${tenant}/inspections`)}
     />
   );
 }
