@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { MODULES as MODULE_REGISTRY } from '@/lib/modules/registry';
+import MarketingComposer from '@/components/admin/MarketingComposer';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -15,6 +16,21 @@ const CHAT_STARTERS = [
   'Propose 3 angles d\'accroche pour les mutuelles de prévention SST.',
   'Donne-moi un plan de contenu LinkedIn sur 4 semaines.',
   'Comment cadrer une 1re campagne conforme LCAP pour un nouveau segment ?',
+];
+
+// Modèles de brief prêts à l'emploi pour la rédaction IA du script d'avatar.
+// Deux incontournables demandés : présentation GLOBALE de l'app + programme VENDEUR/affilié.
+const SCRIPT_TEMPLATES: { k: string; label: string; ideas: string }[] = [
+  {
+    k: 'app',
+    label: '🏢 Présentation de l\'app (globale)',
+    ideas: "Présenter C-Secur360 dans son ensemble : une plateforme SST/industrielle modulaire et tout-en-un pour les entreprises (AST, permis, inspections d'équipement, planificateur, feuilles de temps, DGA transformateurs, RH, rapports). Insister sur : un seul outil au lieu de plusieurs, conformité (Loi 25, normes SST), assistance IA intégrée, mobile et terrain (QR, photos), hébergement canadien. Ton : confiant, professionnel, accessible. Public : dirigeants, responsables SST et maintenance. Terminer par un appel à l'action pour une démo.",
+  },
+  {
+    k: 'affil',
+    label: '🤝 Programme d\'affiliation (vendeur)',
+    ideas: "Présenter le programme d'affiliation / co-vendeur de C-Secur360 : comment un partenaire ou vendeur peut référer des clients et toucher des commissions récurrentes. Insister sur : produit québécois en forte demande (SST, conformité), commissions sur abonnement, outils de vente fournis, contrat clair, accompagnement. Ton : motivant, orienté opportunité d'affaires. Public : vendeurs, consultants SST, partenaires, représentants. Terminer par un appel à l'action pour rejoindre le programme.",
+  },
 ];
 
 // Source UNIQUE et réelle des modules = le registre (lib/modules/registry.ts). Pas de liste recopiée :
@@ -151,10 +167,6 @@ export default function MarketingTab() {
   ];
   const [avaVoice, setAvaVoice] = useState('fr-CA-SylvieNeural');
   const [avaDelay, setAvaDelay] = useState(800); // délai (ms) de silence avant que l'avatar parle
-  // Composeur vidéo : avatar incrusté + slides en arrière-plan -> composition.json (rendu Remotion).
-  const [compVideo, setCompVideo] = useState('');
-  const [compCorner, setCompCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>('br');
-  const [compRows, setCompRows] = useState<{ url: string; seconds: number; avatar: 'center' | 'corner' | 'hidden'; caption?: string }[]>([]);
   const [avaText, setAvaText] = useState('');
   const [avaUrl, setAvaUrl] = useState('');
   const [avaBusy, setAvaBusy] = useState(false);
@@ -188,6 +200,7 @@ export default function MarketingTab() {
   const [newAvatarVoice, setNewAvatarVoice] = useState('fr-CA-SylvieNeural');
   const [library, setLibrary] = useState<{ id: string; url: string; name?: string }[]>([]);
   const [avaVideos, setAvaVideos] = useState<{ id: string; url: string; created_at?: string }[]>([]);
+  const [bgVideos, setBgVideos] = useState<{ id: string; url: string; name?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const selectedAvatar = avatars.find(a => a.id === selectedAvatarId) || null;
 
@@ -199,6 +212,7 @@ export default function MarketingTab() {
       setSelectedAvatarId(prev => (prev && avs.some(a => a.id === prev)) ? prev : (avs[0]?.id || ''));
       setLibrary((j.library || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
       setAvaVideos((j.videos || []).map((a: any) => ({ id: a.id, url: a.data?.url, created_at: a.created_at })).filter((x: any) => x.url));
+      setBgVideos((j.bgVideos || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
     } catch { /* */ }
   }
   useEffect(() => { loadAssets(); }, []);
@@ -233,6 +247,22 @@ export default function MarketingTab() {
       setNotice({ msg: '✓ Image(s) ajoutée(s) à la bibliothèque.', ok: true }); loadAssets();
     } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
     finally { setUploading(false); }
+  }
+  async function uploadBgVideos(files: FileList) {
+    setUploading(true); setNotice(null);
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadToMarketing(file, 'bg');
+        await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'bg_video', data: { url, name: file.name } }) });
+      }
+      setNotice({ msg: '✓ Vidéo(s) de fond ajoutée(s) à la médiathèque.', ok: true }); loadAssets();
+    } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
+    finally { setUploading(false); }
+  }
+  // Range une vidéo (composition assemblée) dans la galerie des vidéos.
+  async function saveVideoToGallery(url: string) {
+    await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'avatar_video', data: { url } }) });
+    loadAssets();
   }
   async function deleteAsset(id: string) {
     await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'delete-asset', id }) });
@@ -272,15 +302,6 @@ export default function MarketingTab() {
     } catch (e: any) { aMsg({ msg: 'Avatar : ' + (e?.message || 'réseau'), ok: false }); setAvaBusy(false); }
   }
 
-  function downloadComposition() {
-    const avatarUrl = compVideo || (avaVideos[0]?.url || '');
-    if (!avatarUrl) { aMsg({ msg: '⚠ Génère/sélectionne d\'abord une vidéo d\'avatar.', ok: false }); return; }
-    const slides = compRows.filter(r => r.url);
-    if (!slides.length) { aMsg({ msg: '⚠ Ajoute au moins une slide.', ok: false }); return; }
-    const blob = new Blob([JSON.stringify({ avatarUrl, corner: compCorner, slides }, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'composition.json'; a.click();
-    aMsg({ msg: '✓ composition.json téléchargé — place-le dans /remotion et lance « npm run render ».', ok: true });
-  }
 
   // ── Prospection ────────────────────────────────────────────────────────
   const [segment, setSegment] = useState('');
@@ -484,12 +505,13 @@ export default function MarketingTab() {
       {/* ================= STUDIO (1 brief -> N livrables) ================= */}
       {view === 'studio' && (
         <>
-          {/* Réglages : modèle d'avatar + bibliothèque d'images */}
+          {/* Médiathèque : avatars + images/photos + vidéos de fond (tout le matériel du studio) */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }} onClick={() => setSettingsOpen(o => !o)}>
-              <h2 style={{ margin: 0 }}>⚙ Réglages du Studio <span className="chip">avatar &amp; images</span></h2>
-              <span style={{ color: 'var(--mist)' }}>{settingsOpen ? '▲' : '▼'}</span>
+              <h2 style={{ margin: 0 }}>🗂 Médiathèque du Studio <span className="chip">avatars · photos · vidéos</span></h2>
+              <span style={{ color: 'var(--mist)' }}>{settingsOpen ? '▲ replier' : '▼ déplier'}</span>
             </div>
+            <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>Tout le matériel réutilisable du studio au même endroit : tes <b>avatars</b> (visages qui parlent), tes <b>photos/images</b> (logos, captures, B-roll) et tes <b>vidéos d'arrière-plan</b>. Tout est piochable dans l'assembleur vidéo plus bas.</p>
             {settingsOpen && (
               <div style={{ marginTop: 12 }}>
                 <div className="grid">
@@ -519,9 +541,9 @@ export default function MarketingTab() {
                       </div>
                     </div>
                   </div>
-                  {/* Bibliothèque d'images */}
+                  {/* Photos / images */}
                   <div>
-                    <label>Bibliothèque d'images (logos, visuels, B-roll) que le studio peut utiliser</label>
+                    <label>📷 Photos &amp; images (logos, captures, visuels, B-roll)</label>
                     <div className="dropzone">
                       <div className="libgrid">
                         {library.map(im => (
@@ -530,16 +552,35 @@ export default function MarketingTab() {
                             <button className="libdel" onClick={() => deleteAsset(im.id)}>×</button>
                           </div>
                         ))}
-                        {library.length === 0 && <span style={{ color: 'var(--mist)', fontSize: 12 }}>Vide.</span>}
+                        {library.length === 0 && <span style={{ color: 'var(--mist)', fontSize: 12 }}>Aucune image.</span>}
                       </div>
                       <label className="btn btn-ghost" style={{ marginTop: 8, display: 'inline-flex' }}>
-                        {uploading ? 'Téléversement…' : '＋ Ajouter des images'}
+                        {uploading ? 'Téléversement…' : '＋ Ajouter des photos/images'}
                         <input type="file" accept="image/*" multiple hidden disabled={uploading} onChange={e => { const fs = e.target.files; if (fs && fs.length) uploadLibrary(fs); e.currentTarget.value = ''; }} />
                       </label>
                     </div>
                   </div>
+                  {/* Vidéos d'arrière-plan */}
+                  <div>
+                    <label>🎞 Vidéos d'arrière-plan (B-roll en mouvement)</label>
+                    <div className="dropzone">
+                      <div className="libgrid">
+                        {bgVideos.map(v => (
+                          <div key={v.id} className="libitem">
+                            <video src={v.url} muted preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                            <button className="libdel" onClick={() => deleteAsset(v.id)}>×</button>
+                          </div>
+                        ))}
+                        {bgVideos.length === 0 && <span style={{ color: 'var(--mist)', fontSize: 12 }}>Aucune vidéo de fond.</span>}
+                      </div>
+                      <label className="btn btn-ghost" style={{ marginTop: 8, display: 'inline-flex' }}>
+                        {uploading ? 'Téléversement…' : '＋ Ajouter des vidéos de fond'}
+                        <input type="file" accept="video/*" multiple hidden disabled={uploading} onChange={e => { const fs = e.target.files; if (fs && fs.length) uploadBgVideos(fs); e.currentTarget.value = ''; }} />
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <div className="note">Les images sont stockées dans le bucket public <code>marketing</code> (Supabase Storage). L'avatar parlant utilise l'API D-ID (clé <code>DID_API_KEY</code>). N'utilise que des images de personnes consentantes.</div>
+                <div className="note">Tout est stocké dans le bucket public <code>marketing</code> (Supabase Storage). L'avatar parlant utilise l'API D-ID (clé <code>DID_API_KEY</code>). N'utilise que des images/voix de personnes consentantes.</div>
               </div>
             )}
           </div>
@@ -597,6 +638,12 @@ export default function MarketingTab() {
             {/* Mode « texte IA » : idées + durée -> script calibré */}
             <div className="addbox">
               <label style={{ marginTop: 0 }}>✦ Rédiger le texte par IA — donne tes idées</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                <span style={{ color: 'var(--mist)', fontSize: 11, alignSelf: 'center' }}>Modèles :</span>
+                {SCRIPT_TEMPLATES.map(t => (
+                  <button key={t.k} type="button" className="copy" onClick={() => setAvaIdeas(t.ideas)}>{t.label}</button>
+                ))}
+              </div>
               <textarea value={avaIdeas} onChange={e => setAvaIdeas(e.target.value)} placeholder="Ex. : présenter le module DGA, gain de temps, capture QR, public technique…" rows={2} />
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 6 }}>
                 <div><label style={{ marginTop: 0 }}>Durée</label>
@@ -644,54 +691,16 @@ export default function MarketingTab() {
             </div>
           </div>
 
-          {/* Composer la vidéo : avatar incrusté + slides en arrière-plan -> composition.json (Remotion) */}
-          <div className="card">
-            <h2>🎬 Composer la vidéo <span className="chip">avatar + slides</span></h2>
-            <p className="hint">Assemble une vidéo finale : tes <b>slides</b> (captures/images) en arrière-plan + l'<b>avatar</b> qui se « tasse » dans un coin pour les présenter. Construis la composition ici, puis rends-la en .mp4 avec le composeur Remotion (script local).</p>
-            <div className="row2">
-              <div><label>Vidéo d'avatar (porte la voix)</label>
-                <select value={compVideo} onChange={e => setCompVideo(e.target.value)}>
-                  <option value="">{avaVideos.length ? '— Choisir une vidéo —' : '(génère d\'abord un avatar)'}</option>
-                  {avaVideos.map((v, i) => <option key={v.id} value={v.url}>Vidéo {i + 1}{v.created_at ? ` · ${new Date(v.created_at).toLocaleDateString('fr-CA')}` : ''}</option>)}
-                </select>
-              </div>
-              <div><label>Coin de l'avatar</label>
-                <select value={compCorner} onChange={e => setCompCorner(e.target.value as any)}>
-                  <option value="br">Bas-droite</option><option value="bl">Bas-gauche</option><option value="tr">Haut-droite</option><option value="tl">Haut-gauche</option>
-                </select>
-              </div>
-            </div>
-
-            <label>Slides (arrière-plan, dans l'ordre)</label>
-            {compRows.length === 0 && <div style={{ color: 'var(--mist)', fontSize: 12, marginBottom: 6 }}>Aucune slide. Ajoute-en (depuis ta bibliothèque ou une URL).</div>}
-            {compRows.map((row, i) => (
-              <div key={i} style={{ marginBottom: 8, borderBottom: '1px solid rgba(35,44,58,.5)', paddingBottom: 8 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--mist)', fontSize: 11, width: 16 }}>{i + 1}</span>
-                  {library.length > 0 ? (
-                    <select value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} style={{ flex: 1, minWidth: 150 }}>
-                      <option value="">— image —</option>
-                      {library.map(im => <option key={im.id} value={im.url}>{im.name || 'image'}</option>)}
-                    </select>
-                  ) : (
-                    <input value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} placeholder="URL de l'image" style={{ flex: 1, minWidth: 150 }} />
-                  )}
-                  <input type="number" min={1} value={row.seconds} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, seconds: +e.target.value } : r))} style={{ width: 60 }} title="secondes" />
-                  <select value={row.avatar} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, avatar: e.target.value as any } : r))} style={{ width: 100 }}>
-                    <option value="center">centre</option><option value="corner">coin</option><option value="hidden">caché</option>
-                  </select>
-                  <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => setCompRows(rs => rs.filter((_, j) => j !== i))}>×</button>
-                </div>
-                <input value={row.caption || ''} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, caption: e.target.value } : r))} placeholder="Sous-titre incrusté (optionnel)" style={{ width: '100%', marginTop: 5 }} />
-              </div>
-            ))}
-            <div className="actions">
-              <button className="btn btn-ghost" onClick={() => setCompRows(rs => [...rs, { url: library[0]?.url || '', seconds: 6, avatar: rs.length === 0 ? 'center' : 'corner', caption: '' }])}>＋ Slide</button>
-              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setCompRows(pack.storyboard.map((s: any, i: number) => ({ url: library[i]?.url || '', seconds: Number(s.seconds) || 6, avatar: i === 0 ? 'center' : 'corner', caption: s.onscreen_text || s.voiceover || '' })))}>Pré-remplir depuis le storyboard</button>}
-              <button className="btn btn-signal" onClick={downloadComposition}>↧ Télécharger composition.json</button>
-            </div>
-            <div className="note">Fondu enchaîné entre slides + sous-titres incrustés en bas. Rendu final (local) : <code>cd remotion &amp;&amp; npm install &amp;&amp; npm run render</code> → <code>out.mp4</code>. Place <code>composition.json</code> dans <code>remotion/</code>. Voir <code>remotion/README.md</code>.</div>
-          </div>
+          {/* Assembleur vidéo IN-APP : aperçu en direct + enregistrement réel (.webm). */}
+          <MarketingComposer
+            avatarVideos={avaVideos}
+            library={library}
+            bgVideos={bgVideos}
+            storyboard={pack?.storyboard}
+            onNotice={(m) => setNotice(m)}
+            uploadFile={uploadToMarketing}
+            saveVideoToGallery={saveVideoToGallery}
+          />
 
           {pack && (
             <>
