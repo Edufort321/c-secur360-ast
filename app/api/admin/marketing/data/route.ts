@@ -58,6 +58,14 @@ export async function GET(req: NextRequest) {
       const { data } = await supabaseAdmin.from('marketing_campaigns').select('*').eq('tenant_id', TENANT).order('created_at', { ascending: false });
       return NextResponse.json({ ok: true, campaigns: data || [] });
     }
+    if (resource === 'assets') {
+      // Modèle d'avatar + bibliothèque d'images déposés dans les réglages du Studio.
+      const { data } = await supabaseAdmin.from('marketing_assets').select('id, kind, data, created_at').eq('tenant_id', TENANT).in('kind', ['avatar_model', 'library_image']).order('created_at', { ascending: false });
+      const rows = data || [];
+      const avatar = rows.find((a: any) => a.kind === 'avatar_model') || null;
+      const library = rows.filter((a: any) => a.kind === 'library_image');
+      return NextResponse.json({ ok: true, avatar, library });
+    }
     return NextResponse.json({ error: 'resource inconnue' }, { status: 400 });
   } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 }); }
 }
@@ -107,13 +115,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, imported: rows.length });
     }
 
-    // Enregistre un PACK STUDIO généré (script/storyboard/posts/courriel) dans marketing_assets.
+    // Enregistre un actif (pack studio, modèle d'avatar, image de bibliothèque) dans marketing_assets.
     if (action === 'save-asset') {
+      const kind = body.kind || 'script';
+      if (kind === 'avatar_model') {
+        // Un seul modèle d'avatar à la fois : on remplace l'ancien.
+        await supabaseAdmin.from('marketing_assets').delete().eq('tenant_id', TENANT).eq('kind', 'avatar_model');
+      }
       const { error } = await supabaseAdmin.from('marketing_assets').insert({
-        tenant_id: TENANT, kind: body.kind || 'script', module: body.module || null,
+        tenant_id: TENANT, kind, module: body.module || null,
         data: body.data || {}, status: 'draft', created_by: who,
       });
       if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
+    if (action === 'delete-asset') {
+      if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
+      await supabaseAdmin.from('marketing_assets').delete().eq('tenant_id', TENANT).eq('id', body.id);
       return NextResponse.json({ ok: true });
     }
 

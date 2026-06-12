@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -129,6 +130,91 @@ export default function MarketingTab() {
     const blob = new Blob([JSON.stringify(capturePlan, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'capture-plan.json'; a.click();
+  }
+
+  // Avatar présentateur (D-ID) : une photo dans public/ + un script -> vidéo qui parle.
+  const AVA_VOICES = [
+    { v: 'fr-CA-SylvieNeural', l: 'FR-CA · Sylvie' }, { v: 'fr-CA-AntoineNeural', l: 'FR-CA · Antoine' },
+    { v: 'fr-CA-JeanNeural', l: 'FR-CA · Jean' }, { v: 'en-US-JennyNeural', l: 'EN-US · Jenny' }, { v: 'en-US-GuyNeural', l: 'EN-US · Guy' },
+  ];
+  const [avaVoice, setAvaVoice] = useState('fr-CA-SylvieNeural');
+  const [avaText, setAvaText] = useState('');
+  const [avaUrl, setAvaUrl] = useState('');
+  const [avaBusy, setAvaBusy] = useState(false);
+
+  // ── Réglages du Studio : modèle d'avatar + bibliothèque d'images (déposés et stockés) ──
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatarModel, setAvatarModel] = useState<{ id: string; url: string; name?: string } | null>(null);
+  const [library, setLibrary] = useState<{ id: string; url: string; name?: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function loadAssets() {
+    try {
+      const j = await fetch('/api/admin/marketing/data?resource=assets', { credentials: 'include' }).then(r => r.json());
+      setAvatarModel(j.avatar ? { id: j.avatar.id, url: j.avatar.data?.url, name: j.avatar.data?.name } : null);
+      setLibrary((j.library || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
+    } catch { /* */ }
+  }
+  useEffect(() => { loadAssets(); }, []);
+
+  // Upload direct vers le bucket public 'marketing' (URL publique requise par l'API avatar).
+  async function uploadToMarketing(file: File, prefix: string): Promise<string> {
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+    const path = `${prefix}/${(globalThis.crypto?.randomUUID?.() || Date.now())}.${ext}`;
+    const { error } = await supabase.storage.from('marketing').upload(path, file, { contentType: file.type || undefined, upsert: true });
+    if (error) throw new Error(error.message.includes('not found') || error.message.includes('Bucket') ? 'Crée d\'abord un bucket public « marketing » dans Supabase Storage.' : error.message);
+    return supabase.storage.from('marketing').getPublicUrl(path).data.publicUrl;
+  }
+  async function uploadAvatarModel(file: File) {
+    setUploading(true); setNotice(null);
+    try {
+      const url = await uploadToMarketing(file, 'avatar');
+      await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'avatar_model', data: { url, name: file.name } }) });
+      setNotice({ msg: '✓ Modèle d\'avatar enregistré.', ok: true }); loadAssets();
+    } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
+    finally { setUploading(false); }
+  }
+  async function uploadLibrary(files: FileList) {
+    setUploading(true); setNotice(null);
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadToMarketing(file, 'library');
+        await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'library_image', data: { url, name: file.name } }) });
+      }
+      setNotice({ msg: '✓ Image(s) ajoutée(s) à la bibliothèque.', ok: true }); loadAssets();
+    } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
+    finally { setUploading(false); }
+  }
+  async function deleteAsset(id: string) {
+    await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'delete-asset', id }) });
+    loadAssets();
+  }
+  async function pollAvatar(id: string) {
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const j = await fetch(`/api/admin/marketing/avatar?id=${encodeURIComponent(id)}`, { credentials: 'include' }).then(r => r.json());
+        if (j.status === 'done' && j.url) { setAvaUrl(j.url); setNotice({ msg: '✓ Avatar généré.', ok: true }); return; }
+        if (j.status === 'error') { setNotice({ msg: 'Avatar : échec du rendu.', ok: false }); return; }
+      } catch { /* retry */ }
+    }
+    setNotice({ msg: 'Avatar : rendu plus long que prévu — réessaie dans un instant.', ok: false });
+  }
+  async function generateAvatar() {
+    const text = avaText.trim() || (pack?.storyboard ? pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' ') : '');
+    if (!text) { setNotice({ msg: '⚠ Entre le texte à narrer (ou génère un storyboard).', ok: false }); return; }
+    if (!avatarModel?.url) { setNotice({ msg: '⚠ Dépose d\'abord un modèle d\'avatar dans les Réglages du Studio.', ok: false }); return; }
+    setAvaBusy(true); setNotice(null); setAvaUrl('');
+    try {
+      const r = await fetch('/api/admin/marketing/avatar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ image: avatarModel.url, text, voice: avaVoice }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      if (j.status === 'done' && j.url) { setAvaUrl(j.url); setNotice({ msg: '✓ Avatar généré.', ok: true }); }
+      else if (j.id) { setNotice({ msg: '⏳ Rendu de l\'avatar en cours…', ok: true }); pollAvatar(j.id); }
+    } catch (e: any) { setNotice({ msg: 'Avatar : ' + (e?.message || ''), ok: false }); }
+    finally { setAvaBusy(false); }
   }
 
   // ── Prospection ────────────────────────────────────────────────────────
@@ -333,6 +419,57 @@ export default function MarketingTab() {
       {/* ================= STUDIO (1 brief -> N livrables) ================= */}
       {view === 'studio' && (
         <>
+          {/* Réglages : modèle d'avatar + bibliothèque d'images */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }} onClick={() => setSettingsOpen(o => !o)}>
+              <h2 style={{ margin: 0 }}>⚙ Réglages du Studio <span className="chip">avatar &amp; images</span></h2>
+              <span style={{ color: 'var(--mist)' }}>{settingsOpen ? '▲' : '▼'}</span>
+            </div>
+            {settingsOpen && (
+              <div style={{ marginTop: 12 }}>
+                <div className="grid">
+                  {/* Modèle d'avatar */}
+                  <div>
+                    <label>Modèle d'avatar (PNG/JPG) — l'IA s'en inspire pour l'avatar parlant</label>
+                    <div className="dropzone">
+                      {avatarModel?.url ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <img src={avatarModel.url} alt="avatar" style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', border: '1px solid var(--line)' }} />
+                          <div style={{ minWidth: 0 }}><div style={{ fontSize: 12 }}>{avatarModel.name || 'modèle.png'}</div>
+                            <button className="copy" onClick={() => deleteAsset(avatarModel.id)}>retirer</button></div>
+                        </div>
+                      ) : <span style={{ color: 'var(--mist)', fontSize: 12 }}>Aucun modèle déposé.</span>}
+                      <label className="btn btn-ghost" style={{ marginTop: 8, display: 'inline-flex' }}>
+                        {uploading ? 'Téléversement…' : '＋ Déposer le modèle'}
+                        <input type="file" accept="image/*" hidden disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatarModel(f); e.currentTarget.value = ''; }} />
+                      </label>
+                    </div>
+                  </div>
+                  {/* Bibliothèque d'images */}
+                  <div>
+                    <label>Bibliothèque d'images (logos, visuels, B-roll) que le studio peut utiliser</label>
+                    <div className="dropzone">
+                      <div className="libgrid">
+                        {library.map(im => (
+                          <div key={im.id} className="libitem">
+                            <img src={im.url} alt={im.name || ''} />
+                            <button className="libdel" onClick={() => deleteAsset(im.id)}>×</button>
+                          </div>
+                        ))}
+                        {library.length === 0 && <span style={{ color: 'var(--mist)', fontSize: 12 }}>Vide.</span>}
+                      </div>
+                      <label className="btn btn-ghost" style={{ marginTop: 8, display: 'inline-flex' }}>
+                        {uploading ? 'Téléversement…' : '＋ Ajouter des images'}
+                        <input type="file" accept="image/*" multiple hidden disabled={uploading} onChange={e => { const fs = e.target.files; if (fs && fs.length) uploadLibrary(fs); e.currentTarget.value = ''; }} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="note">Les images sont stockées dans le bucket public <code>marketing</code> (Supabase Storage). L'avatar parlant utilise l'API D-ID (clé <code>DID_API_KEY</code>). N'utilise que des images de personnes consentantes.</div>
+              </div>
+            )}
+          </div>
+
           <div className="card">
             <h2>Brief créatif <span className="chip">IA · multi-livrables</span></h2>
             <p className="hint">Un seul brief → l'IA produit un <b>pack complet</b> : accroches, storyboard adapté à chaque format, sous-titres, post LinkedIn, courriel de suivi et concept de miniature. Démo fictive crédible ; allégations chiffrées signalées si non sourcées.</p>
@@ -358,6 +495,30 @@ export default function MarketingTab() {
               <button className="btn btn-violet" onClick={generatePack} disabled={genPack}>{genPack ? '✦ Génération du pack…' : '✦ Générer le pack marketing (IA)'}</button>
               {pack && <button className="btn btn-ghost" onClick={() => setPack(null)}>Vider</button>}
             </div>
+          </div>
+
+          {/* Avatar présentateur (parle ton script) */}
+          <div className="card">
+            <h2>Avatar présentateur <span className="chip">parle &amp; explique</span></h2>
+            <p className="hint">À partir du <b>modèle déposé dans les Réglages</b>, l'avatar prononce ton script (lip-sync, via D-ID). Idéal pour un présentateur en incrustation dans la vidéo.</p>
+            {!avatarModel?.url && <div className="warnbox" style={{ marginTop: 0 }}>Dépose d'abord un <b>modèle d'avatar</b> dans ⚙ Réglages du Studio.</div>}
+            <div className="row2">
+              <div><label>Voix</label><select value={avaVoice} onChange={e => setAvaVoice(e.target.value)}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select></div>
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setAvaText(pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' '))}>Remplir depuis le storyboard</button>}
+              </div>
+            </div>
+            <label>Texte à narrer</label>
+            <textarea value={avaText} onChange={e => setAvaText(e.target.value)} placeholder="Ce que l'avatar dit à l'écran…" />
+            <div className="actions">
+              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy || !avatarModel?.url}>{avaBusy ? '🎬 Génération…' : '🎬 Générer l\'avatar qui parle'}</button>
+            </div>
+            {avaUrl && (
+              <div style={{ marginTop: 12 }}>
+                <video src={avaUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
+                <div className="actions"><a className="btn btn-ghost" href={avaUrl} target="_blank" rel="noreferrer" download>↧ Télécharger la vidéo</a></div>
+              </div>
+            )}
           </div>
 
           {pack && (
@@ -753,6 +914,11 @@ export default function MarketingTab() {
         .btext{white-space:pre-wrap;}
         .chatbar{margin-top:11px;display:flex;gap:10px;align-items:stretch;}
         .chatbar textarea{flex:1;min-height:46px;}
+        .dropzone{border:1px dashed var(--line);border-radius:10px;background:var(--bg);padding:12px;margin-top:5px;}
+        .libgrid{display:flex;flex-wrap:wrap;gap:8px;}
+        .libitem{position:relative;width:58px;height:58px;}
+        .libitem img{width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+        .libdel{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:var(--rust);color:#fff;font-size:12px;line-height:1;cursor:pointer;}
         .candbox{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden;}
         .candhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mist);flex-wrap:wrap;}
         .cand{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid rgba(35,44,58,.5);cursor:pointer;}
