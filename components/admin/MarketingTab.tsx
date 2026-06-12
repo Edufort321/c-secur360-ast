@@ -56,7 +56,7 @@ export default function MarketingTab() {
     { k: '1:1', label: '1:1 · Carré' },
   ];
   const [sModule, setSModule] = useState(MODULES[0]);
-  const [sAudience, setSAudience] = useState('responsables SST / maintenance');
+  const [sAudience, setSAudience] = useState(''); // vide -> l'IA déduit le public du module choisi
   const [sMsg, setSMsg] = useState('');
   const [sCta, setSCta] = useState('Réserver une démo');
   const [sLang, setSLang] = useState<'fr' | 'en'>('fr');
@@ -323,7 +323,7 @@ export default function MarketingTab() {
 
   // ── Recherche de prospection légale par IA (QC -> Canada) ──────────────
   const [researchRegion, setResearchRegion] = useState<'QC' | 'Canada'>('QC');
-  const [researchSector, setResearchSector] = useState('Mutuelles de prévention SST');
+  const [researchSector, setResearchSector] = useState('');
   const [researching, setResearching] = useState(false);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [picked, setPicked] = useState<Record<string, boolean>>({});

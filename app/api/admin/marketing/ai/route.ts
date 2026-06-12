@@ -77,12 +77,12 @@ Retourne UNIQUEMENT ce JSON (sans texte autour) :
       // choisis, avec sous-titres, post social, courriel de suivi (interconnecté à la prospection) et
       // miniature — dans la langue demandée. Respecte la conformité (allégations démontrables, démo fictive).
       const moduleName = String(body.module || 'Module C-Secur360').slice(0, 120);
-      const audience = String(body.audience || 'responsables SST / maintenance').slice(0, 120);
+      const audience = String(body.audience || '').slice(0, 120);
       const message = String(body.message || '').slice(0, 700);
       const cta = String(body.cta || 'Réserver une démo').slice(0, 80);
       const formats: string[] = Array.isArray(body.formats) && body.formats.length ? body.formats.slice(0, 4) : ['16:9'];
       const lang = body.lang === 'en' ? 'English' : 'français';
-      const prompt = `Tu produis un PACK MARKETING complet et cohérent pour une vidéo de démonstration du module « ${moduleName} » de la plateforme SST C-Secur360. Public cible : ${audience}. Message clé à démontrer à l'écran : "${message}". Appel à l'action : "${cta}". Formats demandés : ${formats.join(', ')}.
+      const prompt = `Tu produis un PACK MARKETING complet et cohérent pour une vidéo de démonstration du module « ${moduleName} » de la plateforme SST C-Secur360. Public cible : ${audience || 'déduis-le du module selon le CIBLAGE PAR MODULE défini dans tes consignes système'}. Message clé à démontrer à l'écran : "${message}". Appel à l'action : "${cta}". Formats demandés : ${formats.join(', ')}.
 La vidéo = capture d'un compte de DÉMONSTRATION à données fictives crédibles (jamais de vraies données client). Toute allégation chiffrée non sourcée doit être listée dans "warnings".
 Langue de TOUS les textes : ${lang}.
 Retourne UNIQUEMENT ce JSON (sans texte autour) :
