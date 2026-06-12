@@ -558,23 +558,26 @@ export default function MarketingTab() {
               </div>
             )}
 
-            {/* Galerie des vidéos d'avatar enregistrées */}
-            {avaVideos.length > 0 && (
-              <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-                <h2 style={{ fontSize: 14 }}>Vidéos d'avatar enregistrées <span className="chip">{avaVideos.length}</span></h2>
-                <div className="grid" style={{ marginTop: 8 }}>
+            {/* Galerie des vidéos d'avatar : stocker / voir / supprimer */}
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+              <h2 style={{ fontSize: 14 }}>📁 Vidéos d'avatar enregistrées <span className="chip">{avaVideos.length}</span></h2>
+              <p className="hint" style={{ marginBottom: 8 }}>Toutes les vidéos générées sont conservées ici (stockage Supabase). Tu peux les revoir, les télécharger ou les supprimer (la suppression efface aussi le fichier).</p>
+              {avaVideos.length === 0 ? (
+                <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo enregistrée pour l'instant.</div>
+              ) : (
+                <div className="grid">
                   {avaVideos.map(v => (
                     <div key={v.id} className="fmtcard">
-                      <video src={v.url} controls style={{ width: '100%', borderRadius: 8 }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                        <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>télécharger</a>
-                        <button className="copy" onClick={() => deleteAsset(v.id)}>supprimer</button>
+                      <video src={v.url} controls preload="metadata" style={{ width: '100%', borderRadius: 8 }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                        <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧ télécharger</a>
+                        <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑 supprimer</button>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {pack && (

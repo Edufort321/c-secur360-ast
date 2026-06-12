@@ -132,6 +132,11 @@ export async function POST(req: NextRequest) {
     }
     if (action === 'delete-asset') {
       if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
+      // Récupère l'actif pour supprimer aussi le FICHIER dans Storage (pas seulement la fiche).
+      const { data: asset } = await supabaseAdmin.from('marketing_assets').select('data').eq('tenant_id', TENANT).eq('id', body.id).maybeSingle();
+      const urls = [(asset as any)?.data?.stored_url, (asset as any)?.data?.url].filter(Boolean);
+      const paths = urls.map((u: string) => { const m = String(u).match(/\/object\/public\/marketing\/(.+)$/); return m ? m[1] : null; }).filter(Boolean) as string[];
+      if (paths.length) { try { await supabaseAdmin.storage.from('marketing').remove(paths); } catch { /* best-effort */ } }
       await supabaseAdmin.from('marketing_assets').delete().eq('tenant_id', TENANT).eq('id', body.id);
       return NextResponse.json({ ok: true });
     }
