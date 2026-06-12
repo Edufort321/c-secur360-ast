@@ -384,6 +384,12 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
   const [linkedEquipment, setLinkedEquipment] = useState<LinkedEquipment | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
+  // Annuaire des utilisateurs du tenant pour la recherche dynamique du champ « Inspecteur »
+  // (saisie libre toujours permise). Chargé via route serveur sécurisée (jamais la clé anon).
+  const [members, setMembers] = useState<{ id: string; name: string; email: string; role: string }[]>([]);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const inspectorBoxRef = useRef<HTMLDivElement>(null);
+
   const savingRef = useRef(false);
 
   // ── Upload helper ─────────────────────────────────────────────────────────
@@ -398,6 +404,27 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
   }, [tenant]);
+
+  // ── Annuaire des utilisateurs du tenant (champ Inspecteur) ─────────────────
+  useEffect(() => {
+    if (!tenant) return;
+    let alive = true;
+    fetch(`/api/tenant/members?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { members: [] }))
+      .then(j => { if (alive && Array.isArray(j.members)) setMembers(j.members); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [tenant]);
+
+  // Ferme le menu déroulant Inspecteur au clic à l'extérieur.
+  useEffect(() => {
+    if (!inspectorOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (inspectorBoxRef.current && !inspectorBoxRef.current.contains(e.target as Node)) setInspectorOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [inspectorOpen]);
 
   // ── Load linked equipment (when opened from equipment QR) ───────────────
   useEffect(() => {
@@ -1080,14 +1107,37 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                   )}
                 </div>
 
-                {/* Inspecteur + Fréquence */}
+                {/* Inspecteur (recherche dynamique des utilisateurs + saisie libre) + Fréquence */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div ref={inspectorBoxRef} className="relative">
                     <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
                     <input type="text" value={form.inspectorName} disabled={isReadOnly}
-                      onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value }))}
+                      onChange={e => { setForm(f => ({ ...f, inspectorName: e.target.value })); setInspectorOpen(true); }}
+                      onFocus={() => setInspectorOpen(true)}
+                      autoComplete="off"
                       placeholder={I.inspectorPlaceholder}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                    {inspectorOpen && !isReadOnly && (() => {
+                      const q = form.inspectorName.trim().toLowerCase();
+                      const matches = members
+                        .filter(m => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+                        .slice(0, 8);
+                      if (matches.length === 0) return null;
+                      return (
+                        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                          {matches.map(m => (
+                            <li key={m.id}>
+                              <button type="button"
+                                onClick={() => { setForm(f => ({ ...f, inspectorName: m.name })); setInspectorOpen(false); }}
+                                className="flex w-full flex-col items-start px-3 py-1.5 text-left text-sm hover:bg-teal-50 dark:hover:bg-teal-500/10">
+                                <span className="font-medium text-gray-800 dark:text-gray-100">{m.name}</span>
+                                {m.email && <span className="text-[11px] text-gray-400">{m.email}</span>}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">{I.frequency}</label>
