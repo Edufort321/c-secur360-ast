@@ -52,6 +52,8 @@ export default function DgaPage() {
   const [query, setQuery] = useState('');
   const [dueFilter, setDueFilter] = useState<'all' | 'overdue' | 'soon' | 'ok'>('all');
   const [treatFilter, setTreatFilter] = useState<'all' | 'todo' | 'done'>('all'); // traité / à traiter
+  const [condFilter, setCondFilter] = useState(false); // « suivi rapproché » : condition élevée (≥ 3)
+  const [pcbFilter, setPcbFilter] = useState(false);   // BPC détecté (traces 2-50 ou présent ≥ 50)
   const [sortBy, setSortBy] = useState<'due' | 'alert'>('due'); // défaut : reprise à venir
   const [sitesTree, setSitesTree] = useState<SiteNode[]>([]);
   const [siteFilter, setSiteFilter] = useState(''); // classer les transfos par site (admin)
@@ -157,6 +159,10 @@ export default function DgaPage() {
       if (treatFilter === 'done' && d.treated === false) return false;
       if (q && ![d.ident, d.client, d.serie, d.apparatus, d.description, d.company, d.equip_no].some(v => (v || '').toLowerCase().includes(q))) return false;
       if (dueFilter !== 'all') { const last = d.id ? lastByDossier[d.id] : undefined; if (dueStatusByDate(effectiveNextDate(d.extra, last)).code !== dueFilter) return false; }
+      // Suivi rapproché : pire condition IEEE élevée (≥ 3, soit Condition 3 ou 4 — reprise mensuelle/hebdo).
+      if (condFilter) { const last = d.id ? lastByDossier[d.id] : undefined; const w = last ? worstCondition(last) : -1; if (w < 2) return false; }
+      // BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm).
+      if (pcbFilter) { const ms = measuresByDossier[d.id!] || (d.id && lastByDossier[d.id] ? [lastByDossier[d.id]] : []); const code = pcbStatus(latestPcb(ms), lang).code; if (code !== 'trace' && code !== 'present') return false; }
       return true;
     });
     arr.sort((a, b) => {
@@ -180,7 +186,7 @@ export default function DgaPage() {
       if (d.serie && oltcByParent.has(d.serie)) grouped.push(...oltcByParent.get(d.serie)!);
     });
     return grouped;
-  }, [dossiers, query, dueFilter, treatFilter, sortBy, lastByDossier, siteFilter]);
+  }, [dossiers, query, dueFilter, treatFilter, condFilter, pcbFilter, sortBy, lastByDossier, measuresByDossier, siteFilter, lang]);
 
   const todoCount = useMemo(() => dossiers.filter(d => d.treated === false).length, [dossiers]);
 
@@ -473,7 +479,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -532,7 +538,8 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, todoCount, onToggleTreated, assembleReport, assembling } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated, assembleReport, assembling } = p;
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   // Transformateurs avec des résultats reçus par courriel non encore consultés (badge « Nouveau »).
@@ -580,9 +587,12 @@ function ListView(p: any) {
         <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF / Excel', 'Import PDF / Excel')}</button>
       </div>
 
-      {/* Recherche + filtres */}
-      <div className="relative"><Search size={14} className="absolute left-2 top-2.5 text-gray-400" /><input className={`${inp} w-full max-w-lg pl-7`} placeholder={tr('Rechercher (N° série, client, identification)…', 'Search (serial no., client, identification)…')} value={query} onChange={e => setQuery(e.target.value)} /></div>
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Recherche + filtres (filtres repliés dans un hamburger sous 640px) */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-lg"><Search size={14} className="absolute left-2 top-2.5 text-gray-400" /><input className={`${inp} w-full pl-7`} placeholder={tr('Rechercher (N° série, client, identification)…', 'Search (serial no., client, identification)…')} value={query} onChange={e => setQuery(e.target.value)} /></div>
+        <button onClick={() => setFiltersOpen(o => !o)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold dark:border-gray-600 sm:hidden">☰ {tr('Filtres', 'Filters')}{(condFilter || pcbFilter || dueFilter !== 'all' || treatFilter !== 'all' || siteFilter) ? ' •' : ''}</button>
+      </div>
+      <div className={`${filtersOpen ? 'flex' : 'hidden'} flex-wrap items-center gap-2 sm:flex`}>
         {filterTabs.map(([k, lbl, cnt, col]) => (
           <button key={k} onClick={() => setDueFilter(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={dueFilter === k ? { background: col, color: '#fff', borderColor: col } : { color: col, borderColor: col }}>
             {lbl} <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span>
@@ -594,6 +604,9 @@ function ListView(p: any) {
             {lbl}{cnt != null ? <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span> : null}
           </button>
         ))}
+        <span className="mx-0.5 h-4 w-px bg-gray-300 dark:bg-gray-600" />
+        <button onClick={() => setCondFilter((v: boolean) => !v)} title={tr('Transformateurs en condition élevée (≥ 3) — suivi rapproché', 'Transformers in elevated condition (≥ 3) — close follow-up')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={condFilter ? { background: '#e63946', color: '#fff', borderColor: '#e63946' } : { color: '#e63946', borderColor: '#e63946' }}>⚠ {tr('Suivi rapproché', 'Close follow-up')}</button>
+        <button onClick={() => setPcbFilter((v: boolean) => !v)} title={tr('BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm)', 'PCB detected (traces 2-50 ppm or present ≥ 50 ppm)')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={pcbFilter ? { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' } : { color: '#7c3aed', borderColor: '#7c3aed' }}>🧪 {tr('BPC détecté', 'PCB detected')}</button>
         {sitesTree.length > 0 && (
           <select className={inp} value={siteFilter} onChange={e => setSiteFilter(e.target.value)} title={tr('Filtrer par site', 'Filter by site')}>
             <option value="">{tr('Tous les sites', 'All sites')}</option>
