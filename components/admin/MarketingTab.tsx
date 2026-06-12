@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -157,13 +156,12 @@ export default function MarketingTab() {
   }
   useEffect(() => { loadAssets(); }, []);
 
-  // Upload direct vers le bucket public 'marketing' (URL publique requise par l'API avatar).
+  // Upload via le SERVEUR (service_role, requireAdmin) — la clé anon ne peut pas écrire (sécurité).
   async function uploadToMarketing(file: File, prefix: string): Promise<string> {
-    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
-    const path = `${prefix}/${(globalThis.crypto?.randomUUID?.() || Date.now())}.${ext}`;
-    const { error } = await supabase.storage.from('marketing').upload(path, file, { contentType: file.type || undefined, upsert: true });
-    if (error) throw new Error(error.message.includes('not found') || error.message.includes('Bucket') ? 'Crée d\'abord un bucket public « marketing » dans Supabase Storage.' : error.message);
-    return supabase.storage.from('marketing').getPublicUrl(path).data.publicUrl;
+    const fd = new FormData(); fd.append('file', file); fd.append('prefix', prefix);
+    const r = await fetch('/api/admin/marketing/upload', { method: 'POST', credentials: 'include', body: fd });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Upload échoué');
+    return j.url as string;
   }
   async function uploadAvatarModel(file: File) {
     setUploading(true); setNotice(null);
