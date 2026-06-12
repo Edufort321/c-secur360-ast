@@ -148,6 +148,10 @@ export default function MarketingTab() {
   ];
   const [avaVoice, setAvaVoice] = useState('fr-CA-SylvieNeural');
   const [avaDelay, setAvaDelay] = useState(800); // délai (ms) de silence avant que l'avatar parle
+  // Composeur vidéo : avatar incrusté + slides en arrière-plan -> composition.json (rendu Remotion).
+  const [compVideo, setCompVideo] = useState('');
+  const [compCorner, setCompCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>('br');
+  const [compRows, setCompRows] = useState<{ url: string; seconds: number; avatar: 'center' | 'corner' | 'hidden' }[]>([]);
   const [avaText, setAvaText] = useState('');
   const [avaUrl, setAvaUrl] = useState('');
   const [avaBusy, setAvaBusy] = useState(false);
@@ -263,6 +267,16 @@ export default function MarketingTab() {
       else if (j.id) { aMsg({ msg: '⏳ Rendu de l\'avatar en cours (10-40 s)…', ok: true }); pollAvatar(j.id); }
       else { aMsg({ msg: 'Avatar : réponse inattendue.', ok: false }); setAvaBusy(false); }
     } catch (e: any) { aMsg({ msg: 'Avatar : ' + (e?.message || 'réseau'), ok: false }); setAvaBusy(false); }
+  }
+
+  function downloadComposition() {
+    const avatarUrl = compVideo || (avaVideos[0]?.url || '');
+    if (!avatarUrl) { aMsg({ msg: '⚠ Génère/sélectionne d\'abord une vidéo d\'avatar.', ok: false }); return; }
+    const slides = compRows.filter(r => r.url);
+    if (!slides.length) { aMsg({ msg: '⚠ Ajoute au moins une slide.', ok: false }); return; }
+    const blob = new Blob([JSON.stringify({ avatarUrl, corner: compCorner, slides }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'composition.json'; a.click();
+    aMsg({ msg: '✓ composition.json téléchargé — place-le dans /remotion et lance « npm run render ».', ok: true });
   }
 
   // ── Prospection ────────────────────────────────────────────────────────
@@ -625,6 +639,52 @@ export default function MarketingTab() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Composer la vidéo : avatar incrusté + slides en arrière-plan -> composition.json (Remotion) */}
+          <div className="card">
+            <h2>🎬 Composer la vidéo <span className="chip">avatar + slides</span></h2>
+            <p className="hint">Assemble une vidéo finale : tes <b>slides</b> (captures/images) en arrière-plan + l'<b>avatar</b> qui se « tasse » dans un coin pour les présenter. Construis la composition ici, puis rends-la en .mp4 avec le composeur Remotion (script local).</p>
+            <div className="row2">
+              <div><label>Vidéo d'avatar (porte la voix)</label>
+                <select value={compVideo} onChange={e => setCompVideo(e.target.value)}>
+                  <option value="">{avaVideos.length ? '— Choisir une vidéo —' : '(génère d\'abord un avatar)'}</option>
+                  {avaVideos.map((v, i) => <option key={v.id} value={v.url}>Vidéo {i + 1}{v.created_at ? ` · ${new Date(v.created_at).toLocaleDateString('fr-CA')}` : ''}</option>)}
+                </select>
+              </div>
+              <div><label>Coin de l'avatar</label>
+                <select value={compCorner} onChange={e => setCompCorner(e.target.value as any)}>
+                  <option value="br">Bas-droite</option><option value="bl">Bas-gauche</option><option value="tr">Haut-droite</option><option value="tl">Haut-gauche</option>
+                </select>
+              </div>
+            </div>
+
+            <label>Slides (arrière-plan, dans l'ordre)</label>
+            {compRows.length === 0 && <div style={{ color: 'var(--mist)', fontSize: 12, marginBottom: 6 }}>Aucune slide. Ajoute-en (depuis ta bibliothèque ou une URL).</div>}
+            {compRows.map((row, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--mist)', fontSize: 11, width: 16 }}>{i + 1}</span>
+                {library.length > 0 ? (
+                  <select value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} style={{ flex: 1, minWidth: 160 }}>
+                    <option value="">— image —</option>
+                    {library.map(im => <option key={im.id} value={im.url}>{im.name || 'image'}</option>)}
+                  </select>
+                ) : (
+                  <input value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} placeholder="URL de l'image" style={{ flex: 1, minWidth: 160 }} />
+                )}
+                <input type="number" min={1} value={row.seconds} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, seconds: +e.target.value } : r))} style={{ width: 64 }} title="secondes" />
+                <select value={row.avatar} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, avatar: e.target.value as any } : r))} style={{ width: 110 }}>
+                  <option value="center">centre</option><option value="corner">coin</option><option value="hidden">caché</option>
+                </select>
+                <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => setCompRows(rs => rs.filter((_, j) => j !== i))}>×</button>
+              </div>
+            ))}
+            <div className="actions">
+              <button className="btn btn-ghost" onClick={() => setCompRows(rs => [...rs, { url: library[0]?.url || '', seconds: 6, avatar: rs.length === 0 ? 'center' : 'corner' }])}>＋ Slide</button>
+              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setCompRows(pack.storyboard.map((s: any, i: number) => ({ url: library[i]?.url || '', seconds: Number(s.seconds) || 6, avatar: i === 0 ? 'center' : 'corner' })))}>Pré-remplir depuis le storyboard</button>}
+              <button className="btn btn-signal" onClick={downloadComposition}>↧ Télécharger composition.json</button>
+            </div>
+            <div className="note">Rendu final (local) : <code>cd remotion &amp;&amp; npm install &amp;&amp; npm run render</code> → <code>out.mp4</code>. Place <code>composition.json</code> dans le dossier <code>remotion/</code>. Voir <code>remotion/README.md</code>.</div>
           </div>
 
           {pack && (
