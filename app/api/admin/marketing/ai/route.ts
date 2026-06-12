@@ -96,6 +96,22 @@ RÈGLES : ne garde dans "formats" que les ratios demandés (${formats.join(', ')
       return NextResponse.json({ ok: true, pack: out });
     }
 
+    if (action === 'capture-plan') {
+      // Génère le SCÉNARIO DE CAPTURE : pour chaque scène, la page à visiter et les actions à filmer.
+      // Exécuté ensuite par un robot Playwright connecté à un COMPTE DÉMO (données fictives) — la
+      // sécurité/RLS de l'app est respectée (le robot ne voit que ce que ce compte voit).
+      const storyboard = Array.isArray(body.storyboard) ? body.storyboard.slice(0, 12) : [];
+      if (!storyboard.length) return NextResponse.json({ error: 'storyboard requis' }, { status: 400 });
+      const ROUTES = 'Routes réelles de l\'app (après /{tenant}) : /modules, /projects, /planificateur, /ast, /permits, /accidents, /near-miss, /inventory, /inspections, /timesheets, /rapports, /dga, /admin.';
+      const prompt = `Tu prépares un PLAN DE CAPTURE D'ÉCRAN pour filmer une démo du produit C-Secur360 à partir de ce storyboard. La capture sera faite par un robot connecté à un COMPTE DÉMO (données fictives uniquement). ${ROUTES}
+Pour chaque scène, indique la page à montrer (route plausible parmi les routes réelles), des actions simples à filmer, un élément à surligner si pertinent, et un nom de fichier. Reste prudent : propose des sélecteurs GÉNÉRIQUES (texte de bouton, rôle) que l'humain affinera.
+STORYBOARD : ${JSON.stringify(storyboard.map((s: any) => ({ scene: s.scene, voiceover: s.voiceover })))}
+Retourne UNIQUEMENT ce JSON :
+{"steps":[{"scene":"...","route":"/inspections","actions":[{"type":"click","selector":"texte ou sélecteur"},{"type":"wait","ms":600}],"highlight":"sélecteur ou null","filename":"01-xxx.png","full_page":false}],"note":"rappel : compte démo à données fictives, jamais de vraies données client"}`;
+      const out = await callClaude(apiKey, system, prompt, { maxTokens: 3000 });
+      return NextResponse.json({ ok: true, plan: out });
+    }
+
     if (action === 'translate-pack') {
       // Traduction one-click du pack (multilingue, comme HeyGen/Synthesia) — FR <-> EN.
       const target = body.target === 'en' ? 'English' : 'français';

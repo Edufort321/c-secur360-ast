@@ -107,6 +107,30 @@ export default function MarketingTab() {
   }
   function copyText(t: string) { try { navigator.clipboard?.writeText(t); setNotice({ msg: '✓ Copié.', ok: true }); } catch { /* */ } }
 
+  // Plan de capture : l'IA prépare le scénario (pages + actions à filmer) que le robot Playwright exécute.
+  const [capturePlan, setCapturePlan] = useState<any>(null);
+  const [genPlan, setGenPlan] = useState(false);
+  async function generateCapturePlan() {
+    if (!pack?.storyboard) return;
+    setGenPlan(true); setNotice(null);
+    try {
+      const r = await fetch('/api/admin/marketing/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'capture-plan', storyboard: pack.storyboard }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setCapturePlan(j.plan || null);
+      setNotice({ msg: '✓ Plan de capture généré. Télécharge-le et lance le robot Playwright.', ok: true });
+    } catch (e: any) { setNotice({ msg: 'Erreur : ' + (e?.message || ''), ok: false }); }
+    finally { setGenPlan(false); }
+  }
+  function downloadPlan() {
+    if (!capturePlan) return;
+    const blob = new Blob([JSON.stringify(capturePlan, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'capture-plan.json'; a.click();
+  }
+
   // ── Prospection ────────────────────────────────────────────────────────
   const [segment, setSegment] = useState('Mutuelles SST');
   const [pModule, setPModule] = useState('Rapports terrain');
@@ -378,6 +402,33 @@ export default function MarketingTab() {
                       <tr key={i}><td>{i + 1}</td><td>{sc.scene}</td><td>{sc.seconds}</td><td>{sc.shot}</td><td>{sc.onscreen_text}</td><td>{sc.voiceover}</td></tr>
                     ))}</tbody>
                   </table></div>
+                </div>
+              )}
+
+              {/* Plan de capture réel (scénario filmé sur le tenant démo CERDIA) */}
+              {Array.isArray(pack.storyboard) && (
+                <div className="card">
+                  <h2>Plan de capture <span className="chip">scénario réel · CERDIA démo</span></h2>
+                  <p className="hint">L'IA prépare le scénario (pages à montrer + actions à filmer). Le robot Playwright se connecte à <b>CERDIA</b> avec un <b>compte démo</b> (sécurité/RLS respectées, données fictives) et capture les écrans réels.</p>
+                  <div className="actions">
+                    <button className="btn btn-violet" onClick={generateCapturePlan} disabled={genPlan}>{genPlan ? '✦ Préparation…' : '✦ Générer le plan de capture (IA)'}</button>
+                    {capturePlan && <button className="btn btn-signal" onClick={downloadPlan}>↧ Télécharger capture-plan.json</button>}
+                  </div>
+                  {capturePlan && Array.isArray(capturePlan.steps) && (
+                    <>
+                      <div className="tablewrap" style={{ marginTop: 12 }}><table>
+                        <thead><tr><th>#</th><th>Scène</th><th>Page</th><th>Actions</th><th>Surligner</th></tr></thead>
+                        <tbody>{capturePlan.steps.map((st: any, i: number) => (
+                          <tr key={i}><td>{i + 1}</td><td>{st.scene}</td><td className="mono">{st.route}</td><td>{(st.actions || []).map((a: any) => a.type === 'wait' ? `wait ${a.ms}ms` : `${a.type} ${a.selector || ''}`).join(' · ') || '—'}</td><td className="mono">{st.highlight || '—'}</td></tr>
+                        ))}</tbody>
+                      </table></div>
+                      <div className="note">Pour lancer la capture (une fois) :<br />
+                        <code>npm i -D playwright &amp;&amp; npx playwright install chromium</code><br />
+                        <code>MKT_DEMO_EMAIL=… MKT_DEMO_PASSWORD=… node scripts/marketing-capture.mjs --plan capture-plan.json</code><br />
+                        Le robot se connecte en compte démo (niveaux de sécurité respectés) ; images dans <code>marketing-captures/</code>.
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
