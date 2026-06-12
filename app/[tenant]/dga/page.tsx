@@ -29,6 +29,7 @@ import { TransfoView } from '@/components/dga/TransfoView';
 import { SampleEntry, type SamplePayload } from '@/components/dga/SampleEntry';
 import { InboundSetup } from '@/components/dga/InboundSetup';
 import { parseLimsBuffer, isPdf, isSpreadsheet } from '@/lib/dga/insideview';
+import { generateMultiDgaReport } from '@/lib/dga/report';
 
 const num = (v: any) => (v == null || v === '' ? 0 : Number(v) || 0);
 const norm = (s?: string) => (s || '').trim().toLowerCase();
@@ -55,6 +56,7 @@ export default function DgaPage() {
   const [sitesTree, setSitesTree] = useState<SiteNode[]>([]);
   const [siteFilter, setSiteFilter] = useState(''); // classer les transfos par site (admin)
   const [delMode, setDelMode] = useState(false);
+  const [assembling, setAssembling] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -252,6 +254,26 @@ export default function DgaPage() {
     });
   }
 
+  // ── Assemble un rapport PDF multi-transformateurs (même client) à partir de la sélection ──
+  async function assembleReport() {
+    const ids = Object.keys(selected).filter(k => selected[k]);
+    if (!ids.length) { exitDelMode(); return; }
+    const items = ids
+      .map(id => dossiers.find(d => d.id === id))
+      .filter(Boolean)
+      .map((d: any) => ({ dossier: d, measures: measuresByDossier[d.id] || [] }));
+    const clients = [...new Set(items.map((it: any) => String(it.dossier.client || it.dossier.company || '').trim()).filter(Boolean))];
+    if (clients.length > 1 && !confirm(tr(
+      `La sélection contient ${clients.length} clients différents. Assembler quand même un seul rapport ?`,
+      `Selection has ${clients.length} different clients. Assemble a single report anyway?`))) return;
+    setAssembling(true);
+    try {
+      await generateMultiDgaReport({ items, clientName: clients[0] || tenantName, logoUrl, lang: lang === 'en' ? 'en' : 'fr' });
+      exitDelMode();
+    } catch (e: any) { setImportErr(e?.message || String(e)); }
+    finally { setAssembling(false); }
+  }
+
   // ── Import PDF (drag/bouton) → aperçu de fusion ──
   function mapEquip(eq: any): Dossier {
     // Détection OLTC : flag IA (eq.isOltc) OU heuristique mots-clés sur type/description/identification.
@@ -423,6 +445,8 @@ export default function DgaPage() {
           const dg = diagnoseFull(gas);
           await saveMeasure(tenant, did, { ...m, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'pdf' });
         }
+        // Nouveaux résultats importés -> statut « À TRAITER » (sinon le dossier reste affiché « Traité »).
+        if (measuresToAdd.length) { try { await setTreated(did, false); } catch { /* colonne treated absente (migration 154) */ } }
         lastId = did;
       }
       setImportPreview(null); await reload();
@@ -449,7 +473,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, todoCount, onToggleTreated: toggleTreated }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -508,7 +532,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, todoCount, onToggleTreated } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, todoCount, onToggleTreated, assembleReport, assembling } = p;
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   // Transformateurs avec des résultats reçus par courriel non encore consultés (badge « Nouveau »).
@@ -530,6 +554,7 @@ function ListView(p: any) {
           {!delMode && <button onClick={startNewT} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Nouveau transformateur', 'New transformer')}</button>}
           {delMode && (<>
             <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={selectAllFiltered}>{filtered.length > 0 && filtered.every((x: Dossier) => selected[x.id!]) ? tr('Tout désélectionner', 'Deselect all') : tr('Tout sélectionner', 'Select all')}</button>
+            <button className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled={!selCount || assembling} onClick={assembleReport} title={tr('Assembler un rapport PDF de tous les transformateurs sélectionnés (même client)', 'Assemble a PDF report of all selected transformers (same client)')}>{assembling ? <Loader2 size={15} className="animate-spin" /> : '📄'} {tr('Assembler le rapport', 'Assemble report')} ({selCount})</button>
             <button className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled={!selCount} onClick={deleteSelected}>{tr('Supprimer la sélection', 'Delete selection')} ({selCount})</button>
             <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={exitDelMode}>{tr('Terminer', 'Done')}</button>
           </>)}

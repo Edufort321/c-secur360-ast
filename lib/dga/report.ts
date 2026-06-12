@@ -39,29 +39,28 @@ async function loadLogo(url?: string | null): Promise<string | null> {
   catch { return null; }
 }
 
-export async function generateDgaReport(opts: { dossier: Dossier; measures: Measure[]; ai?: any; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary' }) {
-  const { default: jsPDF } = await import('jspdf');
-  const fr = (opts.lang || 'fr') === 'fr';
-  const rtype = opts.reportType || 'full';
-  const d = opts.dossier; const ms = (opts.measures || []).slice().sort((a, b) => String(a.sample_date).localeCompare(String(b.sample_date)));
-  const last = ms[ms.length - 1];
-  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
-  const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+function applyFooters(doc: any, W: number, Hp: number, M: number) {
+  const total = doc.getNumberOfPages();
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7); doc.setTextColor(150);
+    doc.text('C-Secur360 — Diagnostic DGA. Donnees fournies par le client; presentation des resultats a titre indicatif, sans garantie. La conduite et la securite de l equipement demeurent sous la responsabilite du client.', M, Hp - 24, { maxWidth: W - 2 * M } as any);
+    doc.text(`${p} / ${total}`, W - M, Hp - 14, { align: 'right' });
+  }
+}
 
+// Rend le contenu d'UN dossier dans le doc, à partir de la page COURANTE. Réutilisé par le rapport
+// simple ET le rapport multi-transformateurs (assemblage).
+function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, rtype: 'full' | 'dga' | 'summary', d: Dossier, measuresIn: Measure[], ai: any, logo: string | null) {
+  const ms = (measuresIn || []).slice().sort((a, b) => String(a.sample_date).localeCompare(String(b.sample_date)));
+  const last = ms[ms.length - 1];
   const header = () => {
-    // Largeur = 0 -> jsPDF conserve le ratio du logo (pas d'écrasement).
     if (logo) { try { doc.addImage(logo, 'PNG', M, 22, 0, 24); } catch { /* ignore */ } }
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
     doc.text(`Equipement: ${d.ident || '—'}   No de serie: ${d.serie || '—'}   No d'equip.: ${d.equip_no || '—'}`, W - M, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal');
     doc.text(`Sous-station/Client: ${d.client || '—'}   Type: ${d.description || d.apparatus || '—'}`, W - M, 42, { align: 'right' });
     doc.setDrawColor(210); doc.line(M, 50, W - M, 50);
-  };
-  const footer = (page: number, total: number) => {
-    doc.setFontSize(7); doc.setTextColor(150);
-    doc.text('C-Secur360 — Diagnostic DGA. Donnees fournies par le client; presentation des resultats a titre indicatif, sans garantie. La conduite et la securite de l equipement demeurent sous la responsabilite du client.', M, Hp - 24, { maxWidth: W - 2 * M } as any);
-    doc.text(`${page} / ${total}`, W - M, Hp - 14, { align: 'right' });
   };
   let y = 60;
   const ensure = (h: number) => { if (y + h > Hp - 50) { doc.addPage(); header(); y = 60; } };
@@ -116,12 +115,12 @@ export async function generateDgaReport(opts: { dossier: Dossier; measures: Meas
   }
 
   // ── Analyse experte ──
-  if (last?.ai_summary || opts.ai) {
+  if (last?.ai_summary || ai) {
     ensure(30); doc.setFont('helvetica', 'bold'); doc.setTextColor(20); doc.text(fr ? 'Analyse experte' : 'Expert analysis', M, y); y += 14;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.setFontSize(9.5);
-    const summary = last?.ai_summary || (fr ? opts.ai?.summaryFr : opts.ai?.summaryEn) || '';
+    const summary = last?.ai_summary || (fr ? ai?.summaryFr : ai?.summaryEn) || '';
     for (const ln of doc.splitTextToSize(String(summary), W - 2 * M)) { ensure(13); doc.text(ln, M, y); y += 13; }
-    const recos = (fr ? opts.ai?.recommendationsFr : opts.ai?.recommendationsEn) || [];
+    const recos = (fr ? ai?.recommendationsFr : ai?.recommendationsEn) || [];
     for (const r of recos) { for (const ln of doc.splitTextToSize('- ' + r, W - 2 * M)) { ensure(13); doc.text(ln, M, y); y += 13; } }
   }
 
@@ -140,9 +139,79 @@ export async function generateDgaReport(opts: { dossier: Dossier; measures: Meas
     }
   }
 
-  const total = doc.getNumberOfPages();
-  for (let p = 1; p <= total; p++) { doc.setPage(p); footer(p, total); }
-  doc.save(`rapport-dga-${(d.ident || 'transfo').replace(/\s+/g, '_')}.pdf`);
+}
+
+// Rapport SIMPLE (un transformateur).
+export async function generateDgaReport(opts: { dossier: Dossier; measures: Measure[]; ai?: any; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary' }) {
+  const { default: jsPDF } = await import('jspdf');
+  const fr = (opts.lang || 'fr') === 'fr';
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
+  const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+  renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', opts.dossier, opts.measures, opts.ai, logo);
+  applyFooters(doc, W, Hp, M);
+  doc.save(`rapport-dga-${(opts.dossier.ident || 'transfo').replace(/\s+/g, '_')}.pdf`);
+}
+
+// Rapport MULTI-TRANSFORMATEURS pour un même client : page de présentation + table des matières
+// commune, puis le rapport complet de chaque transformateur (même rendu que le rapport simple).
+export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; measures: Measure[]; ai?: any }[]; clientName?: string; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary' }) {
+  const { default: jsPDF } = await import('jspdf');
+  const fr = (opts.lang || 'fr') === 'fr';
+  const items = opts.items || [];
+  if (!items.length) return;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
+  const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+  const client = opts.clientName || items[0]?.dossier?.client || items[0]?.dossier?.company || '';
+  const today = new Date().toLocaleDateString(fr ? 'fr-CA' : 'en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // ── Page 1 : présentation ──
+  if (logo) { try { doc.addImage(logo, 'PNG', M, 40, 0, 34); } catch { /* */ } }
+  let cy = 200;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(24); doc.setTextColor(20);
+  doc.text(fr ? 'Rapport de diagnostic DGA' : 'DGA Diagnostic Report', M, cy); cy += 34;
+  doc.setFontSize(16); doc.setTextColor(60);
+  doc.text(fr ? 'Parc de transformateurs' : 'Transformer fleet', M, cy); cy += 40;
+  doc.setFontSize(13); doc.setTextColor(20); doc.setFont('helvetica', 'bold');
+  if (client) { doc.text(`${fr ? 'Client' : 'Client'} : ${client}`, M, cy); cy += 22; }
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(80); doc.setFontSize(11);
+  doc.text(`${items.length} ${fr ? 'transformateur(s)' : 'transformer(s)'}`, M, cy); cy += 18;
+  doc.text(`${fr ? 'Date du rapport' : 'Report date'} : ${today}`, M, cy);
+
+  // ── Page 2 : table des matières (remplie après le rendu) ──
+  doc.addPage();
+  const tocPage = doc.getNumberOfPages();
+
+  // ── Rapports par transformateur ──
+  const toc: { title: string; serie: string; page: number }[] = [];
+  for (const it of items) {
+    doc.addPage();
+    toc.push({ title: it.dossier.ident || '—', serie: it.dossier.serie || '—', page: doc.getNumberOfPages() });
+    renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', it.dossier, it.measures, it.ai, logo);
+  }
+
+  // ── Remplit la table des matières ──
+  doc.setPage(tocPage);
+  let ty = 70;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(20);
+  doc.text(fr ? 'Table des matières' : 'Table of contents', M, ty); ty += 26;
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(90);
+  doc.text(fr ? 'Transformateur' : 'Transformer', M, ty); doc.text(fr ? 'N° de série' : 'Serial no.', M + 260, ty); doc.text('Page', W - M, ty, { align: 'right' }); ty += 6;
+  doc.setDrawColor(210); doc.line(M, ty, W - M, ty); ty += 16;
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(40);
+  toc.forEach((t, i) => {
+    if (ty > Hp - 60) { /* déborde : on s'arrête proprement (rare) */ return; }
+    doc.text(`${i + 1}. ${t.title}`, M, ty, { maxWidth: 250 } as any);
+    doc.text(t.serie, M + 260, ty, { maxWidth: 180 } as any);
+    doc.text(String(t.page), W - M, ty, { align: 'right' });
+    ty += 18;
+  });
+
+  applyFooters(doc, W, Hp, M);
+  const safeClient = (client || 'client').replace(/\s+/g, '_').slice(0, 40);
+  doc.save(`rapport-dga-${safeClient}-${items.length}-transfos.pdf`);
 }
 
 // Mini-graphique de tendance dans le PDF.
