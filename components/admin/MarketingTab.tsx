@@ -140,11 +140,32 @@ export default function MarketingTab() {
   const [avaText, setAvaText] = useState('');
   const [avaUrl, setAvaUrl] = useState('');
   const [avaBusy, setAvaBusy] = useState(false);
+  const [avaMsg, setAvaMsg] = useState<{ msg: string; ok: boolean } | null>(null); // statut affiché DANS la carte
+  const aMsg = (m: { msg: string; ok: boolean }) => { setAvaMsg(m); setNotice(m); };
+  // Mode « texte IA » : idées + durée -> script calibré.
+  const [avaIdeas, setAvaIdeas] = useState('');
+  const [avaSeconds, setAvaSeconds] = useState(30);
+  const [avaWriting, setAvaWriting] = useState(false);
+  async function writeAvatarScript() {
+    if (!avaIdeas.trim()) { aMsg({ msg: '⚠ Donne quelques idées d\'abord.', ok: false }); return; }
+    setAvaWriting(true); setAvaMsg(null);
+    try {
+      const r = await fetch('/api/admin/marketing/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'avatar-script', ideas: avaIdeas, seconds: avaSeconds, lang: sLang }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setAvaText(j.text || '');
+      aMsg({ msg: `✓ Texte rédigé (~${j.words || '?'} mots ≈ ${avaSeconds}s).`, ok: true });
+    } catch (e: any) { aMsg({ msg: 'Texte IA : ' + (e?.message || ''), ok: false }); }
+    finally { setAvaWriting(false); }
+  }
 
   // ── Réglages du Studio : modèle d'avatar + bibliothèque d'images (déposés et stockés) ──
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarModel, setAvatarModel] = useState<{ id: string; url: string; name?: string } | null>(null);
   const [library, setLibrary] = useState<{ id: string; url: string; name?: string }[]>([]);
+  const [avaVideos, setAvaVideos] = useState<{ id: string; url: string; created_at?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
 
   async function loadAssets() {
@@ -152,6 +173,7 @@ export default function MarketingTab() {
       const j = await fetch('/api/admin/marketing/data?resource=assets', { credentials: 'include' }).then(r => r.json());
       setAvatarModel(j.avatar ? { id: j.avatar.id, url: j.avatar.data?.url, name: j.avatar.data?.name } : null);
       setLibrary((j.library || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
+      setAvaVideos((j.videos || []).map((a: any) => ({ id: a.id, url: a.data?.url, created_at: a.created_at })).filter((x: any) => x.url));
     } catch { /* */ }
   }
   useEffect(() => { loadAssets(); }, []);
@@ -192,27 +214,29 @@ export default function MarketingTab() {
       await new Promise(r => setTimeout(r, 3000));
       try {
         const j = await fetch(`/api/admin/marketing/avatar?id=${encodeURIComponent(id)}`, { credentials: 'include' }).then(r => r.json());
-        if (j.status === 'done' && j.url) { setAvaUrl(j.url); setNotice({ msg: '✓ Avatar généré.', ok: true }); return; }
-        if (j.status === 'error') { setNotice({ msg: 'Avatar : échec du rendu.', ok: false }); return; }
+        if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.', ok: true }); setAvaBusy(false); loadAssets(); return; }
+        if (j.status === 'error') { aMsg({ msg: 'Avatar : échec du rendu (vérifie que le modèle est une vraie photo de visage).', ok: false }); setAvaBusy(false); return; }
       } catch { /* retry */ }
     }
-    setNotice({ msg: 'Avatar : rendu plus long que prévu — réessaie dans un instant.', ok: false });
+    aMsg({ msg: 'Avatar : rendu plus long que prévu — réessaie dans un instant.', ok: false }); setAvaBusy(false);
   }
   async function generateAvatar() {
+    setAvaMsg(null);
     const text = avaText.trim() || (pack?.storyboard ? pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' ') : '');
-    if (!text) { setNotice({ msg: '⚠ Entre le texte à narrer (ou génère un storyboard).', ok: false }); return; }
-    if (!avatarModel?.url) { setNotice({ msg: '⚠ Dépose d\'abord un modèle d\'avatar dans les Réglages du Studio.', ok: false }); return; }
-    setAvaBusy(true); setNotice(null); setAvaUrl('');
+    if (!avatarModel?.url) { aMsg({ msg: '⚠ Dépose d\'abord un modèle d\'avatar dans ⚙ Réglages du Studio (en haut).', ok: false }); return; }
+    if (!text) { aMsg({ msg: '⚠ Entre le texte à narrer (ou clique « Remplir depuis le storyboard »).', ok: false }); return; }
+    setAvaBusy(true); setAvaUrl('');
     try {
       const r = await fetch('/api/admin/marketing/avatar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ image: avatarModel.url, text, voice: avaVoice }),
       });
-      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
-      if (j.status === 'done' && j.url) { setAvaUrl(j.url); setNotice({ msg: '✓ Avatar généré.', ok: true }); }
-      else if (j.id) { setNotice({ msg: '⏳ Rendu de l\'avatar en cours…', ok: true }); pollAvatar(j.id); }
-    } catch (e: any) { setNotice({ msg: 'Avatar : ' + (e?.message || ''), ok: false }); }
-    finally { setAvaBusy(false); }
+      const j = await r.json();
+      if (!r.ok) { aMsg({ msg: 'Avatar : ' + (j.error || 'échec'), ok: false }); setAvaBusy(false); return; }
+      if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.', ok: true }); setAvaBusy(false); }
+      else if (j.id) { aMsg({ msg: '⏳ Rendu de l\'avatar en cours (10-40 s)…', ok: true }); pollAvatar(j.id); }
+      else { aMsg({ msg: 'Avatar : réponse inattendue.', ok: false }); setAvaBusy(false); }
+    } catch (e: any) { aMsg({ msg: 'Avatar : ' + (e?.message || 'réseau'), ok: false }); setAvaBusy(false); }
   }
 
   // ── Prospection ────────────────────────────────────────────────────────
@@ -506,15 +530,49 @@ export default function MarketingTab() {
                 {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setAvaText(pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' '))}>Remplir depuis le storyboard</button>}
               </div>
             </div>
-            <label>Texte à narrer</label>
-            <textarea value={avaText} onChange={e => setAvaText(e.target.value)} placeholder="Ce que l'avatar dit à l'écran…" />
-            <div className="actions">
-              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy || !avatarModel?.url}>{avaBusy ? '🎬 Génération…' : '🎬 Générer l\'avatar qui parle'}</button>
+            {/* Mode « texte IA » : idées + durée -> script calibré */}
+            <div className="addbox">
+              <label style={{ marginTop: 0 }}>✦ Rédiger le texte par IA — donne tes idées</label>
+              <textarea value={avaIdeas} onChange={e => setAvaIdeas(e.target.value)} placeholder="Ex. : présenter le module DGA, gain de temps, capture QR, public technique…" rows={2} />
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 6 }}>
+                <div><label style={{ marginTop: 0 }}>Durée</label>
+                  <select value={avaSeconds} onChange={e => setAvaSeconds(+e.target.value)} style={{ width: 130 }}>
+                    <option value={10}>10 secondes</option><option value={20}>20 secondes</option>
+                    <option value={30}>30 secondes</option><option value={45}>45 secondes</option><option value={60}>60 secondes</option>
+                  </select>
+                </div>
+                <button className="btn btn-violet" onClick={writeAvatarScript} disabled={avaWriting}>{avaWriting ? '✦ Rédaction…' : '✦ Rédiger le texte'}</button>
+              </div>
             </div>
+
+            <label>Texte à narrer</label>
+            <textarea value={avaText} onChange={e => setAvaText(e.target.value)} placeholder="Ce que l'avatar dit à l'écran… (ou rédige-le par IA ci-dessus)" rows={3} />
+            <div className="actions">
+              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy}>{avaBusy ? '🎬 Génération…' : '🎬 Générer l\'avatar qui parle'}</button>
+            </div>
+            {avaMsg && <div className={`mkt-notice ${avaMsg.ok ? 'ok' : 'err'}`} style={{ marginTop: 10, marginBottom: 0 }}>{avaMsg.msg}</div>}
             {avaUrl && (
               <div style={{ marginTop: 12 }}>
                 <video src={avaUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
                 <div className="actions"><a className="btn btn-ghost" href={avaUrl} target="_blank" rel="noreferrer" download>↧ Télécharger la vidéo</a></div>
+              </div>
+            )}
+
+            {/* Galerie des vidéos d'avatar enregistrées */}
+            {avaVideos.length > 0 && (
+              <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+                <h2 style={{ fontSize: 14 }}>Vidéos d'avatar enregistrées <span className="chip">{avaVideos.length}</span></h2>
+                <div className="grid" style={{ marginTop: 8 }}>
+                  {avaVideos.map(v => (
+                    <div key={v.id} className="fmtcard">
+                      <video src={v.url} controls style={{ width: '100%', borderRadius: 8 }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                        <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>télécharger</a>
+                        <button className="copy" onClick={() => deleteAsset(v.id)}>supprimer</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

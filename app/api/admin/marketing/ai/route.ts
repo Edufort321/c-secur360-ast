@@ -156,6 +156,20 @@ Vise ${count} entreprises. Retourne UNIQUEMENT ce JSON (sans texte autour) :
       return NextResponse.json({ ok: true, candidates, note: out.note || '' });
     }
 
+    if (action === 'avatar-script') {
+      // Rédige le texte que l'avatar prononcera, CALIBRÉ à une durée cible (≈ 2,5 mots/seconde).
+      const ideas = String(body.ideas || '').slice(0, 800);
+      const seconds = Math.max(5, Math.min(120, Number(body.seconds) || 30));
+      const lang = body.lang === 'en' ? 'English' : 'français';
+      const words = Math.round(seconds * 2.4);
+      const prompt = `Rédige un texte de VOIX OFF pour un avatar présentateur de C-Secur360 (plateforme SST), à partir de ces idées : "${ideas}".
+Durée cible : ${seconds} secondes — soit ENVIRON ${words} mots (une voix off dit ~2,4 mots/seconde). Respecte cette longueur d'assez près.
+Ton : clair, oral, professionnel, orienté bénéfice. Pas d'allégation chiffrée non démontrable. Langue : ${lang}.
+Retourne UNIQUEMENT ce JSON : {"text":"le texte à prononcer","words":<nombre de mots>,"seconds":${seconds}}`;
+      const out = await callClaude(apiKey, system, prompt, { maxTokens: 800 });
+      return NextResponse.json({ ok: true, ...out });
+    }
+
     if (action === 'chat') {
       // Assistant conversationnel : stratège marketing & prospection. Échange libre pour cadrer les
       // pistes (segments, secteurs, angles, idées de contenu) avant de générer/rechercher/envoyer.

@@ -59,12 +59,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, campaigns: data || [] });
     }
     if (resource === 'assets') {
-      // Modèle d'avatar + bibliothèque d'images déposés dans les réglages du Studio.
-      const { data } = await supabaseAdmin.from('marketing_assets').select('id, kind, data, created_at').eq('tenant_id', TENANT).in('kind', ['avatar_model', 'library_image']).order('created_at', { ascending: false });
+      // Modèle d'avatar + bibliothèque d'images + vidéos d'avatar générées.
+      const { data } = await supabaseAdmin.from('marketing_assets').select('id, kind, data, created_at').eq('tenant_id', TENANT).in('kind', ['avatar_model', 'library_image', 'avatar_video']).order('created_at', { ascending: false });
       const rows = data || [];
       const avatar = rows.find((a: any) => a.kind === 'avatar_model') || null;
       const library = rows.filter((a: any) => a.kind === 'library_image');
-      return NextResponse.json({ ok: true, avatar, library });
+      const videos = rows.filter((a: any) => a.kind === 'avatar_video');
+      return NextResponse.json({ ok: true, avatar, library, videos });
     }
     return NextResponse.json({ error: 'resource inconnue' }, { status: 400 });
   } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 }); }
