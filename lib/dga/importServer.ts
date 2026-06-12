@@ -20,11 +20,14 @@ const PROMPT = `Tu es un extracteur de donnees pour rapports d'analyse d'huile d
 Lis le PDF et retourne UNIQUEMENT un objet JSON valide, sans texte autour, sans backticks, avec cette forme exacte :
 {"transformers": [{"equipment": ${EQUIP_SCHEMA}, "measurements": ${MEAS_SCHEMA}}]}
 Regles :
+- EXHAUSTIVITE ABSOLUE : parcours TOUTES les pages du document, du debut a la fin, sans en sauter une seule. N'arrete pas l'extraction avant la derniere page. Chaque page, chaque tableau, chaque feuille de resultats peut contenir un transformateur ou des mesures supplementaires : extrais-les TOUS. Ne resume pas, ne tronque pas, ne te limite pas aux premieres pages.
 - IMPORTANT : un rapport peut contenir PLUSIEURS transformateurs (equipements distincts : N° de serie / N° d'equipement / identification differents). Retourne UN objet PAR transformateur dans "transformers", chacun avec SES propres mesures. S'il n'y a qu'un seul transformateur, "transformers" contient un seul objet.
 - Regroupe les mesures par transformateur (ne melange pas les mesures de transformateurs differents).
+- Pour CHAQUE transformateur, extrais TOUTES ses colonnes/lignes de mesures historiques (toutes les dates presentes), pas seulement la plus recente.
 - Gaz dissous en ppm. Si une valeur est "<1" ou "< 0.5", mets la moitie du seuil (ex: 0.5).
 - Une entree par colonne/ligne de date dans le tableau (mesures multiples = plusieurs objets dans measurements).
 - Dates au format YYYY-MM-DD.
+- Un gaz NON mesure / case vide / absent du tableau = null (ne mets PAS 0). 0 uniquement si le rapport indique reellement 0. Ne devine jamais une valeur.
 - Champs absents = null. Ne devine pas.
 - Reconnais les synonymes: Acetylene/Acetylene/C2H2, Hydrogene/Hydrogen/H2, etc.
 - dielectric = rigidite D1816 ; dbd877 = rigidite D877.
@@ -52,7 +55,7 @@ export async function extractDgaFromPdf(pdfBase64: string, tenant: string): Prom
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 8192,
+      max_tokens: 16384, // marge suffisante pour un rapport multi-transformateurs (sinon JSON tronque = transfos perdus)
       messages: [{
         role: 'user',
         content: [
@@ -99,9 +102,11 @@ function mapMeasure(mm: any): Record<string, any> {
   const oil_quality: Record<string, any> = {};
   (OIL_FIELDS as any[]).forEach(f => { if (mm[f.key] != null) oil_quality[f.key] = f.text ? String(mm[f.key]) : Number(mm[f.key]); });
   (FURAN_FIELDS as any[]).forEach(f => { if (mm[f.key] != null) oil_quality[f.key] = Number(mm[f.key]); });
+  // Gaz NON mesuré (absent du fichier) -> null (pas 0), pour ne pas fausser tendances/condition.
+  const ng = (v: any) => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v));
   return {
     sample_date: mm.date || null,
-    h2: num(mm.H2), ch4: num(mm.CH4), c2h6: num(mm.C2H6), c2h4: num(mm.C2H4), c2h2: num(mm.C2H2), co: num(mm.CO), co2: num(mm.CO2),
+    h2: ng(mm.H2), ch4: ng(mm.CH4), c2h6: ng(mm.C2H6), c2h4: ng(mm.C2H4), c2h2: ng(mm.C2H2), co: ng(mm.CO), co2: ng(mm.CO2),
     o2: mm.O2 != null ? num(mm.O2) : null, n2: mm.N2 != null ? num(mm.N2) : null, oil_quality,
   };
 }

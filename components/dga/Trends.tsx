@@ -7,10 +7,10 @@ import type { Measure } from '@/lib/dga/dossiers';
 
 type Param = { key: string; label: string; color: string; get: (m: Measure) => number | null };
 const numOrNull = (v: any) => (v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v));
-// Un relevé n'a de gaz que si au moins un gaz > 0. Un relevé partiel (BPC/huile seul) ne doit pas
-// alimenter les courbes de gaz (null = ignoré). Gère aussi les anciens relevés où les gaz vides = 0.
+// Un relevé partiel (BPC/huile seul) a ses gaz à null -> ne doit pas alimenter les courbes de gaz.
 const GAS_KEYS = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
-const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = numOrNull((m as any)[k]); return v != null && v > 0; });
+// Mesuré (non-null) = relevé de gaz (0 inclus). Null = non mesuré (relevé BPC/huile seul) -> exclu.
+const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = (m as any)[k]; return v != null && v !== '' && !isNaN(Number(v)); });
 const gasVal = (m: Measure, k: string) => hasGas(m) ? numOrNull((m as any)[k]) : null;
 
 const PARAMS: Param[] = [

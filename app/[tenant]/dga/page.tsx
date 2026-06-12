@@ -304,7 +304,9 @@ export default function DgaPage() {
     const oil_quality: Record<string, any> = {};
     OIL_FIELDS.forEach(f => { if (mm[f.key] != null) oil_quality[f.key] = f.text ? String(mm[f.key]) : Number(mm[f.key]); });
     FURAN_FIELDS.forEach(f => { if (mm[f.key] != null) oil_quality[f.key] = Number(mm[f.key]); });
-    return { sample_date: mm.date || null, h2: num(mm.H2), ch4: num(mm.CH4), c2h6: num(mm.C2H6), c2h4: num(mm.C2H4), c2h2: num(mm.C2H2), co: num(mm.CO), co2: num(mm.CO2), o2: mm.O2 != null ? num(mm.O2) : null, n2: mm.N2 != null ? num(mm.N2) : null, oil_quality };
+    // Gaz NON mesuré (absent du fichier) -> null (pas 0). Un 0 réellement présent reste 0.
+    const ng = (v: any) => (v == null || v === '' ? null : (isNaN(Number(v)) ? null : Number(v)));
+    return { sample_date: mm.date || null, h2: ng(mm.H2), ch4: ng(mm.CH4), c2h6: ng(mm.C2H6), c2h4: ng(mm.C2H4), c2h2: ng(mm.C2H2), co: ng(mm.CO), co2: ng(mm.CO2), o2: mm.O2 != null ? num(mm.O2) : null, n2: mm.N2 != null ? num(mm.N2) : null, oil_quality };
   }
   // Découpe un gros PDF en sous-PDF (par pages) pour passer sous la limite de body de la plateforme,
   // comme l'import Excel de l'inventaire découpe en lots. Petit fichier = 1 seul lot (fichier brut).

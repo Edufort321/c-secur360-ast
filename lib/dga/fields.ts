@@ -99,9 +99,12 @@ export function worstCondition(m: Measure | null | undefined): number {
 // Un relevé contient des DONNÉES DE GAZ si au moins un gaz a une valeur > 0 (un relevé BPC/huile seul,
 // ou un relevé aux gaz non mesurés, en est exclu).
 const GAS_KEYS_M = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
+// Un relevé contient des données de gaz si au moins un gaz a été MESURÉ (valeur non-null, 0 inclus —
+// un transformateur propre mesuré à 0 reste un relevé de gaz valide). Un relevé BPC/huile seul a ses
+// gaz à null -> exclu. (Sur d'anciennes données où les gaz vides = 0, ils comptent comme mesurés.)
 export function hasGas(m: Measure | null | undefined): boolean {
   if (!m) return false;
-  return GAS_KEYS_M.some(k => { const v = Number((m as any)[k]); return !isNaN(v) && v > 0; });
+  return GAS_KEYS_M.some(k => { const v = (m as any)[k]; return v != null && v !== '' && !isNaN(Number(v)); });
 }
 // Dernière mesure (par date) CONTENANT DES GAZ — pour la condition/Duval/limites de gaz, afin qu'un
 // relevé partiel (ex. BPC seul) ne masque pas le vrai état de gaz. Renvoie undefined si aucune.

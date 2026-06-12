@@ -19,7 +19,7 @@ export interface Dossier {
 }
 export interface Measure {
   id?: string; tenant_id?: string; dossier_id?: string; sample_date?: string | null;
-  h2?: number; ch4?: number; c2h6?: number; c2h4?: number; c2h2?: number; co?: number; co2?: number; o2?: number | null; n2?: number | null;
+  h2?: number | null; ch4?: number | null; c2h6?: number | null; c2h4?: number | null; c2h2?: number | null; co?: number | null; co2?: number | null; o2?: number | null; n2?: number | null;
   oil_quality?: any; tdcg?: number; condition?: number; duval?: string; fault?: string; methods?: any;
   ai_summary?: string; flag?: string; source?: string; attachment_url?: string; notes?: string; created_at?: string;
 }

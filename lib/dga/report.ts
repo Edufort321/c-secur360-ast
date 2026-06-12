@@ -15,7 +15,8 @@ function num(v: any): number | null { return v === null || v === undefined || v 
 // Un relevé n'a de DONNÉES DE GAZ que si au moins un gaz combustible/CO2 a une valeur > 0. Un relevé
 // partiel (ex. BPC/huile seul) sans gaz mesurés ne doit PAS alimenter les courbes de gaz (null = ignoré).
 const GAS_KEYS = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
-const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = num((m as any)[k]); return v != null && v > 0; });
+// Mesuré (non-null) = relevé de gaz (0 inclus). Null = non mesuré (relevé BPC/huile seul) -> exclu.
+const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = (m as any)[k]; return v != null && v !== '' && !isNaN(Number(v)); });
 const gasVal = (m: Measure, k: keyof Measure) => hasGas(m) ? num((m as any)[k]) : null;
 // Paramètres tracés (gaz : seulement si le relevé a des gaz ; qualité d'huile : si présente).
 const TREND_PARAMS: { label: string; get: (m: Measure) => number | null }[] = [
