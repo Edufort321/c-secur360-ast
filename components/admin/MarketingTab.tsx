@@ -214,7 +214,7 @@ export default function MarketingTab() {
       await new Promise(r => setTimeout(r, 3000));
       try {
         const j = await fetch(`/api/admin/marketing/avatar?id=${encodeURIComponent(id)}`, { credentials: 'include' }).then(r => r.json());
-        if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.', ok: true }); setAvaBusy(false); loadAssets(); return; }
+        if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.' + (j.stored === false ? ' ⚠ Bucket non public — lecture via lien D-ID temporaire ; applique la migration 165 (bucket « marketing » PUBLIC) pour conserver la vidéo.' : ''), ok: true }); setAvaBusy(false); loadAssets(); return; }
         if (j.status === 'error') { aMsg({ msg: 'Avatar : échec du rendu (vérifie que le modèle est une vraie photo de visage).', ok: false }); setAvaBusy(false); return; }
       } catch { /* retry */ }
     }
@@ -233,7 +233,7 @@ export default function MarketingTab() {
       });
       const j = await r.json();
       if (!r.ok) { aMsg({ msg: 'Avatar : ' + (j.error || 'échec'), ok: false }); setAvaBusy(false); return; }
-      if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.', ok: true }); setAvaBusy(false); }
+      if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.' + (j.stored === false ? ' ⚠ Bucket non public — lecture via lien D-ID temporaire ; applique la migration 165 (bucket « marketing » PUBLIC).' : ''), ok: true }); setAvaBusy(false); loadAssets(); }
       else if (j.id) { aMsg({ msg: '⏳ Rendu de l\'avatar en cours (10-40 s)…', ok: true }); pollAvatar(j.id); }
       else { aMsg({ msg: 'Avatar : réponse inattendue.', ok: false }); setAvaBusy(false); }
     } catch (e: any) { aMsg({ msg: 'Avatar : ' + (e?.message || 'réseau'), ok: false }); setAvaBusy(false); }

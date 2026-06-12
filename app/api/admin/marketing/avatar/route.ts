@@ -4,18 +4,27 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const TENANT = 'cerdia';
 // Récupère la vidéo D-ID (URL temporaire) et la persiste dans le bucket 'marketing' + marketing_assets.
-async function persistVideo(srcUrl: string, who: string): Promise<string> {
+// Renvoie { url (stockée si possible, sinon D-ID), source (D-ID), bytes }. Vérifie que le stockage est
+// réellement accessible (bucket public) : sinon on garde l'URL D-ID pour que la lecture marche.
+async function persistVideo(srcUrl: string, who: string): Promise<{ url: string; source: string; bytes: number; stored: boolean }> {
+  let bytes = 0;
   try {
     const res = await fetch(srcUrl);
-    if (!res.ok) return srcUrl;
+    if (!res.ok) return { url: srcUrl, source: srcUrl, bytes, stored: false };
     const buf = Buffer.from(await res.arrayBuffer());
+    bytes = buf.length;
+    if (bytes < 1000) return { url: srcUrl, source: srcUrl, bytes, stored: false }; // téléchargement vide/erreur
     const path = `avatar-videos/${crypto.randomUUID()}.mp4`;
     const up = await supabaseAdmin.storage.from('marketing').upload(path, buf, { contentType: 'video/mp4', upsert: true });
-    if (up.error) return srcUrl; // bucket absent -> on garde l'URL D-ID (temporaire)
+    if (up.error) return { url: srcUrl, source: srcUrl, bytes, stored: false }; // bucket absent -> URL D-ID
     const url = supabaseAdmin.storage.from('marketing').getPublicUrl(path).data.publicUrl;
-    await supabaseAdmin.from('marketing_assets').insert({ tenant_id: TENANT, kind: 'avatar_video', data: { url }, status: 'ready', created_by: who });
-    return url;
-  } catch { return srcUrl; }
+    // Vérifie que l'objet est PUBLIQUEMENT lisible (bucket public). Sinon, on retombe sur l'URL D-ID.
+    let publicOk = false;
+    try { const head = await fetch(url, { method: 'HEAD' }); publicOk = head.ok; } catch { /* */ }
+    const finalUrl = publicOk ? url : srcUrl;
+    await supabaseAdmin.from('marketing_assets').insert({ tenant_id: TENANT, kind: 'avatar_video', data: { url: finalUrl, stored_url: url, source: srcUrl, bytes, public: publicOk }, status: 'ready', created_by: who });
+    return { url: finalUrl, source: srcUrl, bytes, stored: publicOk };
+  } catch { return { url: srcUrl, source: srcUrl, bytes, stored: false }; }
 }
 
 // Avatar présentateur (talking head) via D-ID : une PHOTO (déposée dans public/) + un script -> vidéo
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
       const st = await fetch(`${DID}/talks/${id}`, { headers });
       if (!st.ok) continue;
       const data = await st.json();
-      if (data.status === 'done' && data.result_url) { const me = await getSessionUser(req); const url = await persistVideo(data.result_url, me?.email || 'admin'); return NextResponse.json({ ok: true, status: 'done', url, id }); }
+      if (data.status === 'done' && data.result_url) { const me = await getSessionUser(req); const pv = await persistVideo(data.result_url, me?.email || 'admin'); return NextResponse.json({ ok: true, status: 'done', url: pv.url, source: pv.source, bytes: pv.bytes, stored: pv.stored, id }); }
       if (data.status === 'error') return NextResponse.json({ error: 'D-ID : échec du rendu', detail: data.error || null }, { status: 502 });
     }
     return NextResponse.json({ ok: true, status: 'pending', id });
@@ -91,7 +100,7 @@ export async function GET(req: NextRequest) {
   try {
     const st = await fetch(`${DID}/talks/${id}`, { headers });
     const data = await st.json();
-    if (data.status === 'done' && data.result_url) { const me = await getSessionUser(req); const url = await persistVideo(data.result_url, me?.email || 'admin'); return NextResponse.json({ ok: true, status: 'done', url }); }
+    if (data.status === 'done' && data.result_url) { const me = await getSessionUser(req); const pv = await persistVideo(data.result_url, me?.email || 'admin'); return NextResponse.json({ ok: true, status: 'done', url: pv.url, source: pv.source, bytes: pv.bytes, stored: pv.stored }); }
     if (data.status === 'error') return NextResponse.json({ ok: false, status: 'error' });
     return NextResponse.json({ ok: true, status: data.status || 'pending' });
   } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 }); }
