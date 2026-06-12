@@ -96,8 +96,6 @@ export function worstCondition(m: Measure | null | undefined): number {
   return Math.max(...WORST_KEYS.map(k => ieeeCondition(k, (m as any)[k]) ?? 0));
 }
 
-// Un relevé contient des DONNÉES DE GAZ si au moins un gaz a une valeur > 0 (un relevé BPC/huile seul,
-// ou un relevé aux gaz non mesurés, en est exclu).
 const GAS_KEYS_M = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
 // Un relevé contient des données de gaz si au moins un gaz a été MESURÉ (valeur non-null, 0 inclus —
 // un transformateur propre mesuré à 0 reste un relevé de gaz valide). Un relevé BPC/huile seul a ses
