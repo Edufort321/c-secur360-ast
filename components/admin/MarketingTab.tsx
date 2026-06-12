@@ -151,7 +151,7 @@ export default function MarketingTab() {
   // Composeur vidéo : avatar incrusté + slides en arrière-plan -> composition.json (rendu Remotion).
   const [compVideo, setCompVideo] = useState('');
   const [compCorner, setCompCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>('br');
-  const [compRows, setCompRows] = useState<{ url: string; seconds: number; avatar: 'center' | 'corner' | 'hidden' }[]>([]);
+  const [compRows, setCompRows] = useState<{ url: string; seconds: number; avatar: 'center' | 'corner' | 'hidden'; caption?: string }[]>([]);
   const [avaText, setAvaText] = useState('');
   const [avaUrl, setAvaUrl] = useState('');
   const [avaBusy, setAvaBusy] = useState(false);
@@ -662,29 +662,32 @@ export default function MarketingTab() {
             <label>Slides (arrière-plan, dans l'ordre)</label>
             {compRows.length === 0 && <div style={{ color: 'var(--mist)', fontSize: 12, marginBottom: 6 }}>Aucune slide. Ajoute-en (depuis ta bibliothèque ou une URL).</div>}
             {compRows.map((row, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--mist)', fontSize: 11, width: 16 }}>{i + 1}</span>
-                {library.length > 0 ? (
-                  <select value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} style={{ flex: 1, minWidth: 160 }}>
-                    <option value="">— image —</option>
-                    {library.map(im => <option key={im.id} value={im.url}>{im.name || 'image'}</option>)}
+              <div key={i} style={{ marginBottom: 8, borderBottom: '1px solid rgba(35,44,58,.5)', paddingBottom: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--mist)', fontSize: 11, width: 16 }}>{i + 1}</span>
+                  {library.length > 0 ? (
+                    <select value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} style={{ flex: 1, minWidth: 150 }}>
+                      <option value="">— image —</option>
+                      {library.map(im => <option key={im.id} value={im.url}>{im.name || 'image'}</option>)}
+                    </select>
+                  ) : (
+                    <input value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} placeholder="URL de l'image" style={{ flex: 1, minWidth: 150 }} />
+                  )}
+                  <input type="number" min={1} value={row.seconds} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, seconds: +e.target.value } : r))} style={{ width: 60 }} title="secondes" />
+                  <select value={row.avatar} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, avatar: e.target.value as any } : r))} style={{ width: 100 }}>
+                    <option value="center">centre</option><option value="corner">coin</option><option value="hidden">caché</option>
                   </select>
-                ) : (
-                  <input value={row.url} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, url: e.target.value } : r))} placeholder="URL de l'image" style={{ flex: 1, minWidth: 160 }} />
-                )}
-                <input type="number" min={1} value={row.seconds} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, seconds: +e.target.value } : r))} style={{ width: 64 }} title="secondes" />
-                <select value={row.avatar} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, avatar: e.target.value as any } : r))} style={{ width: 110 }}>
-                  <option value="center">centre</option><option value="corner">coin</option><option value="hidden">caché</option>
-                </select>
-                <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => setCompRows(rs => rs.filter((_, j) => j !== i))}>×</button>
+                  <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => setCompRows(rs => rs.filter((_, j) => j !== i))}>×</button>
+                </div>
+                <input value={row.caption || ''} onChange={e => setCompRows(rs => rs.map((r, j) => j === i ? { ...r, caption: e.target.value } : r))} placeholder="Sous-titre incrusté (optionnel)" style={{ width: '100%', marginTop: 5 }} />
               </div>
             ))}
             <div className="actions">
-              <button className="btn btn-ghost" onClick={() => setCompRows(rs => [...rs, { url: library[0]?.url || '', seconds: 6, avatar: rs.length === 0 ? 'center' : 'corner' }])}>＋ Slide</button>
-              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setCompRows(pack.storyboard.map((s: any, i: number) => ({ url: library[i]?.url || '', seconds: Number(s.seconds) || 6, avatar: i === 0 ? 'center' : 'corner' })))}>Pré-remplir depuis le storyboard</button>}
+              <button className="btn btn-ghost" onClick={() => setCompRows(rs => [...rs, { url: library[0]?.url || '', seconds: 6, avatar: rs.length === 0 ? 'center' : 'corner', caption: '' }])}>＋ Slide</button>
+              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setCompRows(pack.storyboard.map((s: any, i: number) => ({ url: library[i]?.url || '', seconds: Number(s.seconds) || 6, avatar: i === 0 ? 'center' : 'corner', caption: s.onscreen_text || s.voiceover || '' })))}>Pré-remplir depuis le storyboard</button>}
               <button className="btn btn-signal" onClick={downloadComposition}>↧ Télécharger composition.json</button>
             </div>
-            <div className="note">Rendu final (local) : <code>cd remotion &amp;&amp; npm install &amp;&amp; npm run render</code> → <code>out.mp4</code>. Place <code>composition.json</code> dans le dossier <code>remotion/</code>. Voir <code>remotion/README.md</code>.</div>
+            <div className="note">Fondu enchaîné entre slides + sous-titres incrustés en bas. Rendu final (local) : <code>cd remotion &amp;&amp; npm install &amp;&amp; npm run render</code> → <code>out.mp4</code>. Place <code>composition.json</code> dans <code>remotion/</code>. Voir <code>remotion/README.md</code>.</div>
           </div>
 
           {pack && (
