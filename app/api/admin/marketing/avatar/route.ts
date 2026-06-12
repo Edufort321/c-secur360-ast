@@ -42,7 +42,11 @@ const DID = 'https://api.d-id.com';
 function ttsFriendly(t: string): string {
   return String(t || '')
     .replace(/\bC[\s.\-]*S[ée]cur[\s.\-]*360\b/gi, 'C Sécur 360')
-    .replace(/\bCSecur360\b/gi, 'C Sécur 360');
+    .replace(/\bCSecur360\b/gi, 'C Sécur 360')
+    // Acronymes à ÉPELER (lettres séparées par des espaces -> la voix dit chaque lettre).
+    .replace(/\bAST\b/g, 'A S T')
+    .replace(/\bDGA\b/g, 'D G A')
+    .replace(/\bCNESST\b/g, 'C N E S S T');
 }
 
 function auth() {

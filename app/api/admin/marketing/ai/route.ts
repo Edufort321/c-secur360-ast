@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     "• Planificateur → COORDONNATEURS et chargés de projet, répartiteurs.",
     "Le terme « SST » ne désigne PAS automatiquement le public d'un module : n'associe le persona SST/prévention qu'aux modules de sécurité ci-dessus.",
     // Prononciation pour la VOIX OFF / AVATAR (synthèse vocale) : tout texte PRONONCÉ doit être facile à dire.
-    "PRONONCIATION (voix off / avatar TTS) : pour tout texte destiné à être PRONONCÉ (champs voiceover, scripts d'avatar), écris-le de façon FACILE À DIRE par une synthèse vocale. Rends phonétiques les marques, acronymes, nombres et termes techniques. En particulier, écris le nom de marque « C-Secur360 » sous la forme « C Sécur 360 » (la lettre C, puis « Sécur », puis le nombre 360 en mots) — jamais « C-Secur360 » collé avec le trait d'union dans un texte parlé. Évite les traits d'union, symboles et anglicismes que la voix bute dessus.",
+    "PRONONCIATION (voix off / avatar TTS) : pour tout texte destiné à être PRONONCÉ (champs voiceover, scripts d'avatar), écris-le de façon FACILE À DIRE par une synthèse vocale. Rends phonétiques les marques, acronymes, nombres et termes techniques. En particulier, écris le nom de marque « C-Secur360 » sous la forme « C Sécur 360 » (la lettre C, puis « Sécur », puis le nombre 360 en mots) — jamais « C-Secur360 » collé avec le trait d'union dans un texte parlé. ÉPELLE les acronymes dans le texte parlé : « AST » → « A S T », « DGA » → « D G A », « CNESST » → « C N E S S T » (lettres séparées par des espaces). Évite les traits d'union, symboles et anglicismes que la voix bute dessus.",
   ].join('\n');
 
   try {
