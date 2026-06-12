@@ -7,14 +7,42 @@ import { useEffect, useState } from 'react';
 // route IA serveur /api/admin/marketing/ai (clé côté serveur, prompt légal imposé). Le verrou de
 // conformité (consentement LCAP) bloque toute programmation d'envoi.
 
-type View = 'studio' | 'prospect' | 'compliance';
+type View = 'assistant' | 'studio' | 'prospect' | 'compliance';
+type ChatMsg = { role: 'user' | 'assistant'; content: string };
+const CHAT_STARTERS = [
+  'Quels secteurs prospecter en premier au Québec pour le module DGA transformateurs ?',
+  'Propose 3 angles d\'accroche pour les mutuelles de prévention SST.',
+  'Donne-moi un plan de contenu LinkedIn sur 4 semaines.',
+  'Comment cadrer une 1re campagne conforme LCAP pour un nouveau segment ?',
+];
 
 const MODULES = ['Rapports terrain (QR + IA)', 'DGA transformateurs', 'Permis espaces clos', 'Inventaire'];
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
 const PLAT_ICON: Record<string, string> = { LinkedIn: '💼', Facebook: '📘', Instagram: '📸', TikTok: '🎵', 'X (Twitter)': '𝕏', X: '𝕏', Twitter: '𝕏', YouTube: '▶️' };
 
 export default function MarketingTab() {
-  const [view, setView] = useState<View>('studio');
+  const [view, setView] = useState<View>('assistant');
+
+  // ── Assistant IA conversationnel (stratégie prospection & marketing) ─────
+  const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  async function sendChat(text?: string) {
+    const msg = (text ?? chatInput).trim();
+    if (!msg || chatSending) return;
+    const next: ChatMsg[] = [...chat, { role: 'user', content: msg }];
+    setChat(next); setChatInput(''); setChatSending(true);
+    try {
+      const r = await fetch('/api/admin/marketing/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'chat', messages: next }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setChat([...next, { role: 'assistant', content: j.reply || '(réponse vide)' }]);
+    } catch (e: any) {
+      setChat([...next, { role: 'assistant', content: '⚠ Erreur : ' + (e?.message || 'IA indisponible') }]);
+    } finally { setChatSending(false); }
+  }
 
   const [notice, setNotice] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -211,6 +239,7 @@ export default function MarketingTab() {
   }
 
   const TABS: { k: View; ico: string; label: string }[] = [
+    { k: 'assistant', ico: '💬', label: 'Assistant IA' },
     { k: 'studio', ico: '🎬', label: 'Studio vidéo' },
     { k: 'prospect', ico: '✉', label: 'Prospection' },
     { k: 'compliance', ico: '⚖', label: 'Conformité' },
@@ -239,6 +268,43 @@ export default function MarketingTab() {
       </div>
 
       {notice && <div className={`mkt-notice ${notice.ok ? 'ok' : 'err'}`}>{notice.msg}</div>}
+
+      {/* ================= ASSISTANT IA ================= */}
+      {view === 'assistant' && (
+        <div className="card">
+          <h2>Assistant IA <span className="chip">stratégie prospection &amp; marketing</span></h2>
+          <p className="hint">Discute avec l'IA pour cadrer ce que tu veux : segments, secteurs (QC → Canada), angles, idées de contenu, séquences. Elle propose des pistes concrètes et rappelle la conformité.</p>
+
+          <div className="chatwin">
+            {chat.length === 0 && (
+              <div className="chatempty">
+                <div style={{ fontSize: 30 }}>💬</div>
+                <p>Donne une piste de ce que tu veux, ou pars d'une suggestion :</p>
+                <div className="starters">
+                  {CHAT_STARTERS.map((s, i) => <button key={i} className="starter" onClick={() => sendChat(s)}>{s}</button>)}
+                </div>
+              </div>
+            )}
+            {chat.map((m, i) => (
+              <div key={i} className={`bubble ${m.role}`}>
+                <div className="brole">{m.role === 'user' ? 'Toi' : 'IA'}</div>
+                <div className="btext">{m.content}</div>
+              </div>
+            ))}
+            {chatSending && <div className="bubble assistant"><div className="brole">IA</div><div className="btext muted">…réflexion</div></div>}
+          </div>
+
+          <div className="chatbar">
+            <textarea value={chatInput} onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+              placeholder="Écris ta piste ou ta question… (Entrée pour envoyer, Maj+Entrée = nouvelle ligne)" rows={2} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button className="btn btn-violet" onClick={() => sendChat()} disabled={chatSending || !chatInput.trim()}>Envoyer</button>
+              {chat.length > 0 && <button className="btn btn-ghost" onClick={() => setChat([])}>Effacer</button>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= STUDIO (1 brief -> N livrables) ================= */}
       {view === 'studio' && (
@@ -624,6 +690,18 @@ export default function MarketingTab() {
         .tags-row{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0;} .htag{font-size:11px;color:var(--violet);background:rgba(124,140,255,.1);border-radius:5px;padding:1px 7px;}
         .platcard{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:12px;}
         .plathead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:13px;}
+        .chatwin{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px;min-height:240px;max-height:460px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+        .chatempty{margin:auto;text-align:center;color:var(--mist);font-size:13px;}
+        .starters{display:flex;flex-direction:column;gap:7px;margin-top:12px;max-width:520px;}
+        .starter{text-align:left;border:1px solid var(--line);background:var(--panel2);color:var(--paper);border-radius:9px;padding:9px 12px;font-size:12.5px;cursor:pointer;}
+        .starter:hover{border-color:var(--violet);}
+        .bubble{max-width:88%;border-radius:11px;padding:9px 12px;font-size:13px;line-height:1.55;}
+        .bubble.user{align-self:flex-end;background:rgba(124,140,255,.14);border:1px solid rgba(124,140,255,.3);}
+        .bubble.assistant{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);}
+        .brole{font-size:10px;color:var(--mist);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;}
+        .btext{white-space:pre-wrap;}
+        .chatbar{margin-top:11px;display:flex;gap:10px;align-items:stretch;}
+        .chatbar textarea{flex:1;min-height:46px;}
         .candbox{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden;}
         .candhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mist);flex-wrap:wrap;}
         .cand{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid rgba(35,44,58,.5);cursor:pointer;}

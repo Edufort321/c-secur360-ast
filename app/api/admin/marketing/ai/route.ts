@@ -140,7 +140,31 @@ Vise ${count} entreprises. Retourne UNIQUEMENT ce JSON (sans texte autour) :
       return NextResponse.json({ ok: true, candidates, note: out.note || '' });
     }
 
-    return NextResponse.json({ error: 'action inconnue (script|email|research)' }, { status: 400 });
+    if (action === 'chat') {
+      // Assistant conversationnel : stratège marketing & prospection. Échange libre pour cadrer les
+      // pistes (segments, secteurs, angles, idées de contenu) avant de générer/rechercher/envoyer.
+      const msgs = (Array.isArray(body.messages) ? body.messages : []).slice(-20)
+        .map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: [{ type: 'text', text: String(m.content || '').slice(0, 4000) }] }))
+        .filter((m: any) => m.content[0].text);
+      if (!msgs.length) return NextResponse.json({ error: 'messages requis' }, { status: 400 });
+      const chatSystem = [
+        ANTI_INJECTION,
+        system,
+        "Tu es un STRATÈGE marketing & prospection B2B pour C-Secur360, plateforme SST québécoise (modules : rapports terrain QR+IA, AST, permis espaces clos, DGA transformateurs, inventaire, feuilles de temps). Tu aides l'équipe à définir : segments et secteurs à prospecter (Québec puis Canada), angles d'accroche, idées de contenu et de vidéo, séquences de relance, positionnement.",
+        "Tu rappelles la conformité quand c'est pertinent (LCAP/CASL : consentement ; Loi 25 : données personnelles ; Loi sur la concurrence : allégations démontrables). Tu poses 1-2 questions de clarification si nécessaire, puis tu proposes des pistes CONCRÈTES et actionnables. Réponses en français, concises, structurées en puces. Quand pertinent, suggère d'utiliser les outils du module (Recherche de prospects IA, Studio, génération de courriel).",
+      ].join('\n');
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: MODEL, max_tokens: 1500, system: chatSystem, messages: msgs }),
+      });
+      if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
+      const data = await resp.json();
+      const reply = (data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n').trim();
+      return NextResponse.json({ ok: true, reply });
+    }
+
+    return NextResponse.json({ error: 'action inconnue (script|email|research|studio-pack|chat)' }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur IA' }, { status: 502 });
   }
