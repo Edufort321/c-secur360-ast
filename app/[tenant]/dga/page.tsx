@@ -563,6 +563,7 @@ function ListView(p: any) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold">{tr('Base de données', 'Database')} ({dossiers.length})</h2>
         <div className="flex flex-wrap gap-2">
+          {!delMode && dossiers.length > 1 && <button className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700" onClick={() => setDelMode(true)} title={tr('Sélectionner plusieurs transformateurs et assembler un rapport PDF', 'Select several transformers and assemble a PDF report')}>📄 {tr('Rapport multi-transfo', 'Multi-transformer report')}</button>}
           {!delMode && dossiers.length > 0 && <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setDelMode(true)}>🗑 {tr('Gérer', 'Manage')}</button>}
           {!delMode && <button onClick={openInbound} className="relative inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"><Mail size={15} /> {tr('Import par courriel', 'Email import')}{newDossiers.length > 0 && <span className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">{newDossiers.length}</span>}</button>}
           {!delMode && <button onClick={startNewT} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Nouveau transformateur', 'New transformer')}</button>}
@@ -681,7 +682,13 @@ function ListView(p: any) {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2">
                   {delMode && <span className={`mt-0.5 grid h-4 w-4 place-items-center rounded border text-[10px] ${isSel ? 'border-rose-500 bg-rose-500 text-white' : 'border-gray-300'}`}>{isSel ? '✓' : ''}</span>}
-                  <div><div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-gray-100">{isOltc && <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold text-white">OLTC</span>}{d.ident}</div><div className="text-[11px] text-gray-500">{d.client || '—'}{d.serie ? ` · SN ${d.serie}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>{siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">📍 {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}{isOltc && parentName && <div className="text-[11px] text-indigo-500">↳ {tr('Transfo.', 'Xfmr')} {parentName}</div>}</div>
+                  <div>
+                    {/* Ordre : Nom du client / Nom d'équipement / n° de série · emplacement */}
+                    <div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-gray-100">{isOltc && <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold text-white">OLTC</span>}{d.company || d.client || tr('Client —', 'Client —')}</div>
+                    <div className="text-[12px] font-semibold text-gray-700 dark:text-gray-200">{d.ident || '—'}</div>
+                    <div className="text-[11px] text-gray-500">{d.serie ? `SN ${d.serie}` : tr('SN —', 'SN —')}{d.client ? ` · 📍 ${d.client}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>
+                    {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">📍 {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}{isOltc && parentName && <div className="text-[11px] text-indigo-500">↳ {tr('Transfo.', 'Xfmr')} {parentName}</div>}
+                  </div>
                 </div>
                 {isOltc
                   ? <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">OLTC</span>
