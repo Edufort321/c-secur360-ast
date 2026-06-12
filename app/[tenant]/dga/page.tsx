@@ -540,6 +540,13 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 function ListView(p: any) {
   const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated, assembleReport, assembling } = p;
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Filtres principaux MUTUELLEMENT EXCLUSIFs : chaque sélection repart de la liste complète (sinon
+  // les bascules « Suivi rapproché » / « BPC » restaient actives et la liste se vidait). Site + recherche
+  // restent des refinements orthogonaux.
+  const pickDue   = (k: any) => { setDueFilter(k); setTreatFilter('all'); setCondFilter(false); setPcbFilter(false); };
+  const pickTreat = (k: any) => { setTreatFilter(k); setDueFilter('all'); setCondFilter(false); setPcbFilter(false); };
+  const pickCond  = () => { const v = !condFilter; setCondFilter(v); if (v) { setDueFilter('all'); setTreatFilter('all'); setPcbFilter(false); } };
+  const pickPcb   = () => { const v = !pcbFilter; setPcbFilter(v); if (v) { setDueFilter('all'); setTreatFilter('all'); setCondFilter(false); } };
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   // Transformateurs avec des résultats reçus par courriel non encore consultés (badge « Nouveau »).
@@ -594,19 +601,19 @@ function ListView(p: any) {
       </div>
       <div className={`${filtersOpen ? 'flex' : 'hidden'} flex-wrap items-center gap-2 sm:flex`}>
         {filterTabs.map(([k, lbl, cnt, col]) => (
-          <button key={k} onClick={() => setDueFilter(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={dueFilter === k ? { background: col, color: '#fff', borderColor: col } : { color: col, borderColor: col }}>
+          <button key={k} onClick={() => pickDue(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={dueFilter === k ? { background: col, color: '#fff', borderColor: col } : { color: col, borderColor: col }}>
             {lbl} <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span>
           </button>
         ))}
         <span className="mx-0.5 h-4 w-px bg-gray-300 dark:bg-gray-600" />
         {([['all', tr('Tous', 'All'), null], ['todo', tr('À traiter', 'To treat'), todoCount], ['done', tr('Traités', 'Treated'), null]] as const).map(([k, lbl, cnt]) => (
-          <button key={k} onClick={() => setTreatFilter(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={treatFilter === k ? { background: '#f4a261', color: '#fff', borderColor: '#f4a261' } : { color: '#b45309', borderColor: '#e0a96d' }}>
+          <button key={k} onClick={() => pickTreat(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={treatFilter === k ? { background: '#f4a261', color: '#fff', borderColor: '#f4a261' } : { color: '#b45309', borderColor: '#e0a96d' }}>
             {lbl}{cnt != null ? <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span> : null}
           </button>
         ))}
         <span className="mx-0.5 h-4 w-px bg-gray-300 dark:bg-gray-600" />
-        <button onClick={() => setCondFilter((v: boolean) => !v)} title={tr('Transformateurs en condition élevée (≥ 3) — suivi rapproché', 'Transformers in elevated condition (≥ 3) — close follow-up')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={condFilter ? { background: '#e63946', color: '#fff', borderColor: '#e63946' } : { color: '#e63946', borderColor: '#e63946' }}>⚠ {tr('Suivi rapproché', 'Close follow-up')}</button>
-        <button onClick={() => setPcbFilter((v: boolean) => !v)} title={tr('BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm)', 'PCB detected (traces 2-50 ppm or present ≥ 50 ppm)')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={pcbFilter ? { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' } : { color: '#7c3aed', borderColor: '#7c3aed' }}>🧪 {tr('BPC détecté', 'PCB detected')}</button>
+        <button onClick={pickCond} title={tr('Transformateurs en condition élevée (≥ 3) — suivi rapproché', 'Transformers in elevated condition (≥ 3) — close follow-up')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={condFilter ? { background: '#e63946', color: '#fff', borderColor: '#e63946' } : { color: '#e63946', borderColor: '#e63946' }}>⚠ {tr('Suivi rapproché', 'Close follow-up')}</button>
+        <button onClick={pickPcb} title={tr('BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm)', 'PCB detected (traces 2-50 ppm or present ≥ 50 ppm)')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={pcbFilter ? { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' } : { color: '#7c3aed', borderColor: '#7c3aed' }}>🧪 {tr('BPC détecté', 'PCB detected')}</button>
         {sitesTree.length > 0 && (
           <select className={inp} value={siteFilter} onChange={e => setSiteFilter(e.target.value)} title={tr('Filtrer par site', 'Filter by site')}>
             <option value="">{tr('Tous les sites', 'All sites')}</option>
