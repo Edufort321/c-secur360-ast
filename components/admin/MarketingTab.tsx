@@ -11,16 +11,6 @@ type Scene = { title: string; seconds: number; fx: string[]; voiceover: string }
 type View = 'studio' | 'prospect' | 'compliance';
 
 const MODULES = ['Rapports terrain (QR + IA)', 'DGA transformateurs', 'Permis espaces clos', 'Inventaire'];
-const PROSPECTS: [string, string, 'expres' | 'tacite' | 'bloque', number][] = [
-  ['Mutuelle Prévention Estrie', 'info@mp-estrie.ca', 'expres', 82],
-  ['Location Lévis Équipement', 'ventes@loclevis.com', 'tacite', 74],
-  ['TransfoTech Industries', 'contact@transfotech.ca', 'expres', 88],
-  ['Groupe Constructo QC', 'sst@constructo-qc.com', 'tacite', 61],
-  ['Ville de Saguenay — TP', 'approv@saguenay.ca', 'tacite', 47],
-  ['Atelier MT Beauce', 'info@mtbeauce.com', 'expres', 69],
-  ['PME générique inc.', 'info@pme-x.ca', 'tacite', 38],
-  ['Énergie MDL inc.', 'j.tremblay@mdl-energie.ca', 'bloque', 0],
-];
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
 
 export default function MarketingTab() {
@@ -30,7 +20,7 @@ export default function MarketingTab() {
   const [sModule, setSModule] = useState(MODULES[0]);
   const [sDuree, setSDuree] = useState('60 s — teaser');
   const [sTon, setSTon] = useState('Dynamique');
-  const [sMsg, setSMsg] = useState("Un rapport d'inspection complet produit en scannant le QR de l'équipement, sans ressaisie, photos et résumé d'anomalies générés par l'IA.");
+  const [sMsg, setSMsg] = useState('');
   const [fxCursor, setFxCursor] = useState(true);
   const [fxZoom, setFxZoom] = useState(true);
   const [fxSubs, setFxSubs] = useState(true);
@@ -77,7 +67,7 @@ export default function MarketingTab() {
   // ── Prospection ────────────────────────────────────────────────────────
   const [segment, setSegment] = useState('Mutuelles SST');
   const [pModule, setPModule] = useState('Rapports terrain');
-  const [angle, setAngle] = useState('Réduire le temps de production des rapports terrain grâce au workflow QR + IA.');
+  const [angle, setAngle] = useState('');
   const [seuil, setSeuil] = useState(55);
   const [checks, setChecks] = useState({ c1: false, c2: false, c3: false, c4: false });
   const [emailDraft, setEmailDraft] = useState<any>(null);
@@ -85,33 +75,72 @@ export default function MarketingTab() {
   const [scheduling, setScheduling] = useState(false);
   const allChecks = checks.c1 && checks.c2 && checks.c3 && checks.c4;
 
-  // Prospects RÉELS (base marketing_prospects via la route serveur). Repli sur la démo si base vide.
-  const [realRows, setRealRows] = useState<{ company: string; email: string; consent: 'expres' | 'tacite' | 'bloque'; score: number; blocked: boolean }[] | null>(null);
+  // Prospects RÉELS (base marketing_prospects via la route serveur). Aucune donnée de démo.
+  type Row = { company: string; email: string; consent: 'expres' | 'tacite' | 'bloque'; score: number; blocked: boolean };
+  const [rows, setRows] = useState<Row[]>([]);
   const [unsubCount, setUnsubCount] = useState(0);
+  const [loadingProspects, setLoadingProspects] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [np, setNp] = useState({ company: '', email: '', segment: '', consent_type: 'express', consent_source: '', score: 60 });
 
   async function loadProspects() {
+    setLoadingProspects(true);
     try {
       const j = await fetch('/api/admin/marketing/data?resource=prospects', { credentials: 'include' }).then(r => r.json());
       if (Array.isArray(j.prospects)) {
-        setRealRows(j.prospects.map((p: any) => ({
+        setRows(j.prospects.map((p: any) => ({
           company: p.company || '—', email: p.email,
-          consent: p._blocked ? 'bloque' : p.consent_type === 'express' ? 'expres' : p.consent_type === 'tacit' ? 'tacite' : 'bloque',
+          consent: (p._blocked ? 'bloque' : p.consent_type === 'express' ? 'expres' : p.consent_type === 'tacit' ? 'tacite' : 'bloque') as Row['consent'],
           score: Number(p.score) || 0, blocked: !!p._blocked,
         })));
         setUnsubCount(Number(j.unsubscribes) || 0);
       }
-    } catch { /* repli démo */ }
+    } catch { /* base indisponible -> liste vide */ }
+    finally { setLoadingProspects(false); }
   }
   useEffect(() => { loadProspects(); }, []);
 
-  const rows: { company: string; email: string; consent: 'expres' | 'tacite' | 'bloque'; score: number; blocked: boolean }[] =
-    (realRows && realRows.length)
-      ? realRows
-      : PROSPECTS.map(p => ({ company: p[0], email: p[1], consent: p[2], score: p[3], blocked: p[2] === 'bloque' }));
-  const usingReal = !!(realRows && realRows.length);
+  const hasProspects = rows.length > 0;
   const aboveSeuil = rows.filter(p => !p.blocked && p.score >= seuil).length;
+
+  // ── Recherche de prospection légale par IA (QC -> Canada) ──────────────
+  const [researchRegion, setResearchRegion] = useState<'QC' | 'Canada'>('QC');
+  const [researchSector, setResearchSector] = useState('Mutuelles de prévention SST');
+  const [researching, setResearching] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [importing, setImporting] = useState(false);
+
+  async function runResearch() {
+    setResearching(true); setNotice(null); setCandidates([]);
+    try {
+      const r = await fetch('/api/admin/marketing/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'research', region: researchRegion === 'Canada' ? 'Canada' : 'QC', sector: researchSector, count: 8 }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec recherche');
+      const list = Array.isArray(j.candidates) ? j.candidates : [];
+      setCandidates(list);
+      setPicked(Object.fromEntries(list.map((c: any) => [String(c.email).toLowerCase(), true])));
+      setNotice({ msg: list.length ? `✓ ${list.length} entreprises trouvées (adresses publiées vérifiables).` : 'Aucune adresse publiée vérifiable trouvée pour ce secteur/région.', ok: list.length > 0 });
+    } catch (e: any) { setNotice({ msg: 'Recherche IA : ' + (e?.message || '') + ' (l\'outil de recherche web doit être activé sur la clé Anthropic).', ok: false }); }
+    finally { setResearching(false); }
+  }
+  async function importSelected() {
+    const chosen = candidates.filter(c => picked[String(c.email).toLowerCase()]);
+    if (!chosen.length) { setNotice({ msg: 'Sélectionne au moins une entreprise.', ok: false }); return; }
+    setImporting(true);
+    try {
+      const r = await fetch('/api/admin/marketing/data', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'import-candidates', candidates: chosen, segment: researchSector }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec import');
+      setNotice({ msg: `✓ ${j.imported} prospect(s) importé(s) avec consentement tacite (source publiée conservée).`, ok: true });
+      setCandidates([]); loadProspects();
+    } catch (e: any) { setNotice({ msg: 'Erreur : ' + (e?.message || ''), ok: false }); }
+    finally { setImporting(false); }
+  }
 
   async function addProspect() {
     if (!np.email.trim()) { setNotice({ msg: 'Courriel requis.', ok: false }); return; }
@@ -144,7 +173,7 @@ export default function MarketingTab() {
   async function scheduleCampaign() {
     if (!allChecks) { setNotice({ msg: '⚠ Le verrou de conformité bloque l\'envoi : active les 4 conditions.', ok: false }); return; }
     if (!emailDraft) { setNotice({ msg: '⚠ Génère d\'abord le courriel (IA) — c\'est lui qui sera envoyé.', ok: false }); return; }
-    if (!usingReal) { setNotice({ msg: '⚠ Aucun prospect réel en base. Ajoute des prospects (avec consentement) avant d\'envoyer.', ok: false }); return; }
+    if (!hasProspects) { setNotice({ msg: '⚠ Aucun prospect en base. Ajoute (ou recherche via l\'IA) des prospects consentants avant d\'envoyer.', ok: false }); return; }
     if (!confirm(`Programmer et ENVOYER la campagne aux destinataires consentants au-dessus du seuil (${aboveSeuil}) ?`)) return;
     setScheduling(true); setNotice(null);
     try {
@@ -211,7 +240,7 @@ export default function MarketingTab() {
               <div><label>Voix off</label><select><option>FR québécois — « Mathis »</option><option>FR québécois — « Léa »</option><option>English — « Ryan »</option></select></div>
             </div>
             <label>Message clé (doit être démontrable à l'écran)</label>
-            <textarea value={sMsg} onChange={e => setSMsg(e.target.value)} />
+            <textarea value={sMsg} onChange={e => setSMsg(e.target.value)} placeholder="Ex. : Un rapport d'inspection produit en scannant le QR de l'équipement, photos et résumé d'anomalies générés par l'IA." />
 
             <div className="togs">
               <Tog label="Curseur humanisé" sub="Trajectoires courbes + micro-pauses — supprime l'effet robot" on={fxCursor} set={setFxCursor} />
@@ -275,10 +304,49 @@ export default function MarketingTab() {
       {view === 'prospect' && (
         <>
           <div className="kpis">
-            <Kpi n={String(rows.length)} l={usingReal ? 'Prospects en base' : 'Prospects (démo)'} />
+            <Kpi n={String(rows.length)} l="Prospects en base" />
             <Kpi n={String(rows.filter(p => !p.blocked).length)} l="Éligibles à l'envoi" c="var(--signal)" />
             <Kpi n={String(aboveSeuil)} l="Au-dessus du seuil" c="var(--violet)" />
-            <Kpi n={String(usingReal ? unsubCount : rows.filter(p => p.blocked).length)} l="Bloqués / désab." c="var(--rust)" />
+            <Kpi n={String(unsubCount)} l="Bloqués / désab." c="var(--rust)" />
+          </div>
+
+          {/* Recherche de prospection LÉGALE par IA (QC -> Canada) */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h2>Recherche de prospects <span className="chip">IA · web</span></h2>
+            <p className="hint">L'IA cherche sur le web des entreprises pertinentes et ne retient que les <b>adresses d'affaires publiées publiquement</b> (base du consentement tacite CASL), avec l'<b>URL source</b> comme preuve. Aucune adresse devinée, aucun scraping.</p>
+            <div className="row3" style={{ display: 'grid', gridTemplateColumns: '160px 1fr auto', gap: 11, alignItems: 'end' }}>
+              <div><label>Région</label>
+                <select value={researchRegion} onChange={e => setResearchRegion(e.target.value as any)}>
+                  <option value="QC">Québec</option>
+                  <option value="Canada">Canada</option>
+                </select>
+              </div>
+              <div><label>Secteur ciblé</label><input value={researchSector} onChange={e => setResearchSector(e.target.value)} placeholder="Ex. : mutuelles SST, location d'équipement, manufacturiers MT…" /></div>
+              <button className="btn btn-violet" onClick={runResearch} disabled={researching}>{researching ? '✦ Recherche…' : '✦ Rechercher (IA)'}</button>
+            </div>
+
+            {candidates.length > 0 && (
+              <div className="candbox">
+                <div className="candhead">
+                  <span>{candidates.length} entreprises — adresses publiées vérifiables</span>
+                  <button className="btn btn-signal" style={{ padding: '7px 12px' }} onClick={importSelected} disabled={importing}>{importing ? 'Import…' : '↧ Importer les sélectionnées (consentement tacite)'}</button>
+                </div>
+                {candidates.map((c, i) => {
+                  const key = String(c.email).toLowerCase();
+                  return (
+                    <label key={i} className="cand">
+                      <input type="checkbox" checked={!!picked[key]} onChange={e => setPicked(p => ({ ...p, [key]: e.target.checked }))} />
+                      <div className="candinfo">
+                        <div className="candc">{c.company} <span className="candcity">{c.city ? `· ${c.city}` : ''} · {c.region || researchRegion}</span></div>
+                        <div className="mono candmail">{c.email}</div>
+                        {c.relevance && <div className="candrel">{c.relevance}</div>}
+                        {c.source_url && <a className="candsrc" href={c.source_url} target="_blank" rel="noreferrer">⚖ source publiée</a>}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div className="grid">
             <div className="card">
@@ -289,7 +357,7 @@ export default function MarketingTab() {
                 <div><label>Segment</label><select value={segment} onChange={e => setSegment(e.target.value)}><option>Mutuelles SST</option><option>Location équipement</option><option>Manufacturiers MT</option></select></div>
               </div>
               <label>Angle d'accroche</label>
-              <textarea value={angle} onChange={e => setAngle(e.target.value)} />
+              <textarea value={angle} onChange={e => setAngle(e.target.value)} placeholder="Ex. : Réduire le temps de production des rapports terrain grâce au workflow QR + IA." />
               <label>Seuil de score minimum pour l'envoi : <b style={{ color: 'var(--reel)' }}>{seuil}</b></label>
               <input type="range" min={0} max={90} step={5} value={seuil} onChange={e => setSeuil(+e.target.value)} style={{ accentColor: 'var(--reel)' }} />
 
@@ -327,7 +395,7 @@ export default function MarketingTab() {
 
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <h2>File de prospects <span className="chip">{usingReal ? 'base réelle' : 'démo'}</span></h2>
+                <h2>File de prospects <span className="chip">base réelle</span></h2>
                 <button className="btn btn-ghost" style={{ padding: '6px 11px' }} onClick={() => setAddOpen(o => !o)}>＋ Prospect</button>
               </div>
               <p className="hint">Score d'intérêt par prospect. Sous le seuil, bloqué ou désabonné = exclu automatiquement.</p>
@@ -360,6 +428,11 @@ export default function MarketingTab() {
                 <table>
                   <thead><tr><th>Entreprise</th><th>Courriel</th><th>Consent.</th><th>Score</th><th>Statut</th></tr></thead>
                   <tbody>
+                    {rows.length === 0 && (
+                      <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--steel)', padding: '22px 8px' }}>
+                        {loadingProspects ? 'Chargement…' : 'Aucun prospect en base. Ajoute-en un, ou lance la recherche IA ci-dessous.'}
+                      </td></tr>
+                    )}
                     {rows.map((p, i) => {
                       const under = !p.blocked && p.score < seuil; const elig = !p.blocked && !under;
                       return (
@@ -374,7 +447,7 @@ export default function MarketingTab() {
                   </tbody>
                 </table>
               </div>
-              <div className="note">{usingReal ? 'Base réelle protégée (Loi 25, RLS). ' : 'Données de démonstration — ajoute des prospects réels pour activer l\'envoi. '}Chaque envoi fige un <b>instantané de consentement</b> (horodatage, type, source), conservé comme preuve (CRTC / Commission d'accès à l'information).</div>
+              <div className="note">Base réelle protégée (Loi 25, RLS). Chaque envoi fige un <b>instantané de consentement</b> (horodatage, type, source), conservé comme preuve (CRTC / Commission d'accès à l'information).</div>
             </div>
           </div>
         </>
@@ -466,6 +539,13 @@ export default function MarketingTab() {
         @media(max-width:680px){.kpis{grid-template-columns:1fr 1fr;}}
         .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px;} .kpi .n{font-size:24px;font-weight:700;} .kpi .l{font-size:11px;color:var(--mist);margin-top:2px;}
         .addbox{margin:6px 0 12px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:12px;}
+        .candbox{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden;}
+        .candhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mist);flex-wrap:wrap;}
+        .cand{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid rgba(35,44,58,.5);cursor:pointer;}
+        .cand:last-child{border-bottom:none;} .cand input{width:auto;margin-top:3px;}
+        .candinfo{min-width:0;} .candc{font-size:13px;font-weight:600;} .candcity{color:var(--mist);font-weight:400;font-size:11px;}
+        .candmail{font-size:12px;color:var(--signal);margin:2px 0;} .candrel{font-size:11px;color:var(--mist);}
+        .candsrc{font-size:11px;color:var(--violet);text-decoration:none;}
         .gate{margin-top:14px;border:1px solid var(--amber);background:rgba(245,185,69,.06);border-radius:10px;padding:12px;}
         .gate-title{font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px;}
         .check{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:12.5px;color:var(--paper);cursor:pointer;}

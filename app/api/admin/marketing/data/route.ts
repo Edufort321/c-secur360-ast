@@ -85,6 +85,28 @@ export async function POST(req: NextRequest) {
       if (error) throw error;
       return NextResponse.json({ ok: true });
     }
+    // Import des candidats issus de la RECHERCHE IA. Consentement TACITE (adresse d'affaires publiée),
+    // avec l'URL source comme PREUVE, et expiration à 24 mois. Désabonnés exclus. Anti-doublon par email.
+    if (action === 'import-candidates') {
+      const cands = Array.isArray(body.candidates) ? body.candidates : [];
+      const { data: unsub } = await supabaseAdmin.from('marketing_unsubscribes').select('email').eq('tenant_id', TENANT);
+      const blocked = new Set((unsub || []).map((u: any) => String(u.email).toLowerCase()));
+      const now = new Date();
+      const rows = cands
+        .map((c: any) => ({ email: String(c.email || '').toLowerCase().trim(), c }))
+        .filter((x: any) => x.email && x.email.includes('@') && !blocked.has(x.email))
+        .map((x: any) => ({
+          tenant_id: TENANT, email: x.email, company: x.c.company || null, segment: x.c.sector || body.segment || null,
+          consent_type: 'tacit', consent_source: x.c.source_url || x.c.website || 'recherche IA (adresse publiée)',
+          consent_at: now.toISOString(), consent_expires_at: new Date(now.getTime() + 730 * 86400000).toISOString(),
+          score: Number(x.c.score) || 50, status: 'active', enriched: { website: x.c.website, region: x.c.region, relevance: x.c.relevance, source_url: x.c.source_url }, updated_at: now.toISOString(),
+        }));
+      if (!rows.length) return NextResponse.json({ ok: true, imported: 0 });
+      const { error } = await supabaseAdmin.from('marketing_prospects').upsert(rows, { onConflict: 'tenant_id,email' });
+      if (error) throw error;
+      return NextResponse.json({ ok: true, imported: rows.length });
+    }
+
     // Désabonnement / plainte (registre + statut prospect). Obligation LCAP : honorer sous 10 j.
     if (action === 'unsubscribe') {
       const email = String(body.email || '').toLowerCase().trim();

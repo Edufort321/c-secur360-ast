@@ -12,13 +12,15 @@ export const maxDuration = 60;
 
 const MODEL = 'claude-sonnet-4-20250514';
 
-async function callClaude(apiKey: string, system: string, prompt: string) {
+async function callClaude(apiKey: string, system: string, prompt: string, opts?: { tools?: any[]; maxTokens?: number }) {
+  const payload: any = { model: MODEL, max_tokens: opts?.maxTokens || 2048, system, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }] };
+  if (opts?.tools) payload.tools = opts.tools;
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 2048, system, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }] }),
+    body: JSON.stringify(payload),
   });
-  if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
+  if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 240)}`); }
   const data = await resp.json();
   const txt = (data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n');
   const clean = txt.replace(/```json|```/g, '').trim();
@@ -71,7 +73,27 @@ Retourne UNIQUEMENT ce JSON (sans texte autour) :
       return NextResponse.json({ ok: true, ...out });
     }
 
-    return NextResponse.json({ error: 'action inconnue (script|email)' }, { status: 400 });
+    if (action === 'research') {
+      // RECHERCHE DE PROSPECTION LÉGALE : l'IA fait une VRAIE recherche web et ne retient que des
+      // adresses d'affaires PUBLIÉES PUBLIQUEMENT (base du consentement tacite CASL), avec l'URL source
+      // comme preuve. Aucune adresse personnelle devinée, aucun scraping de masse.
+      const region = body.region === 'Canada' ? 'tout le Canada' : 'la province de Québec';
+      const sector = String(body.sector || 'sécurité industrielle / SST').slice(0, 160);
+      const count = Math.max(3, Math.min(15, Number(body.count) || 8));
+      const prompt = `Recherche sur le WEB des ENTREPRISES de ${region} dans le secteur « ${sector} » qui pourraient être intéressées par la plateforme SST C-Secur360 (rapports terrain, AST, permis espaces clos, DGA transformateurs, inventaire).
+Pour CHAQUE entreprise, ne retiens une adresse courriel QUE si elle est une ADRESSE D'AFFAIRES PUBLIÉE PUBLIQUEMENT par l'entreprise sur son propre site (ex. info@, contact@, sst@), SANS mention « pas de sollicitation / no soliciting », et PERTINENTE à la fonction. Donne l'URL EXACTE où l'adresse est publiée (preuve du consentement tacite CASL). N'INVENTE JAMAIS d'adresse : si tu ne trouves pas d'adresse publiée vérifiable, mets email à null.
+Vise ${count} entreprises. Retourne UNIQUEMENT ce JSON (sans texte autour) :
+{"candidates":[{"company":"...","sector":"...","city":"...","region":"QC|CA","email":"adresse publiée ou null","website":"https://...","source_url":"URL exacte où l'adresse est publiée","no_solicitation":false,"relevance":"pourquoi cette entreprise est pertinente","consent_basis":"tacite — adresse d'affaires publiée à <source_url>"}],"note":"rappel légal"}`;
+      const out = await callClaude(apiKey, system, prompt, {
+        maxTokens: 4096,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
+      });
+      // Filtre serveur : on ne renvoie que des candidats avec email publié + source + sans no-solicitation.
+      const candidates = (Array.isArray(out.candidates) ? out.candidates : []).filter((c: any) => c && c.email && c.source_url && !c.no_solicitation);
+      return NextResponse.json({ ok: true, candidates, note: out.note || '' });
+    }
+
+    return NextResponse.json({ error: 'action inconnue (script|email|research)' }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur IA' }, { status: 502 });
   }
