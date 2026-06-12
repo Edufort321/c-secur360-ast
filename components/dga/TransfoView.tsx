@@ -628,7 +628,7 @@ export function TransfoView(props: {
 
         {/* INSPECTION DE ROUTINE (au-dessus des anomalies) */}
         <InspectionSection
-          dossier={dossier} inspections={inspections} lang={lang} tr={tr} logoUrl={logoUrl}
+          dossier={dossier} inspections={inspections} lang={lang} tr={tr} logoUrl={logoUrl} tenant={tenant}
           onChange={updateInspections} onCreateAnomalies={addAnomaliesFromInspection} onSetReminder={setInspectionReminder} setNotice={setNotice}
         />
 

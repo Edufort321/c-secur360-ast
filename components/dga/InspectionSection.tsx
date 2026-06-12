@@ -53,9 +53,9 @@ function nextFromInterval(id: string, baseDate: string): string | null {
   return o.days != null ? addDays(baseDate, o.days) : addMonths(baseDate, o.months || 0);
 }
 
-export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onChange, onCreateAnomalies, onSetReminder, setNotice }: {
+export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, tenant, onChange, onCreateAnomalies, onSetReminder, setNotice }: {
   dossier: Dossier; inspections: Inspection[]; lang: Lang; tr: (fr: string, en: string) => string;
-  logoUrl?: string | null;
+  logoUrl?: string | null; tenant?: string;
   onChange: (next: Inspection[]) => void;
   onCreateAnomalies: (anomalies: Anomaly[]) => void;
   onSetReminder: (nextDate: string | null, intervalId?: string) => void;
@@ -66,6 +66,25 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
   const [prefilled, setPrefilled] = useState(false);
   const [date, setDate] = useState(todayIso());
   const [inspector, setInspector] = useState('');
+  // Annuaire des utilisateurs du tenant pour la recherche dynamique du champ « Inspecteur » (saisie libre permise).
+  const [members, setMembers] = useState<{ id: string; name: string; email: string; role: string }[]>([]);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const inspectorBoxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!tenant) return;
+    let alive = true;
+    fetch(`/api/tenant/members?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { members: [] }))
+      .then(j => { if (alive && Array.isArray(j.members)) setMembers(j.members); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [tenant]);
+  useEffect(() => {
+    if (!inspectorOpen) return;
+    const onDown = (e: MouseEvent) => { if (inspectorBoxRef.current && !inspectorBoxRef.current.contains(e.target as Node)) setInspectorOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [inspectorOpen]);
   // Séquence de reprise (hors formulaire) : fréquence + prochaine échéance, persistées dans extra.
   const initInterval = REMINDER_OPTIONS.some(o => o.id === dossier.extra?.insp_interval_id) ? dossier.extra.insp_interval_id : DEFAULT_INTERVAL;
   const [intervalId, setIntervalId] = useState<string>(initInterval);
@@ -286,8 +305,30 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr("Date d'inspection", 'Inspection date')}</span>
               <input type="date" className={INP} value={date} onChange={e => setDate(e.target.value)} /></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Inspecteur', 'Inspector')}</span>
-              <input className={INP} value={inspector} onChange={e => setInspector(e.target.value)} placeholder={tr('Nom', 'Name')} /></label>
+            <div ref={inspectorBoxRef} className="relative">
+              <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Inspecteur', 'Inspector')}</span>
+                <input className={INP} value={inspector} autoComplete="off"
+                  onChange={e => { setInspector(e.target.value); setInspectorOpen(true); }}
+                  onFocus={() => setInspectorOpen(true)} placeholder={tr('Nom', 'Name')} /></label>
+              {inspectorOpen && (() => {
+                const q = inspector.trim().toLowerCase();
+                const matches = members.filter(m => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)).slice(0, 8);
+                if (matches.length === 0) return null;
+                return (
+                  <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                    {matches.map(m => (
+                      <li key={m.id}>
+                        <button type="button" onClick={() => { setInspector(m.name); setInspectorOpen(false); }}
+                          className="flex w-full flex-col items-start px-3 py-1.5 text-left text-sm hover:bg-cyan-50 dark:hover:bg-cyan-500/10">
+                          <span className="font-medium text-gray-800 dark:text-gray-100">{m.name}</span>
+                          {m.email && <span className="text-[11px] text-gray-400">{m.email}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+            </div>
           </div>
           {inspections[0]?.date && (
             prefilled ? (
