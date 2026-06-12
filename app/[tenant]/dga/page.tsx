@@ -200,7 +200,10 @@ export default function DgaPage() {
   }
   async function onNewMeasureSave(p: SamplePayload) {
     if (!selId) return;
-    const dg = diagnoseFull(p.gas);
+    // Diagnostic : null -> 0 (un gaz non mesuré ne contribue pas). Mais on STOCKE les null tels quels
+    // (les tendances de gaz ignorent les relevés sans données de gaz).
+    const gasDiag: GasInput = { h2: num(p.gas.h2), ch4: num(p.gas.ch4), c2h6: num(p.gas.c2h6), c2h4: num(p.gas.c2h4), c2h2: num(p.gas.c2h2), co: num(p.gas.co), co2: num(p.gas.co2) };
+    const dg = diagnoseFull(gasDiag);
     const res = await saveMeasure(tenant, selId, {
       ...(editMeasure?.id ? { id: editMeasure.id } : {}), // id présent = mise à jour (édition manuelle), sinon insertion
       sample_date: p.sample_date, ...p.gas, o2: p.o2, n2: p.n2, oil_quality: p.oil_quality,

@@ -12,7 +12,8 @@ import type { Measure } from '@/lib/dga/dossiers';
 
 const INP = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
 
-export interface SamplePayload { sample_date: string | null; gas: GasInput; o2: number | null; n2: number | null; oil_quality: Record<string, any>; }
+// gas : valeurs number OU null (null = paramètre NON mesuré -> non compté dans les tendances).
+export interface SamplePayload { sample_date: string | null; gas: Record<string, number | null>; o2: number | null; n2: number | null; oil_quality: Record<string, any>; }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -34,9 +35,10 @@ export function SampleEntry({ lang, tr, dossierIdent, initial, onSave, onCancel 
   const set = (k: string, v: string) => setDraft(s => ({ ...s, [k]: v }));
 
   function save() {
-    // Gaz : null -> 0 (cohérent avec le prototype).
-    const g = (k: string) => { const v = parseNum(draft[k]); return v == null ? 0 : v; };
-    const gas: GasInput = { h2: g('h2'), ch4: g('ch4'), c2h6: g('c2h6'), c2h4: g('c2h4'), c2h2: g('c2h2'), co: g('co'), co2: g('co2') };
+    // Gaz NON renseigné -> null (PAS 0) : un relevé partiel (ex. BPC/huile seul) ne doit pas injecter
+    // de « 0 » dans les courbes de gaz. Un 0 réellement saisi reste 0.
+    const g = (k: string) => parseNum(draft[k]);
+    const gas: Record<string, number | null> = { h2: g('h2'), ch4: g('ch4'), c2h6: g('c2h6'), c2h4: g('c2h4'), c2h2: g('c2h2'), co: g('co'), co2: g('co2') };
     const oil_quality: Record<string, any> = {};
     OIL_FIELDS.forEach(f => { const raw = draft[f.key]; if (raw != null && raw !== '') oil_quality[f.key] = f.text ? String(raw).trim() : parseNum(raw); });
     FURAN_FIELDS.forEach(f => { const v = parseNum(draft[f.key]); if (v != null) oil_quality[f.key] = v; });

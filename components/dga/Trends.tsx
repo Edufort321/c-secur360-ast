@@ -7,16 +7,21 @@ import type { Measure } from '@/lib/dga/dossiers';
 
 type Param = { key: string; label: string; color: string; get: (m: Measure) => number | null };
 const numOrNull = (v: any) => (v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v));
+// Un relevé n'a de gaz que si au moins un gaz > 0. Un relevé partiel (BPC/huile seul) ne doit pas
+// alimenter les courbes de gaz (null = ignoré). Gère aussi les anciens relevés où les gaz vides = 0.
+const GAS_KEYS = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
+const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = numOrNull((m as any)[k]); return v != null && v > 0; });
+const gasVal = (m: Measure, k: string) => hasGas(m) ? numOrNull((m as any)[k]) : null;
 
 const PARAMS: Param[] = [
-  { key: 'tdcg', label: 'TDCG (ppm)', color: '#111827', get: m => numOrNull(m.tdcg) },
-  { key: 'h2', label: 'Hydrogène H₂ (ppm)', color: '#2563eb', get: m => numOrNull(m.h2) },
-  { key: 'ch4', label: 'Méthane CH₄ (ppm)', color: '#16a34a', get: m => numOrNull(m.ch4) },
-  { key: 'c2h6', label: 'Éthane C₂H₆ (ppm)', color: '#0891b2', get: m => numOrNull(m.c2h6) },
-  { key: 'c2h4', label: 'Éthylène C₂H₄ (ppm)', color: '#f59e0b', get: m => numOrNull(m.c2h4) },
-  { key: 'c2h2', label: 'Acétylène C₂H₂ (ppm)', color: '#dc2626', get: m => numOrNull(m.c2h2) },
-  { key: 'co', label: 'Monoxyde CO (ppm)', color: '#7c3aed', get: m => numOrNull(m.co) },
-  { key: 'co2', label: 'Dioxyde CO₂ (ppm)', color: '#9333ea', get: m => numOrNull(m.co2) },
+  { key: 'tdcg', label: 'TDCG (ppm)', color: '#111827', get: m => hasGas(m) ? numOrNull(m.tdcg) : null },
+  { key: 'h2', label: 'Hydrogène H₂ (ppm)', color: '#2563eb', get: m => gasVal(m, 'h2') },
+  { key: 'ch4', label: 'Méthane CH₄ (ppm)', color: '#16a34a', get: m => gasVal(m, 'ch4') },
+  { key: 'c2h6', label: 'Éthane C₂H₆ (ppm)', color: '#0891b2', get: m => gasVal(m, 'c2h6') },
+  { key: 'c2h4', label: 'Éthylène C₂H₄ (ppm)', color: '#f59e0b', get: m => gasVal(m, 'c2h4') },
+  { key: 'c2h2', label: 'Acétylène C₂H₂ (ppm)', color: '#dc2626', get: m => gasVal(m, 'c2h2') },
+  { key: 'co', label: 'Monoxyde CO (ppm)', color: '#7c3aed', get: m => gasVal(m, 'co') },
+  { key: 'co2', label: 'Dioxyde CO₂ (ppm)', color: '#9333ea', get: m => gasVal(m, 'co2') },
   { key: 'moisture', label: 'Humidité (ppm)', color: '#0ea5e9', get: m => numOrNull(m.oil_quality?.moisture) },
   { key: 'dielectric', label: 'Rigidité D1816 (kV)', color: '#0d9488', get: m => numOrNull(m.oil_quality?.dielectric) },
   { key: 'dbd877', label: 'Rigidité D877 (kV)', color: '#14b8a6', get: m => numOrNull(m.oil_quality?.dbd877) },

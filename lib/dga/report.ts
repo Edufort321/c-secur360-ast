@@ -11,16 +11,21 @@ const IEEE: Record<string, [number, number, number]> = {
 };
 const GAS_ROWS: [keyof Measure, string][] = [['h2', 'H2'], ['ch4', 'CH4'], ['c2h6', 'C2H6'], ['c2h4', 'C2H4'], ['c2h2', 'C2H2'], ['co', 'CO'], ['co2', 'CO2']];
 
-// Paramètres tracés (gaz + qualité d'huile).
+function num(v: any): number | null { return v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v); }
+// Un relevé n'a de DONNÉES DE GAZ que si au moins un gaz combustible/CO2 a une valeur > 0. Un relevé
+// partiel (ex. BPC/huile seul) sans gaz mesurés ne doit PAS alimenter les courbes de gaz (null = ignoré).
+const GAS_KEYS = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
+const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = num((m as any)[k]); return v != null && v > 0; });
+const gasVal = (m: Measure, k: keyof Measure) => hasGas(m) ? num((m as any)[k]) : null;
+// Paramètres tracés (gaz : seulement si le relevé a des gaz ; qualité d'huile : si présente).
 const TREND_PARAMS: { label: string; get: (m: Measure) => number | null }[] = [
-  { label: 'TDCG (ppm)', get: m => num(m.tdcg) }, { label: 'H2 (ppm)', get: m => num(m.h2) }, { label: 'CH4 (ppm)', get: m => num(m.ch4) },
-  { label: 'C2H6 (ppm)', get: m => num(m.c2h6) }, { label: 'C2H4 (ppm)', get: m => num(m.c2h4) }, { label: 'C2H2 (ppm)', get: m => num(m.c2h2) },
-  { label: 'CO (ppm)', get: m => num(m.co) }, { label: 'CO2 (ppm)', get: m => num(m.co2) },
+  { label: 'TDCG (ppm)', get: m => hasGas(m) ? num(m.tdcg) : null }, { label: 'H2 (ppm)', get: m => gasVal(m, 'h2') }, { label: 'CH4 (ppm)', get: m => gasVal(m, 'ch4') },
+  { label: 'C2H6 (ppm)', get: m => gasVal(m, 'c2h6') }, { label: 'C2H4 (ppm)', get: m => gasVal(m, 'c2h4') }, { label: 'C2H2 (ppm)', get: m => gasVal(m, 'c2h2') },
+  { label: 'CO (ppm)', get: m => gasVal(m, 'co') }, { label: 'CO2 (ppm)', get: m => gasVal(m, 'co2') },
   { label: 'Humidite (ppm)', get: m => num(m.oil_quality?.moisture) }, { label: 'Rigidite D1816 (kV)', get: m => num(m.oil_quality?.dielectric) },
   { label: 'IFT (mN/m)', get: m => num(m.oil_quality?.ift) }, { label: 'Acidite (mgKOH/g)', get: m => num(m.oil_quality?.acid) },
   { label: 'Couleur (ASTM)', get: m => num(m.oil_quality?.color) }, { label: 'PF 25C (%)', get: m => num(m.oil_quality?.pf25) },
 ];
-function num(v: any): number | null { return v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v); }
 const insufficient = (m: Measure) => (Number(m.ch4 || 0) + Number(m.c2h2 || 0) + Number(m.c2h4 || 0)) < 1;
 const gi = (m: Measure) => ({ h2: +(m.h2 || 0), ch4: +(m.ch4 || 0), c2h6: +(m.c2h6 || 0), c2h4: +(m.c2h4 || 0), c2h2: +(m.c2h2 || 0), co: +(m.co || 0), co2: +(m.co2 || 0) });
 
