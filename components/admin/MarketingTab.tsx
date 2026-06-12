@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -82,8 +82,50 @@ export default function MarketingTab() {
   const [checks, setChecks] = useState({ c1: false, c2: false, c3: false, c4: false });
   const [emailDraft, setEmailDraft] = useState<any>(null);
   const [genEmail, setGenEmail] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const allChecks = checks.c1 && checks.c2 && checks.c3 && checks.c4;
-  const aboveSeuil = PROSPECTS.filter(p => p[2] !== 'bloque' && p[3] >= seuil).length;
+
+  // Prospects RÉELS (base marketing_prospects via la route serveur). Repli sur la démo si base vide.
+  const [realRows, setRealRows] = useState<{ company: string; email: string; consent: 'expres' | 'tacite' | 'bloque'; score: number; blocked: boolean }[] | null>(null);
+  const [unsubCount, setUnsubCount] = useState(0);
+  const [addOpen, setAddOpen] = useState(false);
+  const [np, setNp] = useState({ company: '', email: '', segment: '', consent_type: 'express', consent_source: '', score: 60 });
+
+  async function loadProspects() {
+    try {
+      const j = await fetch('/api/admin/marketing/data?resource=prospects', { credentials: 'include' }).then(r => r.json());
+      if (Array.isArray(j.prospects)) {
+        setRealRows(j.prospects.map((p: any) => ({
+          company: p.company || '—', email: p.email,
+          consent: p._blocked ? 'bloque' : p.consent_type === 'express' ? 'expres' : p.consent_type === 'tacit' ? 'tacite' : 'bloque',
+          score: Number(p.score) || 0, blocked: !!p._blocked,
+        })));
+        setUnsubCount(Number(j.unsubscribes) || 0);
+      }
+    } catch { /* repli démo */ }
+  }
+  useEffect(() => { loadProspects(); }, []);
+
+  const rows: { company: string; email: string; consent: 'expres' | 'tacite' | 'bloque'; score: number; blocked: boolean }[] =
+    (realRows && realRows.length)
+      ? realRows
+      : PROSPECTS.map(p => ({ company: p[0], email: p[1], consent: p[2], score: p[3], blocked: p[2] === 'bloque' }));
+  const usingReal = !!(realRows && realRows.length);
+  const aboveSeuil = rows.filter(p => !p.blocked && p.score >= seuil).length;
+
+  async function addProspect() {
+    if (!np.email.trim()) { setNotice({ msg: 'Courriel requis.', ok: false }); return; }
+    try {
+      const r = await fetch('/api/admin/marketing/data', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'upsert-prospect', ...np }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setNotice({ msg: `✓ Prospect ${np.email} enregistré avec son consentement.`, ok: true });
+      setNp({ company: '', email: '', segment: '', consent_type: 'express', consent_source: '', score: 60 });
+      setAddOpen(false); loadProspects();
+    } catch (e: any) { setNotice({ msg: 'Erreur : ' + (e?.message || ''), ok: false }); }
+  }
 
   async function generateEmail() {
     setGenEmail(true); setNotice(null);
@@ -99,9 +141,29 @@ export default function MarketingTab() {
     } catch (e: any) { setNotice({ msg: 'Erreur IA : ' + (e?.message || 'inconnue'), ok: false }); }
     finally { setGenEmail(false); }
   }
-  function scheduleCampaign() {
+  async function scheduleCampaign() {
     if (!allChecks) { setNotice({ msg: '⚠ Le verrou de conformité bloque l\'envoi : active les 4 conditions.', ok: false }); return; }
-    setNotice({ msg: `✓ Campagne programmée — ${aboveSeuil} destinataires au-dessus du seuil, envoi cadencé.`, ok: true });
+    if (!emailDraft) { setNotice({ msg: '⚠ Génère d\'abord le courriel (IA) — c\'est lui qui sera envoyé.', ok: false }); return; }
+    if (!usingReal) { setNotice({ msg: '⚠ Aucun prospect réel en base. Ajoute des prospects (avec consentement) avant d\'envoyer.', ok: false }); return; }
+    if (!confirm(`Programmer et ENVOYER la campagne aux destinataires consentants au-dessus du seuil (${aboveSeuil}) ?`)) return;
+    setScheduling(true); setNotice(null);
+    try {
+      const r = await fetch('/api/admin/marketing/data', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({
+          action: 'save-campaign', module: pModule, segment, angle, min_score: seuil,
+          sequence: [{ day: 0 }, { day: 4 }, { day: 9 }], content: emailDraft,
+          compliance_ack: checks,
+        }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      const msg = j.mailConfigured
+        ? `✓ Campagne programmée — ${j.sent} courriel(s) envoyé(s), ${j.queued} en file (sur ${j.recipients} éligibles).`
+        : `✓ Campagne enregistrée — ${j.recipients} destinataires en file. ⚠ Envoi inactif : configure RESEND_API_KEY pour l'envoi réel.`;
+      setNotice({ msg, ok: true });
+      loadProspects();
+    } catch (e: any) { setNotice({ msg: 'Erreur : ' + (e?.message || ''), ok: false }); }
+    finally { setScheduling(false); }
   }
 
   const TABS: { k: View; ico: string; label: string }[] = [
@@ -213,10 +275,10 @@ export default function MarketingTab() {
       {view === 'prospect' && (
         <>
           <div className="kpis">
-            <Kpi n="418" l="Prospects en base" />
-            <Kpi n="385" l="Éligibles à l'envoi" c="var(--signal)" />
+            <Kpi n={String(rows.length)} l={usingReal ? 'Prospects en base' : 'Prospects (démo)'} />
+            <Kpi n={String(rows.filter(p => !p.blocked).length)} l="Éligibles à l'envoi" c="var(--signal)" />
             <Kpi n={String(aboveSeuil)} l="Au-dessus du seuil" c="var(--violet)" />
-            <Kpi n="33" l="Bloqués / désab." c="var(--rust)" />
+            <Kpi n={String(usingReal ? unsubCount : rows.filter(p => p.blocked).length)} l="Bloqués / désab." c="var(--rust)" />
           </div>
           <div className="grid">
             <div className="card">
@@ -247,7 +309,7 @@ export default function MarketingTab() {
               </div>
               <div className="actions">
                 <button className="btn btn-violet" onClick={generateEmail} disabled={genEmail}>{genEmail ? '✦ Génération…' : '✦ Générer le courriel (IA)'}</button>
-                <button className="btn btn-signal" onClick={scheduleCampaign} disabled={!allChecks} title={allChecks ? '' : 'Active les 4 conditions de conformité'}>▶ Programmer la campagne</button>
+                <button className="btn btn-signal" onClick={scheduleCampaign} disabled={!allChecks || scheduling} title={allChecks ? '' : 'Active les 4 conditions de conformité'}>{scheduling ? '▶ Envoi…' : '▶ Programmer & envoyer'}</button>
               </div>
 
               {emailDraft && (
@@ -264,27 +326,55 @@ export default function MarketingTab() {
             </div>
 
             <div className="card">
-              <h2>File de prospects <span className="chip">score + consentement</span></h2>
-              <p className="hint">Score d'intérêt par prospect. Sous le seuil ou bloqué = exclu automatiquement.</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <h2>File de prospects <span className="chip">{usingReal ? 'base réelle' : 'démo'}</span></h2>
+                <button className="btn btn-ghost" style={{ padding: '6px 11px' }} onClick={() => setAddOpen(o => !o)}>＋ Prospect</button>
+              </div>
+              <p className="hint">Score d'intérêt par prospect. Sous le seuil, bloqué ou désabonné = exclu automatiquement.</p>
+
+              {addOpen && (
+                <div className="addbox">
+                  <div className="row2">
+                    <div><label>Entreprise</label><input value={np.company} onChange={e => setNp(s => ({ ...s, company: e.target.value }))} /></div>
+                    <div><label>Courriel *</label><input value={np.email} onChange={e => setNp(s => ({ ...s, email: e.target.value }))} /></div>
+                  </div>
+                  <div className="row2">
+                    <div><label>Type de consentement</label>
+                      <select value={np.consent_type} onChange={e => setNp(s => ({ ...s, consent_type: e.target.value }))}>
+                        <option value="express">Exprès (opt-in)</option>
+                        <option value="tacit">Tacite (relation &lt; 24 mois)</option>
+                        <option value="none">Aucun (jamais d'envoi)</option>
+                      </select>
+                    </div>
+                    <div><label>Source du consentement</label><input value={np.consent_source} onChange={e => setNp(s => ({ ...s, consent_source: e.target.value }))} placeholder="formulaire, salon, relation d'affaires…" /></div>
+                  </div>
+                  <div className="row2">
+                    <div><label>Segment</label><input value={np.segment} onChange={e => setNp(s => ({ ...s, segment: e.target.value }))} /></div>
+                    <div><label>Score ({np.score})</label><input type="range" min={0} max={100} value={np.score} onChange={e => setNp(s => ({ ...s, score: +e.target.value }))} /></div>
+                  </div>
+                  <div className="actions"><button className="btn btn-violet" onClick={addProspect}>Enregistrer le prospect</button></div>
+                </div>
+              )}
+
               <div className="tablewrap">
                 <table>
                   <thead><tr><th>Entreprise</th><th>Courriel</th><th>Consent.</th><th>Score</th><th>Statut</th></tr></thead>
                   <tbody>
-                    {PROSPECTS.map((p, i) => {
-                      const blocked = p[2] === 'bloque'; const under = !blocked && p[3] < seuil; const elig = !blocked && !under;
+                    {rows.map((p, i) => {
+                      const under = !p.blocked && p.score < seuil; const elig = !p.blocked && !under;
                       return (
                         <tr key={i}>
-                          <td>{p[0]}</td><td className="mono">{p[1]}</td>
-                          <td><span className={`tag ${p[2]}`}>{CLBL[p[2]]}</span></td>
-                          <td>{blocked ? <span style={{ color: 'var(--rust)' }}>—</span> : <span className="scoredot" style={{ background: p[3] >= 70 ? 'var(--signal)' : p[3] >= 45 ? 'var(--amber)' : 'var(--rust)' }}>{p[3]}</span>}</td>
-                          <td style={{ color: elig ? 'var(--signal)' : 'var(--rust)' }}>{blocked ? 'Bloqué' : under ? 'Sous seuil' : 'Éligible'}</td>
+                          <td>{p.company}</td><td className="mono">{p.email}</td>
+                          <td><span className={`tag ${p.consent}`}>{CLBL[p.consent]}</span></td>
+                          <td>{p.blocked ? <span style={{ color: 'var(--rust)' }}>—</span> : <span className="scoredot" style={{ background: p.score >= 70 ? 'var(--signal)' : p.score >= 45 ? 'var(--amber)' : 'var(--rust)' }}>{p.score}</span>}</td>
+                          <td style={{ color: elig ? 'var(--signal)' : 'var(--rust)' }}>{p.blocked ? 'Bloqué/désab.' : under ? 'Sous seuil' : 'Éligible'}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-              <div className="note">Chaque envoi fige un <b>instantané de consentement</b> (horodatage, type, source), conservé 36 mois comme preuve (CRTC / Commission d'accès à l'information).</div>
+              <div className="note">{usingReal ? 'Base réelle protégée (Loi 25, RLS). ' : 'Données de démonstration — ajoute des prospects réels pour activer l\'envoi. '}Chaque envoi fige un <b>instantané de consentement</b> (horodatage, type, source), conservé comme preuve (CRTC / Commission d'accès à l'information).</div>
             </div>
           </div>
         </>
@@ -375,6 +465,7 @@ export default function MarketingTab() {
         .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px;}
         @media(max-width:680px){.kpis{grid-template-columns:1fr 1fr;}}
         .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px;} .kpi .n{font-size:24px;font-weight:700;} .kpi .l{font-size:11px;color:var(--mist);margin-top:2px;}
+        .addbox{margin:6px 0 12px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:12px;}
         .gate{margin-top:14px;border:1px solid var(--amber);background:rgba(245,185,69,.06);border-radius:10px;padding:12px;}
         .gate-title{font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px;}
         .check{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:12.5px;color:var(--paper);cursor:pointer;}
