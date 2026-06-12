@@ -28,8 +28,12 @@ export const maxDuration = 60;
 const DID = 'https://api.d-id.com';
 
 function auth() {
-  const key = process.env.DID_API_KEY;
-  return key ? { Authorization: `Basic ${key}`, 'Content-Type': 'application/json' } : null;
+  const key = (process.env.DID_API_KEY || '').trim();
+  if (!key) return null;
+  // D-ID fournit la clé en clair « API_USER:API_PASSWORD ». L'en-tête Basic exige le base64 de
+  // « user:pass ». Si la clé contient ':' (brute), on l'encode ; sinon on la suppose déjà encodée.
+  const token = key.includes(':') ? Buffer.from(key).toString('base64') : key;
+  return { Authorization: `Basic ${token}`, 'Content-Type': 'application/json' };
 }
 
 // POST { image, text, voice? } -> crée la vidéo et attend le résultat (poll). image = nom de fichier
