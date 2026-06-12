@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Send, Loader2, Plus, Trash2,
   Search, Briefcase, Settings2, Wrench, MoreHorizontal, Car, Building2,
-  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown, DollarSign, Paperclip, Receipt,
+  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown, DollarSign, Paperclip, Receipt, Download,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -133,6 +133,7 @@ export default function TimesheetDetailPage() {
   const [kmRate, setKmRate]     = useState(0);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [notice, setNotice]     = useState<string | null>(null);
   // Auto-enregistrement : toute saisie est persistée automatiquement (débounce), même en quittant la semaine.
   const [autoSaving, setAutoSaving]     = useState(false);
@@ -628,6 +629,24 @@ export default function TimesheetDetailPage() {
     }
   }
 
+  async function exportPdf() {
+    if (!sheet) return;
+    setExporting(true);
+    try {
+      // Logo du tenant (sinon C-Secur360 par défaut).
+      let logoUrl: string | undefined;
+      try { const { data } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(); logoUrl = (data as any)?.logo_url || undefined; } catch { /* défaut */ }
+      const { exportTimesheetPdf } = await import('@/lib/timesheetPdf');
+      await exportTimesheetPdf({
+        tr: (fr) => fr, logoUrl,
+        sheet: { employee_name: sheet.employee_name, period_start: sheet.period_start, period_end: sheet.period_end, status: sheet.status },
+        entries: entries.map(e => ({ date: e.date, category: e.category, project_number: e.project_number, project_title: e.project_title, recurring_task_name: e.recurring_task_name, description: e.description, hrs_regular: e.hrs_regular, hrs_overtime: e.hrs_overtime, hrs_premium: e.hrs_premium, km: e.km, allowances: e.allowances })),
+        expenses: expenses.map(x => ({ date: x.date, category: x.category, supplier: x.supplier, description: x.description, total: x.total, reimbursable: x.reimbursable, receipt_url: x.receipt_url })),
+      });
+    } catch (e: any) { setNotice('Export PDF : ' + (e?.message || 'erreur')); }
+    finally { setExporting(false); }
+  }
+
   const isReadOnly = (sheet ? isLocked(sheet.status) : false) || notOwner; // validée/vérifiée/payée = verrouillée
   const canSubmit  = sheet?.status === 'draft' || sheet?.status === 'rejected';
 
@@ -710,27 +729,33 @@ export default function TimesheetDetailPage() {
               <p className="mt-0.5 text-xs text-violet-600">{money(Number(profile.hourly_rate))}/h · OT ×{profile.ot_multiplier} · DT ×{profile.dt_multiplier}</p>
             )}
           </div>
-          {!isReadOnly && (
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-              <span className="flex items-center gap-1 text-xs font-medium text-slate-400" title="Vos saisies sont enregistrées automatiquement">
-                {autoSaving
-                  ? <><Loader2 size={12} className="animate-spin" /> Enregistrement…</>
-                  : lastAutoSaved
-                    ? <><CheckCircle2 size={12} className="text-emerald-500" /> Auto ✓ {lastAutoSaved.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}</>
-                    : <>Auto-enregistrement activé</>}
-              </span>
-              <button onClick={() => save(false)} disabled={saving}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 sm:flex-none">
-                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
-              </button>
-              {canSubmit && (
-                <button onClick={() => save(true)} disabled={saving || needsOdometer}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60 sm:flex-none">
-                  <Send size={15} /> <span className="sm:hidden">Soumettre</span><span className="hidden sm:inline">Soumettre au superviseur</span>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            {!isReadOnly && (
+              <>
+                <span className="flex items-center gap-1 text-xs font-medium text-slate-400" title="Vos saisies sont enregistrées automatiquement">
+                  {autoSaving
+                    ? <><Loader2 size={12} className="animate-spin" /> Enregistrement…</>
+                    : lastAutoSaved
+                      ? <><CheckCircle2 size={12} className="text-emerald-500" /> Auto ✓ {lastAutoSaved.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}</>
+                      : <>Auto-enregistrement activé</>}
+                </span>
+                <button onClick={() => save(false)} disabled={saving}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
                 </button>
-              )}
-            </div>
-          )}
+                {canSubmit && (
+                  <button onClick={() => save(true)} disabled={saving || needsOdometer}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60">
+                    <Send size={15} /> <span className="sm:hidden">Soumettre</span><span className="hidden sm:inline">Soumettre au superviseur</span>
+                  </button>
+                )}
+              </>
+            )}
+            <button onClick={exportPdf} disabled={exporting}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+              {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export PDF
+            </button>
+          </div>
         </div>
 
         {/* ── GATE ODOMÈTRE ────────────────────────────────────────────── */}
