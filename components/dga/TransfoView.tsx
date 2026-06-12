@@ -218,7 +218,11 @@ export function TransfoView(props: {
   };
 
   const lastMeasure = data[data.length - 1];
-  const autoNext = autoNextDate(lastMeasure.sample_date, worstCondition(lastMeasure));
+  // « Auto » = on suit d'ABORD la RECOMMANDATION de l'analyseur (targeted_months / full_next_date),
+  // sinon l'intervalle IEEE selon la condition. Avant, l'auto ignorait la reco -> retombait à 1 an.
+  const recoMonths = Number(extra.targeted_months) || null;
+  const recoNext = (recoMonths && lastMeasure?.sample_date) ? addMonths(lastMeasure.sample_date, recoMonths) : (extra.full_next_date || null);
+  const autoNext = recoNext || autoNextDate(lastMeasure.sample_date, worstCondition(lastMeasure));
   const effNext = extra.next_date_manual || autoNext;
   const due = dueStatusByDate(effNext);
   const dueColor = due.code === 'overdue' ? '#e63946' : due.code === 'soon' ? '#f4a261' : '#2a9d8f';
@@ -521,7 +525,7 @@ export function TransfoView(props: {
               </div>
               <div className="mb-1 flex flex-wrap items-center gap-2">
                 <input type="date" className={INP + ' !w-44'} value={dateDraft || autoNext || ''} onChange={e => { setDateDraft(e.target.value); updateExtra({ next_date_manual: e.target.value, interval_id: 'custom' }); }} />
-                {extra.next_date_manual && <button className="text-xs text-gray-400 hover:text-rose-600" onClick={() => { setDateDraft(''); updateExtra({ next_date_manual: '', interval_id: '' }); }}>↺ {tr('(auto selon condition)', '(auto by condition)')}</button>}
+                {extra.next_date_manual && <button className="text-xs text-gray-400 hover:text-rose-600" onClick={() => { setDateDraft(''); updateExtra({ next_date_manual: '', interval_id: '' }); }}>↺ {tr('(auto selon la recommandation)', '(auto by recommendation)')}</button>}
                 <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: dueColor + '22', color: dueColor }}>
                   {due.code === 'overdue' ? '⚠ ' + tr('En retard', 'Overdue') : due.code === 'soon' ? '◷ ' + tr('Bientôt dû', 'Due soon') : '✓ ' + tr('À jour', 'Up to date')}
                   {due.days != null && ` (${due.days < 0 ? `${-due.days} ${tr('j. de retard', 'days late')}` : `${due.days} ${tr('j. restants', 'days left')}`})`}
