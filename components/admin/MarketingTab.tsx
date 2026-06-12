@@ -7,62 +7,77 @@ import { useEffect, useState } from 'react';
 // route IA serveur /api/admin/marketing/ai (clé côté serveur, prompt légal imposé). Le verrou de
 // conformité (consentement LCAP) bloque toute programmation d'envoi.
 
-type Scene = { title: string; seconds: number; fx: string[]; voiceover: string };
 type View = 'studio' | 'prospect' | 'compliance';
 
 const MODULES = ['Rapports terrain (QR + IA)', 'DGA transformateurs', 'Permis espaces clos', 'Inventaire'];
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
+const PLAT_ICON: Record<string, string> = { LinkedIn: '💼', Facebook: '📘', Instagram: '📸', TikTok: '🎵', 'X (Twitter)': '𝕏', X: '𝕏', Twitter: '𝕏', YouTube: '▶️' };
 
 export default function MarketingTab() {
   const [view, setView] = useState<View>('studio');
 
-  // ── Studio ─────────────────────────────────────────────────────────────
-  const [sModule, setSModule] = useState(MODULES[0]);
-  const [sDuree, setSDuree] = useState('60 s — teaser');
-  const [sTon, setSTon] = useState('Dynamique');
-  const [sMsg, setSMsg] = useState('');
-  const [fxCursor, setFxCursor] = useState(true);
-  const [fxZoom, setFxZoom] = useState(true);
-  const [fxSubs, setFxSubs] = useState(true);
-  const [scenes, setScenes] = useState<Scene[]>([]);
-  const [sel, setSel] = useState<number | null>(null);
-  const [warnings, setWarnings] = useState<string[]>([]);
-  const [genScript, setGenScript] = useState(false);
-  const [renderPct, setRenderPct] = useState(0);
-  const [renderStatus, setRenderStatus] = useState('Prêt');
   const [notice, setNotice] = useState<{ msg: string; ok: boolean } | null>(null);
 
-  async function generateScript() {
-    setGenScript(true); setNotice(null);
+  // ── Studio : atelier « 1 brief → N livrables » (script, hooks, sous-titres, post, courriel, miniature)
+  const ALL_FORMATS = [
+    { k: '16:9', label: '16:9 · LinkedIn/YouTube' },
+    { k: '9:16', label: '9:16 · Reels/TikTok' },
+    { k: '1:1', label: '1:1 · Carré' },
+  ];
+  const [sModule, setSModule] = useState(MODULES[0]);
+  const [sAudience, setSAudience] = useState('responsables SST / maintenance');
+  const [sMsg, setSMsg] = useState('');
+  const [sCta, setSCta] = useState('Réserver une démo');
+  const [sLang, setSLang] = useState<'fr' | 'en'>('fr');
+  const [sFormats, setSFormats] = useState<Record<string, boolean>>({ '16:9': true, '9:16': true, '1:1': false });
+  const [pack, setPack] = useState<any>(null);
+  const [genPack, setGenPack] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [savingAsset, setSavingAsset] = useState(false);
+
+  async function generatePack() {
+    setGenPack(true); setNotice(null); setPack(null);
+    try {
+      const formats = Object.entries(sFormats).filter(([, v]) => v).map(([k]) => k);
+      const r = await fetch('/api/admin/marketing/ai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'studio-pack', module: sModule, audience: sAudience, message: sMsg, cta: sCta, formats, lang: sLang }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec IA');
+      setPack(j.pack || null);
+      setNotice({ msg: '✓ Pack marketing généré (script, hooks, sous-titres, post, courriel, miniature).', ok: true });
+    } catch (e: any) { setNotice({ msg: 'Erreur IA : ' + (e?.message || 'inconnue') + (String(e?.message || '').includes('web') ? '' : ''), ok: false }); }
+    finally { setGenPack(false); }
+  }
+  async function translatePack() {
+    if (!pack) return;
+    const target = sLang === 'fr' ? 'en' : 'fr';
+    setTranslating(true);
     try {
       const r = await fetch('/api/admin/marketing/ai', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ action: 'script', module: sModule, duree: sDuree, ton: sTon, message: sMsg }),
+        body: JSON.stringify({ action: 'translate-pack', pack, target }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'Échec IA');
-      const sc: Scene[] = (Array.isArray(j.scenes) ? j.scenes : []).map((s: any) => ({
-        title: String(s.title || 'Scène'), seconds: Number(s.seconds) || 8,
-        fx: Array.isArray(s.fx) ? s.fx : [], voiceover: String(s.voiceover || ''),
-      }));
-      setScenes(sc); setSel(sc.length ? 0 : null); setWarnings(Array.isArray(j.warnings) ? j.warnings : []);
-      setNotice({ msg: `✓ ${sc.length} scènes générées par l'IA.`, ok: true });
-    } catch (e: any) { setNotice({ msg: 'Erreur IA : ' + (e?.message || 'inconnue'), ok: false }); }
-    finally { setGenScript(false); }
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setPack(j.pack || pack); setSLang(target);
+      setNotice({ msg: `✓ Pack traduit (${target.toUpperCase()}).`, ok: true });
+    } catch (e: any) { setNotice({ msg: 'Traduction : ' + (e?.message || ''), ok: false }); }
+    finally { setTranslating(false); }
   }
-
-  async function runRender() {
-    if (!scenes.length) { setNotice({ msg: '⚠ Génère d\'abord un script.', ok: false }); return; }
-    const steps = ['Script validé', 'Playwright filme (curseur humanisé)', 'Voix off + sous-titres', 'Montage zooms + encodage 1080p'];
-    for (let i = 0; i < steps.length; i++) {
-      setRenderStatus(steps[i]);
-      const target = ((i + 1) / steps.length) * 100;
-      for (let p = renderPct; p <= target; p += 4) { setRenderPct(Math.min(target, p)); await new Promise(r => setTimeout(r, 24)); }
-    }
-    setRenderPct(100); setRenderStatus('✓ Rendu terminé'); setNotice({ msg: '✓ Aperçu de rendu terminé (maquette pipeline).', ok: true });
+  async function saveAsset() {
+    if (!pack) return;
+    setSavingAsset(true);
+    try {
+      const r = await fetch('/api/admin/marketing/data', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ action: 'save-asset', kind: 'script', module: sModule, data: { ...pack, lang: sLang, audience: sAudience, cta: sCta } }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setNotice({ msg: '✓ Pack enregistré dans les actifs marketing.', ok: true });
+    } catch (e: any) { setNotice({ msg: 'Erreur : ' + (e?.message || ''), ok: false }); }
+    finally { setSavingAsset(false); }
   }
-  const visibleFx = (fx: string[]) => fx.filter(f => (f === 'curseur' && fxCursor) || (f === 'zoom' && fxZoom) || (f === 'sous-titres' && fxSubs));
-  const totalSec = scenes.reduce((s, x) => s + x.seconds, 0);
+  function copyText(t: string) { try { navigator.clipboard?.writeText(t); setNotice({ msg: '✓ Copié.', ok: true }); } catch { /* */ } }
 
   // ── Prospection ────────────────────────────────────────────────────────
   const [segment, setSegment] = useState('Mutuelles SST');
@@ -225,79 +240,137 @@ export default function MarketingTab() {
 
       {notice && <div className={`mkt-notice ${notice.ok ? 'ok' : 'err'}`}>{notice.msg}</div>}
 
-      {/* ================= STUDIO ================= */}
+      {/* ================= STUDIO (1 brief -> N livrables) ================= */}
       {view === 'studio' && (
-        <div className="grid">
+        <>
           <div className="card">
-            <h2>Scénario <span className="chip">IA</span></h2>
-            <p className="hint">L'IA écrit le script et découpe la timeline. Capture sur compte démo à données fictives crédibles.</p>
+            <h2>Brief créatif <span className="chip">IA · multi-livrables</span></h2>
+            <p className="hint">Un seul brief → l'IA produit un <b>pack complet</b> : accroches, storyboard adapté à chaque format, sous-titres, post LinkedIn, courriel de suivi et concept de miniature. Démo fictive crédible ; allégations chiffrées signalées si non sourcées.</p>
             <div className="row2">
               <div><label>Module</label><select value={sModule} onChange={e => setSModule(e.target.value)}>{MODULES.map(m => <option key={m}>{m}</option>)}</select></div>
-              <div><label>Durée</label><select value={sDuree} onChange={e => setSDuree(e.target.value)}><option>60 s — teaser</option><option>90 s — démo</option><option>2 min 30 — complet</option></select></div>
-            </div>
-            <div className="row2">
-              <div><label>Ton</label><select value={sTon} onChange={e => setSTon(e.target.value)}><option>Dynamique</option><option>Pédagogique</option><option>Technique</option></select></div>
-              <div><label>Voix off</label><select><option>FR québécois — « Mathis »</option><option>FR québécois — « Léa »</option><option>English — « Ryan »</option></select></div>
+              <div><label>Public cible</label><input value={sAudience} onChange={e => setSAudience(e.target.value)} placeholder="Ex. : responsables SST, chefs de maintenance…" /></div>
             </div>
             <label>Message clé (doit être démontrable à l'écran)</label>
             <textarea value={sMsg} onChange={e => setSMsg(e.target.value)} placeholder="Ex. : Un rapport d'inspection produit en scannant le QR de l'équipement, photos et résumé d'anomalies générés par l'IA." />
-
-            <div className="togs">
-              <Tog label="Curseur humanisé" sub="Trajectoires courbes + micro-pauses — supprime l'effet robot" on={fxCursor} set={setFxCursor} />
-              <Tog label="Zooms & surbrillances" sub="Zoom sur l'élément nommé par la narration" on={fxZoom} set={setFxZoom} />
-              <Tog label="Sous-titres animés" sub="85 % des vues LinkedIn sont sans son" on={fxSubs} set={setFxSubs} />
+            <div className="row2">
+              <div><label>Appel à l'action (CTA)</label><input value={sCta} onChange={e => setSCta(e.target.value)} /></div>
+              <div><label>Langue</label><select value={sLang} onChange={e => setSLang(e.target.value as any)}><option value="fr">Français</option><option value="en">English</option></select></div>
             </div>
-
-            <div className="actions">
-              <button className="btn btn-violet" onClick={generateScript} disabled={genScript}>{genScript ? '✦ Écriture…' : '✦ Générer script + timeline (IA)'}</button>
-              <button className="btn btn-ghost" onClick={() => { setScenes([]); setSel(null); setWarnings([]); }}>Vider</button>
-            </div>
-
-            {warnings.length > 0 && (
-              <div className="warnbox">
-                <strong>⚠ Allégations à sourcer (Loi sur la concurrence)</strong>
-                <ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
-              </div>
-            )}
-
-            <div className="ruler"><span>00:00</span><span>SCÈNES</span><span>{fmt(totalSec)}</span></div>
-            <div className="track">
-              {scenes.length === 0 && <div className="track-empty">Génère un script pour voir la timeline.</div>}
-              {scenes.map((s, i) => (
-                <button key={i} className={`clip ${sel === i ? 'sel' : ''}`} style={{ width: Math.max(120, s.seconds * 9) }} onClick={() => setSel(i)}>
-                  <div className="num">SC {String(i + 1).padStart(2, '0')}</div>
-                  <div className="cttl">{s.title}</div>
-                  {visibleFx(s.fx).length > 0 && <div className="cfx">{visibleFx(s.fx).join(' · ')}</div>}
-                  <div className="cdur">{s.seconds}s</div>
-                </button>
+            <label>Formats à produire</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {ALL_FORMATS.map(f => (
+                <label key={f.k} className={`fmtchip ${sFormats[f.k] ? 'on' : ''}`}>
+                  <input type="checkbox" checked={!!sFormats[f.k]} onChange={e => setSFormats(s => ({ ...s, [f.k]: e.target.checked }))} style={{ width: 'auto' }} /> {f.label}
+                </label>
               ))}
+            </div>
+            <div className="actions">
+              <button className="btn btn-violet" onClick={generatePack} disabled={genPack}>{genPack ? '✦ Génération du pack…' : '✦ Générer le pack marketing (IA)'}</button>
+              {pack && <button className="btn btn-ghost" onClick={() => setPack(null)}>Vider</button>}
             </div>
           </div>
 
-          <div className="card">
-            <h2>Rendu <span className="chip">pipeline</span></h2>
-            <p className="hint">Aperçu du parcours filmé et de la chaîne de production.</p>
-            <div className="vstage">
-              {sel !== null && scenes[sel] ? (
-                <div className="vmock">
-                  <div className="vscene">SC {String(sel + 1).padStart(2, '0')} · {scenes[sel].seconds}s</div>
-                  {fxSubs && scenes[sel].voiceover && <div className="vsub">{scenes[sel].voiceover}</div>}
+          {pack && (
+            <>
+              <div className="packbar">
+                <span className="chip">Langue : {sLang.toUpperCase()}</span>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn btn-ghost" onClick={translatePack} disabled={translating}>{translating ? 'Traduction…' : `🌐 Traduire en ${sLang === 'fr' ? 'EN' : 'FR'}`}</button>
+                  <button className="btn btn-signal" onClick={saveAsset} disabled={savingAsset}>{savingAsset ? 'Enregistrement…' : '💾 Enregistrer dans les actifs'}</button>
                 </div>
-              ) : <div className="vmock muted">Sélectionne une scène</div>}
-            </div>
-            <div className="pipeline">
-              {[['✎', 'Script & storyboard', 'claude · IA serveur'], ['▶', 'Capture + curseur', 'playwright · compte démo'], ['♪', 'Voix off + sous-titres', 'elevenlabs + whisper'], ['⧉', 'Montage + encodage', 'remotion 1080p']].map((p, i) => (
-                <div className="stage" key={i}><div className="sico">{p[0]}</div><div><div className="snm">{p[1]}</div><div className="stool">{p[2]}</div></div></div>
-              ))}
-            </div>
-            <div className="progress"><i style={{ width: `${renderPct}%` }} /></div>
-            <div className="progmeta"><span>{renderStatus}</span><span>{Math.round(renderPct)} %</span></div>
-            <div className="actions">
-              <button className="btn btn-reel" onClick={runRender}>⧉ Lancer le rendu</button>
-            </div>
-            <div className="note">Toute allégation chiffrée affichée doit être démontrable, sinon représentation trompeuse (Loi sur la concurrence). L'IA marque les allégations non sourcées.</div>
-          </div>
-        </div>
+              </div>
+
+              {Array.isArray(pack.warnings) && pack.warnings.length > 0 && (
+                <div className="warnbox"><strong>⚠ Allégations à sourcer (Loi sur la concurrence)</strong><ul>{pack.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}</ul></div>
+              )}
+
+              <div className="grid">
+                {/* Hooks */}
+                {Array.isArray(pack.hooks) && (
+                  <div className="card"><h2>Accroches <span className="chip">{pack.hooks.length}</span></h2>
+                    {pack.hooks.map((h: string, i: number) => (
+                      <div key={i} className="hookrow"><span>{h}</span><button className="copy" onClick={() => copyText(h)}>copier</button></div>
+                    ))}
+                  </div>
+                )}
+                {/* Sous-titres */}
+                {pack.captions && (
+                  <div className="card"><h2>Sous-titres <span className="chip">prêts</span></h2>
+                    <pre className="ebody">{pack.captions}</pre>
+                    <button className="btn btn-ghost" onClick={() => copyText(pack.captions)}>Copier les sous-titres</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Storyboard */}
+              {Array.isArray(pack.storyboard) && (
+                <div className="card">
+                  <h2>Storyboard <span className="chip">{pack.storyboard.reduce((s: number, x: any) => s + (Number(x.seconds) || 0), 0)} s</span></h2>
+                  <div className="tablewrap"><table>
+                    <thead><tr><th>#</th><th>Scène</th><th>s</th><th>Plan</th><th>Texte écran</th><th>Voix off</th></tr></thead>
+                    <tbody>{pack.storyboard.map((sc: any, i: number) => (
+                      <tr key={i}><td>{i + 1}</td><td>{sc.scene}</td><td>{sc.seconds}</td><td>{sc.shot}</td><td>{sc.onscreen_text}</td><td>{sc.voiceover}</td></tr>
+                    ))}</tbody>
+                  </table></div>
+                </div>
+              )}
+
+              {/* Formats */}
+              {Array.isArray(pack.formats) && pack.formats.length > 0 && (
+                <div className="card"><h2>Déclinaisons par format <span className="chip">{pack.formats.length}</span></h2>
+                  <div className="grid">{pack.formats.map((f: any, i: number) => (
+                    <div key={i} className="fmtcard"><div className="fmttop"><b>{f.ratio}</b> · {f.platform} · {f.duration_s}s</div><div className="fmtnotes">{f.edit_notes}</div></div>
+                  ))}</div>
+                </div>
+              )}
+
+              {/* Publications prêtes à pousser — une version par plateforme */}
+              {Array.isArray(pack.social_posts) && pack.social_posts.length > 0 && (
+                <div className="card">
+                  <h2>Publications par plateforme <span className="chip">copier &amp; pousser</span></h2>
+                  <p className="hint">Chaque réseau a sa version adaptée (ton, longueur, hashtags). Copie celle que tu veux et publie-la.</p>
+                  <div className="grid">
+                    {pack.social_posts.map((sp: any, i: number) => {
+                      const full = `${sp.caption}${Array.isArray(sp.hashtags) && sp.hashtags.length ? `\n\n${sp.hashtags.join(' ')}` : ''}`;
+                      return (
+                        <div key={i} className="platcard">
+                          <div className="plathead"><b>{PLAT_ICON[sp.platform] || '◆'} {sp.platform}</b><button className="copy" onClick={() => copyText(full)}>copier</button></div>
+                          <pre className="ebody">{sp.caption}</pre>
+                          {Array.isArray(sp.hashtags) && sp.hashtags.length > 0 && <div className="tags-row">{sp.hashtags.map((t: string, j: number) => <span key={j} className="htag">{t}</span>)}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid">
+                {/* Courriel de suivi -> interconnexion prospection */}
+                {pack.follow_up_email && (
+                  <div className="card"><h2>Courriel de suivi <span className="chip">→ prospection</span></h2>
+                    <div className="er"><span>Objet</span><b>{pack.follow_up_email.subject}</b></div>
+                    <pre className="ebody">{pack.follow_up_email.body}</pre>
+                    <div className="actions">
+                      <button className="btn btn-ghost" onClick={() => copyText(`${pack.follow_up_email.subject}\n\n${pack.follow_up_email.body}`)}>Copier</button>
+                      <button className="btn btn-violet" onClick={() => {
+                        setEmailDraft({ subjectA: pack.follow_up_email.subject, subjectB: pack.follow_up_email.subject, body: pack.follow_up_email.body, footer: 'C-Secur360 · [Adresse postale C-Secur360] · [Lien de désabonnement]', compliance: ['Vérifier le consentement avant envoi (LCAP).'] });
+                        setView('prospect');
+                        setNotice({ msg: '✓ Courriel chargé dans Prospection — vérifie le consentement avant d\'envoyer.', ok: true });
+                      }}>↗ Utiliser dans Prospection</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Miniature */}
+              {pack.thumbnail && (
+                <div className="card"><h2>Concept de miniature</h2><p className="hint" style={{ marginBottom: 0 }}>{pack.thumbnail}</p></div>
+              )}
+
+              <div className="note">Production : le pack (script, sous-titres, posts, courriel) est prêt à l'emploi. Le rendu vidéo final (capture compte démo + voix + montage) se fait avec ton outil de montage à partir de ce storyboard.</div>
+            </>
+          )}
+        </>
       )}
 
       {/* ================= PROSPECTION ================= */}
@@ -539,6 +612,18 @@ export default function MarketingTab() {
         @media(max-width:680px){.kpis{grid-template-columns:1fr 1fr;}}
         .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px;} .kpi .n{font-size:24px;font-weight:700;} .kpi .l{font-size:11px;color:var(--mist);margin-top:2px;}
         .addbox{margin:6px 0 12px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:12px;}
+        .fmtchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 11px;font-size:12px;color:var(--mist);cursor:pointer;}
+        .fmtchip.on{border-color:var(--reel);color:var(--paper);background:rgba(255,122,69,.08);}
+        .packbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);}
+        .hookrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(35,44,58,.5);font-size:13px;}
+        .hookrow:last-child{border-bottom:none;}
+        .copy{background:none;border:1px solid var(--line);color:var(--mist);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;flex:0 0 auto;}
+        .copy:hover{color:var(--paper);border-color:var(--steel);}
+        .fmtcard{border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:11px;}
+        .fmttop{font-size:12.5px;margin-bottom:5px;} .fmtnotes{font-size:11.5px;color:var(--mist);}
+        .tags-row{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0;} .htag{font-size:11px;color:var(--violet);background:rgba(124,140,255,.1);border-radius:5px;padding:1px 7px;}
+        .platcard{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:12px;}
+        .plathead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:13px;}
         .candbox{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden;}
         .candhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mist);flex-wrap:wrap;}
         .cand{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid rgba(35,44,58,.5);cursor:pointer;}
@@ -572,14 +657,6 @@ export default function MarketingTab() {
   );
 }
 
-function Tog({ label, sub, on, set }: { label: string; sub: string; on: boolean; set: (v: boolean) => void }) {
-  return (
-    <label className="tog" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(35,44,58,.5)', cursor: 'pointer' }}>
-      <span style={{ fontSize: 12.5 }}>{label}<small style={{ display: 'block', color: 'var(--mist)', fontSize: 10.5 }}>{sub}</small></span>
-      <input type="checkbox" checked={on} onChange={e => set(e.target.checked)} style={{ width: 'auto' }} />
-    </label>
-  );
-}
 function Kpi({ n, l, c }: { n: string; l: string; c?: string }) {
   return <div className="kpi"><div className="n" style={{ color: c || 'var(--paper)' }}>{n}</div><div className="l">{l}</div></div>;
 }
@@ -593,4 +670,3 @@ function LawCard({ title, tag, rules }: { title: string; tag: string; rules: str
     </div>
   );
 }
-function fmt(s: number) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }

@@ -107,6 +107,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, imported: rows.length });
     }
 
+    // Enregistre un PACK STUDIO généré (script/storyboard/posts/courriel) dans marketing_assets.
+    if (action === 'save-asset') {
+      const { error } = await supabaseAdmin.from('marketing_assets').insert({
+        tenant_id: TENANT, kind: body.kind || 'script', module: body.module || null,
+        data: body.data || {}, status: 'draft', created_by: who,
+      });
+      if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
+
     // Désabonnement / plainte (registre + statut prospect). Obligation LCAP : honorer sous 10 j.
     if (action === 'unsubscribe') {
       const email = String(body.email || '').toLowerCase().trim();

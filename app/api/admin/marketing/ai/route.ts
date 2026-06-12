@@ -59,6 +59,53 @@ Retourne UNIQUEMENT ce JSON (sans texte autour) :
       return NextResponse.json({ ok: true, ...out });
     }
 
+    if (action === 'studio-pack') {
+      // « 1 brief -> N livrables » (état de l'art : Arcade Creator Studio, Opus Clip, HeyGen).
+      // L'IA produit un PACK marketing complet et cohérent à partir d'un seul brief, adapté aux formats
+      // choisis, avec sous-titres, post social, courriel de suivi (interconnecté à la prospection) et
+      // miniature — dans la langue demandée. Respecte la conformité (allégations démontrables, démo fictive).
+      const moduleName = String(body.module || 'Module C-Secur360').slice(0, 120);
+      const audience = String(body.audience || 'responsables SST / maintenance').slice(0, 120);
+      const message = String(body.message || '').slice(0, 700);
+      const cta = String(body.cta || 'Réserver une démo').slice(0, 80);
+      const formats: string[] = Array.isArray(body.formats) && body.formats.length ? body.formats.slice(0, 4) : ['16:9'];
+      const lang = body.lang === 'en' ? 'English' : 'français';
+      const prompt = `Tu produis un PACK MARKETING complet et cohérent pour une vidéo de démonstration du module « ${moduleName} » de la plateforme SST C-Secur360. Public cible : ${audience}. Message clé à démontrer à l'écran : "${message}". Appel à l'action : "${cta}". Formats demandés : ${formats.join(', ')}.
+La vidéo = capture d'un compte de DÉMONSTRATION à données fictives crédibles (jamais de vraies données client). Toute allégation chiffrée non sourcée doit être listée dans "warnings".
+Langue de TOUS les textes : ${lang}.
+Retourne UNIQUEMENT ce JSON (sans texte autour) :
+{
+ "hooks": ["3 à 5 accroches « scroll-stopping » de 1 ligne"],
+ "storyboard": [{"scene":"titre court","seconds":8,"shot":"écran|zoom|avatar|b-roll","onscreen_text":"texte à l'écran","voiceover":"1 phrase de narration","broll":"suggestion visuelle"}],
+ "captions": "sous-titres prêts (par phrase, ton oral, max ~40 mots/ligne)",
+ "formats": [{"ratio":"16:9|9:16|1:1","platform":"LinkedIn|YouTube|Reels/TikTok|Carré","duration_s":60,"edit_notes":"adaptation du montage pour ce format"}],
+ "social_posts": [
+   {"platform":"LinkedIn","caption":"post pro : accroche + valeur + CTA (peut être plus long)","hashtags":["#..."]},
+   {"platform":"Facebook","caption":"ton conversationnel, accrocheur, lien démo","hashtags":["#..."]},
+   {"platform":"Instagram","caption":"visuel-first, court, emojis pertinents","hashtags":["#..."]},
+   {"platform":"TikTok","caption":"hook fort dès la 1re ligne, langage parlé, court","hashtags":["#..."]},
+   {"platform":"X (Twitter)","caption":"≤ 280 caractères, percutant","hashtags":["#..."]},
+   {"platform":"YouTube","caption":"description vidéo : résumé + chapitres + CTA + lien","hashtags":["#..."]}
+ ],
+ "follow_up_email": {"subject":"objet","body":"courriel de suivi court et conforme (sans promesse non prouvée)"},
+ "thumbnail": "concept de miniature : texte d'accroche + visuel suggéré",
+ "warnings": ["allégation à sourcer le cas échéant"]
+}
+RÈGLES : ne garde dans "formats" que les ratios demandés (${formats.join(', ')}). Sois concret, orienté bénéfice, crédible. Pas de superlatifs invérifiables.`;
+      const out = await callClaude(apiKey, system, prompt, { maxTokens: 4096 });
+      return NextResponse.json({ ok: true, pack: out });
+    }
+
+    if (action === 'translate-pack') {
+      // Traduction one-click du pack (multilingue, comme HeyGen/Synthesia) — FR <-> EN.
+      const target = body.target === 'en' ? 'English' : 'français';
+      const pack = body.pack || {};
+      const prompt = `Traduis fidèlement en ${target} TOUS les textes de ce pack marketing (hooks, storyboard.onscreen_text/voiceover/broll, captions, formats.edit_notes, social_post, follow_up_email, thumbnail, warnings) en gardant EXACTEMENT la même structure JSON et les mêmes clés. Adapte le ton au marché (naturel, pas une traduction littérale). Retourne UNIQUEMENT le JSON traduit.
+PACK : ${JSON.stringify(pack).slice(0, 6000)}`;
+      const out = await callClaude(apiKey, system, prompt, { maxTokens: 4096 });
+      return NextResponse.json({ ok: true, pack: out });
+    }
+
     if (action === 'email') {
       const moduleName = String(body.module || 'Module C-Secur360').slice(0, 120);
       const segment = String(body.segment || 'PME').slice(0, 120);
