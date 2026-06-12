@@ -69,19 +69,23 @@ export async function POST(req: NextRequest) {
   const text = String(body.text || '').trim().slice(0, 4000);
   if (!text) return NextResponse.json({ error: 'Texte à narrer requis' }, { status: 400 });
   const voice = String(body.voice || 'fr-CA-SylvieNeural');
+  const delayMs = Math.max(0, Math.min(5000, Number(body.delayMs) || 0));
   const origin = new URL(req.url).origin;
   const img = String(body.image || 'presenter.png');
   const source_url = /^https?:\/\//i.test(img) ? img : `${origin}/${img.replace(/^\/+/, '')}`;
+
+  // Délai de silence AVANT de parler (sinon la voix démarre trop vite et on rate le début) : on
+  // utilise un <break> SSML en tête. Sans délai, texte simple.
+  const spoken = ttsFriendly(text);
+  const script: any = delayMs > 0
+    ? { type: 'text', ssml: true, input: `<break time="${delayMs}ms"/>${spoken.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`, provider: { type: 'microsoft', voice_id: voice } }
+    : { type: 'text', input: spoken, provider: { type: 'microsoft', voice_id: voice } };
 
   try {
     // 1) Créer le « talk »
     const create = await fetch(`${DID}/talks`, {
       method: 'POST', headers,
-      body: JSON.stringify({
-        source_url,
-        script: { type: 'text', input: ttsFriendly(text), provider: { type: 'microsoft', voice_id: voice } },
-        config: { stitch: true },
-      }),
+      body: JSON.stringify({ source_url, script, config: { stitch: true } }),
     });
     if (!create.ok) { const e = await create.text(); return NextResponse.json({ error: `D-ID ${create.status}: ${e.slice(0, 240)}` }, { status: 502 }); }
     const created = await create.json();

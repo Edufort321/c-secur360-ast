@@ -59,13 +59,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, campaigns: data || [] });
     }
     if (resource === 'assets') {
-      // Modèle d'avatar + bibliothèque d'images + vidéos d'avatar générées.
+      // Avatars (plusieurs) + bibliothèque d'images + vidéos d'avatar générées.
       const { data } = await supabaseAdmin.from('marketing_assets').select('id, kind, data, created_at').eq('tenant_id', TENANT).in('kind', ['avatar_model', 'library_image', 'avatar_video']).order('created_at', { ascending: false });
       const rows = data || [];
-      const avatar = rows.find((a: any) => a.kind === 'avatar_model') || null;
+      const avatars = rows.filter((a: any) => a.kind === 'avatar_model');
       const library = rows.filter((a: any) => a.kind === 'library_image');
       const videos = rows.filter((a: any) => a.kind === 'avatar_video');
-      return NextResponse.json({ ok: true, avatar, library, videos });
+      return NextResponse.json({ ok: true, avatars, library, videos });
     }
     return NextResponse.json({ error: 'resource inconnue' }, { status: 400 });
   } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 }); }
@@ -116,17 +116,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, imported: rows.length });
     }
 
-    // Enregistre un actif (pack studio, modèle d'avatar, image de bibliothèque) dans marketing_assets.
+    // Enregistre un actif (pack studio, avatar, image de bibliothèque) dans marketing_assets.
+    // Plusieurs avatars sont permis (chacun avec nom + voix par défaut).
     if (action === 'save-asset') {
-      const kind = body.kind || 'script';
-      if (kind === 'avatar_model') {
-        // Un seul modèle d'avatar à la fois : on remplace l'ancien.
-        await supabaseAdmin.from('marketing_assets').delete().eq('tenant_id', TENANT).eq('kind', 'avatar_model');
-      }
       const { error } = await supabaseAdmin.from('marketing_assets').insert({
-        tenant_id: TENANT, kind, module: body.module || null,
+        tenant_id: TENANT, kind: body.kind || 'script', module: body.module || null,
         data: body.data || {}, status: 'draft', created_by: who,
       });
+      if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
+    // Met à jour les métadonnées d'un actif (ex. nom/voix d'un avatar) en fusionnant dans data.
+    if (action === 'update-asset') {
+      if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
+      const { data: cur } = await supabaseAdmin.from('marketing_assets').select('data').eq('tenant_id', TENANT).eq('id', body.id).maybeSingle();
+      const merged = { ...((cur as any)?.data || {}), ...(body.patch || {}) };
+      const { error } = await supabaseAdmin.from('marketing_assets').update({ data: merged }).eq('tenant_id', TENANT).eq('id', body.id);
       if (error) throw error;
       return NextResponse.json({ ok: true });
     }

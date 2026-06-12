@@ -133,10 +133,21 @@ export default function MarketingTab() {
 
   // Avatar présentateur (D-ID) : une photo dans public/ + un script -> vidéo qui parle.
   const AVA_VOICES = [
-    { v: 'fr-CA-SylvieNeural', l: 'FR-CA · Sylvie' }, { v: 'fr-CA-AntoineNeural', l: 'FR-CA · Antoine' },
-    { v: 'fr-CA-JeanNeural', l: 'FR-CA · Jean' }, { v: 'en-US-JennyNeural', l: 'EN-US · Jenny' }, { v: 'en-US-GuyNeural', l: 'EN-US · Guy' },
+    { v: 'fr-CA-SylvieNeural', l: 'FR-CA · Sylvie (femme)' },
+    { v: 'fr-CA-AntoineNeural', l: 'FR-CA · Antoine (homme)' },
+    { v: 'fr-CA-JeanNeural', l: 'FR-CA · Jean (homme)' },
+    { v: 'fr-FR-DeniseNeural', l: 'FR · Denise (jeune femme)' },
+    { v: 'fr-FR-CoralieNeural', l: 'FR · Coralie (jeune)' },
+    { v: 'fr-FR-EloiseNeural', l: 'FR · Éloïse (très jeune)' },
+    { v: 'fr-FR-HenriNeural', l: 'FR · Henri (jeune homme)' },
+    { v: 'fr-FR-YvetteNeural', l: 'FR · Yvette (jeune)' },
+    { v: 'en-US-AriaNeural', l: 'EN · Aria (jeune femme)' },
+    { v: 'en-US-AnaNeural', l: 'EN · Ana (très jeune)' },
+    { v: 'en-US-JennyNeural', l: 'EN · Jenny (femme)' },
+    { v: 'en-US-GuyNeural', l: 'EN · Guy (homme)' },
   ];
   const [avaVoice, setAvaVoice] = useState('fr-CA-SylvieNeural');
+  const [avaDelay, setAvaDelay] = useState(800); // délai (ms) de silence avant que l'avatar parle
   const [avaText, setAvaText] = useState('');
   const [avaUrl, setAvaUrl] = useState('');
   const [avaBusy, setAvaBusy] = useState(false);
@@ -161,22 +172,31 @@ export default function MarketingTab() {
     finally { setAvaWriting(false); }
   }
 
-  // ── Réglages du Studio : modèle d'avatar + bibliothèque d'images (déposés et stockés) ──
+  // ── Réglages du Studio : PLUSIEURS avatars (nom + voix par défaut) + bibliothèque d'images ──
+  type Avatar = { id: string; url: string; name?: string; voice?: string };
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [avatarModel, setAvatarModel] = useState<{ id: string; url: string; name?: string } | null>(null);
+  const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [selectedAvatarId, setSelectedAvatarId] = useState('');
+  const [newAvatarName, setNewAvatarName] = useState('');
+  const [newAvatarVoice, setNewAvatarVoice] = useState('fr-CA-SylvieNeural');
   const [library, setLibrary] = useState<{ id: string; url: string; name?: string }[]>([]);
   const [avaVideos, setAvaVideos] = useState<{ id: string; url: string; created_at?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const selectedAvatar = avatars.find(a => a.id === selectedAvatarId) || null;
 
   async function loadAssets() {
     try {
       const j = await fetch('/api/admin/marketing/data?resource=assets', { credentials: 'include' }).then(r => r.json());
-      setAvatarModel(j.avatar ? { id: j.avatar.id, url: j.avatar.data?.url, name: j.avatar.data?.name } : null);
+      const avs: Avatar[] = (j.avatars || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name, voice: a.data?.voice })).filter((x: any) => x.url);
+      setAvatars(avs);
+      setSelectedAvatarId(prev => (prev && avs.some(a => a.id === prev)) ? prev : (avs[0]?.id || ''));
       setLibrary((j.library || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
       setAvaVideos((j.videos || []).map((a: any) => ({ id: a.id, url: a.data?.url, created_at: a.created_at })).filter((x: any) => x.url));
     } catch { /* */ }
   }
   useEffect(() => { loadAssets(); }, []);
+  // La voix suit l'avatar choisi (modifiable ensuite).
+  useEffect(() => { if (selectedAvatar?.voice) setAvaVoice(selectedAvatar.voice); }, [selectedAvatarId]); // eslint-disable-line
 
   // Upload via le SERVEUR (service_role, requireAdmin) — la clé anon ne peut pas écrire (sécurité).
   async function uploadToMarketing(file: File, prefix: string): Promise<string> {
@@ -189,8 +209,10 @@ export default function MarketingTab() {
     setUploading(true); setNotice(null);
     try {
       const url = await uploadToMarketing(file, 'avatar');
-      await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'avatar_model', data: { url, name: file.name } }) });
-      setNotice({ msg: '✓ Modèle d\'avatar enregistré.', ok: true }); loadAssets();
+      const name = newAvatarName.trim() || file.name.replace(/\.[a-z0-9]+$/i, '');
+      await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'avatar_model', data: { url, name, voice: newAvatarVoice } }) });
+      setNewAvatarName('');
+      setNotice({ msg: `✓ Avatar « ${name} » ajouté.`, ok: true }); loadAssets();
     } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
     finally { setUploading(false); }
   }
@@ -209,6 +231,10 @@ export default function MarketingTab() {
     await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'delete-asset', id }) });
     loadAssets();
   }
+  async function updateAvatar(id: string, patch: any) {
+    await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'update-asset', id, patch }) });
+    loadAssets();
+  }
   async function pollAvatar(id: string) {
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 3000));
@@ -223,13 +249,13 @@ export default function MarketingTab() {
   async function generateAvatar() {
     setAvaMsg(null);
     const text = avaText.trim() || (pack?.storyboard ? pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' ') : '');
-    if (!avatarModel?.url) { aMsg({ msg: '⚠ Dépose d\'abord un modèle d\'avatar dans ⚙ Réglages du Studio (en haut).', ok: false }); return; }
+    if (!selectedAvatar?.url) { aMsg({ msg: '⚠ Ajoute (et choisis) un avatar dans ⚙ Réglages du Studio (en haut).', ok: false }); return; }
     if (!text) { aMsg({ msg: '⚠ Entre le texte à narrer (ou clique « Remplir depuis le storyboard »).', ok: false }); return; }
     setAvaBusy(true); setAvaUrl('');
     try {
       const r = await fetch('/api/admin/marketing/avatar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ image: avatarModel.url, text, voice: avaVoice }),
+        body: JSON.stringify({ image: selectedAvatar.url, text, voice: avaVoice, delayMs: avaDelay }),
       });
       const j = await r.json();
       if (!r.ok) { aMsg({ msg: 'Avatar : ' + (j.error || 'échec'), ok: false }); setAvaBusy(false); return; }
@@ -450,21 +476,30 @@ export default function MarketingTab() {
             {settingsOpen && (
               <div style={{ marginTop: 12 }}>
                 <div className="grid">
-                  {/* Modèle d'avatar */}
+                  {/* Avatars (plusieurs, avec nom + voix par défaut) */}
                   <div>
-                    <label>Modèle d'avatar (PNG/JPG) — l'IA s'en inspire pour l'avatar parlant</label>
+                    <label>Avatars (PNG/JPG d'un visage) — chacun avec sa voix par défaut</label>
                     <div className="dropzone">
-                      {avatarModel?.url ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <img src={avatarModel.url} alt="avatar" style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', border: '1px solid var(--line)' }} />
-                          <div style={{ minWidth: 0 }}><div style={{ fontSize: 12 }}>{avatarModel.name || 'modèle.png'}</div>
-                            <button className="copy" onClick={() => deleteAsset(avatarModel.id)}>retirer</button></div>
+                      {avatars.length === 0 && <span style={{ color: 'var(--mist)', fontSize: 12 }}>Aucun avatar. Ajoute-en un ci-dessous.</span>}
+                      {avatars.map(av => (
+                        <div key={av.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid rgba(35,44,58,.5)' }}>
+                          <img src={av.url} alt={av.name || ''} style={{ width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: '1px solid var(--line)' }} />
+                          <input value={av.name || ''} onChange={e => setAvatars(list => list.map(x => x.id === av.id ? { ...x, name: e.target.value } : x))} onBlur={e => updateAvatar(av.id, { name: e.target.value })} placeholder="Nom" style={{ width: 120 }} />
+                          <select value={av.voice || 'fr-CA-SylvieNeural'} onChange={e => updateAvatar(av.id, { voice: e.target.value })} style={{ width: 150 }}>
+                            {AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}
+                          </select>
+                          <button className="copy" style={{ color: 'var(--rust)', marginLeft: 'auto' }} onClick={() => deleteAsset(av.id)}>supprimer</button>
                         </div>
-                      ) : <span style={{ color: 'var(--mist)', fontSize: 12 }}>Aucun modèle déposé.</span>}
-                      <label className="btn btn-ghost" style={{ marginTop: 8, display: 'inline-flex' }}>
-                        {uploading ? 'Téléversement…' : '＋ Déposer le modèle'}
-                        <input type="file" accept="image/*" hidden disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatarModel(f); e.currentTarget.value = ''; }} />
-                      </label>
+                      ))}
+                      {/* Ajout d'un avatar */}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 10 }}>
+                        <input value={newAvatarName} onChange={e => setNewAvatarName(e.target.value)} placeholder="Nom du nouvel avatar" style={{ width: 160 }} />
+                        <select value={newAvatarVoice} onChange={e => setNewAvatarVoice(e.target.value)} style={{ width: 150 }}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select>
+                        <label className="btn btn-ghost" style={{ display: 'inline-flex' }}>
+                          {uploading ? 'Téléversement…' : '＋ Ajouter un avatar'}
+                          <input type="file" accept="image/*" hidden disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatarModel(f); e.currentTarget.value = ''; }} />
+                        </label>
+                      </div>
                     </div>
                   </div>
                   {/* Bibliothèque d'images */}
@@ -522,13 +557,25 @@ export default function MarketingTab() {
           {/* Avatar présentateur (parle ton script) */}
           <div className="card">
             <h2>Avatar présentateur <span className="chip">parle &amp; explique</span></h2>
-            <p className="hint">À partir du <b>modèle déposé dans les Réglages</b>, l'avatar prononce ton script (lip-sync, via D-ID). Idéal pour un présentateur en incrustation dans la vidéo.</p>
-            {!avatarModel?.url && <div className="warnbox" style={{ marginTop: 0 }}>Dépose d'abord un <b>modèle d'avatar</b> dans ⚙ Réglages du Studio.</div>}
-            <div className="row2">
-              <div><label>Voix</label><select value={avaVoice} onChange={e => setAvaVoice(e.target.value)}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select></div>
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setAvaText(pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' '))}>Remplir depuis le storyboard</button>}
+            <p className="hint">Choisis un <b>avatar</b> (déposé dans les Réglages) ; il prononce ton script (lip-sync, via D-ID).</p>
+            {avatars.length === 0 && <div className="warnbox" style={{ marginTop: 0 }}>Ajoute d'abord un <b>avatar</b> dans ⚙ Réglages du Studio (en haut).</div>}
+            <div className="row3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 130px', gap: 11 }}>
+              <div><label>Avatar</label>
+                <select value={selectedAvatarId} onChange={e => setSelectedAvatarId(e.target.value)}>
+                  {avatars.length === 0 && <option value="">— aucun —</option>}
+                  {avatars.map(a => <option key={a.id} value={a.id}>{a.name || 'avatar'}</option>)}
+                </select>
               </div>
+              <div><label>Voix</label><select value={avaVoice} onChange={e => setAvaVoice(e.target.value)}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select></div>
+              <div><label>Délai au début</label>
+                <select value={avaDelay} onChange={e => setAvaDelay(+e.target.value)}>
+                  <option value={0}>aucun</option><option value={500}>0,5 s</option><option value={800}>0,8 s</option><option value={1200}>1,2 s</option><option value={2000}>2 s</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+              {selectedAvatar?.url && <img src={selectedAvatar.url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--line)' }} />}
+              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setAvaText(pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' '))}>Remplir depuis le storyboard</button>}
             </div>
             {/* Mode « texte IA » : idées + durée -> script calibré */}
             <div className="addbox">
