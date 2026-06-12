@@ -96,6 +96,21 @@ export function worstCondition(m: Measure | null | undefined): number {
   return Math.max(...WORST_KEYS.map(k => ieeeCondition(k, (m as any)[k]) ?? 0));
 }
 
+// Un relevé contient des DONNÉES DE GAZ si au moins un gaz a une valeur > 0 (un relevé BPC/huile seul,
+// ou un relevé aux gaz non mesurés, en est exclu).
+const GAS_KEYS_M = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
+export function hasGas(m: Measure | null | undefined): boolean {
+  if (!m) return false;
+  return GAS_KEYS_M.some(k => { const v = Number((m as any)[k]); return !isNaN(v) && v > 0; });
+}
+// Dernière mesure (par date) CONTENANT DES GAZ — pour la condition/Duval/limites de gaz, afin qu'un
+// relevé partiel (ex. BPC seul) ne masque pas le vrai état de gaz. Renvoie undefined si aucune.
+export function lastGasMeasure(measures: Measure[] | null | undefined): Measure | undefined {
+  const dated = (measures || []).filter(m => m.sample_date).slice().sort((a, b) => String(a.sample_date).localeCompare(String(b.sample_date)));
+  for (let i = dated.length - 1; i >= 0; i--) if (hasGas(dated[i])) return dated[i];
+  return undefined;
+}
+
 // ── Ratios de Rogers (forme objet, pour l'affichage en 4 cases — identique au prototype) ──
 export function rogersRatios(m: Measure): Record<string, number> {
   const s = (n: number, dn: number) => (dn === 0 ? 0 : n / dn);

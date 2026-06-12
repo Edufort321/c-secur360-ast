@@ -17,7 +17,7 @@ import {
 import { getPhotos, savePhotos, getAnomalies, saveAnomalies, getDocs, saveDocs, getInspections, saveInspections, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly, type DgaDoc, type Inspection } from '@/lib/dga/dossiers';
 import {
   GAS_FIELDS, COMBUSTIBLE, IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl,
-  ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, pcbStatus, latestPcb, type Lang,
+  ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, pcbStatus, latestPcb, lastGasMeasure, type Lang,
 } from '@/lib/dga/fields';
 import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
@@ -218,11 +218,14 @@ export function TransfoView(props: {
   };
 
   const lastMeasure = data[data.length - 1];
+  // Reprise : on se base sur la dernière mesure CONTENANT DES GAZ (l'état de gaz courant ; un relevé
+  // BPC/huile seul ne doit pas piloter la reprise DGA, et après réparation le dernier gaz fait foi).
+  const lastGas = lastGasMeasure(data) || lastMeasure;
   // « Auto » = on suit d'ABORD la RECOMMANDATION de l'analyseur (targeted_months / full_next_date),
-  // sinon l'intervalle IEEE selon la condition. Avant, l'auto ignorait la reco -> retombait à 1 an.
+  // sinon l'intervalle IEEE selon la condition de la dernière mesure de gaz.
   const recoMonths = Number(extra.targeted_months) || null;
-  const recoNext = (recoMonths && lastMeasure?.sample_date) ? addMonths(lastMeasure.sample_date, recoMonths) : (extra.full_next_date || null);
-  const autoNext = recoNext || autoNextDate(lastMeasure.sample_date, worstCondition(lastMeasure));
+  const recoNext = (recoMonths && lastGas?.sample_date) ? addMonths(lastGas.sample_date, recoMonths) : (extra.full_next_date || null);
+  const autoNext = recoNext || autoNextDate(lastGas.sample_date, worstCondition(lastGas));
   const effNext = extra.next_date_manual || autoNext;
   const due = dueStatusByDate(effNext);
   const dueColor = due.code === 'overdue' ? '#e63946' : due.code === 'soon' ? '#f4a261' : '#2a9d8f';

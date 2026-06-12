@@ -59,6 +59,9 @@ function applyFooters(doc: any, W: number, Hp: number, M: number) {
 function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, rtype: 'full' | 'dga' | 'summary', d: Dossier, measuresIn: Measure[], ai: any, logo: string | null) {
   const ms = (measuresIn || []).slice().sort((a, b) => String(a.sample_date).localeCompare(String(b.sample_date)));
   const last = ms[ms.length - 1];
+  // Dernière mesure CONTENANT DES GAZ (pour « gaz vs limites » / condition ; un relevé BPC/huile seul
+  // ne reflète pas l'état de gaz).
+  const lastGas = [...ms].reverse().find(m => hasGas(m)) || last;
   const header = () => {
     if (logo) { try { doc.addImage(logo, 'PNG', M, 22, 0, 24); } catch { /* ignore */ } }
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
@@ -109,14 +112,14 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
   }
   y += 6;
 
-  // ── Dernière mesure : gaz vs limites (sauf sommaire) ──
-  if (rtype !== 'summary' && last) {
+  // ── Dernière mesure de GAZ : gaz vs limites (sauf sommaire) ──
+  if (rtype !== 'summary' && lastGas && hasGas(lastGas)) {
     ensure(24); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20);
-    doc.text(fr ? 'Derniere mesure — gaz vs IEEE C57.104' : 'Latest — gases vs IEEE C57.104', M, y); y += 13;
+    doc.text(fr ? 'Dernier relevé de gaz — gaz vs IEEE C57.104' : 'Latest gas sample — gases vs IEEE C57.104', M, y); y += 13;
     doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
-    for (const [k, label] of GAS_ROWS) { ensure(13); const v = Number((last as any)?.[k] ?? 0); const lim = IEEE[k as string]; doc.text(`${label}: ${v}  (C1/C2/C3 = ${lim[0]}/${lim[1]}/${lim[2]})`, M, y); y += 12; }
+    for (const [k, label] of GAS_ROWS) { ensure(13); const v = Number((lastGas as any)?.[k] ?? 0); const lim = IEEE[k as string]; doc.text(`${label}: ${v}  (C1/C2/C3 = ${lim[0]}/${lim[1]}/${lim[2]})`, M, y); y += 12; }
     y += 4; doc.setFont('helvetica', 'bold'); doc.setTextColor(20);
-    doc.text(`TDCG: ${Math.round(last.tdcg || 0)}    ${fr ? 'Condition' : 'Condition'}: ${last.condition || '—'}/4    Duval: ${last.duval || '—'}`, M, y); y += 16;
+    doc.text(`TDCG: ${Math.round(lastGas.tdcg || 0)}    ${fr ? 'Condition' : 'Condition'}: ${lastGas.condition || '—'}/4    Duval: ${lastGas.duval || '—'}`, M, y); y += 16;
   }
 
   // ── Analyse experte ──

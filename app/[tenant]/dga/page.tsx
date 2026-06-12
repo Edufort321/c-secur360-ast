@@ -22,7 +22,7 @@ import {
 import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import { duvalPct, duvalZone } from '@/lib/dga/duval';
 import { dueStatusByDate } from '@/lib/dga/catalog';
-import { GAS_FIELDS, OIL_FIELDS, FURAN_FIELDS, gl, fl, COND_LABELS, COND_COLORS, worstCondition, effectiveNextDate, pcbStatus, latestPcb } from '@/lib/dga/fields';
+import { GAS_FIELDS, OIL_FIELDS, FURAN_FIELDS, gl, fl, COND_LABELS, COND_COLORS, worstCondition, effectiveNextDate, pcbStatus, latestPcb, lastGasMeasure } from '@/lib/dga/fields';
 import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
 import { voltageClass } from '@/lib/dga/oil';
 import { TransfoView } from '@/components/dga/TransfoView';
@@ -139,17 +139,20 @@ export default function DgaPage() {
 
   const dueCounts = useMemo(() => {
     const a = { overdue: 0, soon: 0, ok: 0 };
-    for (const d of dossiers) { const last = d.id ? lastByDossier[d.id] : undefined; const s = dueStatusByDate(effectiveNextDate(d.extra, last)).code; if (s === 'overdue') a.overdue++; else if (s === 'soon') a.soon++; else if (s === 'ok') a.ok++; }
+    for (const d of dossiers) { const lg = (d.id ? lastGasMeasure(measuresByDossier[d.id]) : undefined) || (d.id ? lastByDossier[d.id] : undefined); const s = dueStatusByDate(effectiveNextDate(d.extra, lg)).code; if (s === 'overdue') a.overdue++; else if (s === 'soon') a.soon++; else if (s === 'ok') a.ok++; }
     return a;
-  }, [dossiers, lastByDossier]);
+  }, [dossiers, lastByDossier, measuresByDossier]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     // Clé de tri par dossier : pire condition (0..3, -1 si aucune mesure) + urgence de reprise.
+    // Condition de gaz = DERNIÈRE mesure CONTENANT DES GAZ (portrait courant ; un relevé BPC/huile seul
+    // ne masque pas l'état de gaz, et après réparation le dernier relevé de gaz reflète l'amélioration).
+    const lastG = (d: Dossier) => d.id ? (lastGasMeasure(measuresByDossier[d.id]) || lastByDossier[d.id]) : undefined;
     const rank = (d: Dossier) => {
-      const last = d.id ? lastByDossier[d.id] : undefined;
-      const worst = last ? worstCondition(last) : -1;
-      const due = dueStatusByDate(effectiveNextDate(d.extra, last));
+      const lg = lastG(d);
+      const worst = lg ? worstCondition(lg) : -1;
+      const due = dueStatusByDate(effectiveNextDate(d.extra, lg));
       const dueKey = due.code === 'none' ? Infinity : (due.days ?? Infinity); // plus en retard / plus tôt = plus petit
       return { worst, dueKey };
     };
@@ -158,9 +161,9 @@ export default function DgaPage() {
       if (treatFilter === 'todo' && d.treated !== false) return false;
       if (treatFilter === 'done' && d.treated === false) return false;
       if (q && ![d.ident, d.client, d.serie, d.apparatus, d.description, d.company, d.equip_no].some(v => (v || '').toLowerCase().includes(q))) return false;
-      if (dueFilter !== 'all') { const last = d.id ? lastByDossier[d.id] : undefined; if (dueStatusByDate(effectiveNextDate(d.extra, last)).code !== dueFilter) return false; }
-      // Suivi rapproché : pire condition IEEE élevée (≥ 3, soit Condition 3 ou 4 — reprise mensuelle/hebdo).
-      if (condFilter) { const last = d.id ? lastByDossier[d.id] : undefined; const w = last ? worstCondition(last) : -1; if (w < 2) return false; }
+      if (dueFilter !== 'all') { if (dueStatusByDate(effectiveNextDate(d.extra, lastG(d))).code !== dueFilter) return false; }
+      // Suivi rapproché : pire condition IEEE de gaz élevée (≥ 3, soit Condition 3 ou 4).
+      if (condFilter) { const lg = lastG(d); const w = lg ? worstCondition(lg) : -1; if (w < 2) return false; }
       // BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm).
       if (pcbFilter) { const ms = measuresByDossier[d.id!] || (d.id && lastByDossier[d.id] ? [lastByDossier[d.id]] : []); const code = pcbStatus(latestPcb(ms), lang).code; if (code !== 'trace' && code !== 'present') return false; }
       return true;
@@ -659,10 +662,13 @@ function ListView(p: any) {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((d: Dossier) => {
           const last = d.id ? lastByDossier[d.id] : undefined;
-          const worst = last ? worstCondition(last) : null;
-          const zone = last ? duvalZone(duvalPct({ ch4: +(last.ch4 || 0), c2h4: +(last.c2h4 || 0), c2h2: +(last.c2h2 || 0) }), lang) : null;
+          // État de GAZ : dernière mesure contenant des gaz (un relevé BPC/huile seul ne masque pas l'état ;
+          // après réparation le dernier relevé de gaz reflète l'amélioration).
+          const lastG = (d.id ? lastGasMeasure(measuresByDossier[d.id]) : undefined) || last;
+          const worst = lastG ? worstCondition(lastG) : null;
+          const zone = lastG ? duvalZone(duvalPct({ ch4: +(lastG.ch4 || 0), c2h4: +(lastG.c2h4 || 0), c2h2: +(lastG.c2h2 || 0) }), lang) : null;
           const isSel = !!selected[d.id!];
-          const nextD = effectiveNextDate(d.extra, last);
+          const nextD = effectiveNextDate(d.extra, lastG);
           const due = dueStatusByDate(nextD);
           const dueColor = due.code === 'overdue' ? '#e63946' : due.code === 'soon' ? '#f4a261' : due.code === 'ok' ? '#2a9d8f' : '#999';
           const dueLabel = due.code === 'overdue' ? tr('En retard', 'Overdue') : due.code === 'soon' ? tr('Bientôt dû', 'Due soon') : due.code === 'ok' ? tr('À jour', 'Up to date') : '—';
