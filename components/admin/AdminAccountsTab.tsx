@@ -92,6 +92,14 @@ export default function AdminAccountsTab() {
     if (r.ok) load();
   }
 
+  async function remove(u: U) {
+    if (!confirm(`SUPPRIMER définitivement le compte ${u.email} ?\n\nCette action est irréversible : le compte et ses sessions sont supprimés (admin ET accès ${TENANT}).`)) return;
+    const r = await fetch(`/api/admin/users?id=${encodeURIComponent(u.id)}`, { method: 'DELETE', credentials: 'include' });
+    const j = await r.json().catch(() => ({}));
+    setNotice(r.ok ? `🗑 Compte ${u.email} supprimé définitivement.` : 'Erreur : ' + (j.error || 'suppression impossible'));
+    if (r.ok) load();
+  }
+
   const inp = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500';
 
   return (
@@ -168,9 +176,13 @@ export default function AdminAccountsTab() {
                         className="inline-flex items-center gap-1 rounded-lg border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50">
                         <Power size={12} /> {u.is_active === false ? 'Réactiver' : 'Désactiver'}
                       </button>
-                      <button onClick={() => revoke(u)} title="Retirer l'accès administrateur"
+                      <button onClick={() => revoke(u)} title="Retirer l'accès administrateur (garde le compte cerdia)"
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50">
+                        Retirer
+                      </button>
+                      <button onClick={() => remove(u)} title="Supprimer définitivement le compte"
                         className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50">
-                        <Trash2 size={12} /> Retirer
+                        <Trash2 size={12} /> Supprimer
                       </button>
                     </div>
                   </td>

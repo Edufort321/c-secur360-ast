@@ -77,6 +77,16 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'archived'>('all');
   const [filterPay, setFilterPay] = useState<'all' | 'upcoming' | 'late' | 'relance'>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Navigation par onglets de modules (au lieu d'une longue page qui défile).
+  const [tab, setTab] = useState<'tableau' | 'clients' | 'vendeurs' | 'admins' | 'marketing' | 'contenu'>('tableau');
+  const ADMIN_TABS: { k: typeof tab; label: string; icon: any }[] = [
+    { k: 'tableau', label: 'Tableau de bord', icon: BarChart3 },
+    { k: 'clients', label: 'Clients', icon: Building },
+    { k: 'vendeurs', label: 'Vendeurs', icon: Users },
+    { k: 'admins', label: 'Administrateurs', icon: Shield },
+    { k: 'marketing', label: 'Marketing', icon: TrendingUp },
+    { k: 'contenu', label: 'Contenu du site', icon: Globe },
+  ];
 
   const [vendors, setVendors] = useState<any[]>([]);
   const [aiReq, setAiReq] = useState<{ requested: string[]; exhausted: string[] }>({ requested: [], exhausted: [] });
@@ -335,7 +345,19 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', color: '#111827', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#f3f4f6', color: '#111827', fontFamily: 'system-ui, -apple-system, sans-serif', overflowX: 'hidden' }}>
+      <style>{`
+        .admTabbar{ display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:10px 16px; background:#fff; border-bottom:1px solid #e5e7eb; position:sticky; top:0; z-index:30; scrollbar-width:thin; }
+        .admTab{ flex:0 0 auto; display:inline-flex; align-items:center; gap:7px; padding:9px 15px; border-radius:9px; border:1px solid #e5e7eb; background:#f9fafb; color:#374151; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .admTab:hover{ background:#f3f4f6; }
+        .admTab.active{ background:#2563eb; color:#fff; border-color:#2563eb; }
+        .admSection, .admMain{ max-width:100%; }
+        @media(max-width:640px){
+          .admMain{ padding:18px 12px !important; }
+          .admSection{ padding:26px 12px 0 !important; }
+          .admTab{ padding:8px 12px; font-size:13px; }
+        }
+      `}</style>
       <PortalHeader subtitle="Panneau de contrôle multi-clients" />
 
       {/* Barre de navigation rapide */}
@@ -345,7 +367,8 @@ export default function AdminDashboard() {
         padding: '10px 24px',
         display: 'flex',
         gap: '12px',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap'
       }}>
         <Link
           href="/"
@@ -417,7 +440,20 @@ export default function AdminDashboard() {
         </Link>
       </div>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
+      {/* Onglets de modules */}
+      <div className="admTabbar">
+        {ADMIN_TABS.map(t => {
+          const Icon = t.icon;
+          return (
+            <button key={t.k} className={`admTab ${tab === t.k ? 'active' : ''}`} onClick={() => setTab(t.k)}>
+              <Icon size={15} /> {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="admMain" style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
+        {tab === 'tableau' && (<>
         {/* Stats Grid */}
         <div style={{
           display: 'grid',
@@ -474,6 +510,9 @@ export default function AdminDashboard() {
         {/* Gestion des prix des modules (au-dessus des tenants) */}
         <PriceManager />
 
+        </>)}
+
+        {tab === 'clients' && (<>
         {/* Clients Table */}
         <div style={{
           background: '#ffffff',
@@ -1094,10 +1133,11 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+        </>)}
       </div>
 
-      {/* Section : Gestion des vendeurs */}
-      <div style={{ padding: '40px 32px 0' }}>
+      {tab === 'vendeurs' && (
+      <div className="admSection" style={{ padding: '40px 32px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 4px 0', color: '#111827' }}>Représentants commerciaux</h2>
@@ -1167,7 +1207,8 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+           <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '720px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
                   {['Nom', 'Courriel', 'Téléphone', 'Taux', 'Clients', 'Revenu annuel', 'Commission estimée', 'Statut', ''].map(h => (
@@ -1226,22 +1267,26 @@ export default function AdminDashboard() {
                 })}
               </tbody>
             </table>
+           </div>
           </div>
         )}
       </div>
+      )}
 
-      {/* Section : comptes administrateurs (accès /admin + tenant cerdia) */}
-      <div style={{ padding: '40px 32px 0' }}>
+      {tab === 'admins' && (
+      <div className="admSection" style={{ padding: '40px 32px 0' }}>
         <AdminAccountsTab />
       </div>
+      )}
 
-      {/* Section : Marketing (campagnes IA + conformité légale) */}
-      <div style={{ padding: '40px 32px 0' }}>
+      {tab === 'marketing' && (
+      <div className="admSection" style={{ padding: '40px 32px 0' }}>
         <MarketingTab />
       </div>
+      )}
 
-      {/* Section : gestion slides page d'accueil */}
-      <div style={{ padding: '40px 32px 0' }}>
+      {tab === 'contenu' && (<>
+      <div className="admSection" style={{ padding: '40px 32px 0' }}>
         <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '6px', color: '#111827' }}>
           Page d'accueil — Carrousel hero
         </h2>
@@ -1252,7 +1297,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Section : captures d'ecran par module */}
-      <div style={{ padding: '40px 32px 0' }}>
+      <div className="admSection" style={{ padding: '40px 32px 0' }}>
         <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '6px', color: '#111827' }}>
           Page d'accueil — Captures modules
         </h2>
@@ -1261,6 +1306,7 @@ export default function AdminDashboard() {
         </p>
         <ModuleSlidesTab />
       </div>
+      </>)}
 
       {/* Footer avec mention CERDIA */}
       <footer style={{
