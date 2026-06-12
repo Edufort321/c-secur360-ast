@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { MODULES as MODULE_REGISTRY } from '@/lib/modules/registry';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -16,7 +17,9 @@ const CHAT_STARTERS = [
   'Comment cadrer une 1re campagne conforme LCAP pour un nouveau segment ?',
 ];
 
-const MODULES = ['Rapports terrain (QR + IA)', 'DGA transformateurs', 'Permis espaces clos', 'Inventaire'];
+// Source UNIQUE et réelle des modules = le registre (lib/modules/registry.ts). Pas de liste recopiée :
+// quand un module est ajouté au produit, il apparaît automatiquement ici. (On exclut 'admin', interne.)
+const MODULES = MODULE_REGISTRY.filter(m => m.key !== 'admin').map(m => m.labelFr);
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
 const PLAT_ICON: Record<string, string> = { LinkedIn: '💼', Facebook: '📘', Instagram: '📸', TikTok: '🎵', 'X (Twitter)': '𝕏', X: '𝕏', Twitter: '𝕏', YouTube: '▶️' };
 
@@ -280,8 +283,8 @@ export default function MarketingTab() {
   }
 
   // ── Prospection ────────────────────────────────────────────────────────
-  const [segment, setSegment] = useState('Mutuelles SST');
-  const [pModule, setPModule] = useState('Rapports terrain');
+  const [segment, setSegment] = useState('');
+  const [pModule, setPModule] = useState(MODULES[0]);
   const [angle, setAngle] = useState('');
   const [seuil, setSeuil] = useState(55);
   const [checks, setChecks] = useState({ c1: false, c2: false, c3: false, c4: false });
@@ -873,8 +876,8 @@ export default function MarketingTab() {
               <h2>Campagne <span className="chip">module + angle</span></h2>
               <p className="hint">« Recherche » = enrichir des fiches <b>déjà consentantes</b>, jamais scraper au hasard.</p>
               <div className="row2">
-                <div><label>Module promu</label><select value={pModule} onChange={e => setPModule(e.target.value)}><option>Rapports terrain</option><option>DGA transformateurs</option><option>Espaces clos</option></select></div>
-                <div><label>Segment</label><select value={segment} onChange={e => setSegment(e.target.value)}><option>Mutuelles SST</option><option>Location équipement</option><option>Manufacturiers MT</option></select></div>
+                <div><label>Module promu</label><select value={pModule} onChange={e => setPModule(e.target.value)}>{MODULES.map(m => <option key={m}>{m}</option>)}</select></div>
+                <div><label>Segment ciblé</label><input value={segment} onChange={e => setSegment(e.target.value)} placeholder="Ex. : mutuelles SST, location d'équipement, manufacturiers MT…" /></div>
               </div>
               <label>Angle d'accroche</label>
               <textarea value={angle} onChange={e => setAngle(e.target.value)} placeholder="Ex. : Réduire le temps de production des rapports terrain grâce au workflow QR + IA." />
