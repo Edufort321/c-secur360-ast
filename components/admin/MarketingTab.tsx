@@ -650,105 +650,6 @@ export default function MarketingTab() {
             </div>
           </div>
 
-          {/* Avatar présentateur (parle ton script) */}
-          <div className="card">
-            <h2>Avatar présentateur <span className="chip">parle &amp; explique</span></h2>
-            <p className="hint">Choisis un <b>avatar</b> (déposé dans les Réglages) ; il prononce ton script (lip-sync, via D-ID).</p>
-            {avatars.length === 0 && <div className="warnbox" style={{ marginTop: 0 }}>Ajoute d'abord un <b>avatar</b> dans ⚙ Réglages du Studio (en haut).</div>}
-            <div className="row3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 130px', gap: 11 }}>
-              <div><label>Avatar</label>
-                <select value={selectedAvatarId} onChange={e => setSelectedAvatarId(e.target.value)}>
-                  {avatars.length === 0 && <option value="">— aucun —</option>}
-                  {avatars.map(a => <option key={a.id} value={a.id}>{a.name || 'avatar'}</option>)}
-                </select>
-              </div>
-              <div><label>Voix</label><select value={avaVoice} onChange={e => setAvaVoice(e.target.value)}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select></div>
-              <div><label>Délai au début</label>
-                <select value={avaDelay} onChange={e => setAvaDelay(+e.target.value)}>
-                  <option value={0}>aucun</option><option value={500}>0,5 s</option><option value={800}>0,8 s</option><option value={1200}>1,2 s</option><option value={2000}>2 s</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
-              {selectedAvatar?.url && <img src={selectedAvatar.url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--line)' }} />}
-              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setAvaText(pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' '))}>Remplir depuis le storyboard</button>}
-            </div>
-            {/* Mode « texte IA » : idées + durée -> script calibré */}
-            <div className="addbox">
-              <label style={{ marginTop: 0 }}>✦ Rédiger le texte par IA — donne tes idées</label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                <span style={{ color: 'var(--mist)', fontSize: 11, alignSelf: 'center' }}>Modèles :</span>
-                {SCRIPT_TEMPLATES.map(t => (
-                  <button key={t.k} type="button" className="copy" onClick={() => setAvaIdeas(t.ideas)}>{t.label}</button>
-                ))}
-              </div>
-              <textarea value={avaIdeas} onChange={e => setAvaIdeas(e.target.value)} placeholder="Ex. : présenter le module DGA, gain de temps, capture QR, public technique…" rows={2} />
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 6 }}>
-                <div><label style={{ marginTop: 0 }}>Durée</label>
-                  <select value={avaSeconds} onChange={e => setAvaSeconds(+e.target.value)} style={{ width: 130 }}>
-                    <option value={10}>10 secondes</option><option value={20}>20 secondes</option>
-                    <option value={30}>30 secondes</option><option value={45}>45 secondes</option><option value={60}>60 secondes</option>
-                  </select>
-                </div>
-                <button className="btn btn-violet" onClick={writeAvatarScript} disabled={avaWriting}>{avaWriting ? '✦ Rédaction…' : '✦ Rédiger le texte'}</button>
-              </div>
-            </div>
-
-            <label>Texte à narrer</label>
-            <textarea value={avaText} onChange={e => setAvaText(e.target.value)} placeholder="Ce que l'avatar dit à l'écran… (ou rédige-le par IA ci-dessus)" rows={3} />
-            <div className="actions">
-              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy}>{avaBusy ? '🎬 Génération…' : '🎬 Générer l\'avatar qui parle'}</button>
-            </div>
-            {avaMsg && <div className={`mkt-notice ${avaMsg.ok ? 'ok' : 'err'}`} style={{ marginTop: 10, marginBottom: 0 }}>{avaMsg.msg}</div>}
-            {avaUrl && (
-              <div style={{ marginTop: 12 }}>
-                <video src={avaUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
-                <div className="actions"><a className="btn btn-ghost" href={avaUrl} target="_blank" rel="noreferrer" download>↧ Télécharger la vidéo</a></div>
-              </div>
-            )}
-
-            {/* Galerie UNIQUE : clips d'avatar + montages assemblés, tout ensemble. */}
-            <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-              <h2 style={{ fontSize: 14 }}>📁 Mes vidéos enregistrées <span className="chip">{avaVideos.length + compositions.length}</span></h2>
-              <p className="hint" style={{ marginBottom: 8 }}>Tout est conservé ici (stockage Supabase) : tes <b>clips d'avatar</b> et tes <b>montages assemblés</b> (badge). Revois, télécharge (↧) ou supprime (🗑). Les montages y arrivent via « 💾 Galerie » de l'assembleur.</p>
-              {(() => {
-                const all = [
-                  ...compositions.map(v => ({ ...v, tag: 'Montage', tc: 'var(--reel)' })),
-                  ...avaVideos.map(v => ({ ...v, tag: 'Avatar', tc: 'var(--violet)' })),
-                ].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-                return all.length === 0 ? (
-                  <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo enregistrée pour l'instant.</div>
-                ) : (
-                  <div className="vidgrid">
-                    {all.map(v => (
-                      <div key={v.id} className="vidcard">
-                        <video src={v.url} controls preload="metadata" />
-                        <div className="vrow">
-                          <span className="chip" style={{ color: v.tc, borderColor: v.tc }}>{v.tag}</span>
-                          <span style={{ display: 'flex', gap: 8 }}>
-                            <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
-                            <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Assembleur vidéo IN-APP : aperçu en direct + enregistrement réel (.webm). */}
-          <MarketingComposer
-            avatarVideos={avaVideos}
-            library={library}
-            bgVideos={bgVideos}
-            storyboard={pack?.storyboard}
-            onNotice={(m) => setNotice(m)}
-            uploadFile={uploadToMarketing}
-            saveVideoToGallery={saveVideoToGallery}
-          />
-
           {pack && (
             <>
               <div className="packbar">
@@ -880,9 +781,108 @@ export default function MarketingTab() {
                 <div className="card"><h2>Concept de miniature</h2><p className="hint" style={{ marginBottom: 0 }}>{pack.thumbnail}</p></div>
               )}
 
-              <div className="note">Production : le pack (script, sous-titres, posts, courriel) est prêt à l'emploi. Le rendu vidéo final (capture compte démo + voix + montage) se fait avec ton outil de montage à partir de ce storyboard.</div>
+              <div className="note">Production : le pack (script, sous-titres, posts, courriel) est prêt. Passe à l'<b>avatar</b> puis à l'<b>assembleur</b> ci-dessous — le storyboard remplit déjà les slides automatiquement.</div>
             </>
           )}
+
+          {/* Avatar présentateur (parle ton script) */}
+          <div className="card">
+            <h2>Avatar présentateur <span className="chip">parle &amp; explique</span></h2>
+            <p className="hint">Choisis un <b>avatar</b> (déposé dans la Médiathèque) ; il prononce ton script (lip-sync, via D-ID).</p>
+            {avatars.length === 0 && <div className="warnbox" style={{ marginTop: 0 }}>Ajoute d'abord un <b>avatar</b> dans 🗂 Médiathèque du Studio (en haut).</div>}
+            <div className="row3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 130px', gap: 11 }}>
+              <div><label>Avatar</label>
+                <select value={selectedAvatarId} onChange={e => setSelectedAvatarId(e.target.value)}>
+                  {avatars.length === 0 && <option value="">— aucun —</option>}
+                  {avatars.map(a => <option key={a.id} value={a.id}>{a.name || 'avatar'}</option>)}
+                </select>
+              </div>
+              <div><label>Voix</label><select value={avaVoice} onChange={e => setAvaVoice(e.target.value)}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select></div>
+              <div><label>Délai au début</label>
+                <select value={avaDelay} onChange={e => setAvaDelay(+e.target.value)}>
+                  <option value={0}>aucun</option><option value={500}>0,5 s</option><option value={800}>0,8 s</option><option value={1200}>1,2 s</option><option value={2000}>2 s</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+              {selectedAvatar?.url && <img src={selectedAvatar.url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--line)' }} />}
+              {pack?.storyboard && <button className="btn btn-ghost" onClick={() => setAvaText(pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' '))}>Remplir depuis le storyboard</button>}
+            </div>
+            {/* Mode « texte IA » : idées + durée -> script calibré */}
+            <div className="addbox">
+              <label style={{ marginTop: 0 }}>✦ Rédiger le texte par IA — donne tes idées</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                <span style={{ color: 'var(--mist)', fontSize: 11, alignSelf: 'center' }}>Modèles :</span>
+                {SCRIPT_TEMPLATES.map(t => (
+                  <button key={t.k} type="button" className="copy" onClick={() => setAvaIdeas(t.ideas)}>{t.label}</button>
+                ))}
+              </div>
+              <textarea value={avaIdeas} onChange={e => setAvaIdeas(e.target.value)} placeholder="Ex. : présenter le module DGA, gain de temps, capture QR, public technique…" rows={2} />
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 6 }}>
+                <div><label style={{ marginTop: 0 }}>Durée</label>
+                  <select value={avaSeconds} onChange={e => setAvaSeconds(+e.target.value)} style={{ width: 130 }}>
+                    <option value={10}>10 secondes</option><option value={20}>20 secondes</option>
+                    <option value={30}>30 secondes</option><option value={45}>45 secondes</option><option value={60}>60 secondes</option>
+                  </select>
+                </div>
+                <button className="btn btn-violet" onClick={writeAvatarScript} disabled={avaWriting}>{avaWriting ? '✦ Rédaction…' : '✦ Rédiger le texte'}</button>
+              </div>
+            </div>
+
+            <label>Texte à narrer</label>
+            <textarea value={avaText} onChange={e => setAvaText(e.target.value)} placeholder="Ce que l'avatar dit à l'écran… (ou rédige-le par IA ci-dessus)" rows={3} />
+            <div className="actions">
+              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy}>{avaBusy ? '🎬 Génération…' : '🎬 Générer l\'avatar qui parle'}</button>
+            </div>
+            {avaMsg && <div className={`mkt-notice ${avaMsg.ok ? 'ok' : 'err'}`} style={{ marginTop: 10, marginBottom: 0 }}>{avaMsg.msg}</div>}
+            {avaUrl && (
+              <div style={{ marginTop: 12 }}>
+                <video src={avaUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
+                <div className="actions"><a className="btn btn-ghost" href={avaUrl} target="_blank" rel="noreferrer" download>↧ Télécharger la vidéo</a></div>
+              </div>
+            )}
+          </div>
+
+          {/* Assembleur vidéo IN-APP : aperçu en direct + enregistrement réel (.webm). */}
+          <MarketingComposer
+            avatarVideos={avaVideos}
+            library={library}
+            bgVideos={bgVideos}
+            storyboard={pack?.storyboard}
+            onNotice={(m) => setNotice(m)}
+            uploadFile={uploadToMarketing}
+            saveVideoToGallery={saveVideoToGallery}
+          />
+
+          {/* Galerie UNIQUE : clips d'avatar + montages assemblés, tout ensemble. */}
+          <div className="card">
+            <h2>📁 Mes vidéos enregistrées <span className="chip">{avaVideos.length + compositions.length}</span></h2>
+            <p className="hint">Tout est conservé ici (stockage Supabase) : tes <b>clips d'avatar</b> et tes <b>montages assemblés</b> (badge). Revois, télécharge (↧) ou supprime (🗑). Les montages y arrivent via « 💾 Enregistrer dans la galerie » de l'assembleur.</p>
+            {(() => {
+              const all = [
+                ...compositions.map(v => ({ ...v, tag: 'Montage', tc: 'var(--reel)' })),
+                ...avaVideos.map(v => ({ ...v, tag: 'Avatar', tc: 'var(--violet)' })),
+              ].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+              return all.length === 0 ? (
+                <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo enregistrée pour l'instant.</div>
+              ) : (
+                <div className="vidgrid">
+                  {all.map(v => (
+                    <div key={v.id} className="vidcard">
+                      <video src={v.url} controls preload="metadata" />
+                      <div className="vrow">
+                        <span className="chip" style={{ color: v.tc, borderColor: v.tc }}>{v.tag}</span>
+                        <span style={{ display: 'flex', gap: 8 }}>
+                          <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
+                          <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </>
       )}
 
