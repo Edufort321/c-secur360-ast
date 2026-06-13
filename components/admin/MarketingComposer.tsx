@@ -365,6 +365,20 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
     } finally { setSaving(false); }
   }
 
+  // Téléchargement FORCÉ : l'attribut `download` est ignoré pour une URL cross-origin (Supabase) -> on
+  // récupère le fichier en blob puis on déclenche le téléchargement local.
+  async function downloadFile(url: string, filename: string) {
+    try {
+      const blob = url.startsWith('blob:') ? await fetch(url).then(r => r.blob()) : await fetch(url).then(r => r.blob());
+      const a = document.createElement('a');
+      const obj = URL.createObjectURL(blob);
+      a.href = obj; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(obj), 4000);
+    } catch (e: any) {
+      onNotice({ msg: 'Téléchargement : ' + (e?.message || 'échec') + '. Astuce : clic droit sur la vidéo → « Enregistrer la vidéo sous… ».', ok: false });
+    }
+  }
+
   // ── Slides : helpers ──
   const addSlide = () => setSlides(rs => [...rs, { url: library[0]?.url || '', seconds: 6, caption: '' }]);
   const upSlide = (i: number, patch: Partial<Slide>) => setSlides(rs => rs.map((r, j) => j === i ? { ...r, ...patch } : r));
@@ -515,13 +529,13 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
             <div style={{ marginTop: 12 }}>
               <video src={mp4Url || resultUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
               <div className="actions" style={{ justifyContent: 'center' }}>
-                <a className="btn btn-ghost" href={resultUrl} download={`composition-${aspect.replace(':', 'x')}.webm`}>↧ .webm</a>
+                <button className="btn btn-ghost" onClick={() => downloadFile(resultUrl, `composition-${aspect.replace(':', 'x')}.webm`)}>↧ .webm</button>
                 {mp4Url
-                  ? <a className="btn btn-ghost" href={mp4Url} target="_blank" rel="noreferrer" download>↧ .mp4</a>
+                  ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ .mp4</button>
                   : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion…' : '🎞 Convertir en .mp4'}</button>}
-                <button className="btn btn-signal" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 Enregistrement…' : '💾 Enregistrer dans la galerie'}</button>
+                <button className="btn btn-ghost" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Galerie'}</button>
               </div>
-              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>« Enregistrer dans la galerie » conserve la vidéo dans le studio (📁 Mes vidéos enregistrées). Sinon elle n'est que téléchargeable.</p>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Pour TikTok/Meta, utilise le <b>.mp4</b> (H.264, frame rate constant). « 💾 Galerie » le conserve dans le studio (📁 Mes vidéos enregistrées).</p>
             </div>
           )}
         </div>

@@ -44,11 +44,16 @@ export async function POST(req: NextRequest) {
     if (srcBuf.length > 80 * 1024 * 1024) return NextResponse.json({ error: 'Vidéo trop volumineuse (max 80 Mo).' }, { status: 413 });
     await fs.writeFile(inPath, srcBuf);
 
-    // 2. Transcode webm -> mp4 (H.264 + AAC, faststart pour la lecture web/réseaux sociaux).
+    // 2. Transcode webm -> mp4 compatible réseaux sociaux (TikTok/Meta) :
+    //    - frame rate CONSTANT 30 fps (le webm de MediaRecorder est à cadence variable -> erreur de
+    //      décodage sinon) ; profil H.264 high@4.1 + yuv420p (largement supporté) ;
+    //    - dimensions paires forcées ; audio AAC stéréo 44,1 kHz ; faststart (lecture progressive).
     await runFfmpeg(ffmpegPath as string, [
-      '-y', '-i', inPath,
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '160k',
+      '-y', '-fflags', '+genpts', '-i', inPath,
+      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30,format=yuv420p',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+      '-profile:v', 'high', '-level', '4.1', '-vsync', 'cfr', '-g', '60',
+      '-c:a', 'aac', '-b:a', '160k', '-ar', '44100', '-ac', '2',
       '-movflags', '+faststart',
       outPath,
     ]);

@@ -297,6 +297,15 @@ export default function MarketingTab() {
     } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
     finally { setUploading(false); }
   }
+  // Téléchargement forcé (l'attribut download est ignoré cross-origin) : on récupère le blob.
+  async function downloadAsset(url: string, filename: string) {
+    try {
+      const blob = await fetch(url).then(r => r.blob());
+      const a = document.createElement('a'); const obj = URL.createObjectURL(blob);
+      a.href = obj; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(obj), 4000);
+    } catch { window.open(url, '_blank'); }
+  }
   // Range une vidéo ASSEMBLÉE (composition finale) dans sa galerie dédiée.
   async function saveVideoToGallery(url: string) {
     await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'composition_video', data: { url } }) });
@@ -873,7 +882,7 @@ export default function MarketingTab() {
                       <div className="vrow">
                         <span className="chip" style={{ color: v.tc, borderColor: v.tc }}>{v.tag}</span>
                         <span style={{ display: 'flex', gap: 8 }}>
-                          <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
+                          <button className="copy" onClick={() => downloadAsset(v.url, `${(v.tag || 'video').toLowerCase()}-${v.id.slice(0, 6)}.${v.url.split('.').pop()?.split('?')[0] || 'mp4'}`)} title="Télécharger">↧</button>
                           <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
                         </span>
                       </div>
