@@ -347,18 +347,28 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         setMp4Url('');
         setResultUrl(URL.createObjectURL(blob));
         recorderRef.current = null; setRecording(false); setPlaying(false); stopLoop();
-        // ENREGISTREMENT AUTOMATIQUE dans « 📁 Mes vidéos enregistrées » (le montage est persisté tout seul).
+        // AUTO : téléverse le webm, CONVERTIT en .mp4 (TikTok/Meta), range le .mp4 dans la galerie.
+        // Le .mp4 devient la version de référence (téléchargement + galerie) -> on ne diffuse jamais de webm.
         (async () => {
           setSaving(true);
-          onNotice({ msg: '✓ Vidéo assemblée — enregistrement dans la galerie…', ok: true });
+          onNotice({ msg: '✓ Vidéo assemblée — conversion .mp4 + enregistrement…', ok: true });
           try {
             const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
-            const url = await uploadFile(file, 'composition');
-            await saveVideoToGallery(url);
-            setSavedUrl(url);
-            onNotice({ msg: '✓ Montage enregistré dans « 📁 Mes vidéos enregistrées ».', ok: true });
+            const webmUrl = await uploadFile(file, 'composition');
+            let finalUrl = webmUrl;
+            try {
+              setConverting(true);
+              const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: webmUrl }) });
+              const j = await r.json();
+              if (r.ok && j.url) { setMp4Url(j.url); finalUrl = j.url; }
+              else onNotice({ msg: '⚠ Conversion .mp4 indisponible (' + (j.error || 'erreur') + ') — le .webm est enregistré à la place.', ok: false });
+            } catch { /* conversion KO -> on garde le webm */ }
+            finally { setConverting(false); }
+            await saveVideoToGallery(finalUrl);
+            setSavedUrl(finalUrl);
+            onNotice({ msg: finalUrl.endsWith('.mp4') ? '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).' : '✓ Montage enregistré (format .webm).', ok: true });
           } catch (e: any) {
-            onNotice({ msg: 'Vidéo prête (téléchargeable ci-dessous). Enregistrement galerie échoué : ' + (e?.message || ''), ok: false });
+            onNotice({ msg: 'Vidéo prête (téléchargeable ci-dessous). Enregistrement échoué : ' + (e?.message || ''), ok: false });
           } finally { setSaving(false); }
         })();
       };
@@ -579,15 +589,15 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
             <div style={{ marginTop: 12 }}>
               <video src={mp4Url || resultUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
               <div className="actions" style={{ justifyContent: 'center' }}>
-                <button className="btn btn-ghost" onClick={() => downloadFile(resultUrl, `composition-${aspect.replace(':', 'x')}.webm`)}>↧ .webm</button>
                 {mp4Url
-                  ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ .mp4</button>
-                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion…' : '🎞 Convertir en .mp4'}</button>}
-                {savedUrl && (!mp4Url || savedUrl === mp4Url)
+                  ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ Télécharger le .mp4 (TikTok)</button>
+                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion .mp4…' : '🎞 Convertir en .mp4'}</button>}
+                <button className="btn btn-ghost" onClick={() => downloadFile(resultUrl, `composition-${aspect.replace(':', 'x')}.webm`)} title="Format brut (non accepté par TikTok)">↧ .webm</button>
+                {savedUrl
                   ? <span className="btn btn-ghost" style={{ cursor: 'default', opacity: 0.8 }}>✓ Enregistré</span>
-                  : <button className="btn btn-signal" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : (mp4Url ? '💾 Enregistrer le .mp4' : '💾 Galerie')}</button>}
+                  : <button className="btn btn-ghost" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Galerie'}</button>}
               </div>
-              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Le montage est <b>enregistré automatiquement</b> dans « 📁 Mes vidéos enregistrées » dès la fin. Pour TikTok/Meta, télécharge le <b>.mp4</b> (H.264, frame rate constant).</p>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Montage <b>converti en .mp4</b> et <b>enregistré automatiquement</b> dans « 📁 Mes vidéos enregistrées ». Pour TikTok/Meta, utilise le <b>.mp4</b> — le <b>.webm</b> n'est PAS accepté par ces plateformes.</p>
             </div>
           )}
         </div>
