@@ -86,11 +86,14 @@ export default function EspaceClosScan() {
 
         {/* Mesures d'urgence */}
         <Card title={<span className="flex items-center gap-1.5 text-red-600"><ShieldAlert size={15} /> Mesures d’urgence / sauvetage</span>}>
-          {space.emergency?.strategy ? (
+          {space.emergency?.strategy || space.emergency?.type ? (
             <div className="text-sm text-gray-700 space-y-1">
-              <p>{space.emergency.strategy}</p>
+              {space.emergency.type && <p className="text-xs font-medium">{space.emergency.type}</p>}
+              {space.emergency.strategy && <p>{space.emergency.strategy}</p>}
               {Array.isArray(space.emergency.equipment) && space.emergency.equipment.length > 0 && <p className="text-xs text-gray-500"><b>Équipement : </b>{space.emergency.equipment.join(', ')}</p>}
+              {space.emergency.communication_plan && <p className="text-xs text-gray-500"><b>Communication : </b>{space.emergency.communication_plan}</p>}
               {space.emergency.contacts && <p className="text-xs text-gray-500"><b>Contacts : </b>{space.emergency.contacts}</p>}
+              {space.emergency.hospital?.name && <p className="text-xs text-gray-500"><b>Hôpital : </b>{space.emergency.hospital.name}{space.emergency.hospital.phone ? ` · ${space.emergency.hospital.phone}` : ''}{space.emergency.hospital.distance_km ? ` · ${space.emergency.hospital.distance_km} km` : ''}</p>}
             </div>
           ) : <p className="text-sm text-gray-400">En cas d’urgence, composez le 911. Ne pas tenter de sauvetage sans équipement et formation.</p>}
         </Card>

@@ -203,11 +203,15 @@ export default function EspaceClosFiche() {
 
           <Card>
             <h2 className="font-semibold text-gray-900 flex items-center gap-2 mb-2"><ShieldAlert size={16} className="text-red-600" /> Mesures d’urgence / sauvetage</h2>
-            {space.emergency?.strategy ? (
+            {space.emergency?.strategy || space.emergency?.type ? (
               <div className="text-sm text-gray-700 space-y-1">
-                <p>{space.emergency.strategy}</p>
+                {space.emergency.type && <p className="text-xs"><b>Type : </b>{space.emergency.type}{space.emergency.response_min ? ` · délai visé ${space.emergency.response_min} min` : ''}</p>}
+                {space.emergency.strategy && <p>{space.emergency.strategy}</p>}
                 {Array.isArray(space.emergency.equipment) && space.emergency.equipment.length > 0 && <p className="text-xs text-gray-500"><b>Équipement : </b>{space.emergency.equipment.join(', ')}</p>}
+                {space.emergency.team && <p className="text-xs text-gray-500"><b>Équipe : </b>{space.emergency.team}</p>}
+                {space.emergency.communication_plan && <p className="text-xs text-gray-500"><b>Communication : </b>{space.emergency.communication_plan}</p>}
                 {space.emergency.contacts && <p className="text-xs text-gray-500"><b>Contacts : </b>{space.emergency.contacts}</p>}
+                {space.emergency.hospital?.name && <p className="text-xs text-gray-500"><b>Hôpital : </b>{space.emergency.hospital.name}{space.emergency.hospital.phone ? ` · ${space.emergency.hospital.phone}` : ''}{space.emergency.hospital.distance_km ? ` · ${space.emergency.hospital.distance_km} km` : ''}</p>}
               </div>
             ) : <p className="text-xs text-gray-400">À compléter (utilise le conseiller IA à la création).</p>}
             <p className="text-[11px] text-gray-400 mt-2">Norme : {norm.regulations[0]}</p>

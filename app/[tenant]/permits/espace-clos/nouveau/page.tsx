@@ -43,6 +43,14 @@ export default function NouvelEspaceClos() {
   });
   const [photoUrl, setPhotoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  // Plan de sauvetage / urgence (structuré, pré-rempli par l'IA puis éditable). Sécurité critique.
+  const [rescue, setRescue] = useState<any>({
+    type: 'Sans entrée (récupération)', strategy: '', equipment: [] as string[], team: '', team_onsite: false,
+    contacts: '', hospital_name: '', hospital_address: '', hospital_phone: '', hospital_distance: '', response_min: '',
+    communication_plan: '', validated: false,
+  });
+  const setR = (k: string, v: any) => setRescue((p: any) => ({ ...p, [k]: v }));
+  const toggleRescueEq = (v: string) => setRescue((p: any) => ({ ...p, equipment: p.equipment.includes(v) ? p.equipment.filter((x: string) => x !== v) : [...p.equipment, v] }));
   const [advice, setAdvice] = useState<any>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -85,6 +93,13 @@ export default function NouvelEspaceClos() {
       });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec IA');
       setAdvice(j.advice);
+      // Pré-remplit le plan de sauvetage structuré à partir de la proposition IA (éditable ensuite).
+      const rc = j.advice?.rescue;
+      if (rc) setRescue((p: any) => ({
+        ...p, type: rc.type === 'avec entrée' ? 'Avec entrée' : (rc.type === 'sans entrée' ? 'Sans entrée (récupération)' : p.type),
+        strategy: rc.strategy || p.strategy, equipment: Array.isArray(rc.equipment) && rc.equipment.length ? rc.equipment : p.equipment,
+        team: rc.team || p.team, contacts: rc.contacts || p.contacts, hospital_name: rc.nearest_hospital || p.hospital_name, communication_plan: rc.notes || p.communication_plan,
+      }));
     } catch (e: any) { setErr('IA : ' + (e?.message || '')); }
     finally { setAiBusy(false); }
   }
@@ -111,7 +126,15 @@ export default function NouvelEspaceClos() {
       const payload: any = {
         tenant_id: tenant, space_code: code, name: f.name.trim(), location: f.location || null, space_type: f.space_type,
         province: f.province, description: f.description || null, photo_url: photoUrl || null,
-        characteristics, hazards, emergency: advice?.rescue || {}, risk_level: advice?.risk_level || null,
+        characteristics,
+        hazards,
+        emergency: {
+          type: rescue.type, strategy: rescue.strategy, equipment: rescue.equipment, team: rescue.team,
+          contacts: rescue.contacts, communication_plan: rescue.communication_plan, validated: rescue.validated,
+          response_min: rescue.response_min,
+          hospital: { name: rescue.hospital_name, address: rescue.hospital_address, phone: rescue.hospital_phone, distance_km: rescue.hospital_distance },
+        },
+        risk_level: advice?.risk_level || null,
         retest_minutes: Number(advice?.recommended_retest_minutes) || norm.defaultRetestMinutes, status: 'active',
       };
       const { data, error } = await supabase.from('confined_spaces').insert(payload).select('id').single();
@@ -212,6 +235,28 @@ export default function NouvelEspaceClos() {
               {Array.isArray(advice.missing_info) && advice.missing_info.length > 0 && <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800"><b>⚠ Informations manquantes à obtenir : </b>{advice.missing_info.join(' · ')}</div>}
             </div>
           )}
+        </Sec>
+
+        {/* 6 · Plan de sauvetage & urgence (structuré) */}
+        <Sec title="6 · Plan de sauvetage & mesures d’urgence" icon={<ShieldAlert size={16} />}>
+          <p className="text-xs text-gray-500 mb-2">Le sauvetage <b>sans entrée</b> (récupération par treuil/trépied/harnais) est à privilégier. Ne jamais improviser un sauvetage : ~60 % des décès en espace clos sont des sauveteurs.</p>
+          <Grid>
+            <F l="Type de sauvetage"><select className="inp" value={rescue.type} onChange={e => setR('type', e.target.value)}><option>Sans entrée (récupération)</option><option>Avec entrée (équipe formée)</option><option>Services d’urgence (911)</option></select></F>
+            <F l="Délai de réponse visé (min)"><input className="inp" inputMode="numeric" value={rescue.response_min} onChange={e => setR('response_min', e.target.value)} /></F>
+            <F l="Stratégie / procédure" full><textarea className="inp" rows={2} value={rescue.strategy} onChange={e => setR('strategy', e.target.value)} /></F>
+          </Grid>
+          <div className="mt-2 text-xs font-semibold text-gray-600 mb-1">Équipement de sauvetage</div>
+          <Chips list={['Harnais récupérateur', 'Trépied / treuil', 'SCBA / ARI', 'Détecteur 4 gaz', 'Radio / communication', 'Civière / panier', 'Ligne de vie', 'Ventilateur', 'Éclairage ATEX']} sel={rescue.equipment} onToggle={toggleRescueEq} cls="cyan" />
+          <Grid>
+            <F l="Équipe de sauvetage"><input className="inp" value={rescue.team} onChange={e => setR('team', e.target.value)} placeholder="interne formée / sous-traitant / 911" /></F>
+            <F l="Plan de communication"><input className="inp" value={rescue.communication_plan} onChange={e => setR('communication_plan', e.target.value)} placeholder="radio canal X, vérif. aux 5 min…" /></F>
+            <F l="Contacts d’urgence" full><input className="inp" value={rescue.contacts} onChange={e => setR('contacts', e.target.value)} placeholder="nom – téléphone ; …" /></F>
+            <F l="Hôpital le plus proche"><input className="inp" value={rescue.hospital_name} onChange={e => setR('hospital_name', e.target.value)} /></F>
+            <F l="Tél. urgences hôpital"><input className="inp" value={rescue.hospital_phone} onChange={e => setR('hospital_phone', e.target.value)} /></F>
+            <F l="Adresse hôpital"><input className="inp" value={rescue.hospital_address} onChange={e => setR('hospital_address', e.target.value)} /></F>
+            <F l="Distance (km)"><input className="inp" inputMode="decimal" value={rescue.hospital_distance} onChange={e => setR('hospital_distance', e.target.value)} /></F>
+          </Grid>
+          <label className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={rescue.validated} onChange={e => setR('validated', e.target.checked)} /> Plan de sauvetage vérifié et réaliste (délai de réponse confirmé)</label>
         </Sec>
 
         <div className="flex justify-end gap-2 mt-6 pb-10">
