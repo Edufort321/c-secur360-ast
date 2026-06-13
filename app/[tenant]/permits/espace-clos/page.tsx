@@ -80,7 +80,7 @@ export default function EspaceClosDashboard() {
           </div>
           <div className="flex gap-2">
             <Link href={`/${tenant}/permits`} className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100">← Permis</Link>
-            <button onClick={() => setOpenNew(true)} className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg"><Plus size={16} /> Nouvel espace clos</button>
+            <Link href={`/${tenant}/permits/espace-clos/nouveau`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg"><Plus size={16} /> Nouvel espace clos</Link>
           </div>
         </div>
 

@@ -188,7 +188,7 @@ function NouveauPermisInner() {
   if (type === 'confined_space') {
     // Refonte : l'espace clos vit dans son module dédié (registre QR + permis intelligent + moteur
     // atmosphérique). On y redirige depuis le sélecteur « +nouveau ».
-    if (typeof window !== 'undefined') router.replace(`/${tenant}/permits/espace-clos`);
+    if (typeof window !== 'undefined') router.replace(`/${tenant}/permits/espace-clos/nouveau`);
     return (
       <div className="min-h-screen bg-slate-50">
         <PortalHeader tenant={tenant} />

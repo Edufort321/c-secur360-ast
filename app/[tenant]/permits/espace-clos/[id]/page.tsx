@@ -169,6 +169,28 @@ export default function EspaceClosFiche() {
             </div>
           </Card>
 
+          {/* Caractérisation complète */}
+          <Card>
+            <h2 className="font-semibold text-gray-900 mb-2">Caractérisation</h2>
+            {space.photo_url && <img src={space.photo_url} alt="" className="w-full h-36 object-cover rounded-lg border mb-2" />}
+            <div className="text-xs text-gray-600 space-y-1">
+              {space.characteristics?.usage && <p><b>Usage :</b> {space.characteristics.usage}</p>}
+              {space.characteristics?.synthese && <p>{space.characteristics.synthese}</p>}
+              {space.characteristics?.dimensions?.volume_m3 ? <p><b>Volume :</b> {space.characteristics.dimensions.volume_m3} m³</p> : null}
+              {space.characteristics?.contents?.previous && <p><b>Dernier contenu :</b> {space.characteristics.contents.previous}</p>}
+              {space.characteristics?.ventilation && <p><b>Ventilation :</b> {space.characteristics.ventilation}</p>}
+            </div>
+            {Array.isArray(space.characteristics?.risk_evaluation) && space.characteristics.risk_evaluation.length > 0 && (
+              <div className="mt-2 overflow-x-auto"><table className="w-full text-[11px] border border-gray-200 rounded"><thead><tr className="bg-gray-50 text-gray-500"><th className="text-left p-1.5">Danger</th><th className="p-1.5">Niveau</th></tr></thead><tbody>{space.characteristics.risk_evaluation.map((r: any, i: number) => <tr key={i} className="border-t border-gray-100"><td className="p-1.5">{r.hazard}</td><td className="p-1.5 text-center">{r.level}</td></tr>)}</tbody></table></div>
+            )}
+            {Array.isArray(space.characteristics?.action_plan) && space.characteristics.action_plan.length > 0 && (
+              <details className="mt-2"><summary className="text-xs font-semibold text-gray-600 cursor-pointer">Plan d’action ({space.characteristics.action_plan.length})</summary><ol className="list-decimal ml-5 text-[11px] text-gray-600 mt-1 space-y-0.5">{space.characteristics.action_plan.map((a: string, i: number) => <li key={i}>{a}</li>)}</ol></details>
+            )}
+            {Array.isArray(space.characteristics?.missing_info) && space.characteristics.missing_info.length > 0 && (
+              <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 rounded p-2">⚠ À compléter : {space.characteristics.missing_info.join(' · ')}</div>
+            )}
+          </Card>
+
           <Card>
             <h2 className="font-semibold text-gray-900 mb-2">Dangers & contrôles</h2>
             {Array.isArray(space.hazards) && space.hazards.length > 0 ? (

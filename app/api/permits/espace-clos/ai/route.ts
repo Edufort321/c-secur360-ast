@@ -55,23 +55,31 @@ Réponds en JSON STRICT, sans texte autour :
       return NextResponse.json({ ok: true, province, norm: { ...norm, ...parsed, source: 'ai', updatedAt: new Date().toISOString() }, citations: parsed.citations || [] });
     }
 
-    // action 'advise' : pré-remplit caractéristiques + dangers + contrôles + plan de sauvetage.
+    // action 'advise' : à partir de la CARACTÉRISATION COMPLÈTE de l'espace, produit une évaluation des
+    // risques structurée + moyens de maîtrise + plan de sauvetage + plan d'action. Le contexte fourni est
+    // essentiel : sans lui, l'analyse n'a aucune valeur. (Sécurité critique.)
     const space = body.space || {};
     const prompt = `Province : ${norm.label} (${province}). Autorité : ${norm.authority}. Réfs : ${norm.regulations.join(' ; ')}.
-Espace clos à caractériser :
-${JSON.stringify({ name: space.name, type: space.space_type, location: space.location, description: space.description })}
-Propose une fiche complète et réaliste. Réponds en JSON STRICT, sans texte autour :
-{"characteristics":{"contenu_anterieur":"","ventilation":"","points_acces":"","dimensions":"","sources_energie":"","particularites":""},
- "hazards":["danger spécifique 1","..."],
- "controls":["mesure de maîtrise 1 (ventilation, cadenassage, EPI, détection…)","..."],
- "atmospheric_focus":["gaz/paramètres à surveiller en priorité pour CE type d'espace"],
- "rescue":{"strategy":"sauvetage SANS entrée privilégié (treuil/trépied/harnais)…","equipment":["..."],"contacts":"qui alerter","notes":""},
+Tu reçois la CARACTÉRISATION d'un espace clos. Analyse-la EN PROFONDEUR (type, usage normal, dernier contenu/résidus, dimensions/accès/configuration, sources d'énergie, ventilation, dangers cochés) et produis une évaluation professionnelle, exhaustive et prudente. Si une information manque, signale-la dans "missing_info".
+
+CARACTÉRISATION FOURNIE :
+${JSON.stringify(space, null, 1)}
+
+Réponds en JSON STRICT, sans texte autour :
+{"characteristics":{"synthese":"résumé technique de l'espace et de son usage","particularites":"config/accès/contenu notables"},
+ "hazards":[{"category":"atmosphérique|ensevelissement|mécanique|électrique|thermique|chute|noyade|bruit|chimique|autre","danger":"description précise","source":"origine du danger"}],
+ "risk_evaluation":[{"hazard":"…","probability":"faible|moyenne|élevée","severity":"mineure|grave|mortelle","level":"faible|moyen|élevé|critique","control":"mesure qui réduit ce risque"}],
+ "controls":["mesures de maîtrise prioritaires (élimination/ventilation/cadenassage LOTO/EPI/détection continue/communication)"],
+ "atmospheric_focus":["gaz/paramètres à surveiller en priorité pour CET espace, avec pourquoi"],
+ "rescue":{"strategy":"plan de sauvetage — privilégier le sauvetage SANS entrée (treuil/trépied/harnais récupérateur)","type":"sans entrée|avec entrée","equipment":["…"],"team":"qui (interne/911/équipe spécialisée)","contacts":"numéros/qui alerter","nearest_hospital":"à préciser par l'employeur","notes":""},
+ "action_plan":["étapes séquentielles AVANT/PENDANT/APRÈS l'entrée (isolement, purge, ventilation, tests, surveillance, communication, fermeture)"],
  "recommended_retest_minutes": ${norm.defaultRetestMinutes},
  "risk_level":"faible|moyen|élevé|critique",
- "rationale_fr":"1-2 phrases justifiant selon la norme de la province"}`;
+ "missing_info":["informations manquantes à obtenir pour sécuriser l'entrée"],
+ "rationale_fr":"justification synthétique selon la norme de la province"}`;
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1800, system: KNOWLEDGE, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 3500, system: KNOWLEDGE, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
