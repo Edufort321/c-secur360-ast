@@ -159,13 +159,15 @@ export default function MarketingTab() {
   // Lance la capture RÉELLE côté serveur (Playwright) : le robot se connecte en compte démo et range les
   // écrans capturés dans la médiathèque (images), prêts à servir de slides.
   const [capturing, setCapturing] = useState(false);
+  const [demoEmail, setDemoEmail] = useState('');
+  const [demoPassword, setDemoPassword] = useState('');
   async function runCapture() {
     if (!capturePlan?.steps?.length) { setNotice({ msg: '⚠ Génère d\'abord le plan de capture.', ok: false }); return; }
     setCapturing(true); setNotice({ msg: '📸 Capture en cours (connexion démo + écrans réels)…', ok: true });
     try {
       const r = await fetch('/api/admin/marketing/capture', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ plan: capturePlan, tenant: 'cerdia' }),
+        body: JSON.stringify({ plan: capturePlan, tenant: 'cerdia', demoEmail: demoEmail.trim() || undefined, demoPassword: demoPassword || undefined }),
       });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
       setNotice({ msg: `✓ ${j.captured?.length || 0}/${j.total || 0} écran(s) capturé(s) et rangé(s) dans 📷 Photos & images.${j.errors?.length ? ` (${j.errors.length} ignoré[s])` : ''}`, ok: true });
@@ -797,6 +799,15 @@ export default function MarketingTab() {
                 <div className="card">
                   <h2>Plan de capture <span className="chip">scénario réel · CERDIA démo</span></h2>
                   <p className="hint">L'IA prépare le scénario (pages à montrer + actions à filmer). Le robot Playwright se connecte à <b>CERDIA</b> avec un <b>compte démo</b> (sécurité/RLS respectées, données fictives) et capture les écrans réels.</p>
+                  {/* Compte démo : saisi ici (transmis seulement pour la capture, jamais stocké) OU via env Vercel. */}
+                  <div className="addbox">
+                    <label style={{ marginTop: 0 }}>Compte démo CERDIA (connexion du robot — non enregistré)</label>
+                    <div className="row2">
+                      <input type="email" autoComplete="off" value={demoEmail} onChange={e => setDemoEmail(e.target.value)} placeholder="email du compte démo" />
+                      <input type="password" autoComplete="new-password" value={demoPassword} onChange={e => setDemoPassword(e.target.value)} placeholder="mot de passe" />
+                    </div>
+                    <p className="note" style={{ marginTop: 8 }}>Utilise un <b>compte normal</b> du tenant CERDIA (données fictives). Laisse vide si tu as défini <code>MKT_DEMO_EMAIL</code>/<code>MKT_DEMO_PASSWORD</code> sur Vercel. Les identifiants servent uniquement à cette capture et ne sont jamais sauvegardés.</p>
+                  </div>
                   <div className="actions">
                     <button className="btn btn-violet" onClick={generateCapturePlan} disabled={genPlan}>{genPlan ? '✦ Préparation…' : '✦ Générer le plan de capture (IA)'}</button>
                     {capturePlan && <button className="btn btn-reel" onClick={runCapture} disabled={capturing}>{capturing ? '📸 Capture en cours…' : '📸 Lancer la capture réelle'}</button>}
@@ -810,7 +821,7 @@ export default function MarketingTab() {
                           <tr key={i}><td>{i + 1}</td><td>{st.scene}</td><td className="mono">{st.route}</td><td>{(st.actions || []).map((a: any) => a.type === 'wait' ? `wait ${a.ms}ms` : `${a.type} ${a.selector || ''}`).join(' · ') || '—'}</td><td className="mono">{st.highlight || '—'}</td></tr>
                         ))}</tbody>
                       </table></div>
-                      <div className="note"><b>📸 Lancer la capture réelle</b> exécute le robot <b>côté serveur</b> : il se connecte à CERDIA en compte démo (sécurité/RLS respectées) et range les écrans capturés directement dans <b>📷 Photos &amp; images</b> (prêts à servir de slides). Requiert les variables d'env <code>MKT_DEMO_EMAIL</code> / <code>MKT_DEMO_PASSWORD</code> (compte démo) sur Vercel. Le bouton « Plan (.json) » reste disponible pour un usage hors-ligne via <code>scripts/marketing-capture.mjs</code>.
+                      <div className="note"><b>📸 Lancer la capture réelle</b> exécute le robot <b>côté serveur</b> : il se connecte à CERDIA avec le compte démo ci-dessus (sécurité/RLS respectées) et range les écrans capturés directement dans <b>📷 Photos &amp; images</b> (prêts à servir de slides). Le bouton « Plan (.json) » reste disponible pour un usage hors-ligne via <code>scripts/marketing-capture.mjs</code>.
                       </div>
                     </>
                   )}

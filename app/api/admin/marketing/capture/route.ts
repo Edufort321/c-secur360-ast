@@ -20,14 +20,17 @@ const TENANT_DB = 'cerdia'; // namespacing des actifs (tenant plateforme du stud
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
 
-  const email = process.env.MKT_DEMO_EMAIL;
-  const password = process.env.MKT_DEMO_PASSWORD;
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Compte démo non configuré : définis MKT_DEMO_EMAIL et MKT_DEMO_PASSWORD (variables d\'environnement Vercel).' }, { status: 503 });
-  }
-
   let body: any = {};
   try { body = await req.json(); } catch { /* */ }
+
+  // Identifiants du compte démo : variables d'env Vercel OU, à défaut, saisis dans le studio par le
+  // super-admin (transmis uniquement pour CETTE capture, jamais stockés). Le robot se connecte avec un
+  // compte NORMAL (RLS/accès respectés) — aucune lecture privilégiée.
+  const email = process.env.MKT_DEMO_EMAIL || (typeof body.demoEmail === 'string' ? body.demoEmail.trim() : '');
+  const password = process.env.MKT_DEMO_PASSWORD || (typeof body.demoPassword === 'string' ? body.demoPassword : '');
+  if (!email || !password) {
+    return NextResponse.json({ error: 'Compte démo requis : saisis l\'email et le mot de passe d\'un compte démo CERDIA dans le studio (ou définis MKT_DEMO_EMAIL/MKT_DEMO_PASSWORD sur Vercel).' }, { status: 503 });
+  }
   const steps: any[] = Array.isArray(body?.plan?.steps) ? body.plan.steps : (Array.isArray(body?.steps) ? body.steps : []);
   if (!steps.length) return NextResponse.json({ error: 'Plan de capture vide (génère-le d\'abord).' }, { status: 400 });
   const urlTenant = String(body?.tenant || 'cerdia').replace(/[^a-z0-9_-]/gi, '') || 'cerdia';
