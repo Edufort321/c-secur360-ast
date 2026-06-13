@@ -301,7 +301,9 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         if (at) tracks.push(at);
       }
       const stream = new MediaStream(tracks);
-      const rec = new MediaRecorder(stream, { mimeType: pickMime(), videoBitsPerSecond: 6_000_000 });
+      // Débit modéré : qualité nette tout en gardant le fichier sous la limite Supabase par défaut (50 Mo)
+      // -> la sauvegarde en galerie réussit sans toucher au réglage global.
+      const rec = new MediaRecorder(stream, { mimeType: pickMime(), videoBitsPerSecond: 3_500_000 });
       recorderRef.current = rec;
       rec.ondataavailable = e => { if (e.data && e.data.size) chunksRef.current.push(e.data); };
       rec.onstop = () => {
@@ -502,11 +504,11 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
               <div className="actions" style={{ justifyContent: 'center' }}>
                 <a className="btn btn-ghost" href={resultUrl} download={`composition-${aspect.replace(':', 'x')}.webm`}>↧ .webm</a>
                 {mp4Url
-                  ? <a className="btn btn-signal" href={mp4Url} target="_blank" rel="noreferrer" download>↧ .mp4</a>
+                  ? <a className="btn btn-ghost" href={mp4Url} target="_blank" rel="noreferrer" download>↧ .mp4</a>
                   : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion…' : '🎞 Convertir en .mp4'}</button>}
-                <button className="btn btn-ghost" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Galerie'}</button>
+                <button className="btn btn-signal" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 Enregistrement…' : '💾 Enregistrer dans la galerie'}</button>
               </div>
-              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>{mp4Url ? '✓ .mp4 H.264 prêt (TikTok/Meta).' : 'Le .webm est lisible partout ; convertis en .mp4 si la plateforme l\'exige.'}</p>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>« Enregistrer dans la galerie » conserve la vidéo dans le studio (📁 Mes vidéos enregistrées). Sinon elle n'est que téléchargeable.</p>
             </div>
           )}
         </div>

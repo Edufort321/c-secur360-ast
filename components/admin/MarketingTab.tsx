@@ -705,25 +705,34 @@ export default function MarketingTab() {
               </div>
             )}
 
-            {/* Galerie des vidéos d'avatar : stocker / voir / supprimer */}
+            {/* Galerie UNIQUE : clips d'avatar + montages assemblés, tout ensemble. */}
             <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-              <h2 style={{ fontSize: 14 }}>📁 Vidéos d'avatar enregistrées <span className="chip">{avaVideos.length}</span></h2>
-              <p className="hint" style={{ marginBottom: 8 }}>Toutes les vidéos générées sont conservées ici (stockage Supabase). Tu peux les revoir, les télécharger ou les supprimer (la suppression efface aussi le fichier).</p>
-              {avaVideos.length === 0 ? (
-                <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo enregistrée pour l'instant.</div>
-              ) : (
-                <div className="vidgrid">
-                  {avaVideos.map(v => (
-                    <div key={v.id} className="vidcard">
-                      <video src={v.url} controls preload="metadata" />
-                      <div className="vrow">
-                        <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
-                        <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
+              <h2 style={{ fontSize: 14 }}>📁 Mes vidéos enregistrées <span className="chip">{avaVideos.length + compositions.length}</span></h2>
+              <p className="hint" style={{ marginBottom: 8 }}>Tout est conservé ici (stockage Supabase) : tes <b>clips d'avatar</b> et tes <b>montages assemblés</b> (badge). Revois, télécharge (↧) ou supprime (🗑). Les montages y arrivent via « 💾 Galerie » de l'assembleur.</p>
+              {(() => {
+                const all = [
+                  ...compositions.map(v => ({ ...v, tag: 'Montage', tc: 'var(--reel)' })),
+                  ...avaVideos.map(v => ({ ...v, tag: 'Avatar', tc: 'var(--violet)' })),
+                ].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+                return all.length === 0 ? (
+                  <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo enregistrée pour l'instant.</div>
+                ) : (
+                  <div className="vidgrid">
+                    {all.map(v => (
+                      <div key={v.id} className="vidcard">
+                        <video src={v.url} controls preload="metadata" />
+                        <div className="vrow">
+                          <span className="chip" style={{ color: v.tc, borderColor: v.tc }}>{v.tag}</span>
+                          <span style={{ display: 'flex', gap: 8 }}>
+                            <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
+                            <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -737,27 +746,6 @@ export default function MarketingTab() {
             uploadFile={uploadToMarketing}
             saveVideoToGallery={saveVideoToGallery}
           />
-
-          {/* Galerie dédiée des VIDÉOS ASSEMBLÉES (compositions finales). */}
-          <div className="card">
-            <h2>🎬 Vidéos assemblées <span className="chip">{compositions.length}</span></h2>
-            <p className="hint">Tes vidéos finales (depuis l'assembleur ci-dessus, bouton « 💾 Galerie »). Stockées dans Supabase — revois, télécharge ou supprime.</p>
-            {compositions.length === 0 ? (
-              <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo assemblée. Compose-en une ci-dessus puis clique « 💾 Galerie ».</div>
-            ) : (
-              <div className="vidgrid">
-                {compositions.map(v => (
-                  <div key={v.id} className="vidcard">
-                    <video src={v.url} controls preload="metadata" />
-                    <div className="vrow">
-                      <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
-                      <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           {pack && (
             <>
