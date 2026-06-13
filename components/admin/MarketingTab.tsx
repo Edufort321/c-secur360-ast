@@ -156,6 +156,23 @@ export default function MarketingTab() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'capture-plan.json'; a.click();
   }
+  // Lance la capture RÉELLE côté serveur (Playwright) : le robot se connecte en compte démo et range les
+  // écrans capturés dans la médiathèque (images), prêts à servir de slides.
+  const [capturing, setCapturing] = useState(false);
+  async function runCapture() {
+    if (!capturePlan?.steps?.length) { setNotice({ msg: '⚠ Génère d\'abord le plan de capture.', ok: false }); return; }
+    setCapturing(true); setNotice({ msg: '📸 Capture en cours (connexion démo + écrans réels)…', ok: true });
+    try {
+      const r = await fetch('/api/admin/marketing/capture', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ plan: capturePlan, tenant: 'cerdia' }),
+      });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setNotice({ msg: `✓ ${j.captured?.length || 0}/${j.total || 0} écran(s) capturé(s) et rangé(s) dans 📷 Photos & images.${j.errors?.length ? ` (${j.errors.length} ignoré[s])` : ''}`, ok: true });
+      loadAssets();
+    } catch (e: any) { setNotice({ msg: 'Capture : ' + (e?.message || ''), ok: false }); }
+    finally { setCapturing(false); }
+  }
 
   // Avatar présentateur (D-ID) : une photo dans public/ + un script -> vidéo qui parle.
   const AVA_VOICES = [
@@ -234,7 +251,13 @@ export default function MarketingTab() {
     const r = await fetch('/api/admin/marketing/sign-upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ prefix, ext }) });
     const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Upload échoué');
     const { error } = await sbBrowser.storage.from('marketing').uploadToSignedUrl(j.path, j.token, file, { contentType: file.type || undefined });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const mb = Math.round(file.size / 1048576);
+      if (/exceed|maximum|too large|payload|size/i.test(error.message || '')) {
+        throw new Error(`Fichier trop volumineux (${mb} Mo) pour Supabase Storage. Applique la migration 167 et relève « Upload file size limit » dans Project Settings > Storage du tableau de bord Supabase.`);
+      }
+      throw new Error(`${error.message} (fichier ${mb} Mo)`);
+    }
     return j.publicUrl as string;
   }
   async function uploadAvatarModel(file: File) {
@@ -765,7 +788,8 @@ export default function MarketingTab() {
                   <p className="hint">L'IA prépare le scénario (pages à montrer + actions à filmer). Le robot Playwright se connecte à <b>CERDIA</b> avec un <b>compte démo</b> (sécurité/RLS respectées, données fictives) et capture les écrans réels.</p>
                   <div className="actions">
                     <button className="btn btn-violet" onClick={generateCapturePlan} disabled={genPlan}>{genPlan ? '✦ Préparation…' : '✦ Générer le plan de capture (IA)'}</button>
-                    {capturePlan && <button className="btn btn-signal" onClick={downloadPlan}>↧ Télécharger capture-plan.json</button>}
+                    {capturePlan && <button className="btn btn-reel" onClick={runCapture} disabled={capturing}>{capturing ? '📸 Capture en cours…' : '📸 Lancer la capture réelle'}</button>}
+                    {capturePlan && <button className="btn btn-ghost" onClick={downloadPlan}>↧ Plan (.json)</button>}
                   </div>
                   {capturePlan && Array.isArray(capturePlan.steps) && (
                     <>
@@ -775,10 +799,7 @@ export default function MarketingTab() {
                           <tr key={i}><td>{i + 1}</td><td>{st.scene}</td><td className="mono">{st.route}</td><td>{(st.actions || []).map((a: any) => a.type === 'wait' ? `wait ${a.ms}ms` : `${a.type} ${a.selector || ''}`).join(' · ') || '—'}</td><td className="mono">{st.highlight || '—'}</td></tr>
                         ))}</tbody>
                       </table></div>
-                      <div className="note">Pour lancer la capture (une fois) :<br />
-                        <code>npm i -D playwright &amp;&amp; npx playwright install chromium</code><br />
-                        <code>MKT_DEMO_EMAIL=… MKT_DEMO_PASSWORD=… node scripts/marketing-capture.mjs --plan capture-plan.json</code><br />
-                        Le robot se connecte en compte démo (niveaux de sécurité respectés) ; images dans <code>marketing-captures/</code>.
+                      <div className="note"><b>📸 Lancer la capture réelle</b> exécute le robot <b>côté serveur</b> : il se connecte à CERDIA en compte démo (sécurité/RLS respectées) et range les écrans capturés directement dans <b>📷 Photos &amp; images</b> (prêts à servir de slides). Requiert les variables d'env <code>MKT_DEMO_EMAIL</code> / <code>MKT_DEMO_PASSWORD</code> (compte démo) sur Vercel. Le bouton « Plan (.json) » reste disponible pour un usage hors-ligne via <code>scripts/marketing-capture.mjs</code>.
                       </div>
                     </>
                   )}

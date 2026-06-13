@@ -11,8 +11,11 @@ const nextConfig = {
   // Inclut le binaire ffmpeg-static dans le bundle serverless de la route de conversion vidéo
   // (sinon le file-tracing de Next ne l'embarque pas et la conversion échoue sur Vercel).
   experimental: {
+    // Ne pas bundler ces paquets serveur (requires dynamiques + binaires) — les laisser externes (Next 14).
+    serverComponentsExternalPackages: ['@sparticuz/chromium', 'playwright-core'],
     outputFileTracingIncludes: {
       '/api/admin/marketing/convert': ['./node_modules/ffmpeg-static/ffmpeg*'],
+      '/api/admin/marketing/capture': ['./node_modules/@sparticuz/chromium/**'],
     },
   },
   images: {
