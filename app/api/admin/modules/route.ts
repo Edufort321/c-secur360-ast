@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { requireAdmin } from '@/lib/apiAuth';
+import { pushModulesToCerdia } from '@/lib/cerdiaBridge';
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
@@ -54,5 +55,8 @@ export async function PATCH(req: NextRequest) {
   if (name_en !== undefined) updates.name_en = String(name_en)
   const { error } = await supabaseAdmin.from('modules').update(updates).eq('key', key)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // Remontée vers CERDIA (agrégateur parent) : produit/module synchronisé en temps réel.
+  const { data: row } = await supabaseAdmin.from('modules').select('key, name_fr, name_en, monthly_price, sort_order, is_active').eq('key', key).maybeSingle()
+  if (row) await pushModulesToCerdia([row])
   return NextResponse.json({ ok: true })
 }

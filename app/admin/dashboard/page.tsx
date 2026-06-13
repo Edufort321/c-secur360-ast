@@ -34,7 +34,8 @@ import {
   Smartphone,
   Lock,
   Home,
-  LogIn
+  LogIn,
+  Building2
 } from 'lucide-react';
 
 interface AdminStats {
@@ -450,6 +451,16 @@ export default function AdminDashboard() {
             </button>
           );
         })}
+        {/* Pont bidirectionnel : aller vers l'admin CERDIA (commerce) */}
+        <a
+          className="admTab"
+          href={`${process.env.NEXT_PUBLIC_CERDIA_URL || 'https://cerdia.ai'}/commerce/admin`}
+          target="_blank" rel="noreferrer"
+          style={{ marginLeft: 'auto', textDecoration: 'none', color: '#7c3aed', borderColor: '#7c3aed' }}
+          title="Ouvrir l'administration CERDIA"
+        >
+          <Building2 size={15} /> CERDIA →
+        </a>
       </div>
 
       <div className="admMain" style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
