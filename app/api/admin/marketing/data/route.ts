@@ -59,14 +59,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, campaigns: data || [] });
     }
     if (resource === 'assets') {
-      // Avatars (plusieurs) + bibliothèque d'images + vidéos d'avatar générées + vidéos de fond.
-      const { data } = await supabaseAdmin.from('marketing_assets').select('id, kind, data, created_at').eq('tenant_id', TENANT).in('kind', ['avatar_model', 'library_image', 'avatar_video', 'bg_video']).order('created_at', { ascending: false });
+      // Avatars + images + vidéos d'avatar + vidéos de fond + vidéos ASSEMBLÉES (compositions finales).
+      const { data } = await supabaseAdmin.from('marketing_assets').select('id, kind, data, created_at').eq('tenant_id', TENANT).in('kind', ['avatar_model', 'library_image', 'avatar_video', 'bg_video', 'composition_video']).order('created_at', { ascending: false });
       const rows = data || [];
       const avatars = rows.filter((a: any) => a.kind === 'avatar_model');
       const library = rows.filter((a: any) => a.kind === 'library_image');
       const videos = rows.filter((a: any) => a.kind === 'avatar_video');
       const bgVideos = rows.filter((a: any) => a.kind === 'bg_video');
-      return NextResponse.json({ ok: true, avatars, library, videos, bgVideos });
+      const compositions = rows.filter((a: any) => a.kind === 'composition_video');
+      return NextResponse.json({ ok: true, avatars, library, videos, bgVideos, compositions });
     }
     return NextResponse.json({ error: 'resource inconnue' }, { status: 400 });
   } catch (e: any) { return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 }); }

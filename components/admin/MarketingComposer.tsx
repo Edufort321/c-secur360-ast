@@ -347,14 +347,17 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
   }
 
   async function saveResultToGallery() {
-    if (!resultUrl) return;
+    if (!resultUrl && !mp4Url) return;
     setSaving(true);
     try {
-      const blob = await fetch(resultUrl).then(r => r.blob());
-      const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
-      const url = await uploadFile(file, 'composition');
+      let url = mp4Url; // si déjà converti, le .mp4 est déjà stocké côté serveur -> pas de ré-upload
+      if (!url) {
+        const blob = await fetch(resultUrl).then(r => r.blob());
+        const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
+        url = await uploadFile(file, 'composition');
+      }
       await saveVideoToGallery(url);
-      onNotice({ msg: '✓ Vidéo rangée dans la galerie (📁 Vidéos enregistrées).', ok: true });
+      onNotice({ msg: '✓ Vidéo rangée dans « 🎬 Vidéos assemblées ».', ok: true });
     } catch (e: any) {
       onNotice({ msg: 'Sauvegarde : ' + (e?.message || 'échec'), ok: false });
     } finally { setSaving(false); }

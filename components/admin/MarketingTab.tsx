@@ -225,6 +225,7 @@ export default function MarketingTab() {
   const [library, setLibrary] = useState<{ id: string; url: string; name?: string }[]>([]);
   const [avaVideos, setAvaVideos] = useState<{ id: string; url: string; created_at?: string }[]>([]);
   const [bgVideos, setBgVideos] = useState<{ id: string; url: string; name?: string }[]>([]);
+  const [compositions, setCompositions] = useState<{ id: string; url: string; created_at?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const selectedAvatar = avatars.find(a => a.id === selectedAvatarId) || null;
 
@@ -237,6 +238,7 @@ export default function MarketingTab() {
       setLibrary((j.library || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
       setAvaVideos((j.videos || []).map((a: any) => ({ id: a.id, url: a.data?.url, created_at: a.created_at })).filter((x: any) => x.url));
       setBgVideos((j.bgVideos || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name })).filter((x: any) => x.url));
+      setCompositions((j.compositions || []).map((a: any) => ({ id: a.id, url: a.data?.url, created_at: a.created_at })).filter((x: any) => x.url));
     } catch { /* */ }
   }
   useEffect(() => { loadAssets(); }, []);
@@ -293,9 +295,9 @@ export default function MarketingTab() {
     } catch (e: any) { setNotice({ msg: 'Upload : ' + (e?.message || ''), ok: false }); }
     finally { setUploading(false); }
   }
-  // Range une vidéo (composition assemblée) dans la galerie des vidéos.
+  // Range une vidéo ASSEMBLÉE (composition finale) dans sa galerie dédiée.
   async function saveVideoToGallery(url: string) {
-    await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'avatar_video', data: { url } }) });
+    await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'composition_video', data: { url } }) });
     loadAssets();
   }
   async function deleteAsset(id: string) {
@@ -710,13 +712,13 @@ export default function MarketingTab() {
               {avaVideos.length === 0 ? (
                 <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo enregistrée pour l'instant.</div>
               ) : (
-                <div className="grid">
+                <div className="vidgrid">
                   {avaVideos.map(v => (
-                    <div key={v.id} className="fmtcard">
-                      <video src={v.url} controls preload="metadata" style={{ width: '100%', borderRadius: 8 }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                        <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧ télécharger</a>
-                        <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑 supprimer</button>
+                    <div key={v.id} className="vidcard">
+                      <video src={v.url} controls preload="metadata" />
+                      <div className="vrow">
+                        <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
+                        <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
                       </div>
                     </div>
                   ))}
@@ -735,6 +737,27 @@ export default function MarketingTab() {
             uploadFile={uploadToMarketing}
             saveVideoToGallery={saveVideoToGallery}
           />
+
+          {/* Galerie dédiée des VIDÉOS ASSEMBLÉES (compositions finales). */}
+          <div className="card">
+            <h2>🎬 Vidéos assemblées <span className="chip">{compositions.length}</span></h2>
+            <p className="hint">Tes vidéos finales (depuis l'assembleur ci-dessus, bouton « 💾 Galerie »). Stockées dans Supabase — revois, télécharge ou supprime.</p>
+            {compositions.length === 0 ? (
+              <div style={{ color: 'var(--mist)', fontSize: 12, padding: '6px 0' }}>Aucune vidéo assemblée. Compose-en une ci-dessus puis clique « 💾 Galerie ».</div>
+            ) : (
+              <div className="vidgrid">
+                {compositions.map(v => (
+                  <div key={v.id} className="vidcard">
+                    <video src={v.url} controls preload="metadata" />
+                    <div className="vrow">
+                      <a className="copy" href={v.url} target="_blank" rel="noreferrer" download>↧</a>
+                      <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {pack && (
             <>
@@ -1132,6 +1155,10 @@ export default function MarketingTab() {
         .libgrid{display:flex;flex-wrap:wrap;gap:8px;}
         .libitem{position:relative;width:58px;height:58px;}
         .libitem img{width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+        .vidgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+        .vidcard{border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:6px;}
+        .vidcard video{width:100%;border-radius:6px;display:block;aspect-ratio:16/9;object-fit:cover;background:#000;}
+        .vidcard .vrow{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
         .libdel{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:var(--rust);color:#fff;font-size:12px;line-height:1;cursor:pointer;}
         .candbox{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden;}
         .candhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mist);flex-wrap:wrap;}
