@@ -355,20 +355,22 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
           try {
             const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
             const webmUrl = await uploadFile(file, 'composition');
-            let finalUrl = webmUrl;
-            try {
-              setConverting(true);
-              const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: webmUrl }) });
-              const j = await r.json();
-              if (r.ok && j.url) { setMp4Url(j.url); finalUrl = j.url; }
-              else onNotice({ msg: '⚠ Conversion .mp4 indisponible (' + (j.error || 'erreur') + ') — le .webm est enregistré à la place.', ok: false });
-            } catch { /* conversion KO -> on garde le webm */ }
-            finally { setConverting(false); }
-            await saveVideoToGallery(finalUrl);
-            setSavedUrl(finalUrl);
-            onNotice({ msg: finalUrl.endsWith('.mp4') ? '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).' : '✓ Montage enregistré (format .webm).', ok: true });
+            // Conversion .mp4 (seul format diffusé : TikTok/Meta refusent le .webm).
+            setConverting(true);
+            const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: webmUrl }) });
+            const j = await r.json();
+            setConverting(false);
+            if (r.ok && j.url) {
+              setMp4Url(j.url);
+              await saveVideoToGallery(j.url);   // on ne range QUE le .mp4 fonctionnel
+              setSavedUrl(j.url);
+              onNotice({ msg: '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).', ok: true });
+            } else {
+              onNotice({ msg: '⚠ Conversion .mp4 échouée : ' + (j.error || 'erreur serveur') + '. Rien n\'a été rangé (le .webm n\'est pas diffusable). Réessaie ; si ça persiste, signale-le.', ok: false });
+            }
           } catch (e: any) {
-            onNotice({ msg: 'Vidéo prête (téléchargeable ci-dessous). Enregistrement échoué : ' + (e?.message || ''), ok: false });
+            setConverting(false);
+            onNotice({ msg: 'Enregistrement échoué : ' + (e?.message || ''), ok: false });
           } finally { setSaving(false); }
         })();
       };
@@ -407,23 +409,6 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
     } finally { setConverting(false); }
   }
 
-  async function saveResultToGallery() {
-    if (!resultUrl && !mp4Url) return;
-    setSaving(true);
-    try {
-      let url = mp4Url; // si déjà converti, le .mp4 est déjà stocké côté serveur -> pas de ré-upload
-      if (!url) {
-        const blob = await fetch(resultUrl).then(r => r.blob());
-        const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
-        url = await uploadFile(file, 'composition');
-      }
-      await saveVideoToGallery(url);
-      setSavedUrl(url);
-      onNotice({ msg: '✓ Vidéo rangée dans « 📁 Mes vidéos enregistrées ».', ok: true });
-    } catch (e: any) {
-      onNotice({ msg: 'Sauvegarde : ' + (e?.message || 'échec'), ok: false });
-    } finally { setSaving(false); }
-  }
 
   // Téléchargement FORCÉ : l'attribut `download` est ignoré pour une URL cross-origin (Supabase) -> on
   // récupère le fichier en blob puis on déclenche le téléchargement local.
@@ -590,14 +575,11 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
               <video src={mp4Url || resultUrl} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--line)' }} />
               <div className="actions" style={{ justifyContent: 'center' }}>
                 {mp4Url
-                  ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ Télécharger le .mp4 (TikTok)</button>
-                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion .mp4…' : '🎞 Convertir en .mp4'}</button>}
-                <button className="btn btn-ghost" onClick={() => downloadFile(resultUrl, `composition-${aspect.replace(':', 'x')}.webm`)} title="Format brut (non accepté par TikTok)">↧ .webm</button>
-                {savedUrl
-                  ? <span className="btn btn-ghost" style={{ cursor: 'default', opacity: 0.8 }}>✓ Enregistré</span>
-                  : <button className="btn btn-ghost" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Galerie'}</button>}
+                  ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ Télécharger le .mp4</button>
+                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting || saving}>{(converting || saving) ? '🎞 Conversion .mp4…' : '🎞 Convertir en .mp4'}</button>}
+                {savedUrl && <span className="btn btn-ghost" style={{ cursor: 'default', opacity: 0.8 }}>✓ Enregistré</span>}
               </div>
-              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Montage <b>converti en .mp4</b> et <b>enregistré automatiquement</b> dans « 📁 Mes vidéos enregistrées ». Pour TikTok/Meta, utilise le <b>.mp4</b> — le <b>.webm</b> n'est PAS accepté par ces plateformes.</p>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Le montage est <b>converti en .mp4</b> et <b>enregistré automatiquement</b> dans « 📁 Mes vidéos enregistrées » — c'est le seul format diffusable (TikTok/Meta).</p>
             </div>
           )}
         </div>
