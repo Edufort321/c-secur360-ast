@@ -375,6 +375,16 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
     setSlides(storyboard.map((s: any, i: number) => ({ url: library[i]?.url || library[0]?.url || '', seconds: Number(s.seconds) || 6, caption: s.onscreen_text || s.voiceover || '' })));
     setBgMode('slides');
   };
+  // Auto-remplissage : dès qu'un storyboard est disponible (généré dans le Brief créatif) et qu'aucune
+  // slide n'a encore été créée, on pré-remplit automatiquement les slides à partir des scènes.
+  const autoFilledRef = useRef(false);
+  useEffect(() => {
+    if (autoFilledRef.current) return;
+    if (storyboard?.length && slides.length === 0) {
+      autoFilledRef.current = true;
+      setSlides(storyboard.map((s: any, i: number) => ({ url: library[i]?.url || library[0]?.url || '', seconds: Number(s.seconds) || 6, caption: s.onscreen_text || s.voiceover || '' })));
+    }
+  }, [storyboard, library, slides.length]);
 
   const stageW = aspect === '9:16' ? 260 : aspect === '1:1' ? 380 : 520;
   const stageH = Math.round(stageW * dims.h / dims.w);
@@ -436,13 +446,16 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
               </div>
             ) : (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ color: 'var(--mist)', fontSize: 12 }}>{slides.length ? `${slides.length} slide(s) · ${slidesTotal}s` : 'Aucune slide.'}</span>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {storyboard?.length ? <button type="button" className="copy" onClick={fillFromStoryboard}>↡ depuis storyboard</button> : null}
+                    <button type="button" className="copy" onClick={fillFromStoryboard} disabled={!storyboard?.length} title={storyboard?.length ? 'Recréer les slides depuis le storyboard' : 'Génère d\'abord un storyboard dans le Brief créatif'}>↡ depuis storyboard</button>
                     <button type="button" className="copy" onClick={addSlide}>＋ slide</button>
                   </div>
                 </div>
+                {!storyboard?.length && (
+                  <p className="cmp-note" style={{ marginTop: 6 }}>Astuce : génère un <b>storyboard</b> dans le « Brief créatif » (plus bas) — les slides se rempliront automatiquement ici.</p>
+                )}
                 <div style={{ marginTop: 8 }}>
                   <label style={{ marginTop: 0 }}>Style de défilement</label>
                   <select value={style} onChange={e => setStyle(e.target.value as Style)}>
