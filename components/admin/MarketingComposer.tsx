@@ -72,40 +72,75 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
   const dims = DIMS[aspect];
   const slidesTotal = useMemo(() => slides.reduce((s, r) => s + (Number(r.seconds) || 0), 0), [slides]);
 
-  // ── Préchargement des images de slides (crossOrigin pour éviter de « teinter » le canvas) ──
+  // Charge un média en BLOB -> object URL (même origine). Le canvas dessinant un object URL n'est JAMAIS
+  // « teinté » (contrairement à une image cross-origin, surtout quand le cache navigateur a déjà servi la
+  // même URL SANS en-têtes CORS via une vignette). C'est la clé pour que l'enregistrement avec slides marche.
+  const objUrlCache = useRef<Map<string, string>>(new Map());
+  async function toBlobUrl(url: string): Promise<string> {
+    const cached = objUrlCache.current.get(url);
+    if (cached) return cached;
+    const blob = await fetch(url, { cache: 'reload' }).then(r => { if (!r.ok) throw new Error('fetch ' + r.status); return r.blob(); });
+    const obj = URL.createObjectURL(blob);
+    objUrlCache.current.set(url, obj);
+    return obj;
+  }
+
+  // ── Préchargement des images de slides (via blob -> jamais de canvas teinté) ──
   useEffect(() => {
-    slides.forEach(s => {
-      if (!s.url || imgCache.current.has(s.url)) return;
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onerror = () => {
-        // Repli sans crossOrigin : l'image s'affiche en aperçu mais l'enregistrement sera bloqué.
-        const fb = new Image(); fb.onload = () => imgCache.current.set(s.url, fb); fb.src = s.url;
-        setCorsBlocked(true);
-      };
-      img.onload = () => imgCache.current.set(s.url, img);
-      img.src = s.url;
-    });
+    let cancelled = false;
+    (async () => {
+      for (const s of slides) {
+        if (!s.url || imgCache.current.has(s.url)) continue;
+        try {
+          const obj = await toBlobUrl(s.url);
+          const img = new Image();
+          await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('img')); img.src = obj; });
+          if (!cancelled) imgCache.current.set(s.url, img);
+        } catch {
+          // Repli (rare) : chargement direct -> aperçu OK mais l'enregistrement peut être bloqué.
+          const img = new Image(); img.onload = () => imgCache.current.set(s.url, img); img.src = s.url; setCorsBlocked(true);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [slides]);
 
-  // ── Source des vidéos cachées (avatar + fond) ──
+  // ── Source des vidéos cachées (avatar + fond) via blob -> object URL (pas de taint, audio captable) ──
   useEffect(() => {
     const v = avatarVidRef.current; if (!v) return;
     if (!avatarUrl) { v.removeAttribute('src'); return; }
-    v.crossOrigin = 'anonymous';
-    v.src = avatarUrl;
-    v.onerror = () => { v.crossOrigin = ''; v.src = avatarUrl; setCorsBlocked(true); };
-    v.load();
+    let cancelled = false;
+    (async () => {
+      try {
+        const obj = await toBlobUrl(avatarUrl);
+        if (cancelled) return;
+        v.removeAttribute('crossorigin'); v.src = obj; v.load();
+      } catch {
+        if (cancelled) return;
+        v.src = avatarUrl; v.load(); setCorsBlocked(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [avatarUrl]);
   useEffect(() => {
     const v = bgVidRef.current; if (!v) return;
     if (bgMode !== 'video' || !bgVideoUrl) { v.removeAttribute('src'); return; }
-    v.crossOrigin = 'anonymous';
     v.muted = true;
-    v.src = bgVideoUrl;
-    v.onerror = () => { v.crossOrigin = ''; v.src = bgVideoUrl; setCorsBlocked(true); };
-    v.load();
+    let cancelled = false;
+    (async () => {
+      try {
+        const obj = await toBlobUrl(bgVideoUrl);
+        if (cancelled) return;
+        v.removeAttribute('crossorigin'); v.src = obj; v.load();
+      } catch {
+        if (cancelled) return;
+        v.src = bgVideoUrl; v.load(); setCorsBlocked(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [bgMode, bgVideoUrl]);
+  // Libère les object URLs au démontage.
+  useEffect(() => () => { objUrlCache.current.forEach(u => URL.revokeObjectURL(u)); objUrlCache.current.clear(); }, []);
 
   // ── Dessin « cover » d'un média dans un rectangle ──
   function drawCover(ctx: CanvasRenderingContext2D, media: CanvasImageSource, mw: number, mh: number, x: number, y: number, w: number, h: number) {
@@ -493,7 +528,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
                 </div>
                 {slides.map((row, i) => (
                   <div key={i} style={{ marginTop: 8, borderTop: i ? '1px solid rgba(35,44,58,.5)' : 'none', paddingTop: i ? 8 : 0 }}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="slide-row" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{ color: 'var(--mist)', fontSize: 11, width: 14 }}>{i + 1}</span>
                       {library.length > 0 ? (
                         <select value={row.url} onChange={e => upSlide(i, { url: e.target.value })} style={{ flex: 1, minWidth: 130 }}>
@@ -590,8 +625,19 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         .cmp :global(.copy:hover) { color: var(--paper); border-color: var(--steel); }
         .cmp :global(.warnbox) { border: 1px solid var(--amber); background: rgba(245,185,69,.08); border-radius: 9px; padding: 10px 13px; font-size: 12px; color: var(--amber); }
         .cmp :global(.cmp-note) { font-size: 11px; color: var(--steel); }
+        .cmp, .cmp :global(*) { min-width: 0; box-sizing: border-box; }
+        .cmp :global(input), .cmp :global(select), .cmp :global(textarea) { max-width: 100%; }
         @media (max-width: 760px) {
           .cmp :global(.composer-grid) { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 560px) {
+          .cmp { padding: 14px; }
+          .cmp :global(.row2) { grid-template-columns: 1fr; }
+          .cmp :global(.addbox) { padding: 11px; }
+          /* Rangées de slides : les contrôles passent en pleine largeur plutôt que de déborder. */
+          .cmp :global(.slide-row) { gap: 6px; }
+          .cmp :global(.slide-row) > :global(select), .cmp :global(.slide-row) > :global(input[type="text"]) { flex: 1 1 100% !important; min-width: 0 !important; }
+          .cmp :global(.btn) { padding: 9px 12px; font-size: 12.5px; flex: 1 1 auto; justify-content: center; }
         }
       `}</style>
     </div>

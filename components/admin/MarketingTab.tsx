@@ -799,7 +799,7 @@ export default function MarketingTab() {
             <h2>Avatar présentateur <span className="chip">parle &amp; explique</span></h2>
             <p className="hint">Choisis un <b>avatar</b> (déposé dans la Médiathèque) ; il prononce ton script (lip-sync, via D-ID).</p>
             {avatars.length === 0 && <div className="warnbox" style={{ marginTop: 0 }}>Ajoute d'abord un <b>avatar</b> dans 🗂 Médiathèque du Studio (en haut).</div>}
-            <div className="row3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 130px', gap: 11 }}>
+            <div className="row3">
               <div><label>Avatar</label>
                 <select value={selectedAvatarId} onChange={e => setSelectedAvatarId(e.target.value)}>
                   {avatars.length === 0 && <option value="">— aucun —</option>}
@@ -1106,6 +1106,7 @@ export default function MarketingTab() {
         :global(.mktwrap) option{background:#11161f;color:#eef2f6;}
         textarea{resize:vertical;min-height:64px;}
         .row2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+        .row3{display:grid;grid-template-columns:1fr 1fr 130px;gap:11px;}
         .togs{margin-top:13px;border-top:1px solid rgba(35,44,58,.5);}
         .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;}
         .btn{border:none;border-radius:8px;padding:10px 15px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
@@ -1196,6 +1197,28 @@ export default function MarketingTab() {
         .mk{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:11px;font-weight:700;flex:0 0 auto;}
         .mk.req{background:rgba(255,107,94,.15);color:var(--rust);} .mk.ok{background:rgba(46,230,166,.15);color:var(--signal);}
         .rule b{font-size:12.5px;} .rule small{display:block;color:var(--mist);font-size:11px;margin-top:2px;}
+        /* Anti-débordement global + retours à la ligne des longs contenus (URLs, scripts). */
+        .mktwrap, .mktwrap *{min-width:0;box-sizing:border-box;}
+        .mktwrap{overflow-x:hidden;}
+        .ebody, .btext, .er b{overflow-wrap:anywhere;word-break:break-word;}
+        :global(.mktwrap) img,:global(.mktwrap) video,:global(.mktwrap) canvas{max-width:100%;}
+        /* ───────── Responsive mobile ───────── */
+        @media(max-width:680px){
+          .row2,.row3{grid-template-columns:1fr;}
+          .grid{grid-template-columns:1fr;}
+        }
+        @media(max-width:560px){
+          .mktwrap{padding:13px;}
+          h1{font-size:21px;}
+          .mkt-top{gap:12px;margin-bottom:14px;}
+          .guard{max-width:100%;}
+          .card{padding:14px;}
+          .mkt-tabs{gap:5px;}
+          .mkt-tab{padding:8px 11px;font-size:12.5px;border-radius:9px;}
+          .actions{gap:8px;}
+          .actions .btn{flex:1 1 auto;justify-content:center;}
+          .btn{padding:9px 12px;font-size:12.5px;}
+        }
       `}</style>
     </div>
   );

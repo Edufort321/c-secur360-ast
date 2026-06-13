@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
       outPath,
     ]);
 
-    // 3. Ré-uploade le mp4 dans le bucket.
+    // 3. Valide la sortie (un mp4 tronqué/vide = échec ffmpeg silencieux) puis ré-uploade.
     const mp4 = await fs.readFile(outPath);
+    if (mp4.length < 1024) return NextResponse.json({ error: 'Conversion vide (ffmpeg n\'a rien produit).' }, { status: 500 });
     const dest = `composition/${stamp}.mp4`;
     const { error } = await supabaseAdmin.storage.from(BUCKET).upload(dest, mp4, { contentType: 'video/mp4', upsert: true });
     if (error) {
