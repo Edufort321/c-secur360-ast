@@ -186,12 +186,14 @@ function NouveauPermisInner() {
   );
 
   if (type === 'confined_space') {
+    // Refonte : l'espace clos vit dans son module dédié (registre QR + permis intelligent + moteur
+    // atmosphérique). On y redirige depuis le sélecteur « +nouveau ».
+    if (typeof window !== 'undefined') router.replace(`/${tenant}/permits/espace-clos`);
     return (
-      <>
+      <div className="min-h-screen bg-slate-50">
         <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <ConfinedSpace {...commonProps} />
-      </>
+        <div className="flex items-center justify-center gap-2 py-24 text-slate-500"><Loader2 className="animate-spin" size={18} /> Ouverture du module Espaces clos…</div>
+      </div>
     );
   }
 

@@ -168,10 +168,10 @@ function NewSpaceModal({ tenant, onClose, onCreated }: { tenant: string; onClose
       const payload: any = {
         tenant_id: tenant, space_code: code, name: f.name.trim(), location: f.location || null,
         space_type: f.space_type, province: f.province, description: f.description || null,
-        characteristics: advice?.characteristics || {}, hazards: advice?.hazards || [],
+        characteristics: { ...(advice?.characteristics || {}), controls: advice?.controls || [], atmospheric_focus: advice?.atmospheric_focus || [], rationale: advice?.rationale_fr || '' },
+        hazards: advice?.hazards || [],
         emergency: advice?.rescue || {}, risk_level: advice?.risk_level || null,
         retest_minutes: Number(advice?.recommended_retest_minutes) || norm.defaultRetestMinutes,
-        data: advice ? { controls: advice.controls, atmospheric_focus: advice.atmospheric_focus, rationale: advice.rationale_fr } : {},
         status: 'active',
       };
       const { error } = await supabase.from('confined_spaces').insert(payload);

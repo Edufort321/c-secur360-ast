@@ -24,6 +24,13 @@ export default function EspaceClosFiche() {
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
+  const [people, setPeople] = useState<any[]>([]);
+
+  // Annuaire du personnel + statut de formation (module RH) pour pré-remplir les entrants.
+  useEffect(() => {
+    fetch(`/api/permits/espace-clos/people?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { people: [] })).then(j => setPeople(j.people || [])).catch(() => {});
+  }, [tenant]);
 
   const norm = useMemo(() => getNorm(space?.province), [space?.province]);
   const retestMin = permit?.retest_minutes || space?.retest_minutes || norm.defaultRetestMinutes;
@@ -141,8 +148,8 @@ export default function EspaceClosFiche() {
           {/* REGISTRE D'ENTRÉES */}
           {permit && permit.status === 'active' && (
             <EntriesPanel
-              norm={norm} entries={entries} openEntrants={openEntrants} attendants={attendants} atmState={atmState}
-              onAdd={async (e: any) => { await supabase.from('cs_entries').insert({ permit_id: permit.id, tenant_id: tenant, person_name: e.name, role: e.role, equipment_in: e.equipment, entered_at: e.role === 'entrant' ? new Date().toISOString() : null }); await loadPermitChildren(permit.id); }}
+              norm={norm} entries={entries} openEntrants={openEntrants} attendants={attendants} atmState={atmState} people={people}
+              onAdd={async (e: any) => { await supabase.from('cs_entries').insert({ permit_id: permit.id, tenant_id: tenant, person_name: e.name, person_user_id: e.personId || null, role: e.role, equipment_in: e.equipment, entered_at: e.role === 'entrant' ? new Date().toISOString() : null }); await loadPermitChildren(permit.id); }}
               onIn={async (id2: string) => { await supabase.from('cs_entries').update({ entered_at: new Date().toISOString() }).eq('id', id2); await loadPermitChildren(permit.id); }}
               onOut={async (id2: string, returned: boolean) => { await supabase.from('cs_entries').update({ exited_at: new Date().toISOString(), equipment_returned: returned }).eq('id', id2); await loadPermitChildren(permit.id); }}
               now={now}
@@ -167,8 +174,8 @@ export default function EspaceClosFiche() {
             {Array.isArray(space.hazards) && space.hazards.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 mb-2">{space.hazards.map((h: string, i: number) => <span key={i} className="text-[11px] px-2 py-1 rounded bg-red-50 text-red-700">{h}</span>)}</div>
             ) : <p className="text-xs text-gray-400">Aucun danger renseigné.</p>}
-            {Array.isArray(space.data?.controls) && space.data.controls.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">{space.data.controls.map((c: string, i: number) => <span key={i} className="text-[11px] px-2 py-1 rounded bg-emerald-50 text-emerald-700">{c}</span>)}</div>
+            {Array.isArray(space.characteristics?.controls) && space.characteristics.controls.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">{space.characteristics.controls.map((c: string, i: number) => <span key={i} className="text-[11px] px-2 py-1 rounded bg-emerald-50 text-emerald-700">{c}</span>)}</div>
             )}
           </Card>
 
@@ -258,13 +265,36 @@ function AtmPanel({ norm, retestMin, atmState, secsLeft, lastReading, lastEval, 
   );
 }
 
-// ── Registre d'entrées ──
-function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, onAdd, onIn, onOut, now }: any) {
+// ── Registre d'entrées (interconnecté annuaire + RH formations + cumuls de temps) ──
+function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, people, onAdd, onIn, onOut, now }: any) {
+  const [sel, setSel] = useState('');        // id personnel sélectionné, ou '' (custom)
   const [name, setName] = useState('');
   const [role, setRole] = useState('entrant');
   const [equip, setEquip] = useState('');
+  const [personId, setPersonId] = useState<string | null>(null);
   const needAttendants = Math.ceil(openEntrants.length / (norm.attendantPerEntrants || 2));
   const attendantOk = attendants.length >= needAttendants;
+
+  const chosen = (people || []).find((p: any) => p.id === sel);
+  function pick(v: string) {
+    setSel(v);
+    const p = (people || []).find((x: any) => x.id === v);
+    if (p) { setName(p.name); setPersonId(p.id); } else { setPersonId(null); }
+  }
+
+  // Cumuls de temps : par personne (toutes ses entrées) + total général. min(entrée->sortie/now).
+  const totals = useMemo(() => {
+    const per: Record<string, number> = {}; let grand = 0;
+    for (const e of entries) {
+      if (!e.entered_at) continue;
+      const end = e.exited_at ? new Date(e.exited_at).getTime() : now;
+      const m = Math.max(0, Math.round((end - new Date(e.entered_at).getTime()) / 60000));
+      per[e.person_name] = (per[e.person_name] || 0) + m; grand += m;
+    }
+    return { per, grand };
+  }, [entries, now]);
+
+  const FORM = { ok: { c: 'bg-emerald-100 text-emerald-700', t: 'Formation à jour' }, expiring: { c: 'bg-amber-100 text-amber-700', t: 'Formation bientôt expirée' }, expired: { c: 'bg-red-100 text-red-700', t: 'Formation EXPIRÉE' }, none: { c: 'bg-gray-100 text-gray-500', t: 'Aucune formation au dossier' } } as const;
 
   return (
     <Card>
@@ -276,10 +306,27 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, onAdd
       {atmState !== 'safe' && <div className="mt-2 text-xs text-red-700 bg-red-50 rounded p-2">⚠ L’atmosphère n’est pas confirmée conforme — aucune entrée ne devrait avoir lieu.</div>}
 
       <div className="mt-3 rounded-lg border border-gray-200 p-3 grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
-        <L l="Nom"><input className="inp" value={name} onChange={e => setName(e.target.value)} /></L>
+        <L l="Personne (annuaire)">
+          <select className="inp" value={sel} onChange={e => pick(e.target.value)}>
+            <option value="">— Saisir un nom —</option>
+            {(people || []).map((p: any) => <option key={p.id} value={p.id}>{p.name}{p.formation_status === 'expired' ? ' ⚠' : ''}</option>)}
+          </select>
+        </L>
+        <L l="Nom"><input className="inp" value={name} onChange={e => { setName(e.target.value); setSel(''); setPersonId(null); }} /></L>
         <L l="Rôle"><select className="inp" value={role} onChange={e => setRole(e.target.value)}><option value="entrant">Entrant</option><option value="attendant">Surveillant</option></select></L>
-        <L l="Matériel entré (séparé par ,)"><input className="inp" value={equip} onChange={e => setEquip(e.target.value)} placeholder="détecteur, harnais, radio…" /></L>
-        <button onClick={async () => { if (!name.trim()) return; await onAdd({ name: name.trim(), role, equipment: equip.split(',').map(s => s.trim()).filter(Boolean) }); setName(''); setEquip(''); }} className="inline-flex justify-center items-center gap-1 px-3 py-2 bg-cyan-600 text-white text-sm rounded-lg"><Plus size={14} /> Ajouter</button>
+        <L l="Matériel entré (,)"><input className="inp" value={equip} onChange={e => setEquip(e.target.value)} placeholder="détecteur, harnais…" /></L>
+      </div>
+      {/* Pré-remplissage formation RH */}
+      {chosen && (
+        <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
+          <span className={`px-2 py-0.5 rounded-full font-semibold ${FORM[chosen.formation_status as keyof typeof FORM].c}`}>{FORM[chosen.formation_status as keyof typeof FORM].t}</span>
+          {chosen.expired?.length > 0 && <span className="text-red-600">Expiré : {chosen.expired.join(', ')}</span>}
+          {chosen.expiring?.length > 0 && <span className="text-amber-600">Bientôt : {chosen.expiring.join(', ')}</span>}
+          {chosen.certifications?.length > 0 && <span className="text-gray-400">({chosen.certifications.length} formation(s) au dossier RH)</span>}
+        </div>
+      )}
+      <div className="mt-2">
+        <button onClick={async () => { if (!name.trim()) return; await onAdd({ name: name.trim(), personId, role, equipment: equip.split(',').map(s => s.trim()).filter(Boolean) }); setName(''); setEquip(''); setSel(''); setPersonId(null); }} className="inline-flex justify-center items-center gap-1 px-3 py-2 bg-cyan-600 text-white text-sm rounded-lg"><Plus size={14} /> Ajouter au registre</button>
       </div>
 
       <div className="mt-3 space-y-1.5">
@@ -302,10 +349,23 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, onAdd
           );
         })}
       </div>
+
+      {/* Cumuls de temps */}
+      {Object.keys(totals.per).length > 0 && (
+        <div className="mt-3 rounded-lg bg-gray-50 p-3">
+          <div className="text-xs font-semibold text-gray-600 mb-1">Temps cumulé par personne</div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+            {Object.entries(totals.per).map(([n, m]) => <span key={n}><b>{n}</b> : {fmtDur(m as number)}</span>)}
+          </div>
+          <div className="mt-2 text-sm font-semibold text-gray-900">Cumul total des entrées : {fmtDur(totals.grand)}</div>
+        </div>
+      )}
       <style jsx>{`:global(.inp){ width:100%; padding:7px 9px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; }`}</style>
     </Card>
   );
 }
+
+function fmtDur(min: number) { const h = Math.floor(min / 60), m = min % 60; return h > 0 ? `${h} h ${m} min` : `${m} min`; }
 
 // ── Petits utilitaires UI ──
 function Shell({ tenant, children }: { tenant: string; children: React.ReactNode }) {
