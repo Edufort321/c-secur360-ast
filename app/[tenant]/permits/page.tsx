@@ -181,12 +181,20 @@ export default function PermitsPage() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/${tenant}/permits/nouveau`}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
-          >
-            <Plus size={18} /> Nouveau permis
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/${tenant}/permits/espace-clos`}
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-2.5 font-semibold text-cyan-700 transition hover:bg-cyan-100"
+            >
+              <Wind size={18} /> Espaces clos
+            </Link>
+            <Link
+              href={`/${tenant}/permits/nouveau`}
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+            >
+              <Plus size={18} /> Nouveau permis
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
