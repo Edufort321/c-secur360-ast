@@ -3,7 +3,7 @@
 // Espace clos — FICHE de gestion. QR permanent + mesures d'urgence + permis (cycle de vie/approbation)
 // + MOTEUR ATMOSPHÉRIQUE (relevés ordonnés O2->LIE->toxiques, voyant vert/rouge, minuterie de reprise
 // customisable, état VENTILER/DANGER) + REGISTRE D'ENTRÉES (timer in/out, check-list matériel, surveillants).
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
@@ -87,6 +87,8 @@ export default function EspaceClosFiche() {
     const { data } = await supabase.from('cs_permits').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', permit.id).select('*').single();
     if (data) { setPermit(data); setPermits(ps => ps.map(p => p.id === data.id ? data : p)); }
   }
+  // Fusionne dans la colonne JSONB `data` du permis (détecteur, communication, check-list, signature).
+  async function setData(patch: any) { if (!permit) return; await setPermitStatus({ data: { ...(permit.data || {}), ...patch } }); }
 
   return (
     <Shell tenant={tenant}>
@@ -115,13 +117,33 @@ export default function EspaceClosFiche() {
                   <Field label={`Reprise atmosphérique (min) — défaut ${norm.defaultRetestMinutes}`}><input type="number" min={1} defaultValue={retestMin} onBlur={e => setPermitStatus({ retest_minutes: Number(e.target.value) || norm.defaultRetestMinutes })} className="inp" /></Field>
                   <Field label="Entrants prévus"><input type="number" min={1} defaultValue={permit.entrants_expected || ''} onBlur={e => setPermitStatus({ entrants_expected: Number(e.target.value) || null })} className="inp" /></Field>
                 </div>
+                {/* Détecteur & calibration — la fiabilité des lectures en dépend (sécurité). */}
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <div className="text-xs font-semibold text-gray-600 mb-2">Détecteur 4 gaz & calibration</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <Field label="Modèle"><input defaultValue={permit.data?.detector?.model || ''} onBlur={e => setData({ detector: { ...(permit.data?.detector || {}), model: e.target.value } })} className="inp" placeholder="BW MicroClip…" /></Field>
+                    <Field label="N° de série"><input defaultValue={permit.data?.detector?.serial || ''} onBlur={e => setData({ detector: { ...(permit.data?.detector || {}), serial: e.target.value } })} className="inp" /></Field>
+                    <Field label="Calibration"><input type="date" defaultValue={permit.data?.detector?.calib_date || ''} onBlur={e => setData({ detector: { ...(permit.data?.detector || {}), calib_date: e.target.value } })} className="inp" /></Field>
+                    <Field label="Bump test fait"><select defaultValue={permit.data?.detector?.bump || ''} onBlur={e => setData({ detector: { ...(permit.data?.detector || {}), bump: e.target.value } })} className="inp"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></Field>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    <Field label="Communication"><select defaultValue={permit.data?.comm_type || 'Radio'} onBlur={e => setData({ comm_type: e.target.value })} className="inp"><option>Radio</option><option>Cellulaire</option><option>Filaire</option><option>Voix/visuel</option></select></Field>
+                    <Field label="Intervalle de vérification (min)"><input type="number" min={1} defaultValue={permit.data?.comm_interval || 5} onBlur={e => setData({ comm_interval: Number(e.target.value) || 5 })} className="inp" /></Field>
+                  </div>
+                </div>
+
+                {/* Check-list pré-entrée (obligatoire avant activation). */}
+                <PreEntryChecklist permit={permit} setData={setData} />
+
                 <div className="flex flex-wrap gap-2">
                   {permit.status === 'draft' && <button onClick={() => setPermitStatus({ status: 'pending_approval' })} className="btn-amber">Soumettre à l’approbation</button>}
-                  {(permit.status === 'pending_approval' || permit.status === 'draft') && <button onClick={() => { const by = prompt('Nom du superviseur qui approuve :'); if (by) setPermitStatus({ status: 'approved', approved_by: by, approved_at: new Date().toISOString() }); }} className="btn-emerald"><ShieldCheck size={14} /> Approuver (superviseur)</button>}
-                  {permit.status === 'approved' && <button onClick={() => setPermitStatus({ status: 'active', valid_from: new Date().toISOString() })} className="btn-cyan"><Activity size={14} /> Activer le permis</button>}
+                  {(permit.status === 'pending_approval' || permit.status === 'draft') && <SupervisorApprove onApprove={(by, cert, sig) => setPermitStatus({ status: 'approved', approved_by: by, approved_at: new Date().toISOString(), approval_signature: sig, data: { ...(permit.data || {}), supervisor_cert: cert } })} />}
+                  {permit.status === 'approved' && (() => { const ready = preEntryReady(permit); return <button onClick={() => { if (!ready) { alert('Complète la check-list pré-entrée avant d’activer.'); return; } setPermitStatus({ status: 'active', valid_from: new Date().toISOString() }); }} className="btn-cyan" style={{ opacity: ready ? 1 : 0.5 }}><Activity size={14} /> Activer le permis</button>; })()}
                   {permit.status === 'active' && <button onClick={() => { if (openEntrants.length) { alert('Tous les entrants doivent être sortis avant de fermer.'); return; } setPermitStatus({ status: 'closed', closed_at: new Date().toISOString() }); }} className="btn-gray">Fermer le permis</button>}
                 </div>
-                {permit.approved_by && <p className="text-xs text-emerald-600">✓ Approuvé par {permit.approved_by} le {fmt(permit.approved_at)}</p>}
+                {permit.approved_by && (
+                  <div className="text-xs text-emerald-600 flex items-center gap-2">✓ Approuvé par {permit.approved_by}{permit.data?.supervisor_cert ? ` (cert. ${permit.data.supervisor_cert})` : ''} le {fmt(permit.approved_at)}{permit.approval_signature && <img src={permit.approval_signature} alt="signature" className="h-8 border rounded bg-white" />}</div>
+                )}
               </div>
             )}
           </Card>
@@ -400,6 +422,74 @@ function Shell({ tenant, children }: { tenant: string; children: React.ReactNode
 function Card({ children }: { children: React.ReactNode }) { return <div className="bg-white rounded-xl border border-gray-200 p-4">{children}</div>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div><label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>{children}</div>; }
 function L({ l, children }: { l: string; children: React.ReactNode }) { return <div><label className="block text-[11px] font-medium text-gray-500 mb-1">{l}</label>{children}</div>; }
+// ── Check-list pré-entrée (obligatoire avant activation) ──
+const PRE_ENTRY: { k: string; l: string }[] = [
+  { k: 'isolation_loto', l: 'Énergies isolées et cadenassées (LOTO)' },
+  { k: 'ventilation_on', l: 'Ventilation en fonction' },
+  { k: 'atm_tested', l: 'Atmosphère testée et conforme' },
+  { k: 'attendant_present', l: 'Surveillant en poste' },
+  { k: 'comm_tested', l: 'Communication testée' },
+  { k: 'rescue_ready', l: 'Équipement de sauvetage en place' },
+  { k: 'permit_reviewed', l: 'Permis révisé avec les entrants' },
+];
+function preEntryReady(permit: any): boolean { const pe = permit?.data?.pre_entry || {}; return PRE_ENTRY.every(i => pe[i.k]); }
+function PreEntryChecklist({ permit, setData }: { permit: any; setData: (p: any) => void }) {
+  const pe = permit?.data?.pre_entry || {};
+  return (
+    <div className="rounded-lg border border-gray-200 p-3">
+      <div className="text-xs font-semibold text-gray-600 mb-2">Check-list pré-entrée (obligatoire)</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {PRE_ENTRY.map(i => (
+          <label key={i.k} className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={!!pe[i.k]} onChange={e => setData({ pre_entry: { ...pe, [i.k]: e.target.checked } })} /> {i.l}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Approbation superviseur avec signature électronique ──
+function SupervisorApprove({ onApprove }: { onApprove: (name: string, cert: string, sig: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [cert, setCert] = useState('');
+  const sigRef = useRef<{ get: () => string; clear: () => void }>(null);
+  if (!open) return <button onClick={() => setOpen(true)} className="btn-emerald"><ShieldCheck size={14} /> Approuver (superviseur)</button>;
+  return (
+    <div className="w-full rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <Field label="Nom du superviseur *"><input value={name} onChange={e => setName(e.target.value)} className="inp" /></Field>
+        <Field label="N° de certification"><input value={cert} onChange={e => setCert(e.target.value)} className="inp" /></Field>
+      </div>
+      <div className="mt-2"><label className="block text-xs font-medium text-gray-600 mb-1">Signature</label><SignaturePad ref={sigRef} /></div>
+      <div className="mt-2 flex gap-2">
+        <button onClick={() => { if (!name.trim()) { alert('Nom requis.'); return; } const sig = sigRef.current?.get() || ''; onApprove(name.trim(), cert.trim(), sig); setOpen(false); }} className="btn-emerald">Confirmer l’approbation</button>
+        <button onClick={() => setOpen(false)} className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg">Annuler</button>
+      </div>
+    </div>
+  );
+}
+
+const SignaturePad = forwardRef<{ get: () => string; clear: () => void }, {}>(function SignaturePad(_props, ref) {
+  const cv = useRef<HTMLCanvasElement | null>(null);
+  const drawing = useRef(false); const last = useRef<{ x: number; y: number } | null>(null);
+  useImperativeHandle(ref, () => ({
+    get: () => cv.current?.toDataURL('image/png') || '',
+    clear: () => { const c = cv.current; if (!c) return; const x = c.getContext('2d')!; x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); },
+  }));
+  useEffect(() => { const c = cv.current; if (!c) return; const x = c.getContext('2d')!; x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }, []);
+  const pos = (e: React.PointerEvent) => { const c = cv.current!; const r = c.getBoundingClientRect(); return { x: (e.clientX - r.left) * (c.width / r.width), y: (e.clientY - r.top) * (c.height / r.height) }; };
+  return (
+    <div>
+      <canvas ref={cv} width={380} height={110} onPointerDown={e => { drawing.current = true; last.current = pos(e); (e.target as Element).setPointerCapture?.(e.pointerId); }}
+        onPointerMove={e => { if (!drawing.current) return; const c = cv.current!; const x = c.getContext('2d')!; const p = pos(e); x.strokeStyle = '#111827'; x.lineWidth = 2.2; x.lineCap = 'round'; x.beginPath(); x.moveTo(last.current!.x, last.current!.y); x.lineTo(p.x, p.y); x.stroke(); last.current = p; }}
+        onPointerUp={() => { drawing.current = false; }} className="w-full rounded-lg border border-gray-300 bg-white touch-none" style={{ height: 110, cursor: 'crosshair' }} />
+      <button type="button" onClick={() => { const c = cv.current!; const x = c.getContext('2d')!; x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }} className="mt-1 text-xs text-gray-500">Effacer</button>
+    </div>
+  );
+});
+
 function StatusBadge({ status }: { status: string }) {
   const m: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', pending_approval: 'bg-amber-100 text-amber-700', approved: 'bg-blue-100 text-blue-700', active: 'bg-emerald-100 text-emerald-700', closed: 'bg-gray-200 text-gray-500', cancelled: 'bg-red-100 text-red-700' };
   const l: Record<string, string> = { draft: 'Brouillon', pending_approval: 'En attente', approved: 'Approuvé', active: 'Actif', closed: 'Fermé', cancelled: 'Annulé' };
