@@ -315,10 +315,15 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
     renderFrame(elapsedNow());
   }
 
-  function pickMime(): string {
-    const cands = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    for (const c of cands) if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(c)) return c;
-    return 'video/webm';
+  // Préfère le MP4 NATIF (Chrome/Edge/Safari récents) -> aucun serveur requis, fichier direct TikTok.
+  // Repli webm (Firefox/anciens) -> conversion serveur ensuite.
+  function pickMime(): { mime: string; ext: 'mp4' | 'webm' } {
+    const sup = (c: string) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(c);
+    const mp4 = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1.4D401E,mp4a.40.2', 'video/mp4'];
+    for (const c of mp4) if (sup(c)) return { mime: c, ext: 'mp4' };
+    const webm = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    for (const c of webm) if (sup(c)) return { mime: c, ext: 'webm' };
+    return { mime: '', ext: 'webm' };
   }
 
   async function record() {
@@ -337,41 +342,39 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         if (at) tracks.push(at);
       }
       const stream = new MediaStream(tracks);
-      // Débit modéré : qualité nette tout en gardant le fichier sous la limite Supabase par défaut (50 Mo)
-      // -> la sauvegarde en galerie réussit sans toucher au réglage global.
-      const rec = new MediaRecorder(stream, { mimeType: pickMime(), videoBitsPerSecond: 3_500_000 });
+      const fmt = pickMime();
+      // Débit modéré : qualité nette tout en gardant le fichier sous la limite Supabase par défaut (50 Mo).
+      const rec = new MediaRecorder(stream, fmt.mime ? { mimeType: fmt.mime, videoBitsPerSecond: 3_500_000 } : { videoBitsPerSecond: 3_500_000 });
       recorderRef.current = rec;
       rec.ondataavailable = e => { if (e.data && e.data.size) chunksRef.current.push(e.data); };
       rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const nativeMp4 = fmt.ext === 'mp4';
+        const blob = new Blob(chunksRef.current, { type: nativeMp4 ? 'video/mp4' : 'video/webm' });
         setMp4Url('');
         setResultUrl(URL.createObjectURL(blob));
         recorderRef.current = null; setRecording(false); setPlaying(false); stopLoop();
-        // AUTO : téléverse le webm, CONVERTIT en .mp4 (TikTok/Meta), range le .mp4 dans la galerie.
-        // Le .mp4 devient la version de référence (téléchargement + galerie) -> on ne diffuse jamais de webm.
+        // AUTO : téléverse puis CONVERTIT côté serveur (normalise H.264 + AJOUTE une piste audio
+        // silencieuse si le montage n'a pas de son — sinon TikTok refuse « décodage impossible » alors
+        // que Facebook l'accepte). On ne range QUE le .mp4 normalisé. Timeout pour ne jamais rester bloqué.
         (async () => {
-          setSaving(true);
-          onNotice({ msg: '✓ Vidéo assemblée — conversion .mp4 + enregistrement…', ok: true });
+          setSaving(true); setConverting(true);
+          onNotice({ msg: '✓ Vidéo assemblée — conversion .mp4 (compatible TikTok)…', ok: true });
+          const ctrl = new AbortController();
+          const to = window.setTimeout(() => ctrl.abort(), 75000);
           try {
-            const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
-            const webmUrl = await uploadFile(file, 'composition');
-            // Conversion .mp4 (seul format diffusé : TikTok/Meta refusent le .webm).
-            setConverting(true);
-            const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: webmUrl }) });
-            const j = await r.json();
-            setConverting(false);
+            const file = new File([blob], `composition-${aspect.replace(':', 'x')}.${fmt.ext}`, { type: blob.type });
+            const uploadedUrl = await uploadFile(file, 'composition');
+            const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: uploadedUrl }), signal: ctrl.signal });
+            const j = await r.json().catch(() => ({}));
             if (r.ok && j.url) {
-              setMp4Url(j.url);
-              await saveVideoToGallery(j.url);   // on ne range QUE le .mp4 fonctionnel
-              setSavedUrl(j.url);
+              setMp4Url(j.url); await saveVideoToGallery(j.url); setSavedUrl(j.url);
               onNotice({ msg: '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).', ok: true });
             } else {
-              onNotice({ msg: '⚠ Conversion .mp4 échouée : ' + (j.error || 'erreur serveur') + '. Rien n\'a été rangé (le .webm n\'est pas diffusable). Réessaie ; si ça persiste, signale-le.', ok: false });
+              onNotice({ msg: '⚠ Conversion .mp4 échouée : ' + (j.error || 'erreur serveur') + '. Réessaie ; si ça persiste, signale-le.', ok: false });
             }
-          } catch (e: any) {
-            setConverting(false);
-            onNotice({ msg: 'Enregistrement échoué : ' + (e?.message || ''), ok: false });
-          } finally { setSaving(false); }
+          } catch (err: any) {
+            onNotice({ msg: err?.name === 'AbortError' ? '⚠ Conversion .mp4 trop longue (serveur) — réessaie.' : 'Enregistrement : ' + (err?.message || 'échec'), ok: false });
+          } finally { window.clearTimeout(to); setConverting(false); setSaving(false); }
         })();
       };
 

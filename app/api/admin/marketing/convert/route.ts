@@ -44,19 +44,27 @@ export async function POST(req: NextRequest) {
     if (srcBuf.length > 80 * 1024 * 1024) return NextResponse.json({ error: 'Vidéo trop volumineuse (max 80 Mo).' }, { status: 413 });
     await fs.writeFile(inPath, srcBuf);
 
-    // 2. Transcode webm -> mp4 compatible réseaux sociaux (TikTok/Meta) :
-    //    - frame rate CONSTANT 30 fps (le webm de MediaRecorder est à cadence variable -> erreur de
-    //      décodage sinon) ; profil H.264 high@4.1 + yuv420p (largement supporté) ;
-    //    - dimensions paires forcées ; audio AAC stéréo 44,1 kHz ; faststart (lecture progressive).
-    await runFfmpeg(ffmpegPath as string, [
-      '-y', '-fflags', '+genpts', '-i', inPath,
-      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30,format=yuv420p',
+    // 2. Détecte si la source a une piste AUDIO. TikTok refuse (« décodage impossible ») une vidéo SANS
+    //    audio (cas d'un montage de slides sans avatar) — alors que Facebook l'accepte. On ajoute donc
+    //    une piste audio SILENCIEUSE quand il n'y en a pas, pour garantir un flux audio dans le MP4.
+    const hasAudio = await probeHasAudio(ffmpegPath as string, inPath);
+
+    // Transcode -> mp4 strictement compatible réseaux sociaux (TikTok/Meta) :
+    //  - H.264 High@4.0, yuv420p, SAR 1:1, métadonnées couleur bt709 (validateurs stricts) ;
+    //  - frame rate CONSTANT 30 fps ; faststart ; audio AAC stéréo 44,1 kHz (réelle ou silencieuse).
+    const vf = 'scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30,setsar=1,format=yuv420p';
+    const common = [
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
-      '-profile:v', 'high', '-level', '4.1', '-vsync', 'cfr', '-g', '60',
+      '-profile:v', 'high', '-level', '4.0', '-vsync', 'cfr', '-g', '60',
+      '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
       '-c:a', 'aac', '-b:a', '160k', '-ar', '44100', '-ac', '2',
       '-movflags', '+faststart',
-      outPath,
-    ]);
+    ];
+    const args = hasAudio
+      ? ['-y', '-fflags', '+genpts', '-i', inPath, '-vf', vf, ...common, '-map', '0:v:0', '-map', '0:a:0', outPath]
+      : ['-y', '-fflags', '+genpts', '-i', inPath, '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+         '-vf', vf, ...common, '-map', '0:v:0', '-map', '1:a:0', '-shortest', outPath];
+    await runFfmpeg(ffmpegPath as string, args);
 
     // 3. Valide la sortie (un mp4 tronqué/vide = échec ffmpeg silencieux) puis ré-uploade.
     const mp4 = await fs.readFile(outPath);
@@ -75,6 +83,17 @@ export async function POST(req: NextRequest) {
     fs.unlink(inPath).catch(() => {});
     fs.unlink(outPath).catch(() => {});
   }
+}
+
+// Détecte une piste audio en lisant la sortie d'analyse de ffmpeg (« Stream ... Audio: »).
+function probeHasAudio(bin: string, input: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const proc = spawn(bin, ['-i', input, '-hide_banner'], { stdio: ['ignore', 'ignore', 'pipe'] });
+    let err = '';
+    proc.stderr.on('data', d => { err += d.toString(); });
+    proc.on('error', () => resolve(false));
+    proc.on('close', () => resolve(/Stream #\d+:\d+.*: Audio:/i.test(err)));
+  });
 }
 
 function runFfmpeg(bin: string, args: string[]): Promise<void> {
