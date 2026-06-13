@@ -1051,6 +1051,7 @@ export default function MarketingTab() {
         .chip{font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--line);color:var(--mist);}
         label{display:block;font-size:11.5px;color:var(--mist);margin:11px 0 5px;font-weight:500;}
         :global(.mktwrap) input,:global(.mktwrap) select,:global(.mktwrap) textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;}
+        :global(.mktwrap) option{background:#11161f;color:#eef2f6;}
         textarea{resize:vertical;min-height:64px;}
         .row2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
         .togs{margin-top:13px;border-top:1px solid rgba(35,44,58,.5);}

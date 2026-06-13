@@ -517,6 +517,13 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
           de .mktwrap) car les classes du studio sont scopées au composant parent et ne descendent pas. */}
       <style jsx>{`
         .cmp { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 18px; }
+        /* Contrôles de formulaire : fond sombre + texte clair garantis (évite le blanc sur blanc). */
+        .cmp :global(input), .cmp :global(select), .cmp :global(textarea) {
+          width: 100%; background: var(--bg); color: var(--paper); border: 1px solid var(--line);
+          border-radius: 8px; padding: 9px 11px; font-size: 13px; font-family: inherit;
+        }
+        .cmp :global(option) { background: #11161f; color: #eef2f6; }
+        .cmp :global(input[type="range"]) { padding: 0; accent-color: var(--violet); }
         .cmp :global(h2) { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 9px; margin: 0 0 3px; }
         .cmp :global(.hint) { font-size: 12px; color: var(--mist); margin-bottom: 14px; }
         .cmp :global(.chip) { font-size: 10px; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line); color: var(--mist); font-weight: 500; }
