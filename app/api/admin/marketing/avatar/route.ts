@@ -18,9 +18,15 @@ async function persistVideo(srcUrl: string, who: string): Promise<{ url: string;
     const up = await supabaseAdmin.storage.from('marketing').upload(path, buf, { contentType: 'video/mp4', upsert: true });
     if (up.error) return { url: srcUrl, source: srcUrl, bytes, stored: false }; // bucket absent -> URL D-ID
     const url = supabaseAdmin.storage.from('marketing').getPublicUrl(path).data.publicUrl;
-    // Vérifie que l'objet est PUBLIQUEMENT lisible (bucket public). Sinon, on retombe sur l'URL D-ID.
+    // Vérifie le flag PUBLIC du bucket de façon AUTORITATIVE (getBucket) plutôt qu'un fetch HEAD fragile
+    // (qui pouvait échouer par course réseau/CDN et provoquer un faux « bucket non public »). Repli HEAD
+    // seulement si getBucket est indisponible.
     let publicOk = false;
-    try { const head = await fetch(url, { method: 'HEAD' }); publicOk = head.ok; } catch { /* */ }
+    try {
+      const { data: bk } = await supabaseAdmin.storage.getBucket('marketing');
+      if (bk) publicOk = !!bk.public;
+      else { const head = await fetch(url, { method: 'HEAD' }); publicOk = head.ok; }
+    } catch { try { const head = await fetch(url, { method: 'HEAD' }); publicOk = head.ok; } catch { /* */ } }
     const finalUrl = publicOk ? url : srcUrl;
     await supabaseAdmin.from('marketing_assets').insert({ tenant_id: TENANT, kind: 'avatar_video', data: { url: finalUrl, stored_url: url, source: srcUrl, bytes, public: publicOk }, status: 'ready', created_by: who });
     return { url: finalUrl, source: srcUrl, bytes, stored: publicOk };

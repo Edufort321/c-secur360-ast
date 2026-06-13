@@ -55,6 +55,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
   const [recording, setRecording] = useState(false);
   const [resultUrl, setResultUrl] = useState('');
   const [mp4Url, setMp4Url] = useState('');
+  const [savedUrl, setSavedUrl] = useState(''); // URL déjà rangée en galerie (évite le doublon)
   const [converting, setConverting] = useState(false);
   const [corsBlocked, setCorsBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -289,7 +290,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
     const canvas = canvasRef.current; if (!canvas) return;
     if (bgMode === 'slides' && slides.filter(s => s.url).length === 0) { onNotice({ msg: '⚠ Ajoute au moins une slide (ou choisis une vidéo de fond).', ok: false }); return; }
     if (corsBlocked) { onNotice({ msg: '⚠ Un média bloque le CORS (lien temporaire D-ID ?). Applique la migration 165 (bucket « marketing » PUBLIC) et régénère l\'avatar pour pouvoir enregistrer.', ok: false }); return; }
-    setResultUrl(''); chunksRef.current = [];
+    setResultUrl(''); setSavedUrl(''); chunksRef.current = [];
     try {
       const canvasStream = (canvas as any).captureStream(30) as MediaStream;
       const tracks = [...canvasStream.getVideoTracks()];
@@ -311,7 +312,20 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         setMp4Url('');
         setResultUrl(URL.createObjectURL(blob));
         recorderRef.current = null; setRecording(false); setPlaying(false); stopLoop();
-        onNotice({ msg: '✓ Vidéo assemblée. Tu peux la visionner, la télécharger ou la ranger dans la galerie.', ok: true });
+        // ENREGISTREMENT AUTOMATIQUE dans « 📁 Mes vidéos enregistrées » (le montage est persisté tout seul).
+        (async () => {
+          setSaving(true);
+          onNotice({ msg: '✓ Vidéo assemblée — enregistrement dans la galerie…', ok: true });
+          try {
+            const file = new File([blob], `composition-${aspect.replace(':', 'x')}.webm`, { type: 'video/webm' });
+            const url = await uploadFile(file, 'composition');
+            await saveVideoToGallery(url);
+            setSavedUrl(url);
+            onNotice({ msg: '✓ Montage enregistré dans « 📁 Mes vidéos enregistrées ».', ok: true });
+          } catch (e: any) {
+            onNotice({ msg: 'Vidéo prête (téléchargeable ci-dessous). Enregistrement galerie échoué : ' + (e?.message || ''), ok: false });
+          } finally { setSaving(false); }
+        })();
       };
 
       // Lancement synchronisé.
@@ -359,7 +373,8 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         url = await uploadFile(file, 'composition');
       }
       await saveVideoToGallery(url);
-      onNotice({ msg: '✓ Vidéo rangée dans « 🎬 Vidéos assemblées ».', ok: true });
+      setSavedUrl(url);
+      onNotice({ msg: '✓ Vidéo rangée dans « 📁 Mes vidéos enregistrées ».', ok: true });
     } catch (e: any) {
       onNotice({ msg: 'Sauvegarde : ' + (e?.message || 'échec'), ok: false });
     } finally { setSaving(false); }
@@ -533,9 +548,11 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
                 {mp4Url
                   ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ .mp4</button>
                   : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting}>{converting ? '🎞 Conversion…' : '🎞 Convertir en .mp4'}</button>}
-                <button className="btn btn-ghost" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : '💾 Galerie'}</button>
+                {savedUrl && (!mp4Url || savedUrl === mp4Url)
+                  ? <span className="btn btn-ghost" style={{ cursor: 'default', opacity: 0.8 }}>✓ Enregistré</span>
+                  : <button className="btn btn-signal" onClick={saveResultToGallery} disabled={saving}>{saving ? '💾 …' : (mp4Url ? '💾 Enregistrer le .mp4' : '💾 Galerie')}</button>}
               </div>
-              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Pour TikTok/Meta, utilise le <b>.mp4</b> (H.264, frame rate constant). « 💾 Galerie » le conserve dans le studio (📁 Mes vidéos enregistrées).</p>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Le montage est <b>enregistré automatiquement</b> dans « 📁 Mes vidéos enregistrées » dès la fin. Pour TikTok/Meta, télécharge le <b>.mp4</b> (H.264, frame rate constant).</p>
             </div>
           )}
         </div>
