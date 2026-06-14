@@ -13,6 +13,7 @@ import { CoutsTab } from '@/components/projet/CoutsTab';
 import { FactureTab } from '@/components/projet/FactureTab';
 import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useEntitlements } from '@/lib/entitlements';
 
 type Tab = 'projet' | 'temps' | 'couts' | 'facture';
 
@@ -36,6 +37,10 @@ export default function ProjectDetailPage() {
   const [linkedAst,     setLinkedAst]     = useState<any[]>([]);
   const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
   const [linkedReports, setLinkedReports] = useState<any[]>([]);
+  // Interconnexions conditionnées aux modules du tenant : on n'affiche un lien que si le module existe
+  // (s'il ne prend pas AST/Permis/Rapports, on ne montre ni la section ni le bouton « Créer »).
+  const ent = useEntitlements(tenant);
+  const hasMod = (k: string) => !ent || ent.includes(k);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
   const [tsActuals, setTsActuals] = useState<ProjectActuals | null>(null); // coût réel agrégé des feuilles de temps
@@ -322,8 +327,8 @@ export default function ProjectDetailPage() {
                   <Field label={tr('Début des travaux', 'Work start')}><input type="date" className="inp" value={p.date_work_start || ''} onChange={e => set('date_work_start', e.target.value)} /></Field>
                 </div>
 
-                {/* AST liés */}
-                <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
+                {/* AST liés (si le tenant a le module AST) */}
+                {hasMod('ast') && <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-bold">{tr('AST liés', 'Linked JSAs')} ({linkedAst.length})</h3>
                     <Link href={`/${tenant}/ast/nouveau?project=${id}`} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Créer un AST', 'Create JSA')}</Link>
@@ -344,10 +349,10 @@ export default function ProjectDetailPage() {
                       ))}
                     </div>
                   )}
-                </div>
+                </div>}
 
-                {/* Permis liés */}
-                <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                {/* Permis liés (si le tenant a le module Permis) */}
+                {hasMod('permits') && <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-bold">{tr('Permis liés', 'Linked permits')} ({linkedPermits.length})</h3>
                     <Link href={`/${tenant}/permits`} className="text-xs font-semibold text-cyan-600 hover:underline">+ {tr('Aller aux permis', 'Go to permits')}</Link>
@@ -368,10 +373,10 @@ export default function ProjectDetailPage() {
                       ))}
                     </div>
                   )}
-                </div>
+                </div>}
 
-                {/* Rapports terrain liés (associés par project_id ; statut visible côté projet) */}
-                <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                {/* Rapports terrain liés (si le tenant a le module Rapports) */}
+                {hasMod('rapports') && <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-bold">{tr('Rapports terrain liés', 'Linked field reports')} ({linkedReports.length})</h3>
                     <Link href={`/${tenant}/rapports`} className="text-xs font-semibold text-indigo-600 hover:underline">{tr('Aller aux rapports', 'Go to reports')}</Link>
@@ -392,10 +397,10 @@ export default function ProjectDetailPage() {
                       ))}
                     </div>
                   )}
-                </div>
+                </div>}
 
-                {/* Matériel consommé (lien Inventaire — sortie de stock manuelle) */}
-                {p.project_number && <ConsumeMaterialPanel tenant={tenant} projectNumber={p.project_number} />}
+                {/* Matériel consommé (lien Inventaire — si le tenant a le module Inventaire) */}
+                {hasMod('inventory') && p.project_number && <ConsumeMaterialPanel tenant={tenant} projectNumber={p.project_number} />}
               </div>
             )}
 
