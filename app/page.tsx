@@ -498,6 +498,11 @@ export default function LandingPage() {
               ? 'Chaque module est concu pour le terrain. Acces mobile, signatures electroniques et synchronisation en temps reel.'
               : 'Every module is built for the field. Mobile access, electronic signatures and real-time sync.'}
           </p>
+          <p className="mt-3 inline-block rounded-full bg-orange-500/10 border border-orange-500/30 px-4 py-1.5 text-sm font-semibold text-orange-300">
+            {fr
+              ? `1 site inclus${perSitePrice != null ? ` · chaque site additionnel +${perSitePrice}$/an` : ''}`
+              : `1 site included${perSitePrice != null ? ` · each additional site +$${perSitePrice}/year` : ''}`}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -567,8 +572,8 @@ export default function LandingPage() {
             <div className="space-y-4">
               {[
                 { icon: Building2, title: fr ? 'Multi-sites & multi-clients' : 'Multi-site & multi-client', desc: fr
-                    ? `Chaque client a son portail prive avec URL dediee. Facturation additive par site${perSitePrice != null ? ` (+${perSitePrice}$/mois/site)` : ''}.`
-                    : `Each client has a private portal with dedicated URL. Additive billing per site${perSitePrice != null ? ` (+$${perSitePrice}/month/site)` : ''}.` },
+                    ? `Chaque client a son portail prive avec URL dediee. 1 site inclus${perSitePrice != null ? `, site additionnel +${perSitePrice}$/an` : ''}.`
+                    : `Each client has a private portal with dedicated URL. 1 site included${perSitePrice != null ? `, additional site +$${perSitePrice}/year` : ''}.` },
                 { icon: Smartphone, title: fr ? 'Application mobile PWA' : 'PWA mobile app', desc: fr ? 'Installez sur iOS et Android. Fonctionne hors-ligne sur le chantier.' : 'Install on iOS and Android. Works offline on the jobsite.' },
                 { icon: BarChart3, title: fr ? 'Tableaux de bord en temps reel' : 'Real-time dashboards', desc: fr ? 'KPIs de securite, tendances d\'incidents et rapports de conformite automatiques.' : 'Safety KPIs, incident trends and automatic compliance reports.' },
                 { icon: Globe, title: fr ? 'Conforme partout au Canada' : 'Compliant across Canada', desc: fr ? 'Toutes les provinces: QC, ON, BC, AB et plus. CNESST, MOL, WorkSafeBC.' : 'All provinces: QC, ON, BC, AB and more. CNESST, MOL, WorkSafeBC.' },
@@ -709,8 +714,8 @@ export default function LandingPage() {
                   {[
                     fr ? `${dbModules.length || 13} modules${freeLabel ? ` (${freeLabel} gratuits)` : ''}` : `${dbModules.length || 13} modules${freeLabel ? ` (${freeLabel} free)` : ''}`,
                     perSitePrice != null
-                      ? (fr ? `Multi-sites (+${perSitePrice}$/mois/site additionnel)` : `Multi-site (+$${perSitePrice}/month/additional site)`)
-                      : (fr ? 'Multi-sites (prix sur demande)' : 'Multi-site (price on request)'),
+                      ? (fr ? `1 site inclus · +${perSitePrice}$/an par site additionnel` : `1 site included · +$${perSitePrice}/year per additional site`)
+                      : (fr ? '1 site inclus · multi-sites sur demande' : '1 site included · multi-site on request'),
                     fr ? 'Application mobile PWA' : 'Mobile PWA app',
                     fr ? 'Support 24/7' : '24/7 support',
                     fr ? 'Analytics avances' : 'Advanced analytics',

@@ -91,7 +91,7 @@ export default function PriceManager() {
                 onFocus={e => e.target.select()}
                 style={{ width: '110px', textAlign: 'right', border: '1px solid #93c5fd', borderRadius: '8px', padding: '6px 10px', fontSize: '15px', fontWeight: 600, color: '#1e40af' }}
               />
-              <span style={{ fontSize: '14px', color: '#6b7280' }}>$/mois par site additionnel</span>
+              <span style={{ fontSize: '14px', color: '#6b7280' }}>$/an par site additionnel (1 site inclus)</span>
             </div>
           </div>
 

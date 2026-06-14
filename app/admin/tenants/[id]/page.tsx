@@ -98,9 +98,9 @@ export default function TenantManagePage() {
   const selected = mods.filter(m => m.enabled);
   const subtotal = useMemo(() => selected.reduce((s, m) => s + (m.monthly_price || 0), 0), [mods]);
   const discountPct = Math.min(Math.max(selected.length - 1, 0) * cfg.discount_per_module, cfg.discount_cap);
-  // Sites supplémentaires : (sites inclus − 1) × prix mensuel × 12 (facture annuelle)
+  // Sites supplémentaires : (sites inclus − 1) × prix ANNUEL par site (1 site inclus).
   const extraSites = Math.max(0, (Number(tenant?.max_sites) || 1) - 1);
-  const sitesAnnual = extraSites * cfg.per_site_monthly * 12;
+  const sitesAnnual = extraSites * cfg.per_site_monthly;
   // Forfait IA (jetons) — facturé en SUS, prix payé par le client = tier_cents (dollars = /100).
   const aiAnnual = (Number(aiTier) || 0) / 100;
   const total = subtotal * (1 - discountPct / 100) + sitesAnnual + aiAnnual;
@@ -422,7 +422,7 @@ export default function TenantManagePage() {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Sous-total</span><span>{money(subtotal)}</span></div>
                     <div className="flex justify-between text-emerald-600"><span>Escompte ({discountPct}%)</span><span>− {money(subtotal * discountPct / 100)}</span></div>
-                    {extraSites > 0 && <div className="flex justify-between text-blue-600"><span>Sites suppl. ({extraSites} × {money(cfg.per_site_monthly)}/mois × 12)</span><span>+ {money(sitesAnnual)}</span></div>}
+                    {extraSites > 0 && <div className="flex justify-between text-blue-600"><span>Sites suppl. ({extraSites} × {money(cfg.per_site_monthly)}/an)</span><span>+ {money(sitesAnnual)}</span></div>}
                     {aiAnnual > 0 && <div className="flex justify-between text-purple-600"><span>Forfait Assistant IA (jetons)</span><span>+ {money(aiAnnual)}</span></div>}
                     <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(total)}</span></div>
                   </div>
