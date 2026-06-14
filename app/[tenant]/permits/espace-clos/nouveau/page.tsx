@@ -215,6 +215,7 @@ export default function NouvelEspaceClos() {
         <Sec title="5 · Analyse & évaluation des risques (IA)" icon={<Sparkles size={16} />}>
           <p className="text-sm text-gray-500 mb-2">L’IA utilise TOUTE la caractérisation ci-dessus pour évaluer les risques, proposer les moyens de maîtrise, le plan de sauvetage et le plan d’action selon la norme de la province.</p>
           <button onClick={runAi} disabled={aiBusy} className="inline-flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">{aiBusy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {aiBusy ? 'Analyse en cours…' : '✦ Analyser et évaluer les risques'}</button>
+          {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
           {advice && (
             <div className="mt-4 space-y-4 text-sm">
