@@ -6,7 +6,7 @@
 // arrive ensuite ; la vidéo réelle + montage est gratuite, l'avatar parlant consomme le forfait.
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Megaphone, Save, Sparkles, Loader2, Copy, Building2 } from 'lucide-react';
+import { Megaphone, Save, Sparkles, Loader2, Copy, Building2, Video, KeyRound, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 
@@ -20,6 +20,25 @@ export default function TenantMarketing() {
   const [pack, setPack] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null);
+  // Clé vidéo D-ID du tenant (BYOK) — il gère/paie sa propre conso vidéo avatar.
+  const [didConfigured, setDidConfigured] = useState(false);
+  const [didKey, setDidKey] = useState('');
+  const [savingDid, setSavingDid] = useState(false);
+  const [showProc, setShowProc] = useState(false);
+
+  async function loadDid() {
+    try { const r = await fetch('/api/marketing/secrets', { credentials: 'include' }); const j = await r.json(); if (r.ok) setDidConfigured(!!j.hasDid); } catch {}
+  }
+  async function saveDid() {
+    setSavingDid(true); setMsg(null);
+    try {
+      const r = await fetch('/api/marketing/secrets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ did_api_key: didKey }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      setDidConfigured(!!j.hasDid); setDidKey('');
+      setMsg({ t: j.hasDid ? '✓ Clé vidéo D-ID enregistrée.' : 'Clé retirée.', ok: true });
+    } catch (e: any) { setMsg({ t: 'Erreur : ' + (e?.message || ''), ok: false }); }
+    finally { setSavingDid(false); }
+  }
 
   async function loadBudget() {
     try { const r = await fetch('/api/marketing/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'budget', tenant }) }); const j = await r.json(); if (r.ok) setBudget(j.budget); } catch {}
@@ -30,7 +49,7 @@ export default function TenantMarketing() {
       if (data) setP((prev: any) => ({ ...prev, ...data }));
       setLoaded(true);
     })();
-    loadBudget();
+    loadBudget(); loadDid();
   }, [tenant]);
 
   const set = (k: string, v: any) => setP((x: any) => ({ ...x, [k]: v }));
@@ -81,6 +100,30 @@ export default function TenantMarketing() {
         )}
 
         {msg && <div className={`mb-3 p-2.5 rounded-lg text-sm ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{msg.t}</div>}
+
+        {/* Vidéo IA — clé D-ID du tenant (BYOK). Le texte IA est sur le forfait ; la vidéo avatar est gérée/payée par le tenant. */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5">
+          <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1"><Video size={16} className="text-pink-600" /> Vidéo IA — avatar parlant <span className={`text-[11px] px-2 py-0.5 rounded-full ${didConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{didConfigured ? 'Clé configurée' : 'Non configurée'}</span></h2>
+          <p className="text-xs text-gray-500 mb-2">La <b>génération d’avatars parlants</b> utilise le service D-ID. Tu fournis <b>ta propre clé D-ID</b> et gères ta consommation/facturation vidéo directement (indépendant de ton forfait texte). 💡 La <b>vidéo réelle (caméra) + slides</b> reste <b>gratuite</b>.</p>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1"><label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1"><KeyRound size={12} /> Clé API D-ID</label>
+              <input className="inp" type="password" value={didKey} onChange={e => setDidKey(e.target.value)} placeholder={didConfigured ? '•••••••• (configurée — entre une nouvelle pour remplacer)' : 'colle ta clé D-ID ici'} /></div>
+            <button onClick={saveDid} disabled={savingDid} className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm rounded-lg disabled:opacity-60">{savingDid ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Enregistrer</button>
+          </div>
+          <button onClick={() => setShowProc(s => !s)} className="mt-2 text-xs text-pink-600 hover:underline">{showProc ? '▲ Masquer' : '▼ Comment obtenir ma clé D-ID ?'}</button>
+          {showProc && (
+            <div className="mt-2 rounded-lg bg-pink-50 p-3 text-xs text-gray-700 space-y-1">
+              <p><b>Procédure :</b></p>
+              <ol className="list-decimal ml-5 space-y-0.5">
+                <li>Crée un compte sur <a href="https://www.d-id.com" target="_blank" rel="noreferrer" className="text-pink-600 underline inline-flex items-center gap-0.5">d-id.com <ExternalLink size={10} /></a> (essai gratuit 14 j — 3 min de vidéo).</li>
+                <li>Choisis un forfait. ⚠ Pour un usage <b>commercial</b>, il faut au minimum le forfait <b>Launch</b> (licence commerciale). Build (16 min/mois) suffit pour tester sans usage commercial.</li>
+                <li>Dans D-ID : <b>Studio → Account Settings (réglages du compte) → API</b>.</li>
+                <li><b>Copie ta clé API</b> (format <code>identifiant:motdepasse</code> ou clé fournie) et colle-la ci-dessus.</li>
+              </ol>
+              <p className="text-gray-500">Tarifs indicatifs D-ID : Build 14,40 $/mois (≈16 min), Launch 69,30 $/mois (≈90 min, commercial), Scale 208 $/mois (≈300 min).</p>
+            </div>
+          )}
+        </div>
 
         {/* Profil d'entreprise */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5">
