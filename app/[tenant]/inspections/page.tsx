@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
+import { useSite } from '@/contexts/SiteContext';
 import {
   INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS,
   type InspectionType, type OverallResult, type InspectionFrequency,
@@ -77,6 +78,7 @@ function calcUrgency(eq: EquipmentRow, lastDate: string | null) {
 export default function InspectionsPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'demo';
+  const { siteId } = useSite(); // sélecteur de site global (en-tête)
 
   const [cards,       setCards]       = useState<EquipmentCard[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -178,6 +180,8 @@ export default function InspectionsPage() {
 
   const filtered = useMemo(() => {
     let list = cards;
+    // Filtre par SITE (sélecteur global de l'en-tête) — 'all' = tous les sites.
+    if (siteId && siteId !== 'all') list = list.filter(c => (c.equipment as any).site_id === siteId);
     if (typeFilter !== 'all') list = list.filter(c => c.equipment.equipment_type === typeFilter);
     const q = query.trim().toLowerCase();
     if (!q) return list;
@@ -187,7 +191,7 @@ export default function InspectionsPage() {
        INSPECTION_TYPE_OPTIONS.find(o => o.value === c.equipment.equipment_type)?.label]
         .filter(Boolean).some(v => String(v).toLowerCase().includes(q))
     );
-  }, [cards, typeFilter, query]);
+  }, [cards, typeFilter, query, siteId]);
 
   const stats = useMemo(() => ({
     total:       cards.length,

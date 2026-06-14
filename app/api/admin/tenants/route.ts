@@ -118,11 +118,13 @@ export async function POST(req: NextRequest) {
           company_name: companyName,
           admin_email: adminEmail || null,
           plan: 'professional',
-          monthly_revenue: Math.round(annualRevenue / 12 * 100) / 100,
-          annual_revenue: annualRevenue,
+          // Non-facturable (démo / case décochée) => revenu 0 dans le miroir CERDIA (pas d'ARR fantôme).
+          monthly_revenue: billable !== false ? Math.round(annualRevenue / 12 * 100) / 100 : 0,
+          annual_revenue: billable !== false ? annualRevenue : 0,
           modules_count: enabledKeys.length,
           sites_count: 1,
           status: 'active',
+          billable: billable !== false,
         }),
       }).catch(() => { /* sync non critique */ });
     }

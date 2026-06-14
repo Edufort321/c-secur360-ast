@@ -23,9 +23,13 @@ export function SiteProvider({ tenant, children }: { tenant: string; children: R
     if (saved) setSiteIdState(saved);
     (async () => {
       try {
+        // Source UNIQUE = planner_succursales (le vrai système de sites, hiérarchique, géré en admin et
+        // lié aux modules : equipment.site_id, DGA…). On expose les SITES racines (parent_id null) ;
+        // l'ancienne table `sites` n'était pas alignée avec les site_id des modules.
         const { data } = await supabase
-          .from('sites').select('id, name, code').eq('tenant_id', tenant).eq('is_active', true).order('name');
-        if (active) setSites((data as any) || []);
+          .from('planner_succursales').select('id, name, code, parent_id').eq('tenant_id', tenant).order('name');
+        const roots = ((data as any[]) || []).filter(r => !r.parent_id).map(r => ({ id: r.id, name: r.name, code: r.code }));
+        if (active) setSites(roots);
       } catch {
         if (active) setSites([]);
       } finally {
