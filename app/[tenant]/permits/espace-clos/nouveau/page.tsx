@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Wind, ArrowLeft, Sparkles, Loader2, Camera, ShieldAlert, ListChecks, Activity, Save, AlertTriangle,
+  Wind, ArrowLeft, Sparkles, Loader2, Camera, ShieldAlert, ListChecks, Activity, Save, AlertTriangle, Image as ImageIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -165,9 +165,11 @@ export default function NouvelEspaceClos() {
           </Grid>
           <div className="mt-3">
             <label className="block text-xs font-medium text-gray-600 mb-1">Photo de l’espace</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {photoUrl ? <img src={photoUrl} alt="" className="w-24 h-24 object-cover rounded-lg border" /> : <div className="w-24 h-24 rounded-lg border border-dashed grid place-items-center text-gray-300"><Camera size={22} /></div>}
-              <label className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer hover:bg-gray-50">{uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />} {uploading ? 'Téléversement…' : 'Ajouter une photo'}<input type="file" accept="image/*" hidden onChange={e => { const file = e.target.files?.[0]; if (file) onPhoto(file); e.currentTarget.value = ''; }} /></label>
+              {/* Mobile : caméra directe (capture) + galerie (sans capture). */}
+              <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-cyan-600 text-white rounded-lg text-sm cursor-pointer hover:bg-cyan-700">{uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />} Prendre une photo<input type="file" accept="image/*" capture="environment" hidden onChange={e => { const file = e.target.files?.[0]; if (file) onPhoto(file); e.currentTarget.value = ''; }} /></label>
+              <label className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer hover:bg-gray-50"><ImageIcon size={14} /> Choisir une image<input type="file" accept="image/*" hidden onChange={e => { const file = e.target.files?.[0]; if (file) onPhoto(file); e.currentTarget.value = ''; }} /></label>
             </div>
           </div>
         </Sec>

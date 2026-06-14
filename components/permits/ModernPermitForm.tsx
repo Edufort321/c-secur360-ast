@@ -6,10 +6,11 @@
 // (annuaire + statut formation RH) + signature superviseur. Écrit dans work_permits (visible dashboard).
 import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, Loader2, Plus, Trash2, Save, Users, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Plus, Trash2, Save, Users, ShieldCheck, Camera, Image as ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { getPermitNorm, PROV_LABELS, type Prov } from '@/lib/permits/norms';
+import { uploadPhoto } from '@/lib/utils/photo';
 
 export type FieldDef = { key: string; label: string; type?: 'text' | 'textarea' | 'checkbox' | 'select' | 'number'; options?: string[]; placeholder?: string; full?: boolean };
 export type PermitConfig = {
@@ -30,11 +31,20 @@ export default function ModernPermitForm({ config }: { config: PermitConfig }) {
   const [checklist, setChecklist] = useState<Record<number, boolean>>({});
   const [workers, setWorkers] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
-  const [advice, setAdvice] = useState<any>(null);
+    const [advice, setAdvice] = useState<any>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const sigRef = useRef<{ get: () => string }>(null);
+
+  async function onPhoto(file: File) {
+    setUploading(true); setErr('');
+    try { const url = await uploadPhoto(file, tenant, supabase as any); setPhotos(p => [...p, url]); }
+    catch (e: any) { setErr('Photo : ' + (e?.message || 'échec')); }
+    finally { setUploading(false); }
+  }
 
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
   const setX = (k: string, v: any) => setExtra(p => ({ ...p, [k]: v }));
@@ -66,7 +76,7 @@ export default function ModernPermitForm({ config }: { config: PermitConfig }) {
         status: 'active', province: f.province,
         siteInfo: { workLocation: f.location, contractor: '', supervisor: f.supervisor },
         work_description: f.work, equipmentName: f.equipment, project_number: f.project,
-        extra, checklist: cl, workers, advice,
+        extra, checklist: cl, workers, advice, photos,
         supervisor_signature: sigRef.current?.get() || '', signed_at: new Date().toISOString(),
         validation: { isComplete: done, percentage: done ? 100 : 70 },
         norm: { type: config.type, references: norm.references },
@@ -95,6 +105,19 @@ export default function ModernPermitForm({ config }: { config: PermitConfig }) {
             <F l="N° de projet"><input className="inp" value={f.project} onChange={e => set('project', e.target.value)} /></F>
             <F l="Province (norme)"><select className="inp" value={f.province} onChange={e => set('province', e.target.value)}>{Object.keys(PROV_LABELS).map(p => <option key={p} value={p}>{PROV_LABELS[p as Prov]}</option>)}</select></F>
           </Grid>
+        </Sec>
+
+        <Sec title="Photos">
+          <div className="flex items-center gap-2 flex-wrap">
+            {photos.map((u, i) => (
+              <div key={i} className="relative">
+                <img src={u} alt="" className="w-20 h-20 object-cover rounded-lg border" />
+                <button type="button" onClick={() => setPhotos(p => p.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 bg-white rounded-full border text-red-500"><X size={14} /></button>
+              </div>
+            ))}
+            <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-cyan-600 text-white rounded-lg text-sm cursor-pointer hover:bg-cyan-700">{uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />} Prendre une photo<input type="file" accept="image/*" capture="environment" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.currentTarget.value = ''; }} /></label>
+            <label className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer hover:bg-gray-50"><ImageIcon size={14} /> Choisir une image<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.currentTarget.value = ''; }} /></label>
+          </div>
         </Sec>
 
         {(config.sections || []).map((sec, si) => (
