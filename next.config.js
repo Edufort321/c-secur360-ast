@@ -38,7 +38,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.googleapis.com https://api.stripe.com https://api.openweathermap.org https://cloudflareinsights.com",
+      "connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.googleapis.com https://api.stripe.com https://api.openweathermap.org https://cloudflareinsights.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://calendly.com",
       "worker-src 'self' blob:",
       "manifest-src 'self'",
