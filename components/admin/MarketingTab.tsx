@@ -32,6 +32,11 @@ const SCRIPT_TEMPLATES: { k: string; label: string; ideas: string }[] = [
     label: '🤝 Programme d\'affiliation (vendeur)',
     ideas: "Présenter le programme d'affiliation / co-vendeur de C-Secur360 : comment un partenaire ou vendeur peut référer des clients et toucher des commissions récurrentes. Insister sur : produit québécois en forte demande (SST, conformité), commissions sur abonnement, outils de vente fournis, contrat clair, accompagnement. Ton : motivant, orienté opportunité d'affaires. Public : vendeurs, consultants SST, partenaires, représentants. Terminer par un appel à l'action pour rejoindre le programme.",
   },
+  {
+    k: 'cerdia',
+    label: '🏢 CERDIA — Plateforme immobilière (organisations)',
+    ideas: "Présenter CERDIA : plateforme de GESTION IMMOBILIÈRE et d'INVESTISSEMENT multi-tenant assistée par IA, dans un seul tableau de bord. Public : sociétés de gestion, family offices et groupes d'investisseurs détenant des actifs au Canada, en République dominicaine, aux États-Unis et au Mexique. Insister sur : suivi de portefeuille en temps réel (valeur, NAV par part, rendements, appréciation) ; multi-devise automatique (CAD, USD, DOP, MXN, EUR aux taux de la Banque du Canada) ; conformité fiscale multi-juridiction intégrée (T1135, T2209, IRNR, ITBIS, FIRPTA, TDT) ; gestion des investisseurs (parts, classes d'actions, votes, dividendes, relevés T5) ; trésorerie, flux, échéanciers et rapports exportables ; assistant IA confidentiel ; architecture multi-tenant sécurisée (organisations isolées). Tarif : 1 450 $/an par organisation. Essai : démo gratuite. CTA : « Démarrer la démo » ou « Nous contacter ». Ton : haut de gamme, financier, confiance.",
+  },
 ];
 
 // Source UNIQUE et réelle des modules = le registre (lib/modules/registry.ts). Pas de liste recopiée :
@@ -41,6 +46,7 @@ const SCRIPT_TEMPLATES: { k: string; label: string; ideas: string }[] = [
 const MODULES = [
   "Présentation globale de l'app (toutes les fonctionnalités)",
   "Programme d'affiliation / vendeur",
+  "CERDIA — Plateforme de gestion immobilière (organisations)",
   ...MODULE_REGISTRY.filter(m => m.key !== 'admin').map(m => m.labelFr),
 ];
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
