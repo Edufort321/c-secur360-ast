@@ -326,12 +326,94 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
     return { mime: '', ext: 'webm' };
   }
 
+  // Garantit que TOUTES les images de slides sont décodées AVANT de capturer (sinon on enregistre des
+  // images noires). Chargement via blob -> object URL (canvas jamais teinté).
+  async function ensureSlidesReady() {
+    if (bgMode !== 'slides') return;
+    for (const s of slides) {
+      if (!s.url || imgCache.current.has(s.url)) continue;
+      try {
+        const obj = await toBlobUrl(s.url);
+        const img = new Image();
+        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('img')); img.src = obj; });
+        imgCache.current.set(s.url, img);
+      } catch { setCorsBlocked(true); }
+    }
+  }
+  // Attend que les vidéos (avatar/fond) soient décodables (readyState>=2), max 4 s pour ne jamais bloquer.
+  function ensureVideosReady(): Promise<void> {
+    const waits: Promise<void>[] = [];
+    const wait = (v: HTMLVideoElement | null) => {
+      if (!v || !v.getAttribute('src') || v.readyState >= 2) return;
+      waits.push(new Promise<void>(res => {
+        const done = () => { v.removeEventListener('loadeddata', done); res(); };
+        v.addEventListener('loadeddata', done);
+        window.setTimeout(done, 4000);
+      }));
+    };
+    if (avatarUrl) wait(avatarVidRef.current);
+    if (bgMode === 'video' && bgVideoUrl) wait(bgVidRef.current);
+    return Promise.all(waits).then(() => undefined);
+  }
+
+  // Finalise après l'arrêt : valide le blob (jamais une vidéo vide), téléverse, convertit en .mp4 en
+  // BEST-EFFORT, et si la conversion serveur échoue on garde quand même le fichier d'origine (le .mp4
+  // natif joue partout) — il y a TOUJOURS une vidéo enregistrée.
+  function finalizeRecording(fmt: { mime: string; ext: 'mp4' | 'webm' }) {
+    const nativeMp4 = fmt.ext === 'mp4';
+    const blob = new Blob(chunksRef.current, { type: nativeMp4 ? 'video/mp4' : 'video/webm' });
+    setMp4Url('');
+    setResultUrl(URL.createObjectURL(blob));
+    recorderRef.current = null; setRecording(false); setPlaying(false); stopLoop();
+    if (blob.size < 50_000) {
+      onNotice({ msg: '⚠ Enregistrement vide ou trop court. Vérifie que tes slides ont bien une image (attends leur chargement) puis réessaie.', ok: false });
+      return;
+    }
+    (async () => {
+      setSaving(true); setConverting(true);
+      onNotice({ msg: '✓ Vidéo assemblée — finalisation .mp4…', ok: true });
+      try {
+        const file = new File([blob], `composition-${aspect.replace(':', 'x')}.${fmt.ext}`, { type: blob.type });
+        const uploadedUrl = await uploadFile(file, 'composition');
+        // Conversion serveur (normalise H.264 + audio silencieux pour TikTok) — best-effort + timeout.
+        let finalUrl = '';
+        try {
+          const ctrl = new AbortController();
+          const to = window.setTimeout(() => ctrl.abort(), 75000);
+          const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: uploadedUrl }), signal: ctrl.signal });
+          window.clearTimeout(to);
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && j.url) finalUrl = j.url;
+        } catch { /* conversion indisponible -> repli sur le fichier d'origine */ }
+        if (finalUrl) {
+          setMp4Url(finalUrl); await saveVideoToGallery(finalUrl); setSavedUrl(finalUrl);
+          onNotice({ msg: '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).', ok: true });
+        } else {
+          setMp4Url(nativeMp4 ? uploadedUrl : ''); await saveVideoToGallery(uploadedUrl); setSavedUrl(uploadedUrl);
+          onNotice({ msg: nativeMp4
+            ? '✓ Vidéo .mp4 enregistrée (conversion serveur indisponible — le fichier est déjà compatible).'
+            : '⚠ Vidéo .webm enregistrée (conversion .mp4 indisponible) — utilise « Convertir en .mp4 » plus tard.', ok: true });
+        }
+      } catch (err: any) {
+        onNotice({ msg: 'Enregistrement : ' + (err?.message || 'échec'), ok: false });
+      } finally { setConverting(false); setSaving(false); }
+    })();
+  }
+
   async function record() {
     const canvas = canvasRef.current; if (!canvas) return;
     if (bgMode === 'slides' && slides.filter(s => s.url).length === 0) { onNotice({ msg: '⚠ Ajoute au moins une slide (ou choisis une vidéo de fond).', ok: false }); return; }
+
+    // PRÉPARATION : on attend que tout le média soit prêt AVANT de capturer (sinon vidéo noire/vide).
+    onNotice({ msg: 'Préparation des médias…', ok: true });
+    await ensureSlidesReady();
+    await ensureVideosReady();
     if (corsBlocked) { onNotice({ msg: '⚠ Un média bloque le CORS (lien temporaire D-ID ?). Applique la migration 165 (bucket « marketing » PUBLIC) et régénère l\'avatar pour pouvoir enregistrer.', ok: false }); return; }
-    setResultUrl(''); setSavedUrl(''); chunksRef.current = [];
+    if (bgMode === 'slides' && !slides.some(s => s.url && imgCache.current.has(s.url))) { onNotice({ msg: '⚠ Images pas encore chargées — réessaie dans un instant.', ok: false }); return; }
+
+    setResultUrl(''); setSavedUrl(''); setMp4Url(''); chunksRef.current = [];
     try {
+      renderFrame(0); // dessine une frame de CONTENU avant de capturer
       const canvasStream = (canvas as any).captureStream(30) as MediaStream;
       const tracks = [...canvasStream.getVideoTracks()];
       const av = avatarVidRef.current;
@@ -343,46 +425,16 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
       }
       const stream = new MediaStream(tracks);
       const fmt = pickMime();
-      // Débit modéré : qualité nette tout en gardant le fichier sous la limite Supabase par défaut (50 Mo).
       const rec = new MediaRecorder(stream, fmt.mime ? { mimeType: fmt.mime, videoBitsPerSecond: 3_500_000 } : { videoBitsPerSecond: 3_500_000 });
       recorderRef.current = rec;
       rec.ondataavailable = e => { if (e.data && e.data.size) chunksRef.current.push(e.data); };
-      rec.onstop = () => {
-        const nativeMp4 = fmt.ext === 'mp4';
-        const blob = new Blob(chunksRef.current, { type: nativeMp4 ? 'video/mp4' : 'video/webm' });
-        setMp4Url('');
-        setResultUrl(URL.createObjectURL(blob));
-        recorderRef.current = null; setRecording(false); setPlaying(false); stopLoop();
-        // AUTO : téléverse puis CONVERTIT côté serveur (normalise H.264 + AJOUTE une piste audio
-        // silencieuse si le montage n'a pas de son — sinon TikTok refuse « décodage impossible » alors
-        // que Facebook l'accepte). On ne range QUE le .mp4 normalisé. Timeout pour ne jamais rester bloqué.
-        (async () => {
-          setSaving(true); setConverting(true);
-          onNotice({ msg: '✓ Vidéo assemblée — conversion .mp4 (compatible TikTok)…', ok: true });
-          const ctrl = new AbortController();
-          const to = window.setTimeout(() => ctrl.abort(), 75000);
-          try {
-            const file = new File([blob], `composition-${aspect.replace(':', 'x')}.${fmt.ext}`, { type: blob.type });
-            const uploadedUrl = await uploadFile(file, 'composition');
-            const r = await fetch('/api/admin/marketing/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: uploadedUrl }), signal: ctrl.signal });
-            const j = await r.json().catch(() => ({}));
-            if (r.ok && j.url) {
-              setMp4Url(j.url); await saveVideoToGallery(j.url); setSavedUrl(j.url);
-              onNotice({ msg: '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).', ok: true });
-            } else {
-              onNotice({ msg: '⚠ Conversion .mp4 échouée : ' + (j.error || 'erreur serveur') + '. Réessaie ; si ça persiste, signale-le.', ok: false });
-            }
-          } catch (err: any) {
-            onNotice({ msg: err?.name === 'AbortError' ? '⚠ Conversion .mp4 trop longue (serveur) — réessaie.' : 'Enregistrement : ' + (err?.message || 'échec'), ok: false });
-          } finally { window.clearTimeout(to); setConverting(false); setSaving(false); }
-        })();
-      };
+      rec.onstop = () => finalizeRecording(fmt);
 
       // Lancement synchronisé.
       syncMediaToStart();
       if (av && avatarUrl) { try { await av.play(); } catch {} }
       setRecording(true); setPlaying(true); startLoop();
-      rec.start();
+      rec.start(250); // timeslice -> flush régulier (évite un blob vide si l'arrêt est rapide)
 
       const dur = (av && avatarUrl && av.duration && isFinite(av.duration)) ? av.duration : totalDuration;
       const stop = () => { if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop(); const b = bgVidRef.current; if (b) b.pause(); if (av) av.pause(); };
