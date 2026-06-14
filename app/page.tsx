@@ -11,7 +11,7 @@ import {
   Package, ClipboardCheck, Clock, Truck,
   CheckSquare, BarChart3, ChevronLeft, ChevronRight, Lock,
   CheckCircle, Smartphone, Globe, ArrowRight, Phone, Mail,
-  Building2, Star, Menu, X, FileText
+  Building2, Star, Menu, X, FileText, Megaphone
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,6 +64,7 @@ const MODULES_FR = [
   { icon: Truck,          key: 'logbook',     name: 'Logbook vehicules',      desc: 'Carnet de bord numerique, kilometrage, incidents et entretien de flotte.' },
   { icon: CheckSquare,    key: 'todo',        name: 'To-Do / Taches',         desc: 'Gestion des taches, priorites, assignations et rappels automatiques.' },
   { icon: FileText,       key: 'rapports',    name: 'Rapports terrain',       desc: 'Constructeur de rapports techniques : gabarits, extraction IA de PDF/manuscrit, annotations, photos et export.' },
+  { icon: Megaphone,      key: 'marketing',   name: 'Marketing IA',           desc: 'Studio marketing IA : scripts, vidéos (avatar ou vidéo réelle + slides), posts et courriels conformes — basés sur VOTRE profil d\'entreprise.' },
 ]
 
 const MODULES_EN = [
@@ -79,6 +80,7 @@ const MODULES_EN = [
   { icon: Truck,          key: 'logbook',     name: 'Vehicle Logbook',        desc: 'Digital logbook, mileage, incidents and fleet maintenance tracking.' },
   { icon: CheckSquare,    key: 'todo',        name: 'Tasks / To-Do',          desc: 'Task management, priorities, assignments and automatic reminders.' },
   { icon: FileText,       key: 'rapports',    name: 'Field reports',          desc: 'Technical report builder: templates, AI extraction from PDF/handwriting, annotations, photos and export.' },
+  { icon: Megaphone,      key: 'marketing',   name: 'AI Marketing',           desc: 'AI marketing studio: scripts, videos (avatar or real video + slides), posts and compliant emails — based on YOUR company profile.' },
 ]
 
 // Correspondance clé d'affichage (statique) -> clé en base (table modules). Sans ça, le prix ne s'affiche pas.
@@ -136,6 +138,10 @@ const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }
   todo: {
     fr: { tagline: 'Rien ne tombe entre les mailles : tâches, rappels et suivi d\'équipe.', points: ['Tâches, priorités et assignations', 'Rappels automatiques', 'Suivi d\'avancement', 'Collaboration d\'équipe'] },
     en: { tagline: 'Nothing falls through the cracks: tasks, reminders and team tracking.', points: ['Tasks, priorities and assignments', 'Automatic reminders', 'Progress tracking', 'Team collaboration'] },
+  },
+  marketing: {
+    fr: { tagline: 'Votre studio marketing propulsé par l\'IA — du script à la vidéo prête à publier.', points: ['L\'IA s\'appuie sur VOTRE profil d\'entreprise (vous décrivez votre activité)', 'Accroches, scripts, storyboard, posts par plateforme et courriels conformes (LCAP, Loi 25)', 'Vidéo : avatar parlant OU vidéo réelle (caméra) montée avec vos slides', 'Vidéo réelle + slides : gratuite ; avatar parlant via votre propre clé D-ID', 'Consommation IA texte incluse dans votre forfait', 'Médiathèque : photos, images et vidéos d\'arrière-plan'] },
+    en: { tagline: 'Your AI-powered marketing studio — from script to publish-ready video.', points: ['The AI uses YOUR company profile (you describe your business)', 'Hooks, scripts, storyboard, per-platform posts and compliant emails (CASL, Law 25)', 'Video: talking avatar OR real video (camera) edited with your slides', 'Real video + slides: free; talking avatar via your own D-ID key', 'Text AI usage included in your plan', 'Media library: photos, images and background videos'] },
   },
 };
 
