@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useSite } from '@/contexts/SiteContext';
 import {
   Clock, Plus, ChevronRight, CheckCircle, XCircle,
   AlertCircle, DollarSign, Loader2, Calendar, User, Send,
@@ -81,6 +82,7 @@ function generatePeriods(year: number): { week: number; start: string; end: stri
 export default function TimesheetsPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'demo';
+  const { siteId } = useSite(); // sélecteur de site global (en-tête)
 
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +134,7 @@ export default function TimesheetsPage() {
         .eq('tenant_id', tenant).eq('employee_id', currentUserId).eq('period_start', start).maybeSingle();
       if (!exists) {
         await supabase.from('timesheets').insert({
-          tenant_id: tenant, employee_id: currentUserId,
+          tenant_id: tenant, site_id: siteId !== 'all' ? siteId : null, employee_id: currentUserId,
           employee_email: currentUserEmail, employee_name: currentUserName,
           period_start: start, period_end: end, status: 'draft',
         });
@@ -151,7 +153,7 @@ export default function TimesheetsPage() {
         .eq('period_start', start).maybeSingle();
       if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}`; return; }
       const { data, error } = await supabase.from('timesheets').insert({
-        tenant_id: tenant, employee_id: currentUserId,
+        tenant_id: tenant, site_id: siteId !== 'all' ? siteId : null, employee_id: currentUserId,
         employee_email: currentUserEmail, employee_name: currentUserName,
         period_start: start, period_end: end, status: 'draft',
       }).select().single();
@@ -164,10 +166,11 @@ export default function TimesheetsPage() {
   const years = useMemo(() => [...new Set(sheets.map(s => isoWeekYear(s.period_start)))].sort((a, b) => b - a), [sheets]);
 
   const filtered = useMemo(() => sheets.filter(s => {
+    if (siteId && siteId !== 'all' && (s as any).site_id !== siteId) return false;
     if (isoWeekYear(s.period_start) !== yearFilter) return false;
     if (employeeFilter && s.employee_name !== employeeFilter) return false;
     return true;
-  }), [sheets, yearFilter, employeeFilter]);
+  }), [sheets, yearFilter, employeeFilter, siteId]);
 
   const ytd = useMemo(() => filtered.reduce((acc, s) => ({
     hrs: acc.hrs + Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium),
@@ -198,7 +201,7 @@ export default function TimesheetsPage() {
         .eq('tenant_id', tenant).eq('employee_id', currentUserId).eq('period_start', start).maybeSingle();
       if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}`; return; }
       const { data, error } = await supabase.from('timesheets').insert({
-        tenant_id: tenant, employee_id: currentUserId,
+        tenant_id: tenant, site_id: siteId !== 'all' ? siteId : null, employee_id: currentUserId,
         employee_email: currentUserEmail, employee_name: currentUserName,
         period_start: start, period_end: end, status: 'draft',
       }).select().single();

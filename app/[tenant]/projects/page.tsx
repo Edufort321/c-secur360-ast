@@ -8,6 +8,7 @@ import {
   FileText, X, Hash, Loader2, Download, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useSite } from '@/contexts/SiteContext';
 import { PortalHeader } from '@/components/PortalHeader';
 import { BackButton } from '@/components/BackButton';
 
@@ -45,6 +46,7 @@ const emptyForm = {
 export default function ProjectsPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'demo';
+  const { siteId } = useSite(); // sélecteur de site global (en-tête)
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [astCounts, setAstCounts] = useState<Record<string, number>>({});
@@ -175,12 +177,14 @@ export default function ProjectsPage() {
   }, [tenant]);
 
   const filtered = useMemo(() => {
+    let list = projects;
+    if (siteId && siteId !== 'all') list = list.filter(p => (p as any).site_id === siteId);
     const q = query.trim().toLowerCase();
-    if (!q) return projects;
-    return projects.filter(p =>
+    if (!q) return list;
+    return list.filter(p =>
       [p.project_number, p.title, p.client_name, p.location]
         .filter(Boolean).some(v => String(v).toLowerCase().includes(q)));
-  }, [projects, query]);
+  }, [projects, query, siteId]);
 
   const stats = useMemo(() => ({
     total: projects.length,
@@ -208,6 +212,8 @@ export default function ProjectsPage() {
       date_submission: form.date_submission || null,
       date_work_start: form.date_work_start || null,
       primary_seller_id: form.primary_seller_id || null,
+      // Rattache le projet au site choisi pour le numéro (ou au site global courant à défaut).
+      site_id: selSiteId || (siteId !== 'all' ? siteId : null) || null,
     } as any;
     setProjects(prev => [optimistic, ...prev]);
 
