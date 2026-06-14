@@ -208,12 +208,10 @@ function NouveauPermisInner() {
   }
 
   if (type === 'loto') {
+    // Refonte LOTO modernisée (CSA Z460 : sources d'énergie, énergie zéro/VAT, IA, signature).
+    if (typeof window !== 'undefined') router.replace(`/${tenant}/permits/loto/nouveau`);
     return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <Loto {...commonProps} />
-      </>
+      <div className="min-h-screen bg-slate-50"><PortalHeader tenant={tenant} /><div className="flex items-center justify-center gap-2 py-24 text-slate-500"><Loader2 className="animate-spin" size={18} /> Ouverture du permis LOTO…</div></div>
     );
   }
 
