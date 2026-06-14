@@ -165,7 +165,7 @@ export default function AdminDashboard() {
           const st = computeSubState(t.subscription);
           return {
             id: t.id, name: t.companyName || t.id, subdomain: t.subdomain || t.id,
-            plan: t.plan || 'basic', sites: 1,
+            plan: t.plan || 'basic', sites: Number(t.max_sites) || 1,
             monthlyFee: Number(t.annualRevenue || 0), annualRevenue: Number(t.annualRevenue || 0),
             status: t.archived ? 'archived' : (t.isActive === false ? 'suspended' : 'active'),
             archived: t.archived === true,
@@ -176,7 +176,10 @@ export default function AdminDashboard() {
             domain: t.domain || `www.c-secur360.ca/${t.subdomain || t.id}`, provinces: [], currentProvince: '',
           };
         }) as any);
-        setStats(prev => ({ ...prev, totalClients: data.tenants.length }));
+        // Sites totaux = somme des sites de chaque tenant (max_sites, défaut 1). N'était jamais recalculé
+        // (restait bloqué à 1). Clients = nombre de tenants.
+        const totalSites = data.tenants.reduce((s: number, t: any) => s + (Number(t.max_sites) || 1), 0);
+        setStats(prev => ({ ...prev, totalClients: data.tenants.length, totalSites }));
       }
     } catch { /* ignore */ }
     // Demandes d'ajustement de forfait IA en attente (carte rouge « ajustement token requis »).
