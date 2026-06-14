@@ -6,9 +6,17 @@
 // arrive ensuite ; la vidéo réelle + montage est gratuite, l'avatar parlant consomme le forfait.
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Megaphone, Save, Sparkles, Loader2, Copy, Building2, Video, KeyRound, ExternalLink } from 'lucide-react';
+import { Megaphone, Save, Sparkles, Loader2, Copy, Building2, Video, KeyRound, ExternalLink, Image as ImageIcon, Film, Trash2, Mic } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
+import MarketingComposer from '@/components/admin/MarketingComposer';
+import CameraRecorder from '@/components/admin/CameraRecorder';
+
+const AVA_VOICES = [
+  { v: 'fr-CA-SylvieNeural', l: 'FR-CA · Sylvie' }, { v: 'fr-CA-AntoineNeural', l: 'FR-CA · Antoine' },
+  { v: 'fr-FR-DeniseNeural', l: 'FR · Denise' }, { v: 'fr-FR-HenriNeural', l: 'FR · Henri' },
+  { v: 'en-US-JennyNeural', l: 'EN · Jenny' }, { v: 'en-US-GuyNeural', l: 'EN · Guy' },
+];
 
 export default function TenantMarketing() {
   const { tenant } = useParams() as { tenant: string };
@@ -28,6 +36,55 @@ export default function TenantMarketing() {
 
   async function loadDid() {
     try { const r = await fetch('/api/marketing/secrets', { credentials: 'include' }); const j = await r.json(); if (r.ok) setDidConfigured(!!j.hasDid); } catch {}
+  }
+
+  // ── Studio vidéo (médiathèque + avatar + caméra + assembleur), scopé tenant ──
+  const [assets, setAssets] = useState<{ avatars: any[]; library: any[]; bgVideos: any[]; videos: any[]; compositions: any[] }>({ avatars: [], library: [], bgVideos: [], videos: [], compositions: [] });
+  const [upBusy, setUpBusy] = useState(false);
+  const [avaSel, setAvaSel] = useState('');
+  const [avaText, setAvaText] = useState('');
+  const [avaVoice, setAvaVoice] = useState('fr-CA-SylvieNeural');
+  const [avaBusy, setAvaBusy] = useState(false);
+
+  function mapAssets(j: any) {
+    const m = (arr: any[]) => (arr || []).map((a: any) => ({ id: a.id, url: a.data?.url, name: a.data?.name, created_at: a.created_at })).filter((x: any) => x.url);
+    setAssets({ avatars: m(j.avatars), library: m(j.library), bgVideos: m(j.bgVideos), videos: m(j.videos), compositions: m(j.compositions) });
+  }
+  async function loadAssets() { try { const r = await fetch('/api/marketing/data', { credentials: 'include' }); const j = await r.json(); if (r.ok) mapAssets(j); } catch {} }
+
+  async function uploadTenant(file: File, prefix: string): Promise<string> {
+    const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+    const r = await fetch('/api/marketing/sign-upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ prefix, ext }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Upload');
+    const { error } = await supabase.storage.from('marketing').uploadToSignedUrl(j.path, j.token, file, { contentType: file.type || undefined });
+    if (error) throw new Error(error.message);
+    return j.publicUrl as string;
+  }
+  async function saveAsset(kind: string, data: any) { await fetch('/api/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind, data }) }); loadAssets(); }
+  async function delAsset(id: string) { await fetch('/api/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'delete-asset', id }) }); loadAssets(); }
+  const saveClip = async (url: string) => saveAsset('avatar_video', { url });
+  const saveComposition = async (url: string) => saveAsset('composition_video', { url });
+
+  async function uploadKind(file: File, prefix: string, kind: string) {
+    setUpBusy(true); setMsg(null);
+    try { const url = await uploadTenant(file, prefix); await saveAsset(kind, { url, name: file.name }); }
+    catch (e: any) { setMsg({ t: 'Upload : ' + (e?.message || ''), ok: false }); }
+    finally { setUpBusy(false); }
+  }
+
+  async function generateAvatar() {
+    const ava = assets.avatars.find(a => a.id === avaSel);
+    if (!ava) { setMsg({ t: 'Choisis d’abord un avatar (image de visage) dans la médiathèque.', ok: false }); return; }
+    if (!avaText.trim()) { setMsg({ t: 'Écris le texte à narrer.', ok: false }); return; }
+    if (!didConfigured) { setMsg({ t: 'Configure ta clé D-ID (section Vidéo IA) pour générer un avatar.', ok: false }); return; }
+    setAvaBusy(true); setMsg(null);
+    try {
+      const r = await fetch('/api/marketing/avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ image: ava.url, text: avaText, voice: avaVoice }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Échec');
+      if (j.status === 'done') { setMsg({ t: '✓ Avatar généré — disponible dans l’assembleur.', ok: true }); loadAssets(); }
+      else setMsg({ t: 'Rendu en cours (réessaie dans un instant pour le voir).', ok: true });
+    } catch (e: any) { setMsg({ t: 'Avatar : ' + (e?.message || ''), ok: false }); }
+    finally { setAvaBusy(false); }
   }
   async function saveDid() {
     setSavingDid(true); setMsg(null);
@@ -49,7 +106,7 @@ export default function TenantMarketing() {
       if (data) setP((prev: any) => ({ ...prev, ...data }));
       setLoaded(true);
     })();
-    loadBudget(); loadDid();
+    loadBudget(); loadDid(); loadAssets();
   }, [tenant]);
 
   const set = (k: string, v: any) => setP((x: any) => ({ ...x, [k]: v }));
@@ -163,12 +220,74 @@ export default function TenantMarketing() {
             </div>
           )}
         </div>
+
+        {/* ───────── STUDIO VIDÉO ───────── */}
+        <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900 mt-8 mb-2"><Film className="text-pink-600" /> Studio vidéo</h2>
+
+        {/* Médiathèque */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-3 text-sm">🗂 Médiathèque {upBusy && <Loader2 className="inline animate-spin" size={13} />}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MediaCol title="🧑 Avatars (visage)" items={assets.avatars} onDel={delAsset} accept="image/*" label="avatar" onPick={f => uploadKind(f, 'avatar', 'avatar_model')} />
+            <MediaCol title="📷 Photos / images" items={assets.library} onDel={delAsset} accept="image/*" label="image" onPick={f => uploadKind(f, 'library', 'library_image')} />
+            <MediaCol title="🎞 Vidéos de fond" items={assets.bgVideos} onDel={delAsset} accept="video/*" video label="vidéo de fond" onPick={f => uploadKind(f, 'bg', 'bg_video')} />
+          </div>
+        </div>
+
+        {/* Avatar parlant (BYOK D-ID) */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <h3 className="flex items-center gap-2 font-semibold text-gray-900 mb-1 text-sm"><Mic size={15} /> Avatar parlant (via ta clé D-ID)</h3>
+          {!didConfigured && <p className="text-xs text-amber-700 mb-2">Configure ta clé D-ID (section « Vidéo IA » plus haut) pour générer un avatar.</p>}
+          {assets.avatars.length === 0 && <p className="text-xs text-gray-500 mb-2">Ajoute d’abord une image d’avatar (visage) dans la médiathèque.</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <F l="Avatar"><select className="inp" value={avaSel} onChange={e => setAvaSel(e.target.value)}><option value="">— choisir —</option>{assets.avatars.map(a => <option key={a.id} value={a.id}>{a.name || 'avatar'}</option>)}</select></F>
+            <F l="Voix"><select className="inp" value={avaVoice} onChange={e => setAvaVoice(e.target.value)}>{AVA_VOICES.map(v => <option key={v.v} value={v.v}>{v.l}</option>)}</select></F>
+            <div className="flex items-end">{avaSel && assets.avatars.find(a => a.id === avaSel)?.url && <img src={assets.avatars.find(a => a.id === avaSel)!.url} alt="" className="w-12 h-12 rounded-lg object-cover border" />}</div>
+          </div>
+          <F l="Texte à narrer"><textarea className="inp" rows={2} value={avaText} onChange={e => setAvaText(e.target.value)} /></F>
+          <button onClick={generateAvatar} disabled={avaBusy} className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm rounded-lg disabled:opacity-60">{avaBusy ? <Loader2 className="animate-spin" size={14} /> : <Mic size={14} />} {avaBusy ? 'Génération (10-40 s)…' : 'Générer l’avatar parlant'}</button>
+        </div>
+
+        {/* Vidéo réelle (gratuite) */}
+        <div className="mb-4"><CameraRecorder uploadFile={uploadTenant} saveClip={saveClip} onNotice={(m: any) => setMsg({ t: m.msg, ok: m.ok })} /></div>
+
+        {/* Assembleur (montage avec slides) */}
+        <MarketingComposer avatarVideos={assets.videos} library={assets.library} bgVideos={assets.bgVideos} storyboard={pack?.storyboard} onNotice={(m: any) => setMsg({ t: m.msg, ok: m.ok })} uploadFile={uploadTenant} saveVideoToGallery={saveComposition} />
+
+        {/* Galerie */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mt-4">
+          <h3 className="font-semibold text-gray-900 text-sm mb-2">📁 Mes vidéos enregistrées</h3>
+          {[...assets.compositions.map(v => ({ ...v, tag: 'Montage' })), ...assets.videos.map(v => ({ ...v, tag: 'Avatar/clip' }))].length === 0 ? <p className="text-sm text-gray-400">Aucune vidéo.</p> : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[...assets.compositions.map(v => ({ ...v, tag: 'Montage' })), ...assets.videos.map(v => ({ ...v, tag: 'Clip' }))].map(v => (
+                <div key={v.id} className="border border-gray-200 rounded-lg p-1.5"><video src={v.url} controls preload="metadata" className="w-full rounded" style={{ aspectRatio: '16/9', objectFit: 'cover', background: '#000' }} /><div className="flex items-center justify-between mt-1"><span className="text-[10px] text-gray-400">{v.tag}</span><button onClick={() => delAsset(v.id)} className="text-red-500"><Trash2 size={12} /></button></div></div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <style jsx>{`:global(.inp){ width:100%; padding:8px 11px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; }`}</style>
     </div>
   );
 }
 
+function MediaCol({ title, items, onDel, onPick, accept, label, video }: { title: string; items: any[]; onDel: (id: string) => void; onPick: (f: File) => void; accept: string; label: string; video?: boolean }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold text-gray-600 mb-1">{title}</div>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[1rem]">
+        {items.length === 0 && <span className="text-[11px] text-gray-400">Vide.</span>}
+        {items.map(it => (
+          <div key={it.id} className="relative w-14 h-14">
+            {video ? <video src={it.url} muted className="w-14 h-14 object-cover rounded border" /> : <img src={it.url} alt="" className="w-14 h-14 object-cover rounded border" />}
+            <button onClick={() => onDel(it.id)} className="absolute -top-1.5 -right-1.5 bg-white rounded-full border text-red-500 leading-none">×</button>
+          </div>
+        ))}
+      </div>
+      <label className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs cursor-pointer hover:bg-gray-50">＋ Ajouter {label}<input type="file" accept={accept} hidden onChange={e => { const f = e.target.files?.[0]; if (f) onPick(f); e.currentTarget.value = ''; }} /></label>
+    </div>
+  );
+}
 function F({ l, children, full }: { l: string; children: React.ReactNode; full?: boolean }) { return <div className={full ? 'sm:col-span-2' : ''}><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{children}</div>; }
 function Out({ title, onCopy, children }: { title: string; onCopy: () => void; children: React.ReactNode }) {
   return <div className="rounded-lg border border-gray-200 p-3"><div className="flex items-center justify-between mb-1"><span className="text-xs font-semibold text-gray-600">{title}</span><button onClick={onCopy} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700"><Copy size={12} /> copier</button></div>{children}</div>;
