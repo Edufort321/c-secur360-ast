@@ -9,7 +9,7 @@ import { useParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Wind, ArrowLeft, Loader2, ShieldAlert, ShieldCheck, Wind as Vent, Plus, Download,
-  Clock, Users, LogIn, LogOut, CheckCircle2, AlertTriangle, FileSignature, Activity,
+  Clock, Users, LogIn, LogOut, CheckCircle2, AlertTriangle, FileSignature, Activity, Eye,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -113,7 +113,7 @@ export default function EspaceClosFiche() {
               <div className="mt-3 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Description des travaux"><input defaultValue={permit.work_description || ''} onBlur={e => setPermitStatus({ work_description: e.target.value })} className="inp" placeholder="Travaux à effectuer…" /></Field>
-                  <Field label="Superviseur"><input defaultValue={permit.supervisor_name || ''} onBlur={e => setPermitStatus({ supervisor_name: e.target.value })} className="inp" /></Field>
+                  <Field label="Superviseur (personnel du tenant)"><input list="cs-personnel" defaultValue={permit.supervisor_name || ''} onBlur={e => setPermitStatus({ supervisor_name: e.target.value })} className="inp" placeholder="rechercher dans le personnel…" /><datalist id="cs-personnel">{people.map((pp: any) => <option key={pp.id} value={pp.name} />)}</datalist></Field>
                   <Field label={`Reprise atmosphérique (min) — défaut ${norm.defaultRetestMinutes}`}><input type="number" min={1} defaultValue={retestMin} onBlur={e => setPermitStatus({ retest_minutes: Number(e.target.value) || norm.defaultRetestMinutes })} className="inp" /></Field>
                   <Field label="Entrants prévus"><input type="number" min={1} defaultValue={permit.entrants_expected || ''} onBlur={e => setPermitStatus({ entrants_expected: Number(e.target.value) || null })} className="inp" /></Field>
                 </div>
@@ -269,6 +269,7 @@ function AtmPanel({ norm, retestMin, atmState, secsLeft, lastReading, lastEval, 
   return (
     <Card>
       <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Vent size={16} /> Conditions atmosphériques</h2>
+      <p className="text-[11px] text-gray-500 mt-1">Normes en vigueur ({norm.label}) : {norm.regulations.join(' · ')}. Seuils : {norm.limits.map((l: any) => `${l.label.split(' (')[0]} ${l.min != null ? l.min + '–' : '< '}${l.max}${l.unit}`).join(' · ')}. Ordre de test : {norm.testOrder.join(' → ')}.</p>
       <div className={`mt-3 rounded-xl ${banner.bg} text-white px-4 py-3 flex items-center gap-3`}>
         <div className="shrink-0">{banner.icon}</div>
         <div className="font-semibold text-sm flex-1">{banner.txt}</div>
@@ -317,11 +318,16 @@ function AtmPanel({ norm, retestMin, atmState, secsLeft, lastReading, lastEval, 
 function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, people, onAdd, onIn, onOut, now }: any) {
   const [sel, setSel] = useState('');        // id personnel sélectionné, ou '' (custom)
   const [name, setName] = useState('');
-  const [role, setRole] = useState('entrant');
   const [equip, setEquip] = useState('');
   const [personId, setPersonId] = useState<string | null>(null);
-  const needAttendants = Math.ceil(openEntrants.length / (norm.attendantPerEntrants || 2));
-  const attendantOk = attendants.length >= needAttendants;
+
+  // Surveillants : 1 surveillant peut surveiller PLUSIEURS entrants (CSA Z1006 / RSST QC — pas de
+  // ratio fixe). Règle : au moins 1 surveillant EN POSTE dès qu'un entrant est à l'intérieur. Un site
+  // peut plafonner via norm.attendantPerEntrants (max entrants/surveillant) ; 0 = pas de plafond.
+  const maxPer = Number(norm.attendantPerEntrants) || 0;
+  const activeAttendants = attendants.filter((a: any) => a.entered_at && !a.exited_at);
+  const needAttendants = openEntrants.length === 0 ? 0 : (maxPer > 0 ? Math.ceil(openEntrants.length / maxPer) : 1);
+  const attendantOk = activeAttendants.length >= needAttendants;
 
   const chosen = (people || []).find((p: any) => p.id === sel);
   function pick(v: string) {
@@ -329,31 +335,67 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, peopl
     const p = (people || []).find((x: any) => x.id === v);
     if (p) { setName(p.name); setPersonId(p.id); } else { setPersonId(null); }
   }
+  async function add(role: string) {
+    if (!name.trim()) return;
+    await onAdd({ name: name.trim(), personId, role, equipment: role === 'entrant' ? equip.split(',').map(s => s.trim()).filter(Boolean) : [] });
+    setName(''); setEquip(''); setSel(''); setPersonId(null);
+  }
 
-  // Cumuls de temps : par personne (toutes ses entrées) + total général. min(entrée->sortie/now).
+  // Cumuls de temps EN SECONDES (live) : un même entrant peut faire plusieurs entrées/sorties ; on
+  // regroupe par personne (person_user_id sinon nom) et on additionne toutes ses présences. La présence
+  // en cours compte jusqu'à « now » → le total monte en continu.
   const totals = useMemo(() => {
-    const per: Record<string, number> = {}; let grand = 0;
+    const per: Record<string, { name: string; sec: number; inside: boolean }> = {}; let grand = 0;
     for (const e of entries) {
       if (!e.entered_at) continue;
+      const k = e.person_user_id || e.person_name;
       const end = e.exited_at ? new Date(e.exited_at).getTime() : now;
-      const m = Math.max(0, Math.round((end - new Date(e.entered_at).getTime()) / 60000));
-      per[e.person_name] = (per[e.person_name] || 0) + m; grand += m;
+      const s = Math.max(0, Math.round((end - new Date(e.entered_at).getTime()) / 1000));
+      if (!per[k]) per[k] = { name: e.person_name, sec: 0, inside: false };
+      per[k].sec += s; if (!e.exited_at) per[k].inside = true; grand += s;
     }
-    return { per, grand };
+    return { per: Object.values(per), grand };
   }, [entries, now]);
 
+  // Matériel encore à l'intérieur (contrôle de fermeture) : équipement des entrants toujours présents.
+  const equipInside = useMemo(() => entries
+    .filter((e: any) => e.entered_at && !e.exited_at && Array.isArray(e.equipment_in) && e.equipment_in.length)
+    .flatMap((e: any) => e.equipment_in.map((it: string) => ({ who: e.person_name, item: it }))), [entries]);
+
   const FORM = { ok: { c: 'bg-emerald-100 text-emerald-700', t: 'Formation à jour' }, expiring: { c: 'bg-amber-100 text-amber-700', t: 'Formation bientôt expirée' }, expired: { c: 'bg-red-100 text-red-700', t: 'Formation EXPIRÉE' }, none: { c: 'bg-gray-100 text-gray-500', t: 'Aucune formation au dossier' } } as const;
+
+  function Row({ e }: { e: any }) {
+    const inside = e.entered_at && !e.exited_at;
+    const isAtt = e.role !== 'entrant';
+    const sec = e.entered_at ? Math.max(0, Math.round(((e.exited_at ? new Date(e.exited_at).getTime() : now) - new Date(e.entered_at).getTime()) / 1000)) : 0;
+    return (
+      <div className="flex items-center gap-2 text-sm border-b border-gray-100 py-1.5">
+        <span className="font-medium text-gray-800">{e.person_name}</span>
+        {!isAtt && Array.isArray(e.equipment_in) && e.equipment_in.length > 0 && <span className="text-[11px] text-gray-400 truncate">🧰 {e.equipment_in.join(', ')}</span>}
+        <span className="ml-auto text-xs">
+          {!e.entered_at ? <span className="text-gray-400">—</span>
+            : inside ? <span className="font-mono font-semibold text-emerald-600 tabular-nums"><Clock size={11} className="inline mb-0.5" /> {fmtClock(sec)}{isAtt ? ' en poste' : ''}</span>
+            : <span className="text-gray-400">{isAtt ? 'poste terminé' : 'sorti'} · {fmtClock(sec)}</span>}
+        </span>
+        {!e.entered_at && <button onClick={() => onIn(e.id)} className="text-xs text-emerald-600 inline-flex items-center gap-0.5"><LogIn size={13} /> {isAtt ? 'Prendre le poste' : 'Entrer'}</button>}
+        {inside && <button onClick={() => onOut(e.id, isAtt ? true : confirm('Tout le matériel entré est-il ressorti ? OK = oui'))} className="text-xs text-red-600 inline-flex items-center gap-0.5"><LogOut size={13} /> {isAtt ? 'Quitter' : 'Sortir'}</button>}
+        {!isAtt && e.exited_at && <button onClick={() => onAdd({ name: e.person_name, personId: e.person_user_id || null, role: 'entrant', equipment: [] })} className="text-xs text-cyan-600 inline-flex items-center gap-0.5"><LogIn size={13} /> Ré-entrer</button>}
+        {!isAtt && e.exited_at && (e.equipment_returned ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertTriangle size={14} className="text-amber-500" />)}
+      </div>
+    );
+  }
 
   return (
     <Card>
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Users size={16} /> Registre des entrants</h2>
-        <span className="text-xs text-gray-500">{openEntrants.length} à l’intérieur · {attendants.length} surveillant(s)</span>
+        <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Users size={16} /> Registre des personnes</h2>
+        <span className="text-xs text-gray-500">{openEntrants.length} entrant(s) à l’intérieur · {activeAttendants.length} surveillant(s) en poste</span>
       </div>
-      {!attendantOk && openEntrants.length > 0 && <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded p-2">⚠ Surveillance insuffisante : {needAttendants} surveillant(s) requis pour {openEntrants.length} entrant(s) ({norm.label}).</div>}
+      {!attendantOk && openEntrants.length > 0 && <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded p-2">⚠ Surveillance insuffisante : au moins {needAttendants} surveillant(s) en poste requis pour {openEntrants.length} entrant(s) ({norm.label}). Ajoutez un surveillant ci-dessous puis « Prendre le poste ».</div>}
       {atmState !== 'safe' && <div className="mt-2 text-xs text-red-700 bg-red-50 rounded p-2">⚠ L’atmosphère n’est pas confirmée conforme — aucune entrée ne devrait avoir lieu.</div>}
 
-      <div className="mt-3 rounded-lg border border-gray-200 p-3 grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+      {/* Ajout commun (annuaire + RH) → bouton Entrant OU Surveillant */}
+      <div className="mt-3 rounded-lg border border-gray-200 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
         <L l="Personne (annuaire)">
           <select className="inp" value={sel} onChange={e => pick(e.target.value)}>
             <option value="">— Saisir un nom —</option>
@@ -361,10 +403,8 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, peopl
           </select>
         </L>
         <L l="Nom"><input className="inp" value={name} onChange={e => { setName(e.target.value); setSel(''); setPersonId(null); }} /></L>
-        <L l="Rôle"><select className="inp" value={role} onChange={e => setRole(e.target.value)}><option value="entrant">Entrant</option><option value="attendant">Surveillant</option></select></L>
-        <L l="Matériel entré (,)"><input className="inp" value={equip} onChange={e => setEquip(e.target.value)} placeholder="détecteur, harnais…" /></L>
+        <L l="Matériel entré (entrant, séparé par ,)"><input className="inp" value={equip} onChange={e => setEquip(e.target.value)} placeholder="détecteur, harnais…" /></L>
       </div>
-      {/* Pré-remplissage formation RH */}
       {chosen && (
         <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
           <span className={`px-2 py-0.5 rounded-full font-semibold ${FORM[chosen.formation_status as keyof typeof FORM].c}`}>{FORM[chosen.formation_status as keyof typeof FORM].t}</span>
@@ -373,39 +413,47 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, peopl
           {chosen.certifications?.length > 0 && <span className="text-gray-400">({chosen.certifications.length} formation(s) au dossier RH)</span>}
         </div>
       )}
-      <div className="mt-2">
-        <button onClick={async () => { if (!name.trim()) return; await onAdd({ name: name.trim(), personId, role, equipment: equip.split(',').map(s => s.trim()).filter(Boolean) }); setName(''); setEquip(''); setSel(''); setPersonId(null); }} className="inline-flex justify-center items-center gap-1 px-3 py-2 bg-cyan-600 text-white text-sm rounded-lg"><Plus size={14} /> Ajouter au registre</button>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button onClick={() => add('entrant')} className="inline-flex justify-center items-center gap-1 px-3 py-2 bg-cyan-600 text-white text-sm rounded-lg"><Plus size={14} /> Ajouter comme entrant</button>
+        <button onClick={() => add('attendant')} className="inline-flex justify-center items-center gap-1 px-3 py-2 bg-violet-600 text-white text-sm rounded-lg"><Plus size={14} /> Ajouter comme surveillant</button>
       </div>
 
-      <div className="mt-3 space-y-1.5">
-        {entries.length === 0 && <p className="text-xs text-gray-400">Aucun entrant.</p>}
-        {entries.map((e: any) => {
-          const inside = e.entered_at && !e.exited_at;
-          const dur = e.entered_at ? Math.round(((e.exited_at ? new Date(e.exited_at).getTime() : now) - new Date(e.entered_at).getTime()) / 60000) : 0;
-          return (
-            <div key={e.id} className="flex items-center gap-2 text-sm border-b border-gray-100 py-1.5">
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${e.role === 'entrant' ? 'bg-cyan-100 text-cyan-700' : 'bg-violet-100 text-violet-700'}`}>{e.role === 'entrant' ? 'Entrant' : 'Surveillant'}</span>
-              <span className="font-medium text-gray-800">{e.person_name}</span>
-              {Array.isArray(e.equipment_in) && e.equipment_in.length > 0 && <span className="text-[11px] text-gray-400 truncate">🧰 {e.equipment_in.join(', ')}</span>}
-              <span className="ml-auto text-xs text-gray-500">
-                {!e.entered_at ? '—' : inside ? <span className="text-emerald-600 font-medium"><Clock size={11} className="inline" /> {dur} min</span> : <span className="text-gray-400">sorti ({dur} min)</span>}
-              </span>
-              {e.role === 'entrant' && !e.entered_at && <button onClick={() => onIn(e.id)} className="text-xs text-emerald-600 inline-flex items-center gap-0.5"><LogIn size={13} /> Entrer</button>}
-              {inside && <button onClick={() => onOut(e.id, confirm('Tout le matériel entré est-il ressorti ? OK = oui'))} className="text-xs text-red-600 inline-flex items-center gap-0.5"><LogOut size={13} /> Sortir</button>}
-              {e.exited_at && (e.equipment_returned ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertTriangle size={14} className="text-amber-500" />)}
-            </div>
-          );
-        })}
+      {/* Section SURVEILLANTS (poste extérieur) */}
+      <div className="mt-4">
+        <div className="text-xs font-semibold text-violet-700 uppercase tracking-wide flex items-center gap-1.5"><Eye size={13} /> Surveillants (poste extérieur)</div>
+        <div className="mt-1.5 space-y-1.5">
+          {attendants.length === 0 && <p className="text-xs text-gray-400">Aucun surveillant. Un surveillant doit être en poste pendant toute la présence d’entrants.</p>}
+          {attendants.map((e: any) => <Row key={e.id} e={e} />)}
+        </div>
       </div>
 
-      {/* Cumuls de temps */}
-      {Object.keys(totals.per).length > 0 && (
-        <div className="mt-3 rounded-lg bg-gray-50 p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1">Temps cumulé par personne</div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
-            {Object.entries(totals.per).map(([n, m]) => <span key={n}><b>{n}</b> : {fmtDur(m as number)}</span>)}
+      {/* Section ENTRANTS */}
+      <div className="mt-4">
+        <div className="text-xs font-semibold text-cyan-700 uppercase tracking-wide flex items-center gap-1.5"><Users size={13} /> Entrants</div>
+        <div className="mt-1.5 space-y-1.5">
+          {entries.filter((e: any) => e.role === 'entrant').length === 0 && <p className="text-xs text-gray-400">Aucun entrant.</p>}
+          {entries.filter((e: any) => e.role === 'entrant').map((e: any) => <Row key={e.id} e={e} />)}
+        </div>
+      </div>
+
+      {/* Matériel encore à l'intérieur (contrôle de fermeture) */}
+      {equipInside.length > 0 && (
+        <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <div className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1.5"><AlertTriangle size={13} /> Matériel encore à l’intérieur ({equipInside.length}) — à ressortir avant fermeture</div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-amber-900">
+            {equipInside.map((x: any, i: number) => <span key={i}>🧰 {x.item} <span className="text-amber-600">({x.who})</span></span>)}
           </div>
-          <div className="mt-2 text-sm font-semibold text-gray-900">Cumul total des entrées : {fmtDur(totals.grand)}</div>
+        </div>
+      )}
+
+      {/* Cumuls de temps (live) */}
+      {totals.per.length > 0 && (
+        <div className="mt-3 rounded-lg bg-gray-50 p-3">
+          <div className="text-xs font-semibold text-gray-600 mb-1">Temps cumulé par personne (toutes ses entrées)</div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+            {totals.per.map((p, i) => <span key={i} className="tabular-nums"><b>{p.name}</b> : <span className={p.inside ? 'font-mono font-semibold text-emerald-600' : 'font-mono'}>{fmtClock(p.sec)}</span>{p.inside && ' ●'}</span>)}
+          </div>
+          <div className="mt-2 text-sm font-semibold text-gray-900 tabular-nums">Cumul total des présences : <span className="font-mono">{fmtClock(totals.grand)}</span></div>
         </div>
       )}
       <style jsx>{`:global(.inp){ width:100%; padding:7px 9px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; }`}</style>
@@ -413,7 +461,13 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, peopl
   );
 }
 
-function fmtDur(min: number) { const h = Math.floor(min / 60), m = min % 60; return h > 0 ? `${h} h ${m} min` : `${m} min`; }
+// Horloge live H:MM:SS (ou MM:SS sous une heure) — pour les timers d'entrée en continu.
+function fmtClock(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${p(m)}:${p(ss)}` : `${m}:${p(ss)}`;
+}
 
 // ── Petits utilitaires UI ──
 function Shell({ tenant, children }: { tenant: string; children: React.ReactNode }) {

@@ -17,7 +17,7 @@ export interface ProvinceNorm {
   testOrder: string[];               // ordre de test imposé (O2 -> inflammables -> toxiques)
   samplingPoints: string[];          // ex. haut/milieu/bas
   defaultRetestMinutes: number;      // intervalle de reprise par défaut
-  attendantPerEntrants: number;      // 1 surveillant par N entrants (max)
+  attendantPerEntrants: number;      // max d'entrants qu'UN surveillant peut surveiller ; 0 = pas de ratio fixe (1 surveillant min, peut en surveiller plusieurs — défaut CSA Z1006/RSST)
   continuousMonitoring: boolean;     // surveillance continue recommandée/exigée
   notes?: string;
   updatedAt?: string;                // si rafraîchi par IA
@@ -41,7 +41,7 @@ export const PROVINCE_NORMS: Record<ProvinceCode, ProvinceNorm> = {
     province: 'QC', label: 'Québec', authority: 'CNESST',
     regulations: ['RSST, section XXVI — Espaces clos (art. 296.1 et suiv., modif. 2023)', 'CSA Z1006 — Travail en espace clos', 'LSST'],
     limits: BASE_LIMITS, testOrder: TEST_ORDER, samplingPoints: SAMPLING,
-    defaultRetestMinutes: 15, attendantPerEntrants: 2, continuousMonitoring: true,
+    defaultRetestMinutes: 15, attendantPerEntrants: 0, continuousMonitoring: true,
     notes: 'Définition 2023 basée sur les risques (asphyxie, intoxication, perte de conscience/jugement, incendie/explosion). Personne qualifiée requise ; aménagement permettant l’intervention de l’extérieur (art. 297.1).',
     source: 'baseline',
   },
@@ -50,7 +50,7 @@ export const PROVINCE_NORMS: Record<ProvinceCode, ProvinceNorm> = {
     regulations: ['O. Reg. 632/05 — Confined Spaces', 'OHSA'],
     limits: [{ ...BASE_LIMITS[0], max: 23.0 }, BASE_LIMITS[1], BASE_LIMITS[2], BASE_LIMITS[3]],
     testOrder: TEST_ORDER, samplingPoints: SAMPLING,
-    defaultRetestMinutes: 15, attendantPerEntrants: 2, continuousMonitoring: true,
+    defaultRetestMinutes: 15, attendantPerEntrants: 0, continuousMonitoring: true,
     notes: 'Plan écrit, évaluation des dangers, permis d’entrée, surveillant formé, plan de sauvetage. Entrée = dès qu’une partie du corps franchit le plan d’ouverture.',
     source: 'baseline',
   },
@@ -58,7 +58,7 @@ export const PROVINCE_NORMS: Record<ProvinceCode, ProvinceNorm> = {
     province: 'FED', label: 'Fédéral (SST Canada)', authority: 'Programme du travail (Code canadien du travail)',
     regulations: ['RCSST partie XI — Espaces clos', 'CSA Z1006'],
     limits: BASE_LIMITS, testOrder: TEST_ORDER, samplingPoints: SAMPLING,
-    defaultRetestMinutes: 15, attendantPerEntrants: 2, continuousMonitoring: true, source: 'baseline',
+    defaultRetestMinutes: 15, attendantPerEntrants: 0, continuousMonitoring: true, source: 'baseline',
   },
   // Provinces alignées sur la base CSA Z1006 (réfs à préciser par rafraîchissement IA).
   BC: prov('BC', 'Colombie-Britannique', 'WorkSafeBC', ['OHS Regulation Part 9 — Confined Spaces', 'CSA Z1006']),
@@ -75,7 +75,7 @@ export const PROVINCE_NORMS: Record<ProvinceCode, ProvinceNorm> = {
 };
 
 function prov(province: ProvinceCode, label: string, authority: string, regulations: string[]): ProvinceNorm {
-  return { province, label, authority, regulations, limits: BASE_LIMITS, testOrder: TEST_ORDER, samplingPoints: SAMPLING, defaultRetestMinutes: 15, attendantPerEntrants: 2, continuousMonitoring: true, source: 'baseline' };
+  return { province, label, authority, regulations, limits: BASE_LIMITS, testOrder: TEST_ORDER, samplingPoints: SAMPLING, defaultRetestMinutes: 15, attendantPerEntrants: 0, continuousMonitoring: true, source: 'baseline' };
 }
 
 export function getNorm(province?: string | null): ProvinceNorm {
