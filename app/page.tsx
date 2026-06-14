@@ -721,7 +721,7 @@ export default function LandingPage() {
                   </p>
                   {discountPct > 0 && (
                     <p className="text-emerald-400 text-xs mt-1 font-semibold">
-                      {fr ? `Rabais -${discountPct}% applique` : `-${discountPct}% discount applied`}
+                      {fr ? `Rabais cascade −${discountPct}% (−5%/module, du + gros au + petit, max −30%)` : `Cascade discount −${discountPct}% (−5%/module, biggest→smallest, max −30%)`}
                     </p>
                   )}
                   {hasPrices && (
@@ -743,6 +743,43 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Détail par module · prix annuel BRUT (avant rabais), trié du plus gros au plus petit
+                    — met en évidence la cascade d'escompte (−5%/module, max −30%) appliquée du + gros au + petit. */}
+                {hasPrices && (
+                  <details className="mb-4 rounded-lg border border-white/10 bg-[#0f1a30]/70 p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-orange-300">
+                      {fr ? 'Détail par module · prix annuel brut (avant rabais)' : 'Per-module detail · gross annual price (before discount)'}
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      {[...paidModules].sort((a, b) => b.monthly_price - a.monthly_price).map((m, i) => (
+                        <div key={m.key} className="flex items-center justify-between text-[11px] text-slate-300">
+                          <span>{i + 1}. {fr ? m.name_fr : m.name_en}</span>
+                          <span className="font-mono">{m.monthly_price}$/an</span>
+                        </div>
+                      ))}
+                      <div className="mt-2 pt-2 border-t border-white/10 flex justify-between text-[11px] text-slate-400">
+                        <span>{fr ? 'Sous-total brut' : 'Gross subtotal'}</span><span className="font-mono">{subtotal}$/an</span>
+                      </div>
+                      {discountPct > 0 && (
+                        <div className="flex justify-between text-[11px] text-emerald-400 font-semibold">
+                          <span>{fr ? 'Rabais cascade (−5%/module, max −30%)' : 'Cascade discount (−5%/module, max −30%)'}</span>
+                          <span className="font-mono">−{discountPct}%</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xs text-white font-bold">
+                        <span>{fr ? 'Total net' : 'Net total'}</span><span className="font-mono">{totalAnnual}$/an</span>
+                      </div>
+                      {perSitePrice != null && perSitePrice > 0 && (
+                        <div className="mt-1 pt-1 border-t border-white/10 flex justify-between text-[11px] text-slate-400">
+                          <span>{fr ? '1 site inclus · site additionnel' : '1 site included · additional site'}</span>
+                          <span className="font-mono">+{perSitePrice}$/an</span>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
+
                 <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                   className="w-full text-center py-3 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white transition">
                   {fr ? 'Demarrer gratuitement' : 'Start for free'}

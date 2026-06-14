@@ -138,7 +138,7 @@ export default function PriceManager() {
                     <span>Sous-total brut : <strong>{subtotal}$/an</strong></span>
                     {discountPct > 0 && (
                       <span style={{ marginLeft: '12px', color: '#16a34a' }}>
-                        Rabais -{discountPct}% ({paidMods.length} modules payants)
+                        Rabais cascade -{discountPct}% (-5 %/module, du + gros au + petit, max -30 %) · {paidMods.length} modules payants
                       </span>
                     )}
                   </div>
