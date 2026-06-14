@@ -197,16 +197,6 @@ function NouveauPermisInner() {
     );
   }
 
-  if (type === 'hot_work') {
-    return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <HotWork {...commonProps} />
-      </>
-    );
-  }
-
   if (type === 'loto') {
     // Refonte LOTO modernisée (CSA Z460 : sources d'énergie, énergie zéro/VAT, IA, signature).
     if (typeof window !== 'undefined') router.replace(`/${tenant}/permits/loto/nouveau`);
@@ -215,53 +205,15 @@ function NouveauPermisInner() {
     );
   }
 
-  if (type === 'electrical') {
+  // Refonte : chaque type pointe vers son flux MODERNE (conseiller IA + normes + check-list + RH + signature).
+  const MODERN: Record<string, string> = {
+    electrical: 'electrique', height_work: 'hauteur', excavation: 'excavation',
+    chemical: 'chimique', pressure: 'pression', hot_work: 'travail-chaud',
+  };
+  if (type && MODERN[type]) {
+    if (typeof window !== 'undefined') router.replace(`/${tenant}/permits/${MODERN[type]}/nouveau`);
     return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <Electrical {...commonProps} />
-      </>
-    );
-  }
-
-  if (type === 'height_work') {
-    return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <HeightWork {...commonProps} />
-      </>
-    );
-  }
-
-  if (type === 'excavation') {
-    return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <Excavation {...commonProps} />
-      </>
-    );
-  }
-
-  if (type === 'chemical') {
-    return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <Chemical {...commonProps} />
-      </>
-    );
-  }
-
-  if (type === 'pressure') {
-    return (
-      <>
-        <PortalHeader tenant={tenant} />
-        <ProvinceBar />
-        <Pressure {...commonProps} />
-      </>
+      <div className="min-h-screen bg-slate-50"><PortalHeader tenant={tenant} /><div className="flex items-center justify-center gap-2 py-24 text-slate-500"><Loader2 className="animate-spin" size={18} /> Ouverture du permis…</div></div>
     );
   }
 
