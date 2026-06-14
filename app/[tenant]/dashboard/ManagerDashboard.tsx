@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { 
+import EspaceClosLive from '@/components/dashboard/EspaceClosLive'
+import {
   BarChart3, 
   TrendingUp, 
   AlertTriangle, 
@@ -947,12 +948,15 @@ export default function ManagerDashboard({
             })}
           </div>
           
+          {/* Espace clos — surveillance en direct (n'apparaît que s'il y a un permis ouvert) */}
+          {!isDemo && <EspaceClosLive tenant={tenant.subdomain} />}
+
           {/* KPI Cards Fonctionnels */}
-          <div 
-            className="slide-in-up" 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          <div
+            className="slide-in-up"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
               gap: '20px',
               marginBottom: '40px'
             }}
