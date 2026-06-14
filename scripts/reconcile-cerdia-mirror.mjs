@@ -34,7 +34,7 @@ const [{ data: tenants }, { data: subs }, { data: tm }, { data: mods }, { data: 
   cs.from('tenant_subscriptions').select('tenant_id, billable'),
   cs.from('tenant_modules').select('tenant_id, module_key, enabled'),
   cs.from('modules').select('*').order('sort_order'),
-  cs.from('billing_config').select('discount_per_module, discount_cap').eq('id', 'default').maybeSingle(),
+  cs.from('billing_config').select('discount_per_module, discount_cap, per_site_monthly').eq('id', 'default').maybeSingle(),
   cs.from('vendors').select('*').order('name'),
 ]);
 
@@ -87,6 +87,9 @@ const mRows = (mods || []).map(m => ({
   monthly_price: Number(m.monthly_price ?? 0), sort_order: Number(m.sort_order ?? 0),
   is_active: m.is_active !== false, active_tenants: enabledC[m.key]?.size ?? 0, billable_tenants: billableC[m.key]?.size ?? 0, synced_at: now,
 }));
+// Ligne « Site additionnel » (prix annuel par site, 1 site inclus) -> visible dans Commerce CERDIA.
+const perSiteAnnual = Number(bc?.per_site_monthly ?? 0);
+if (perSiteAnnual > 0) mRows.push({ key: 'site_additionnel', name_fr: 'Site additionnel (1 site inclus)', name_en: 'Additional site (1 site included)', monthly_price: perSiteAnnual, sort_order: 999, is_active: true, active_tenants: 0, billable_tenants: 0, synced_at: now });
 if (mRows.length) { const { error } = await ce.from('csecur360_modules').upsert(mRows, { onConflict: 'key' }); if (error) console.error('modules:', error.message); }
 const mPruned = await pruneMissing('csecur360_modules', 'key', mRows.map(m => m.key));
 

@@ -6,10 +6,11 @@ import { pushModulesToCerdia } from '@/lib/cerdiaBridge';
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
 
-  const [{ data: mods, error }, { data: tm }, { data: subs }] = await Promise.all([
+  const [{ data: mods, error }, { data: tm }, { data: subs }, { data: bc }] = await Promise.all([
     supabaseAdmin.from('modules').select('*').order('sort_order'),
     supabaseAdmin.from('tenant_modules').select('module_key, enabled, tenant_id'),
     supabaseAdmin.from('tenant_subscriptions').select('tenant_id, billable'),
+    supabaseAdmin.from('billing_config').select('per_site_monthly').eq('id', 'default').maybeSingle(),
   ])
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -40,6 +41,13 @@ export async function GET(req: NextRequest) {
     active_tenants: enabledCounts[m.key]?.size ?? 0,
     billable_tenants: billableCounts[m.key]?.size ?? 0,
   }))
+
+  // Ligne « Site additionnel » (prix ANNUEL par site, 1 site inclus) — remontée à CERDIA Commerce comme
+  // produit distinct. Clé spéciale `site_additionnel` (exclue des compteurs « modules » côté CERDIA).
+  const perSiteAnnual = Number(bc?.per_site_monthly ?? 0)
+  if (perSiteAnnual > 0) {
+    modules.push({ key: 'site_additionnel', name_fr: 'Site additionnel (1 site inclus)', name_en: 'Additional site (1 site included)', monthly_price: perSiteAnnual, sort_order: 999, is_active: true, active_tenants: 0, billable_tenants: 0 })
+  }
 
   return NextResponse.json({ modules })
 }
