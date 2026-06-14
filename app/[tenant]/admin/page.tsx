@@ -2540,14 +2540,15 @@ function suggestEmail(fullName: string, tenant: string): string {
 
 function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: string, e: string) => string; canReveal: boolean }) {
   type Personnel = { id: string; name: string; email: string; niveauAcces?: string; access_password?: string };
-  type UserAccount = { id: string; email: string; name: string; role: string; is_active: boolean };
+  type UserAccount = { id: string; email: string; name: string; role: string; is_active: boolean; site_id?: string | null };
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [users, setUsers]         = useState<UserAccount[]>([]);
   const [loading, setLoading]     = useState(true);
   const [selected, setSelected]   = useState<Personnel | null>(null);
-  const [form, setForm]           = useState({ email: '', name: '', role: 'user', password: '' });
+  const [form, setForm]           = useState({ email: '', name: '', role: 'user', password: '', site_id: '' });
+  const [sites, setSites]         = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy]           = useState(false);
   const [notice, setNotice]       = useState<string | null>(null);
   const [showPwd, setShowPwd]     = useState(false);
@@ -2571,6 +2572,10 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
     const merged = (pers || []).filter((p: any) => p.name).map((p: any) => ({ ...p, access_password: p.access_password || readLocalPwd(p.id) }));
     setPersonnel(merged);
     setUsers(usersRes?.users || []);
+    try {
+      const { data: sg } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name');
+      setSites(((sg as any[]) || []).filter(r => !r.parent_id).map(r => ({ id: r.id, name: r.name })));
+    } catch { /* sites indisponibles */ }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -2596,6 +2601,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       name:     p.name,
       role:     niveauToRole[p.niveauAcces || ''] || 'user',
       password: pwd,
+      site_id:  existing?.site_id || '',
     });
     setShowPwd(false); // masqué par défaut
   }
@@ -2657,7 +2663,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
     if (!form.password.trim()) { setNotice(tr('Saisissez un mot de passe pour mettre à jour.', 'Enter a password to update.')); return; }
     setBusy(true); setNotice(null);
     try {
-      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password }) });
+      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password, site_id: form.site_id || null }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
       if (selected?.id) { await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', id: selected.id, password: form.password, email: form.email }) }); writeLocalPwd(selected.id, form.password); }
@@ -2669,6 +2675,12 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
 
   async function toggleActive(u: UserAccount) {
     await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: u.id, is_active: !u.is_active }) });
+    load();
+  }
+
+  // Assigne un site à un compte directement depuis la liste (atterrissage par défaut de l'utilisateur).
+  async function setUserSite(u: UserAccount, siteId: string) {
+    await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: u.id, site_id: siteId || null }) });
     load();
   }
 
@@ -2791,6 +2803,16 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
               </select>
             </div>
 
+            {sites.length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Site assigné (atterrissage par défaut)', 'Assigned site (default landing)')}</label>
+                <select className={inp2} value={form.site_id} onChange={e => setForm(f => ({ ...f, site_id: e.target.value }))}>
+                  <option value="">{tr('Aucun — voit tous les sites', 'None — sees all sites')}</option>
+                  {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="mb-1 flex items-center justify-between text-xs font-semibold text-gray-600 dark:text-gray-400">
                 {tr('Mot de passe', 'Password')}
@@ -2854,6 +2876,13 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                     {u.name && <div className="truncate text-[10px] text-gray-400">{u.name}</div>}
                   </div>
                   <span className="text-[10px] text-gray-400 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5">{u.role}</span>
+                  {sites.length > 0 && (
+                    <select value={u.site_id || ''} onChange={e => setUserSite(u, e.target.value)} title={tr('Site assigné', 'Assigned site')}
+                      className="shrink-0 rounded-full border border-gray-200 dark:border-gray-600 bg-transparent px-1.5 py-0.5 text-[10px] text-gray-600 dark:text-gray-300 outline-none max-w-[110px]">
+                      <option value="">{tr('Tous les sites', 'All sites')}</option>
+                      {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  )}
                   <button onClick={() => startPwdEdit(u)} title={tr('Changer mot de passe', 'Change password')}
                     className="text-[11px] rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 px-2 py-0.5 font-semibold shrink-0">
                     🔑

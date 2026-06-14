@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const tenant = new URL(req.url).searchParams.get('tenant');
   if (!tenant) return NextResponse.json({ error: 'tenant requis' }, { status: 400 });
   // Sélectionne large (id/email/name/role) ; is_active peut ne pas exister selon le schéma.
-  let res: any = await supabaseAdmin.from('users').select('id, email, name, role, is_active').eq('tenant_id', tenant).order('email');
+  let res: any = await supabaseAdmin.from('users').select('id, email, name, role, is_active, site_id').eq('tenant_id', tenant).order('email');
   if (res.error) {
     // is_active absent ? réessaie sans, puis bascule sur tenantId si tenant_id n'existe pas.
     res = await supabaseAdmin.from('users').select('id, email, name, role').eq('tenant_id', tenant).order('email');
@@ -36,11 +36,11 @@ export async function GET(req: NextRequest) {
 // Insert résilient : retire automatiquement toute colonne absente du schéma réel
 // (tenant_id vs tenantId, is_active, first_login) pour que la création n'échoue jamais
 // à cause d'une colonne manquante (sinon le compte n'est jamais créé -> login impossible).
-const USER_OPTIONAL_COLS = ['tenant_id', 'tenantId', 'is_active', 'first_login', 'name', 'created_at', 'updated_at', 'createdAt', 'updatedAt'];
+const USER_OPTIONAL_COLS = ['tenant_id', 'tenantId', 'is_active', 'first_login', 'name', 'site_id', 'created_at', 'updated_at', 'createdAt', 'updatedAt'];
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
-    const { tenant, email, name, role, password } = await req.json();
+    const { tenant, email, name, role, password, site_id } = await req.json();
     if (!tenant || !email || !password) return NextResponse.json({ error: 'tenant, email et mot de passe requis' }, { status: 400 });
     const hash = await hashPassword(password);
     const nowIso = new Date().toISOString();
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
       tenant_id: tenant,
       is_active: true,
       first_login: true,
+      site_id: site_id || null,
       // Fournis les deux conventions de timestamps : Prisma updatedAt n'a pas de défaut DB
       // (un INSERT qui l'omet viole NOT NULL). Les colonnes absentes seront retirées au besoin.
       created_at: nowIso,
@@ -104,15 +105,21 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
-    const { id, name, email, role, is_active, password } = await req.json();
+    const { id, name, email, role, is_active, password, site_id } = await req.json();
     if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
     const updates: any = {};
     if (name !== undefined) updates.name = name || null;
     if (email !== undefined) updates.email = String(email).toLowerCase().trim();
     if (role !== undefined) updates.role = role;
     if (is_active !== undefined) updates.is_active = is_active;
+    if (site_id !== undefined) updates.site_id = site_id || null;
     if (password) updates.password = await hashPassword(password);
-    const { error } = await supabaseAdmin.from('users').update(updates).eq('id', id);
+    let { error } = await supabaseAdmin.from('users').update(updates).eq('id', id);
+    // Repli si la colonne site_id n'existe pas encore (migration 172 non appliquée).
+    if (error && /site_id/.test(error.message || '') && 'site_id' in updates) {
+      delete updates.site_id;
+      ({ error } = await supabaseAdmin.from('users').update(updates).eq('id', id));
+    }
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (e: any) {

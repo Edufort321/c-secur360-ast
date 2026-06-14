@@ -30,6 +30,16 @@ export function SiteProvider({ tenant, children }: { tenant: string; children: R
           .from('planner_succursales').select('id, name, code, parent_id').eq('tenant_id', tenant).order('name');
         const roots = ((data as any[]) || []).filter(r => !r.parent_id).map(r => ({ id: r.id, name: r.name, code: r.code }));
         if (active) setSites(roots);
+        // ATTERRISSAGE : sans choix explicite enregistré, on se place sur le SITE ASSIGNÉ de l'utilisateur
+        // (users.site_id via /api/auth/me). Non assigné -> « Tous les sites ». Le choix manuel (localStorage)
+        // a toujours priorité.
+        if (!saved) {
+          try {
+            const me = await fetch('/api/auth/me', { credentials: 'include' }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+            const assigned = me?.user?.siteId;
+            if (active && assigned && roots.some(r => r.id === assigned)) setSiteIdState(assigned);
+          } catch { /* défaut 'all' */ }
+        }
       } catch {
         if (active) setSites([]);
       } finally {
