@@ -19,6 +19,7 @@ type PermitRow = {
   permit_number: string;
   updated_at: string;
   permitType: string;   // 'confined_space' | 'hot_work' | 'loto' | etc.
+  href?: string;        // lien dédié (ex. espace clos -> module dédié) sinon /permits/{permit_number}
   data: {
     status?: PermitStatus;
     province?: string;
@@ -96,8 +97,8 @@ export default function PermitsPage() {
     let active = true;
     (async () => {
       try {
-        // Fetch from both tables in parallel
-        const [csRes, wpRes] = await Promise.all([
+        // Permis : ancienne table espace clos (legacy) + work_permits + NOUVEAU registre d'espaces clos.
+        const [csRes, wpRes, ecRes] = await Promise.all([
           supabase
             .from('confined_space_permits')
             .select('permit_number, data, updated_at')
@@ -107,6 +108,12 @@ export default function PermitsPage() {
             .from('work_permits')
             .select('permit_number, type, data, updated_at')
             .eq('tenant_id', tenant)
+            .order('updated_at', { ascending: false }),
+          supabase
+            .from('confined_spaces')
+            .select('id, space_code, name, location, risk_level, status, updated_at')
+            .eq('tenant_id', tenant)
+            .eq('status', 'active')
             .order('updated_at', { ascending: false }),
         ]);
 
@@ -124,8 +131,17 @@ export default function PermitsPage() {
           data: r.data,
         }));
 
+        // Nouveau registre d'espaces clos -> carte liée au module dédié.
+        const ecRows: PermitRow[] = (ecRes.data || []).map((r: any) => ({
+          permit_number: r.space_code || r.name || r.id,
+          updated_at: r.updated_at,
+          permitType: 'confined_space',
+          href: `/${tenant}/permits/espace-clos/${r.id}`,
+          data: { status: 'active', siteInformation: { workLocation: r.location } },
+        }));
+
         // Merge and sort by updated_at desc
-        const merged = [...csRows, ...wpRows].sort(
+        const merged = [...ecRows, ...csRows, ...wpRows].sort(
           (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
 
@@ -181,20 +197,12 @@ export default function PermitsPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/${tenant}/permits/espace-clos`}
-              className="inline-flex items-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-2.5 font-semibold text-cyan-700 transition hover:bg-cyan-100"
-            >
-              <Wind size={18} /> Espaces clos
-            </Link>
-            <Link
-              href={`/${tenant}/permits/nouveau`}
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
-            >
-              <Plus size={18} /> Nouveau permis
-            </Link>
-          </div>
+          <Link
+            href={`/${tenant}/permits/nouveau`}
+            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+          >
+            <Plus size={18} /> Nouveau permis
+          </Link>
         </div>
 
         {/* Stats */}
@@ -310,8 +318,8 @@ export default function PermitsPage() {
 
               return (
                 <Link
-                  key={p.permit_number}
-                  href={`/${tenant}/permits/${p.permit_number}`}
+                  key={p.href || p.permit_number}
+                  href={p.href || `/${tenant}/permits/${p.permit_number}`}
                   className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
                 >
                   {/* Header row */}
