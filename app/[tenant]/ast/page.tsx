@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useSite } from '@/contexts/SiteContext';
 import {
   ClipboardList, Plus, Search, MapPin, User, Calendar,
   Clock, CheckCircle, XCircle, Loader2, BarChart3, QrCode, Printer,
@@ -25,6 +26,7 @@ type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 type ASTRow = {
   permit_number: string;
   updated_at: string;
+  site_id?: string | null;
   data: {
     status?: PermitStatus;
     province?: string;
@@ -50,6 +52,7 @@ const STATUS: Record<PermitStatus, { label: string; cls: string; icon: React.Ele
 export default function ASTListPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'demo';
+  const { siteId } = useSite(); // sélecteur de site global (en-tête)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
 
@@ -139,7 +142,7 @@ export default function ASTListPage() {
     try {
       const { data } = await supabase
         .from('ast_permits')
-        .select('permit_number, data, updated_at')
+        .select('permit_number, data, updated_at, site_id')
         .eq('tenant_id', tenant)
         .order('updated_at', { ascending: false });
       setRows((data ?? []) as ASTRow[]);
@@ -156,7 +159,7 @@ export default function ASTListPage() {
       try {
         const { data } = await supabase
           .from('ast_permits')
-          .select('permit_number, data, updated_at')
+          .select('permit_number, data, updated_at, site_id')
           .eq('tenant_id', tenant)
           .order('updated_at', { ascending: false });
         if (active) setRows((data ?? []) as ASTRow[]);
@@ -184,6 +187,7 @@ export default function ASTListPage() {
 
   const filtered = useMemo(() => {
     let list = rows;
+    if (siteId && siteId !== 'all') list = list.filter(r => r.site_id === siteId);
     if (filter !== 'all') list = list.filter(r => (r.data?.status || 'draft') === filter);
     if (period !== 'all') list = list.filter(r => inPeriod(rowDate(r), period));
     const q = query.trim().toLowerCase();
@@ -198,7 +202,7 @@ export default function ASTListPage() {
         r.data?.taskInfo?.taskDescription,
       ].filter(Boolean).some(v => String(v).toLowerCase().includes(q))
     );
-  }, [rows, filter, query, period]);
+  }, [rows, filter, query, period, siteId]);
 
   // Stats HSE sur l'ensemble filtré par période (gestion de la fréquence + conformité).
   const stats = useMemo(() => {

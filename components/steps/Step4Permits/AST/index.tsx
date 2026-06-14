@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
+import { useSite } from '@/contexts/SiteContext';
 
 // ── Supabase (best-effort) ─────────────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -4090,6 +4091,7 @@ export default function ASTPermit({
 }: ASTPermitProps) {
   const resolvedProvince: ProvinceCode = (selectedProvince ?? province) as ProvinceCode;
   const t = T[language];
+  const { siteId: currentSiteId } = useSite(); // site global courant -> rattachement de l'AST
 
   const [ast, setAst] = useState<ASTPermit>(() => ({
     ...createDefaultPermit(resolvedProvince, tenant),
@@ -4116,6 +4118,7 @@ export default function ASTPermit({
         const { error } = await supabase.from('ast_permits').upsert({
           permit_number: payload.permit_number,
           tenant_id: tenant,
+          site_id: currentSiteId && currentSiteId !== 'all' ? currentSiteId : null,
           data: payload,
           updated_at: payload.updated_at,
         });
@@ -4129,7 +4132,7 @@ export default function ASTPermit({
       setSaveStatus('error');
       return false;
     }
-  }, [tenant]);
+  }, [tenant, currentSiteId]);
 
   useEffect(() => {
     if (!enableAutoSave) return;
