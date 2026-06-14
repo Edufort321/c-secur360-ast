@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, Megaphone, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports' | 'marketing';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -118,6 +118,13 @@ export const MODULES: ModuleDef[] = [
     descFr: "Constructeur de rapports techniques : gabarits, extraction IA de PDF/manuscrit, annotations, photos, export.",
     descEn: 'Technical report builder: templates, AI extraction from PDF/handwriting, annotations, photos, export.',
     icon: FileText, basePath: 'rapports', color: 'text-fuchsia-600', accent: 'bg-fuchsia-600', status: 'available',
+  },
+  {
+    key: 'marketing',
+    labelFr: 'Marketing IA', labelEn: 'AI Marketing',
+    descFr: "Studio marketing IA : scripts, vidéos (avatar ou vidéo réelle + slides), posts et courriels conformes. L'IA s'appuie sur VOTRE profil d'entreprise. Consommation IA selon votre forfait.",
+    descEn: 'AI marketing studio: scripts, videos (avatar or real video + slides), posts and compliant emails. The AI uses YOUR company profile. AI usage per your plan.',
+    icon: Megaphone, basePath: 'marketing', color: 'text-pink-600', accent: 'bg-pink-600', status: 'available',
   },
 ];
 
