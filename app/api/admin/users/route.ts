@@ -81,13 +81,13 @@ export async function POST(req: NextRequest) {
         let ue = (await supabaseAdmin.from('users').update(upd).eq('email', payload.email)).error;
         if (ue) { delete upd.updatedAt; ue = (await supabaseAdmin.from('users').update(upd).eq('email', payload.email)).error; }
         if (ue) throw ue;
-        if (role === 'super_admin') await pushAdminToCerdia({ email: payload.email, name: name || undefined, password, role: 'super_admin' });
+        if (role === 'super_admin') await pushAdminToCerdia({ email: payload.email, name: name || undefined, password, role: 'org_commerce' }); // CERDIA: commerce seulement (pas zone investisseur)
         return NextResponse.json({ ok: true, updated: true });
       }
       throw lastErr;
     }
     // Remontée vers CERDIA : crée le MÊME administrateur (même email + mot de passe) côté CERDIA.
-    if (role === 'super_admin') await pushAdminToCerdia({ email: payload.email, name: name || undefined, password, role: 'super_admin' });
+    if (role === 'super_admin') await pushAdminToCerdia({ email: payload.email, name: name || undefined, password, role: 'org_commerce' }); // CERDIA: commerce seulement (pas zone investisseur)
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     const msg = e?.message || 'Erreur';
