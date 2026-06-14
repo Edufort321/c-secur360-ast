@@ -177,8 +177,8 @@ const TESTIMONIALS_EN = [
 
 // ─── Contact mailto ───────────────────────────────────────────────────────────
 
-const CONTACT_MAILTO_FR = "mailto:eric.dufort@cerdia.ai?subject=Demande%20d%27information%20%E2%80%94%20C-Secur360&body=Bonjour%20Eric%2C%0A%0ANom%20%3A%20%0ACourriel%20%3A%20%0ANom%20de%20l%27entreprise%20%3A%20%0A%0AJe%20souhaite%20en%20savoir%20plus%20sur%20C-Secur360%20et%20obtenir%20un%20acces%20d%27essai."
-const CONTACT_MAILTO_EN = "mailto:eric.dufort@cerdia.ai?subject=Information%20Request%20%E2%80%94%20C-Secur360&body=Hello%20Eric%2C%0A%0AName%3A%20%0AEmail%3A%20%0ACompany%20name%3A%20%0A%0AI%20would%20like%20to%20learn%20more%20about%20C-Secur360%20and%20get%20trial%20access."
+const CONTACT_MAILTO_FR = "mailto:info@cerdia.ai?subject=Demande%20d%27information%20%E2%80%94%20C-Secur360&body=Bonjour%20Eric%2C%0A%0ANom%20%3A%20%0ACourriel%20%3A%20%0ANom%20de%20l%27entreprise%20%3A%20%0A%0AJe%20souhaite%20en%20savoir%20plus%20sur%20C-Secur360%20et%20obtenir%20un%20acces%20d%27essai."
+const CONTACT_MAILTO_EN = "mailto:info@cerdia.ai?subject=Information%20Request%20%E2%80%94%20C-Secur360&body=Hello%20Eric%2C%0A%0AName%3A%20%0AEmail%3A%20%0ACompany%20name%3A%20%0A%0AI%20would%20like%20to%20learn%20more%20about%20C-Secur360%20and%20get%20trial%20access."
 
 // ─── Composant principal ───────────────────────────────────────────────────────
 
@@ -556,6 +556,24 @@ export default function LandingPage() {
               </div>
             )
           })}
+
+          {/* Carte « Site additionnel » — prix par site (annuel), 1 site inclus */}
+          {perSitePrice != null && perSitePrice > 0 && (
+            <div className="relative bg-[#111c30] border border-emerald-500/30 rounded-xl p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                  <Building2 size={20} className="text-emerald-400" />
+                </div>
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-bold text-emerald-300 whitespace-nowrap">
+                  +{perSitePrice}$/an
+                </span>
+              </div>
+              <h3 className="font-bold text-white text-sm mt-3 mb-0">{fr ? 'Site additionnel' : 'Additional site'}</h3>
+              <p className="text-xs text-emerald-300/90 leading-snug mt-1.5">
+                {fr ? '1 site inclus dans votre forfait. Chaque site supplémentaire (ex. Montréal + Sherbrooke) est facturé annuellement.' : '1 site included in your plan. Each additional site (e.g. Montreal + Sherbrooke) is billed annually.'}
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -907,7 +925,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <a href="mailto:eric.dufort@cerdia.ai" className="text-slate-400 hover:text-orange-400 transition">
+            <a href="mailto:info@cerdia.ai" className="text-slate-400 hover:text-orange-400 transition">
               <Mail size={16} />
             </a>
             <Link href="/auth/admin" className="text-slate-400 hover:text-orange-400 transition">
@@ -961,7 +979,7 @@ export default function LandingPage() {
                 </div>
               )}
               <div className="mt-6 flex flex-wrap gap-2">
-                <a href="mailto:eric.dufort@cerdia.ai?subject=Démo C-Secur360" className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-orange-600">
+                <a href="mailto:info@cerdia.ai?subject=Démo C-Secur360" className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-orange-600">
                   {fr ? 'Demander une démo' : 'Request a demo'}
                 </a>
                 <button

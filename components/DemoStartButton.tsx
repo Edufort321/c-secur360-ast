@@ -98,7 +98,7 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
                   {result && !result.ok && (result.status === 'locked' || result.status === 'converted') && (
                     <div className="flex gap-2 pt-1">
                       <a href="/#pricing" onClick={() => setOpen(false)} className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-center text-xs font-bold hover:bg-white/5">{fr ? 'Voir les forfaits' : 'See plans'}</a>
-                      <a href="mailto:eric.dufort@cerdia.ai?subject=Abonnement C-Secur360" className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-center text-xs font-bold hover:bg-white/5">{fr ? 'S\'abonner' : 'Subscribe'}</a>
+                      <a href="mailto:info@cerdia.ai?subject=Abonnement C-Secur360" className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-center text-xs font-bold hover:bg-white/5">{fr ? 'S\'abonner' : 'Subscribe'}</a>
                     </div>
                   )}
                 </form>

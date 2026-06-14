@@ -1341,7 +1341,7 @@ export default function AdminDashboard() {
             alt="CERDIA" 
             style={{ height: '16px', width: 'auto' }}
           />
-          CERDIA - Contact: eric.dufort@cerdia.ai | 514-603-4519
+          CERDIA - Contact: info@cerdia.ai | 514-603-4519
         </p>
       </footer>
     </div>

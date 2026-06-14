@@ -21,7 +21,11 @@ export default function RevenueForecast() {
           supabase.from('billing_config').select('discount_per_module, discount_cap').eq('id', 'default').maybeSingle(),
           supabase.from('tenant_subscriptions').select('tenant_id, billable'),
         ]);
-        const nonBillable = new Set((subs || []).filter((s: any) => s.billable === false).map((s: any) => s.tenant_id));
+        // Ne compter QUE les tenants avec un abonnement FACTURABLE explicite (billable !== false).
+        // Exclut donc : démo, CERDIA interne, et tout tenant sans abonnement (ex. 'demo' orphelin) — qui
+        // gonflaient le revenu à tort.
+        const billableSet = new Set((subs || []).filter((s: any) => s.billable !== false).map((s: any) => s.tenant_id));
+        const INTERNAL = new Set(['cerdia', 'demo', 'entreprisedemo']); // jamais facturés
         const price: Record<string, number> = Object.fromEntries((mods || []).map((m: any) => [m.key, Number(m.monthly_price) || 0]));
         const per = Number(bc?.discount_per_module ?? 5);
         const cap = Number(bc?.discount_cap ?? 30);
@@ -29,7 +33,7 @@ export default function RevenueForecast() {
         (tm || []).filter((x: any) => x.enabled).forEach((x: any) => { (byTenant[x.tenant_id] ||= []).push(x.module_key); });
         let total = 0;
         for (const t of Object.keys(byTenant)) {
-          if (nonBillable.has(t)) continue;
+          if (INTERNAL.has(t) || !billableSet.has(t)) continue;
           const keys = byTenant[t];
           const subtotal = keys.reduce((s, k) => s + (price[k] || 0), 0);
           const disc = Math.min(Math.max(keys.length - 1, 0) * per, cap);

@@ -29,7 +29,7 @@ export function DemoCountdownBanner() {
       <div className="fixed inset-x-0 top-0 z-[80] flex flex-wrap items-center justify-center gap-3 bg-amber-600 px-4 py-2 text-sm font-semibold text-white">
         <span>⏱️ Démo terminée.</span>
         <a href="/#pricing" className="rounded-lg bg-white px-3 py-1 text-amber-700 hover:bg-amber-50">Voir les forfaits</a>
-        <a href="mailto:eric.dufort@cerdia.ai?subject=Abonnement C-Secur360" className="rounded-lg border border-white/60 px-3 py-1 hover:bg-amber-700">S'abonner</a>
+        <a href="mailto:info@cerdia.ai?subject=Abonnement C-Secur360" className="rounded-lg border border-white/60 px-3 py-1 hover:bg-amber-700">S'abonner</a>
       </div>
     );
   }

@@ -1,6 +1,6 @@
 // Base de connaissance + system prompt du chatbot PUBLIC (marketing).
 // Portée stricte : présentation de C-Secur360, orientation vers démo + contact. Aucune donnée tenant.
-export const PUBLIC_CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'eric.dufort@cerdia.ai';
+export const PUBLIC_CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'info@cerdia.ai';
 
 const KNOWLEDGE = `
 C-Secur360 est une plateforme SaaS de sécurité industrielle, modulaire et multi-locataire.

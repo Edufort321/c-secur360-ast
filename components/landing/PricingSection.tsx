@@ -401,10 +401,10 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
               Réserver une démo gratuite
             </button>
             <button
-              onClick={() => window.location.href = 'mailto:eric.dufort@cerdia.ai'}
+              onClick={() => window.location.href = 'mailto:info@cerdia.ai'}
               className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-slate-900 transition-colors text-lg"
             >
-              eric.dufort@cerdia.ai | 514-603-4519
+              info@cerdia.ai | 514-603-4519
             </button>
           </div>
         </div>

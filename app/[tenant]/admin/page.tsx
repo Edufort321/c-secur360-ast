@@ -1023,7 +1023,7 @@ function AiPlanPanel({ tenant, tr }: { tenant: string; tr: (f: string, e: string
     try { await fetch('/api/inventory/ai-budget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, requestedTierCents: chosen?.price_cents }) }); setRequested(true); } catch { /* ignore */ }
     const subject = `Demande d'ajustement de forfait IA — ${tenant}`;
     const body = `Bonjour,\n\nLe client « ${tenant} » demande ${exhausted ? 'un renouvellement' : 'un ajustement'} de son forfait Assistant IA (jetons).\n${chosen ? `Forfait souhaité : ${chosen.name_fr} — ${Math.round(chosen.price_cents / 100)} $/an.\n` : ''}\nMerci de procéder à l'ajustement du forfait de jetons.\n`;
-    window.location.href = `mailto:eric.dufort@cerdia.ai?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:info@cerdia.ai?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setSending(false);
   };
 
