@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MODULES as MODULE_REGISTRY } from '@/lib/modules/registry';
 import MarketingComposer from '@/components/admin/MarketingComposer';
+import CameraRecorder from '@/components/admin/CameraRecorder';
 import { supabase as sbBrowser } from '@/lib/supabase';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
@@ -315,6 +316,11 @@ export default function MarketingTab() {
   // Range une vidéo ASSEMBLÉE (composition finale) dans sa galerie dédiée.
   async function saveVideoToGallery(url: string) {
     await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'composition_video', data: { url } }) });
+    loadAssets();
+  }
+  // Range un CLIP vidéo réel (caméra) comme « présentateur » -> sélectionnable dans l'assembleur.
+  async function saveClip(url: string) {
+    await fetch('/api/admin/marketing/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'save-asset', kind: 'avatar_video', data: { url } }) });
     loadAssets();
   }
   async function deleteAsset(id: string) {
@@ -857,6 +863,9 @@ export default function MarketingTab() {
               </div>
             )}
           </div>
+
+          {/* Enregistrement d'une VIDÉO RÉELLE (caméra) -> devient un présentateur sélectionnable. */}
+          <CameraRecorder uploadFile={uploadToMarketing} saveClip={saveClip} onNotice={(m) => setNotice(m)} />
 
           {/* Assembleur vidéo IN-APP : aperçu en direct + enregistrement réel (.webm). */}
           <MarketingComposer
