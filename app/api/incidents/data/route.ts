@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       incident_type: it.incident_type ?? null,
       province: it.province ?? null,
       status: it.status || 'draft',
+      site_id: it.site_id ?? null, // rattachement au site (filtre par site)
       data: it.data ?? {},
       updated_at: now,
     };

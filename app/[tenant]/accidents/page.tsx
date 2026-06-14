@@ -10,6 +10,7 @@ import {
 import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSite } from '@/contexts/SiteContext';
 import { useRealtime } from '@/lib/useRealtime';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -113,6 +114,7 @@ export default function AccidentsPage() {
   const params = useParams();
   const router = useRouter();
   const tenant = params.tenant as string;
+  const { siteId } = useSite(); // sélecteur de site global (en-tête)
   const { lang } = useLanguage();
   const t = T[lang];
 
@@ -162,6 +164,7 @@ export default function AccidentsPage() {
 
   const filtered = reports
     .filter(r => {
+      if (siteId && siteId !== 'all' && (r as any).site_id !== siteId) return false;
       if (filter !== 'all' && r.incident_type !== filter) return false;
       if (severityFilter !== 'all' && String(r.data?.severityLevel ?? '') !== severityFilter) return false;
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
@@ -216,6 +219,7 @@ export default function AccidentsPage() {
           tenant={tenant}
           reportId={activeReport === 'new' ? undefined : activeReport}
           defaultType={defaultType}
+          siteId={siteId !== 'all' ? siteId : null}
           onClose={() => { setActiveReport(null); load(); }}
           onSaved={() => {}}
           embedded

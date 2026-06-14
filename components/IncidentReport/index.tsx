@@ -145,6 +145,7 @@ export interface IncidentReportFormProps {
   onClose?: () => void;
   onSaved?: (id: string) => void;
   embedded?: boolean;
+  siteId?: string | null; // site courant (sélecteur global) -> rattache le rapport au site
 }
 
 export interface DayCounter {
@@ -1195,6 +1196,7 @@ export default function IncidentReportForm({
   onClose,
   onSaved,
   embedded = false,
+  siteId = null,
 }: IncidentReportFormProps) {
   const { lang } = useLanguage();
   const tr = TR[lang];
@@ -1270,6 +1272,7 @@ export default function IncidentReportForm({
       incident_type: data.incidentType,
       province: data.province,
       status: submit ? 'submitted' : status,
+      site_id: siteId ?? null,
       data,
       updated_at: now,
       ...(submit ? { submitted_at: now } : {}),
