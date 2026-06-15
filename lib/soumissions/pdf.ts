@@ -29,6 +29,7 @@ export type SoumissionPdfOpts = {
   breakdownMode?: 'detaille' | 'par_item' | 'global_desc'; // ventilation des coûts
   includeTaux?: boolean;             // joindre une page « Liste de taux » (catalogue)
   conditions?: { titre: string; contenu: string }[]; // conditions & modalités cochées (page jointe)
+  attachments?: { url: string; filename?: string }[]; // PDF supplémentaires à annexer (fusion pdf-lib)
   filename?: string;
 };
 
@@ -181,5 +182,29 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   // Pied de page numéroté sur toutes les pages (socle partagé).
   applyFooters(doc, `${opts.companyName || 'C-Secur360'} · ${s.numero || ''}`);
 
-  doc.save(opts.filename || `${s.numero || 'soumission'}.pdf`);
+  const fname = opts.filename || `${s.numero || 'soumission'}.pdf`;
+
+  // Pièces jointes PDF : fusionnées en fin de document via pdf-lib (jsPDF ne sait pas annexer).
+  if (opts.attachments && opts.attachments.length) {
+    try {
+      const { PDFDocument } = await import('pdf-lib');
+      const merged = await PDFDocument.load(doc.output('arraybuffer'));
+      for (const a of opts.attachments) {
+        try {
+          const res = await fetch(a.url); const ab = await res.arrayBuffer();
+          const ext = await PDFDocument.load(ab);
+          const pages = await merged.copyPages(ext, ext.getPageIndices());
+          pages.forEach(p => merged.addPage(p));
+        } catch { /* pièce illisible : ignorée */ }
+      }
+      const out = await merged.save();
+      const blob = new Blob([out], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = fname; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      return;
+    } catch { /* échec fusion : on retombe sur l'export simple ci-dessous */ }
+  }
+
+  doc.save(fname);
 }

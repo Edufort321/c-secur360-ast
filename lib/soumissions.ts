@@ -280,6 +280,35 @@ export async function deleteSoumissionTemplate(tenant: string, id: string): Prom
   return { error };
 }
 
+// ── Pièces jointes PDF (bibliothèque réutilisable : soumission_id null) ──────────────
+export type SoumissionAttachment = { id?: string; filename?: string; file_url?: string; soumission_id?: string | null };
+
+export async function getSoumissionAttachments(tenant: string): Promise<SoumissionAttachment[]> {
+  try {
+    const { data } = await supabase.from('soumission_attachments').select('*').eq('tenant_id', tenant).is('soumission_id', null).order('created_at', { ascending: false });
+    return (data || []) as SoumissionAttachment[];
+  } catch { return []; }
+}
+
+export async function uploadSoumissionAttachment(tenant: string, file: File): Promise<{ row?: SoumissionAttachment; error?: any }> {
+  let url = '';
+  try {
+    const path = `${tenant}/${crypto.randomUUID()}.pdf`;
+    const up = await supabase.storage.from('soumission-documents').upload(path, file, { contentType: 'application/pdf', upsert: false });
+    if (!up.error) url = supabase.storage.from('soumission-documents').getPublicUrl(path).data.publicUrl;
+  } catch { /* bucket absent -> repli base64 */ }
+  if (!url) {
+    url = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = e => resolve(e.target?.result as string); r.onerror = reject; r.readAsDataURL(file); });
+  }
+  const { data, error } = await supabase.from('soumission_attachments').insert({ tenant_id: tenant, soumission_id: null, filename: file.name, file_url: url }).select('*').single();
+  return { row: data as SoumissionAttachment, error };
+}
+
+export async function deleteSoumissionAttachment(tenant: string, id: string): Promise<{ error?: any }> {
+  const { error } = await supabase.from('soumission_attachments').delete().eq('tenant_id', tenant).eq('id', id);
+  return { error };
+}
+
 // ── Numérotation (spec client) : <PREFIX><AA><NNN><S|P> ─────────────────────
 // PREFIX = initiales des mots du site (« CERDIA Sherbrooke » -> « CS »). AA = 2 chiffres année.
 // NNN = séquentiel monotone (001+). Suffixe S = soumission, P = projet. Compteurs séparés.

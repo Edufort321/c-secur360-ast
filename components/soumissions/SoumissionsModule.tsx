@@ -11,7 +11,8 @@ import {
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   getSoumissionSettings, saveSoumissionSettings,
   getSoumissionTemplates, saveSoumissionTemplate, deleteSoumissionTemplate,
-  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem, type SoumissionTemplate,
+  getSoumissionAttachments, uploadSoumissionAttachment, deleteSoumissionAttachment,
+  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem, type SoumissionTemplate, type SoumissionAttachment,
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
 import { frLongDate } from '@/lib/pdf/letterhead';
@@ -73,6 +74,17 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [templates, setTemplates] = useState<SoumissionTemplate[]>([]);
   const reloadTemplates = () => getSoumissionTemplates(tenant).then(setTemplates).catch(() => {});
   useEffect(() => { reloadTemplates(); }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pièces jointes PDF (bibliothèque réutilisable) + sélection à l'export
+  const [attachLib, setAttachLib] = useState<SoumissionAttachment[]>([]);
+  const [attachSel, setAttachSel] = useState<string[]>([]);
+  const [attachBusy, setAttachBusy] = useState(false);
+  const reloadAttach = () => getSoumissionAttachments(tenant).then(setAttachLib).catch(() => {});
+  useEffect(() => { reloadAttach(); }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
+  const uploadAttach = async (file?: File | null) => {
+    if (!file) return; setAttachBusy(true);
+    try { const { error } = await uploadSoumissionAttachment(tenant, file); if (error) setNotice(tr('Erreur (migration 179 appliquée ?) : ', 'Error (migration 179 applied?): ') + (error.message || error)); else reloadAttach(); }
+    finally { setAttachBusy(false); }
+  };
   const [logoUrl, setLogoUrl] = useState('/c-secur360-logo.png');
   const [companyName, setCompanyName] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
@@ -338,6 +350,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
       await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
         cat, logoUrl, companyName, includeSummary: expSummary, coverLetter, breakdownMode, includeTaux: inclTaux,
         conditions: (coverCfg?.conditions || []).filter(c => condSel.includes(c.id)).map(c => ({ titre: c.titre, contenu: c.contenu })),
+        attachments: attachLib.filter(a => a.id && attachSel.includes(a.id) && a.file_url).map(a => ({ url: a.file_url!, filename: a.filename })),
         itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,
       });
     } catch (e: any) { setNotice(tr('Export PDF impossible : ', 'PDF export failed: ') + (e?.message || e)); }
@@ -1079,6 +1092,29 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   </div>
                 </div>
               )}
+
+              {/* Pièces jointes PDF (bibliothèque réutilisable) — fusionnées en fin de document */}
+              <div className="mt-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300">📎 {tr('Pièces jointes PDF', 'PDF attachments')}</span>
+                  <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:underline">
+                    {attachBusy ? '…' : `+ ${tr('Importer un PDF', 'Upload a PDF')}`}
+                    <input type="file" accept="application/pdf" className="hidden" disabled={attachBusy} onChange={e => { uploadAttach(e.target.files?.[0]); e.currentTarget.value = ''; }} />
+                  </label>
+                </div>
+                {attachLib.length === 0 ? (
+                  <p className="text-[11px] text-gray-400">{tr('Importe des PDF (conditions, formulaires…) à annexer à l\'export.', 'Upload PDFs (terms, forms…) to append to the export.')}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                    {attachLib.map(a => (
+                      <span key={a.id} className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                        <input type="checkbox" checked={!!a.id && attachSel.includes(a.id)} onChange={e => a.id && setAttachSel(prev => e.target.checked ? [...prev, a.id!] : prev.filter(x => x !== a.id))} /> {a.filename || tr('(PDF)', '(PDF)')}
+                        <button type="button" onClick={() => a.id && deleteSoumissionAttachment(tenant, a.id).then(reloadAttach)} className="text-gray-300 hover:text-red-500" title={tr('Supprimer', 'Delete')}><Trash2 size={11} /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{pdfBusy ? '…' : tr('Exporter le PDF (sélection)', 'Export PDF (selection)')}</button>
