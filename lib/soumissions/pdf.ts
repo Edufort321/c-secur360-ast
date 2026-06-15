@@ -5,7 +5,7 @@ import {
   computeLigneMontant, computeItemTotal, computeSoumissionTotal, applyMarkup, hoursByCategory,
   CATEGORIE_LABELS, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
 } from '@/lib/soumissions';
-import { drawCoverLetterPage, applyFooters, type CoverLetterData } from '@/lib/pdf/letterhead';
+import { drawCoverLetterPage, applyFooters, drawLogo, type CoverLetterData } from '@/lib/pdf/letterhead';
 
 const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
 const money = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
@@ -38,19 +38,21 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   const cat = opts.cat || null;
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' }); // 612 x 792
-  const M = 40, W = 612, R = W - M;
+  const M = 42, W = 612, R = W - M; // marge DGA
   let y = M;
 
-  const ensure = (need: number) => { if (y + need > 792 - M) { doc.addPage(); y = M; drawHeader(); } };
-  const line = (x1: number, x2: number, yy: number) => { doc.setDrawColor(225); doc.setLineWidth(0.6); doc.line(x1, yy, x2, yy); };
+  const ensure = (need: number) => { if (y + need > 792 - 50) { doc.addPage(); drawHeader(); } };
+  const line = (x1: number, x2: number, yy: number) => { doc.setDrawColor(210); doc.setLineWidth(0.6); doc.line(x1, yy, x2, yy); };
 
+  // En-tête de page FIDÈLE DGA : logo (ratio préservé, hauteur 24) + métadonnées à droite + filet à y=50.
   function drawHeader() {
-    if (logo) { try { doc.addImage(logo, 'PNG', M, y, 120, 36); } catch { /* ignore */ } }
-    doc.setTextColor(17, 24, 39); doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
-    doc.text('SOUMISSION', R, y + 16, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(107, 114, 128);
-    doc.text(`${s.numero || ''}${s.revision && s.revision > 1 ? ` · rév. ${s.revision}` : ''}`, R, y + 32, { align: 'right' });
-    y += 50;
+    drawLogo(doc, logo, M, 22, 24);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
+    doc.text(opts.companyName || 'C-Secur360', R, 30, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Soumission ${s.numero || ''}${s.revision && s.revision > 1 ? ` · rév. ${s.revision}` : ''}`, R, 42, { align: 'right' });
+    doc.setDrawColor(210); doc.setLineWidth(0.6); doc.line(M, 50, R, 50);
+    y = 60;
   }
 
   // Lettre de présentation (page de tête, look pro partagé) — si fournie.
@@ -60,8 +62,11 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   }
 
   drawHeader();
+  // Titre du document (corps), façon DGA.
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20);
+  doc.text('SOUMISSION', M, y); y += 18;
   // Bloc client
-  doc.setTextColor(17, 24, 39); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.setTextColor(20, 20, 20); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
   doc.text(String(s.client_snapshot?.name || '—'), M, y + 4);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 114, 128);
   const meta = [s.client_snapshot?.lieu, s.year ? `Année ${s.year}` : '', opts.companyName].filter(Boolean).join('  ·  ');
@@ -76,7 +81,7 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   // Détail par item
   for (const it of wanted) {
     ensure(40);
-    doc.setTextColor(37, 99, 235); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+    doc.setTextColor(20, 20, 20); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
     doc.text(it.name || 'Item', M, y);
     if (mode !== 'global_desc') { // prix par item masqué en mode « global »
       doc.setTextColor(17, 24, 39);

@@ -30,7 +30,8 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
 
   // Logo (tenant ou défaut)
   const logo = await toDataUrl(company?.logo_url || '/c-secur360-logo.png');
-  if (logo) { try { doc.addImage(logo, 'PNG', M, y, 120, 40, undefined, 'FAST'); } catch { /* ignore */ } }
+  // Logo à RATIO PRÉSERVÉ (largeur auto via 0) — ne pas déformer (cohérent DGA).
+  if (logo) { try { doc.addImage(logo, 'PNG', M, y, 0, 38); } catch { /* ignore */ } }
 
   // Coordonnées entreprise (à droite)
   doc.setFontSize(10); doc.setTextColor(40);
