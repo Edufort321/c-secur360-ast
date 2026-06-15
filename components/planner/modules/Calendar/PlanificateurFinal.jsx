@@ -70,9 +70,9 @@ export function PlanificateurFinal({
         if (!job) return false;
         if (job.controleAFaire) return true;
         const nb = Array.isArray(job.personnel) ? job.personnel.length : 0;
-        const req = Number(job.nombrePersonnelRequis) || 0;
         if (nb === 0) return true;                              // personne d'assigné
-        if (req > 0 && nb !== req) return true;                 // sous- ou sur-effectif
+        // NB : pas de « sur/sous-effectif ». L'effectif PILOTE la durée (effort ÷ effectif) — mettre plus
+        // ou moins de personnes ajuste la durée, ce n'est jamais une incohérence à contrôler.
         if (!job.dateDebut || !job.dateFin) return true;        // dates incomplètes
         const heures = Number(job.heuresPlanifiees) || 0;
         const aEtapes = Array.isArray(job.etapes) && job.etapes.length > 0;
@@ -86,10 +86,7 @@ export function PlanificateurFinal({
         if (!job) return r;
         if (job.controleAFaire) r.push(T('Marqué à contrôler', 'Flagged for control'));
         const nb = Array.isArray(job.personnel) ? job.personnel.length : 0;
-        const req = Number(job.nombrePersonnelRequis) || 0;
         if (nb === 0) r.push(T('Aucun personnel assigné', 'No staff assigned'));
-        else if (req > 0 && nb < req) r.push(T(`Sous-effectif (${nb}/${req})`, `Understaffed (${nb}/${req})`));
-        else if (req > 0 && nb > req) r.push(T(`Sur-effectif (${nb}/${req})`, `Overstaffed (${nb}/${req})`));
         if (!job.dateDebut || !job.dateFin) r.push(T('Dates incomplètes', 'Incomplete dates'));
         const heures = Number(job.heuresPlanifiees) || 0;
         const aEtapes = Array.isArray(job.etapes) && job.etapes.length > 0;

@@ -390,20 +390,15 @@ export function JobModal({
             }
             return;
         }
-        // Fin = MONTAGE GLOBAL ordonnancé, pas la somme brute des heures. Quand des étapes existent,
-        // la durée suit l'étendue planifiée (fin de la dernière étape, parallélisme + dépendances pris
-        // en compte via generateHierarchicalGanttData) -> 3 étapes de 8 h EN PARALLÈLE = 1 jour, pas 3.
-        // Sans étapes exploitables : repli = heures-homme réparties sur l'effectif (équipe en parallèle).
+        // L'EFFECTIF PILOTE LA DURÉE : durée calendaire = EFFORT (heures-personne) ÷ effectif ÷ heures/jour,
+        // répartie sur les jours ouvrables. Mettre 1, 2 ou 10 personnes ajuste AUTOMATIQUEMENT la date de
+        // fin (864 h-pers ÷ 5 = 172,8 h ; ÷ 1 = 864 h). L'effectif = personnel assigné, sinon « nombre de
+        // personnes » saisi. (Source de vérité de l'effort : « Heures totales » / les étapes du Gantt.)
         const hpd = Math.max(0.5, diffHours(formData.heuresDebutJour, formData.heuresFinJour)); // heures/jour (fenêtre)
         const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length)
             ? formData.personnel.length
             : (parseInt(formData.nombrePersonnelRequis) || 1));
-        let spanWorkHours = total / nb; // repli : charge totale étalée sur l'effectif
-        try {
-            const sched = generateHierarchicalGanttData();
-            const schedSpan = (sched || []).reduce((m, t) => Math.max(m, Number(t.endHours) || 0), 0);
-            if (schedSpan > 0) spanWorkHours = schedSpan; // étendue réelle du montage (parallélisme inclus)
-        } catch { /* pas d'étapes exploitables -> repli ci-dessus */ }
+        const spanWorkHours = total / nb;                   // durée calendaire en heures (équipe en parallèle)
         const days = Math.max(1, Math.ceil(spanWorkHours / hpd));
         const isWork = (dt) => formData.includeWeekendsInDuration || (dt.getDay() !== 0 && dt.getDay() !== 6);
         let d = new Date(`${formData.dateDebut}T12:00:00`);
@@ -3835,23 +3830,35 @@ export function JobModal({
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                                        Personnel requis (calculé)
+                                                        👥 {L('Effectif (pilote la durée)', 'Crew size (drives duration)')}
                                                     </label>
-                                                    <div className="p-3 bg-green-100 border border-green-300 rounded-lg text-center">
-                                                        <span className="text-lg font-bold text-green-800">
-                                                            {formData.heuresPlanifiees ?
-                                                                calculatePersonnelRequis(
-                                                                    formData.heuresPlanifiees,
-                                                                    formData.dateDebut,
-                                                                    formData.dateFin,
-                                                                    formData.modeHoraire,
-                                                                    formData.heuresDebutJour,
-                                                                    formData.heuresFinJour,
-                                                                    formData.includeWeekendsInDuration
-                                                                ) : 1
-                                                            } personnes
-                                                        </span>
-                                                    </div>
+                                                    {(() => {
+                                                        const assigned = Array.isArray(formData.personnel) ? formData.personnel.length : 0;
+                                                        const nb = Math.max(1, assigned || (parseInt(formData.nombrePersonnelRequis) || 1));
+                                                        const total = parseFloat(formData.heuresPlanifiees) || 0;
+                                                        const wall = Math.round((total / nb) * 100) / 100;
+                                                        return (
+                                                            <div className="p-3 bg-green-100 border border-green-300 rounded-lg text-center dark:bg-green-900/20 dark:border-green-800">
+                                                                <span className="text-lg font-bold text-green-800 dark:text-green-300">{nb} {L('personne(s)', 'person(s)')}</span>
+                                                                <div className="mt-1 text-[11px] text-green-700 dark:text-green-400">
+                                                                    {assigned > 0
+                                                                        ? L(`= personnel assigné · durée ≈ ${wall} h`, `= assigned staff · duration ≈ ${wall} h`)
+                                                                        : L(`saisi · durée ≈ ${wall} h (assignez des ressources)`, `set · duration ≈ ${wall} h (assign resources)`)}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    {!Array.isArray(formData.personnel) || formData.personnel.length === 0 ? (
+                                                        <input
+                                                            type="number" min="1" step="1"
+                                                            value={formData.nombrePersonnelRequis || 1}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, nombrePersonnelRequis: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                                            className="mt-2 w-full p-2 border rounded-lg text-center focus:ring-2 focus:ring-green-500"
+                                                            title={L('Nombre de personnes prévues — ajuste la durée (effort ÷ effectif)', 'Planned crew size — adjusts duration (effort ÷ crew)')}
+                                                        />
+                                                    ) : (
+                                                        <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{L('Basé sur le personnel assigné. Ajoutez/retirez des ressources pour changer la durée.', 'Based on assigned staff. Add/remove resources to change duration.')}</p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -3944,25 +3951,21 @@ export function JobModal({
                                                 </div>
                                             )}
 
-                                            {formData.heuresPlanifiees && formData.dateDebut && formData.dateFin && (
-                                                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                    <p className="text-sm text-yellow-800">
-                                                        💡 <strong>Calcul automatique :</strong> Avec {formData.heuresPlanifiees}h sur {
-                                                            Math.ceil((new Date(formData.dateFin) - new Date(formData.dateDebut)) / (1000 * 60 * 60 * 24)) + 1
-                                                        } jours, il faut {
-                                                            calculatePersonnelRequis(
-                                                                formData.heuresPlanifiees,
-                                                                formData.dateDebut,
-                                                                formData.dateFin,
-                                                                formData.modeHoraire,
-                                                                formData.heuresDebutJour,
-                                                                formData.heuresFinJour,
-                                                                formData.includeWeekendsInDuration
-                                                            )
-                                                        } personne(s) pour compléter le travail.
-                                                    </p>
-                                                </div>
-                                            )}
+                                            {formData.heuresPlanifiees && formData.dateDebut && formData.dateFin && (() => {
+                                                const total = parseFloat(formData.heuresPlanifiees) || 0;
+                                                const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length) ? formData.personnel.length : (parseInt(formData.nombrePersonnelRequis) || 1));
+                                                const jours = Math.ceil((new Date(formData.dateFin) - new Date(formData.dateDebut)) / (1000 * 60 * 60 * 24)) + 1;
+                                                const wall = Math.round((total / nb) * 100) / 100;
+                                                return (
+                                                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800">
+                                                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                            💡 <strong>{L('Calcul automatique :', 'Automatic calculation:')}</strong> {L(
+                                                                `${total} h‑personne d'effort ÷ ${nb} personne(s) ≈ ${wall} h de durée → fin le ${formData.dateFin} (${jours} j). Changez l'effectif et la durée s'ajuste.`,
+                                                                `${total} man‑h of effort ÷ ${nb} person(s) ≈ ${wall} h duration → ends ${formData.dateFin} (${jours} d). Change the crew and the duration adjusts.`)}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
 
                                     </div>
@@ -4532,7 +4535,12 @@ export function JobModal({
                                                                                 {hierarchicalTasks.length > 10 && (
                                                                                     <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-2 border-t bg-gray-50 dark:bg-gray-700/50 mt-2 sticky bottom-0">
                                                                                         Total: {hierarchicalTasks.length} étapes |
-                                                                                        Durée totale: {hierarchicalTasks.reduce((sum, task) => sum + (task.duration || 0), 0)}h |
+                                                                                        {(() => {
+                                                                                            const effort = hierarchicalTasks.reduce((sum, task) => sum + (Number(task.manHours) || (Number(task.duration) || 0) * (Number(task.personnesRequises) || 1)), 0);
+                                                                                            const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length) ? formData.personnel.length : (parseInt(formData.nombrePersonnelRequis) || 1));
+                                                                                            const wall = Math.round((effort / nb) * 10) / 10;
+                                                                                            return ` Effort: ${Math.round(effort)} h‑pers ÷ ${nb} = durée ≈ ${wall} h | `;
+                                                                                        })()}
                                                                                         Critiques: {hierarchicalTasks.filter(task => task.isCritical).length}
                                                                                     </div>
                                                                                 )}
@@ -5535,9 +5543,9 @@ export function JobModal({
                                                 </div>
                                             </div>
                                             <div className="bg-yellow-50 p-3 rounded-lg">
-                                                <div className="font-medium text-yellow-800">⏰ {L('Durée totale', 'Total duration')}</div>
+                                                <div className="font-medium text-yellow-800">⏱️ {L('Effort total', 'Total effort')}</div>
                                                 <div className="text-yellow-600 text-lg font-bold">
-                                                    {formData.etapes.reduce((sum, t) => sum + (t.duration || 0), 0)}h
+                                                    {Math.round(formData.etapes.reduce((sum, t) => sum + (Number(t.manHours) || (Number(t.duration) || 0) * (Number(t.personnesRequises) || 1)), 0))} {L('h‑pers', 'man‑h')}
                                                 </div>
                                             </div>
                                             <div className="bg-purple-50 p-3 rounded-lg">
