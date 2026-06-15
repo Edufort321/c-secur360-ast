@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
+import PunchWidget from '@/components/planner/PunchWidget';
 
 const PlannerApp = dynamic(() => import('@/components/planner/App'), {
   ssr: false,
@@ -13,6 +14,7 @@ export default function PlanificateurPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   return (
     <div className="planner-app">
+      <PunchWidget tenant={tenant} />
       <PlannerApp tenant={tenant} />
     </div>
   );
