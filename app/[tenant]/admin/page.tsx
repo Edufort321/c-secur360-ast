@@ -6090,7 +6090,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['aging', tr('Âge des comptes', 'Aging')], ['periods', tr('Périodes', 'Periods')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
+          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['aging', tr('Âge des comptes', 'Aging')], ['periods', tr('Périodes', 'Periods')], ['new', tr('Écriture de correction', 'Adjusting entry')]] as const).map(([k, lbl]) => (
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
@@ -6395,7 +6395,11 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
           </div>
         </div>
       ) : (
-        // Nouvelle écriture
+        // Écriture de correction / ajustement (la saisie NORMALE passe par Transactions, comptabilisées auto)
+        <div className="space-y-3">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            ⚠️ {tr('Cet écran sert UNIQUEMENT aux écritures de correction / ajustement (vérification comptable). La saisie normale (revenus, dépenses, achats) passe par le module ', 'This screen is ONLY for correcting/adjusting entries (accounting review). Normal entry (revenue, expenses, purchases) goes through the ')}<b>{tr('Transactions', 'Transactions')}</b>{tr(' — tout y est comptabilisé automatiquement au grand livre.', ' module — everything is auto-posted to the ledger there.')}
+          </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-3 sm:grid-cols-4">
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={neDate} onChange={e => setNeDate(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
@@ -6422,9 +6426,10 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
               <span className={`ml-4 font-semibold ${balanced ? 'text-emerald-600' : 'text-red-500'}`}>{balanced ? tr('Équilibré', 'Balanced') : tr('Déséquilibré', 'Unbalanced')}</span>
             </div>
             <button onClick={saveEntry} disabled={!balanced || saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">
-              {saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer l\'écriture', 'Post entry')}
+              {saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer l\'écriture de correction', 'Post adjusting entry')}
             </button>
           </div>
+        </div>
         </div>
       )}
     </div>
