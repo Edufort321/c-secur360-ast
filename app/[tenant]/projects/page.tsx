@@ -178,7 +178,10 @@ export default function ProjectsPage() {
 
   const filtered = useMemo(() => {
     let list = projects;
-    if (siteId && siteId !== 'all') list = list.filter(p => (p as any).site_id === siteId);
+    // Filtre par site : on garde le site sélectionné MAIS aussi les projets SANS site (site_id null) —
+    // sinon un projet non rattaché à un site (ex. issu d'une soumission) disparaît de la liste alors
+    // qu'il est compté dans « Total » (déploiement progressif de site_id, cf. site-scoping Phase 2).
+    if (siteId && siteId !== 'all') list = list.filter(p => !(p as any).site_id || (p as any).site_id === siteId);
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter(p =>
