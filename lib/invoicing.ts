@@ -22,7 +22,13 @@ export const TAX_BY_PROVINCE: Record<string, TaxRates> = {
 };
 export const PROVINCES = Object.keys(TAX_BY_PROVINCE);
 
-export type InvoiceItem = { id?: string; description: string; quantity: number; unit_price: number; subtotal: number; taxable: boolean; sort_order?: number };
+// tax_category : 'standard' (TPS+TVQ), 'zero_rated' (détaxé 0% — fourniture taxable à 0%, CTI possible
+// sur intrants), 'exempt' (exonéré — pas de taxe, pas de CTI). Pour le calcul d'une ligne, détaxé et
+// exonéré = 0 taxe ; la catégorie sert au classement fiscal. Rétro-compat : si absent, on lit `taxable`.
+export type TaxCategory = 'standard' | 'zero_rated' | 'exempt';
+export type InvoiceItem = { id?: string; description: string; quantity: number; unit_price: number; subtotal: number; taxable: boolean; tax_category?: TaxCategory; sort_order?: number };
+// Une ligne est TAXÉE seulement si sa catégorie est 'standard' (sinon 0). Repli sur l'ancien booléen.
+export const lineIsTaxed = (i: { tax_category?: TaxCategory; taxable?: boolean }) => i.tax_category ? i.tax_category === 'standard' : i.taxable !== false;
 export type Invoice = {
   id?: string; invoice_number: string; client_id?: string | null; client_snapshot?: any;
   status: 'draft' | 'sent' | 'paid' | 'cancelled'; issue_date: string; due_date?: string | null; province: string;
@@ -41,7 +47,7 @@ const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 /** Calcule sous-total + taxes (sur la base taxable, sans taxe sur taxe) + total selon la province. */
 export function computeInvoiceTotals(items: InvoiceItem[], province: string) {
   const r = TAX_BY_PROVINCE[province] || TAX_BY_PROVINCE.QC;
-  const taxableBase = items.filter(i => i.taxable).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
+  const taxableBase = items.filter(lineIsTaxed).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const subtotal = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
   const gst_amount = r2(taxableBase * r.gst);
   const qst_amount = r2(taxableBase * r.qst);
@@ -106,9 +112,17 @@ export async function saveInvoice(tenant: string, header: Invoice, items: Invoic
   const rows = items.map((it, i) => ({
     tenant_id: tenant, invoice_id: id, description: it.description, quantity: Number(it.quantity) || 0,
     unit_price: Number(it.unit_price) || 0, subtotal: r2((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)),
-    taxable: it.taxable !== false, sort_order: i,
+    taxable: lineIsTaxed(it), // synchro avec la catégorie -> taxes correctes même avant migration 182
+    tax_category: it.tax_category || (it.taxable === false ? 'exempt' : 'standard'), sort_order: i,
   }));
-  if (rows.length) { const { error } = await supabase.from('commerce_invoice_items').insert(rows); if (error) throw error; }
+  if (rows.length) {
+    let { error } = await supabase.from('commerce_invoice_items').insert(rows);
+    if (error && /tax_category/i.test(String(error.message || ''))) { // colonne absente (migration 182) -> retire et réessaie
+      const rows2 = rows.map(({ tax_category, ...r }) => r);
+      ({ error } = await supabase.from('commerce_invoice_items').insert(rows2));
+    }
+    if (error) throw error;
+  }
   return id as string;
 }
 

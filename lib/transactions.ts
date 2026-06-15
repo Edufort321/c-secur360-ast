@@ -2,10 +2,10 @@
 // Calcule les taxes payees (recuperables CTI/RTI) et alimente le grand livre via une
 // ecriture d'achat. Reutilise les taux par province du module Facture.
 import { supabase } from '@/lib/supabase';
-import { TAX_BY_PROVINCE } from '@/lib/invoicing';
+import { TAX_BY_PROVINCE, lineIsTaxed, type TaxCategory } from '@/lib/invoicing';
 
 export type TransactionItem = {
-  id?: string; description: string; account_code: string; amount: number; taxable: boolean; sort_order?: number;
+  id?: string; description: string; account_code: string; amount: number; taxable: boolean; tax_category?: TaxCategory; sort_order?: number;
 };
 export type Transaction = {
   id?: string; transaction_number: string; vendor_id?: string | null; vendor_name?: string | null;
@@ -22,7 +22,7 @@ const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 /** Sous-total (somme des lignes) + taxes sur la base taxable + total, selon la province. */
 export function computeTransactionTotals(items: TransactionItem[], province: string) {
   const r = TAX_BY_PROVINCE[province] || TAX_BY_PROVINCE.QC;
-  const taxableBase = items.filter(i => i.taxable).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const taxableBase = items.filter(lineIsTaxed).reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const subtotal = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const gst_amount = r2(taxableBase * r.gst);
   const qst_amount = r2(taxableBase * r.qst);
@@ -76,9 +76,17 @@ export async function saveTransaction(tenant: string, header: Transaction, items
   }
   const rows = items.map((it, i) => ({
     tenant_id: tenant, transaction_id: id, description: it.description, account_code: it.account_code || '5300',
-    amount: r2(Number(it.amount) || 0), taxable: it.taxable !== false, sort_order: i,
+    amount: r2(Number(it.amount) || 0), taxable: lineIsTaxed(it),
+    tax_category: it.tax_category || (it.taxable === false ? 'exempt' : 'standard'), sort_order: i,
   }));
-  if (rows.length) { const { error } = await supabase.from('commerce_transaction_items').insert(rows); if (error) throw error; }
+  if (rows.length) {
+    let { error } = await supabase.from('commerce_transaction_items').insert(rows);
+    if (error && /tax_category/i.test(String(error.message || ''))) { // colonne absente (migration 182)
+      const rows2 = rows.map(({ tax_category, ...r }) => r);
+      ({ error } = await supabase.from('commerce_transaction_items').insert(rows2));
+    }
+    if (error) throw error;
+  }
   return id as string;
 }
 

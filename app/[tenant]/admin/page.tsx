@@ -6414,7 +6414,11 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                 <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-5 ${inputCls}`} />
                 <input type="number" placeholder={tr('Qté', 'Qty')} value={it.quantity} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, quantity: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
                 <input type="number" placeholder={tr('Prix', 'Price')} value={it.unit_price} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, unit_price: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
-                <label className="col-span-2 flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={it.taxable !== false} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, taxable: e.target.checked } : x))} />{tr('Taxable', 'Taxable')}</label>
+                <select value={it.tax_category || (it.taxable === false ? 'exempt' : 'standard')} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, tax_category: e.target.value as any, taxable: e.target.value === 'standard' } : x))} className="col-span-2 rounded border border-gray-300 px-1 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700" title={tr('Catégorie de taxe', 'Tax category')}>
+                  <option value="standard">{tr('Taxable', 'Taxable')}</option>
+                  <option value="zero_rated">{tr('Détaxé 0 %', 'Zero-rated')}</option>
+                  <option value="exempt">{tr('Exonéré', 'Exempt')}</option>
+                </select>
                 <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
               </div>
             ))}
@@ -6719,7 +6723,11 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   {lineAccounts.map(a => <option key={a.id} value={a.code}>{a.code} · {a.name}</option>)}
                 </select>
                 <input type="number" placeholder={tr('Montant', 'Amount')} value={it.amount} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
-                <label className="col-span-1 flex items-center justify-center text-xs text-gray-500" title={tr('Taxable', 'Taxable')}><input type="checkbox" checked={it.taxable !== false} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, taxable: e.target.checked } : x))} /></label>
+                <select value={it.tax_category || (it.taxable === false ? 'exempt' : 'standard')} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, tax_category: e.target.value as any, taxable: e.target.value === 'standard' } : x))} className="col-span-1 rounded border border-gray-300 px-1 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700" title={tr('Catégorie de taxe', 'Tax category')}>
+                  <option value="standard">{tr('Taxable', 'Taxable')}</option>
+                  <option value="zero_rated">{tr('Détaxé', 'Zero-r.')}</option>
+                  <option value="exempt">{tr('Exonéré', 'Exempt')}</option>
+                </select>
                 <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
               </div>
             ))}
