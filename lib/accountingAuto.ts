@@ -2,12 +2,23 @@
 // Approche idempotente par (source_type, source_id) : ré-exécutable sans doublon.
 // Phase 2 : paie (feuilles de temps). Les ventes/factures arriveront avec le module Facture.
 import { supabase } from '@/lib/supabase';
-import { getAccounts, createEntry } from '@/lib/accounting';
+import { getAccounts, createEntry, seedAccountingDefaults } from '@/lib/accounting';
 
 async function accountMap(tenant: string): Promise<Record<string, string>> {
   const accs = await getAccounts(tenant);
   const m: Record<string, string> = {};
   for (const a of accs) m[a.code] = a.id;
+  return m;
+}
+
+/** Carte des comptes en s'assurant que le plan comptable EXISTE : si absent, on l'initialise (idempotent)
+ *  pour que la comptabilisation « juste marche » sans étape manuelle. Si la migration 085 manque, renvoie
+ *  une carte vide et l'appelant affiche un message. */
+async function ensureAccountMap(tenant: string): Promise<Record<string, string>> {
+  let m = await accountMap(tenant);
+  if (!m['1000'] || !m['4000']) {
+    try { await seedAccountingDefaults(tenant); m = await accountMap(tenant); } catch { /* migration 085 absente */ }
+  }
   return m;
 }
 
@@ -228,8 +239,8 @@ export async function autoPostTransactionStatus(tenant: string, transactionId: s
     const { data: txn } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).eq('id', transactionId).maybeSingle();
     if (!txn) return;
     const isRev = (txn.txn_type || 'expense') === 'revenue';
-    const m = await accountMap(tenant);
-    if (!m['1000'] || !m['4000']) return; // plan comptable absent -> filet = bouton Synchroniser
+    const m = await ensureAccountMap(tenant); // auto-initialise le plan comptable si absent
+    if (!m['1000'] || !m['4000']) return; // migration 085 absente -> filet = bouton Synchroniser
     if (!txn.gl_entry_id) {
       const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);
       if (isRev) await postTransactionRevenue(tenant, txn, its || [], m);   // constatation du revenu
@@ -246,8 +257,8 @@ export async function autoPostTransactionStatus(tenant: string, transactionId: s
  * paiements fournisseurs (payés à crédit). Politique INCHANGÉE (poste ce que les boutons postent déjà).
  */
 export async function syncAllToLedger(tenant: string): Promise<{ payroll: number; sales: number; salePayments: number; purchases: number; purchasePayments: number }> {
-  const m = await accountMap(tenant);
-  if (!m['5000'] || !m['2300']) throw new Error('Plan comptable non initialisé (migration 085 puis « Initialiser »).');
+  const m = await ensureAccountMap(tenant); // initialise le plan comptable si absent
+  if (!m['5000'] || !m['2300']) throw new Error('Plan comptable non initialisé — exécutez la migration 085 dans Supabase, puis réessayez.');
   const pay = await syncPayrollEntries(tenant);
   let sales = 0, salePayments = 0, purchases = 0, purchasePayments = 0;
 
@@ -257,7 +268,9 @@ export async function syncAllToLedger(tenant: string): Promise<{ payroll: number
     if (inv.status === 'paid' && (await postInvoicePayment(tenant, inv, m)) === 'created') salePayments++;
   }
 
-  const { data: txns } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).in('status', ['posted', 'paid']);
+  // Transactions : on poste TOUT ce qui n'est pas annulé (brouillons inclus) — la saisie d'une
+  // transaction VAUT comptabilisation (la « nouvelle écriture » manuelle ne sert qu'aux corrections).
+  const { data: txns } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).neq('status', 'cancelled');
   for (const txn of (txns || [])) {
     const isRev = (txn.txn_type || 'expense') === 'revenue';
     if (!txn.gl_entry_id) {
