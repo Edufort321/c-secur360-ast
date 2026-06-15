@@ -168,6 +168,37 @@ export async function postInvoicePayment(tenant: string, inv: any, accMap?: Reco
   return 'created';
 }
 
+/**
+ * Vente/revenu saisi comme TRANSACTION (et non facture). DR 1000 Banque (comptant) | 1100 Clients
+ * (à recevoir) ; CR 4000 Ventes + taxes PERÇUES (2100/2110). Idempotent ('transaction'). Met à jour
+ * gl_entry_id + statut 'posted'. Pendant des achats `postTransactionPurchase`, mais côté revenu.
+ */
+export async function postTransactionRevenue(
+  tenant: string, txn: any, items: any[], accMap?: Record<string, string>,
+): Promise<'created' | 'skipped' | 'no-accounts'> {
+  if (txn.gl_entry_id) return 'skipped';
+  if (await entryExists(tenant, 'transaction', txn.id)) return 'skipped';
+  const m = accMap || await accountMap(tenant);
+  const recvAcc = txn.payment_method === 'on_account' ? m['1100'] : m['1000']; // Clients (AR) ou Banque
+  if (!recvAcc || !m['4000']) return 'no-accounts';
+  const total = Number(txn.total) || 0;
+  if (total <= 0) return 'skipped';
+  const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
+    { account_id: recvAcc, debit: total, credit: 0, description: txn.payment_method === 'on_account' ? 'Clients' : 'Banque' },
+    { account_id: m['4000'], debit: 0, credit: Number(txn.subtotal) || 0, description: 'Ventes et services' },
+  ];
+  const taxFed = (Number(txn.gst_amount) || 0) + (Number(txn.pst_amount) || 0);
+  if (taxFed > 0 && m['2100']) lines.push({ account_id: m['2100'], debit: 0, credit: taxFed, description: 'TPS/TVH/PST a payer' });
+  if ((Number(txn.qst_amount) || 0) > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: Number(txn.qst_amount), description: 'TVQ a payer' });
+  const entryId = await createEntry(tenant, {
+    entry_date: txn.txn_date || new Date().toISOString().slice(0, 10),
+    description: `Revenu — ${txn.vendor_name || txn.transaction_number || ''}`,
+    reference: txn.transaction_number || undefined, journal_code: 'VEN', source_type: 'transaction', source_id: txn.id, lines,
+  });
+  await supabase.from('commerce_transactions').update({ gl_entry_id: entryId, status: txn.status === 'draft' ? 'posted' : txn.status }).eq('id', txn.id);
+  return 'created';
+}
+
 // ── POSTAGE ÉVÉNEMENTIEL (comptabilité d'EXERCICE / accrual) ─────────────────────────────────────
 // Déclenché automatiquement au changement de statut (depuis setInvoiceStatus / setTransactionStatus),
 // pour que « tout se centralise vers Comptabilité » sans clic. EXERCICE : le revenu est constaté à
@@ -189,19 +220,22 @@ export async function autoPostInvoiceStatus(tenant: string, invoiceId: string, s
   } catch { /* best-effort : ne bloque jamais le changement de statut */ }
 }
 
-/** Auto-poste une transaction (achat) selon son statut (exercice). 'posted'/'paid' -> achat ; 'paid' à crédit -> paiement. */
+/** Auto-poste une transaction selon son statut (exercice). REVENU -> vente ; DÉPENSE -> achat ;
+ *  'paid' à crédit (dépense) -> paiement fournisseur. Idempotent, best-effort. */
 export async function autoPostTransactionStatus(tenant: string, transactionId: string, status: string): Promise<void> {
   try {
     if (status !== 'posted' && status !== 'paid') return;
     const { data: txn } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).eq('id', transactionId).maybeSingle();
-    if (!txn || (txn.txn_type || 'expense') === 'revenue') return; // les revenus passent par les factures
+    if (!txn) return;
+    const isRev = (txn.txn_type || 'expense') === 'revenue';
     const m = await accountMap(tenant);
-    if (!m['1000'] || !m['2000']) return;
+    if (!m['1000'] || !m['4000']) return; // plan comptable absent -> filet = bouton Synchroniser
     if (!txn.gl_entry_id) {
       const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);
-      await postTransactionPurchase(tenant, txn, its || [], m); // constatation de la charge (idempotent)
+      if (isRev) await postTransactionRevenue(tenant, txn, its || [], m);   // constatation du revenu
+      else await postTransactionPurchase(tenant, txn, its || [], m);        // constatation de la charge
     }
-    if (status === 'paid' && txn.payment_method === 'on_account') await postTransactionPayment(tenant, txn, m);
+    if (status === 'paid' && !isRev && txn.payment_method === 'on_account') await postTransactionPayment(tenant, txn, m);
   } catch { /* best-effort */ }
 }
 
@@ -225,11 +259,13 @@ export async function syncAllToLedger(tenant: string): Promise<{ payroll: number
 
   const { data: txns } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).in('status', ['posted', 'paid']);
   for (const txn of (txns || [])) {
+    const isRev = (txn.txn_type || 'expense') === 'revenue';
     if (!txn.gl_entry_id) {
       const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);
-      if ((await postTransactionPurchase(tenant, txn, its || [], m)) === 'created') purchases++;
+      const r = isRev ? await postTransactionRevenue(tenant, txn, its || [], m) : await postTransactionPurchase(tenant, txn, its || [], m);
+      if (r === 'created') { if (isRev) sales++; else purchases++; }
     }
-    if (txn.status === 'paid' && txn.payment_method === 'on_account' && (await postTransactionPayment(tenant, txn, m)) === 'created') purchasePayments++;
+    if (txn.status === 'paid' && !isRev && txn.payment_method === 'on_account' && (await postTransactionPayment(tenant, txn, m)) === 'created') purchasePayments++;
   }
   return { payroll: pay.created, sales, salePayments, purchases, purchasePayments };
 }

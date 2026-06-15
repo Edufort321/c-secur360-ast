@@ -17,7 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, getPeriods, upsertPeriod, setPeriodStatus, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode, type GLPeriod } from '@/lib/accounting';
-import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
+import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionRevenue, postTransactionPayment } from '@/lib/accountingAuto';
 import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport } from '@/lib/agingReports';
 import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
@@ -6762,7 +6762,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   }
   async function save() {
     setSaving(true); setNotice(null);
-    try { await saveTransaction(tenant, hdr, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0)); setNotice(tr('Transaction enregistrée.', 'Transaction saved.')); await load(); setView('list'); }
+    try {
+      const id = await saveTransaction(tenant, hdr, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0));
+      // « Tout remonte vers comptabilité » (exercice) : on COMPTABILISE immédiatement au grand livre.
+      // setTransactionStatus('posted') déclenche le postage auto (revenu OU dépense), idempotent + best-effort.
+      try { await setTransactionStatus(tenant, id, 'posted'); } catch { /* le bouton « Comptabiliser » reste un filet */ }
+      setNotice(tr('Transaction enregistrée et comptabilisée.', 'Transaction saved and posted.')); await load(); setView('list');
+    }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSaving(false);
   }
@@ -6778,9 +6784,12 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     try {
       const its = await getTransactionItems(tenant, t.id!);
       const m: Record<string, string> = {}; accounts.forEach(a => m[a.code] = a.id);
-      const r = await postTransactionPurchase(tenant, t, its, m);
+      // Route REVENU -> vente / DÉPENSE -> achat. Sans plan comptable -> message d'init.
+      const r = t.txn_type === 'revenue'
+        ? await postTransactionRevenue(tenant, t, its, m)
+        : await postTransactionPurchase(tenant, t, its, m);
       if (r === 'no-accounts') { setNotice(tr('Initialisez d\'abord le plan comptable (onglet Comptabilité).', 'Initialize the chart of accounts first.')); return; }
-      setNotice(r === 'created' ? tr('Achat comptabilisé au grand livre.', 'Purchase posted to ledger.') : tr('Déjà comptabilisée.', 'Already posted.'));
+      setNotice(r === 'created' ? tr('Comptabilisé au grand livre.', 'Posted to ledger.') : tr('Déjà comptabilisée.', 'Already posted.'));
       await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
@@ -7025,7 +7034,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   <td className="px-4 py-2 text-right" data-label="">
                     {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
                       <button onClick={() => editTxn(t)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
-                      {t.txn_type !== 'revenue' && !t.gl_entry_id && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
+                      {!t.gl_entry_id && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {t.txn_type !== 'revenue' && t.payment_method === 'on_account' && t.status !== 'paid' && <button onClick={() => payTxn(t)} className="text-emerald-600 hover:underline">{tr('Payer', 'Pay')}</button>}
                       {!t.gl_entry_id && <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>}
                     </div>}
