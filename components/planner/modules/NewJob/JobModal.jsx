@@ -390,12 +390,21 @@ export function JobModal({
             }
             return;
         }
-        // Avec heures totales -> fin = répartition sur jours ouvrables selon fenêtre horaire et nb de personnes.
+        // Fin = MONTAGE GLOBAL ordonnancé, pas la somme brute des heures. Quand des étapes existent,
+        // la durée suit l'étendue planifiée (fin de la dernière étape, parallélisme + dépendances pris
+        // en compte via generateHierarchicalGanttData) -> 3 étapes de 8 h EN PARALLÈLE = 1 jour, pas 3.
+        // Sans étapes exploitables : repli = heures-homme réparties sur l'effectif (équipe en parallèle).
         const hpd = Math.max(0.5, diffHours(formData.heuresDebutJour, formData.heuresFinJour)); // heures/jour (fenêtre)
         const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length)
             ? formData.personnel.length
             : (parseInt(formData.nombrePersonnelRequis) || 1));
-        const days = Math.max(1, Math.ceil(total / (hpd * nb)));
+        let spanWorkHours = total / nb; // repli : charge totale étalée sur l'effectif
+        try {
+            const sched = generateHierarchicalGanttData();
+            const schedSpan = (sched || []).reduce((m, t) => Math.max(m, Number(t.endHours) || 0), 0);
+            if (schedSpan > 0) spanWorkHours = schedSpan; // étendue réelle du montage (parallélisme inclus)
+        } catch { /* pas d'étapes exploitables -> repli ci-dessus */ }
+        const days = Math.max(1, Math.ceil(spanWorkHours / hpd));
         const isWork = (dt) => formData.includeWeekendsInDuration || (dt.getDay() !== 0 && dt.getDay() !== 6);
         let d = new Date(`${formData.dateDebut}T12:00:00`);
         let guard = 0;
@@ -408,7 +417,7 @@ export function JobModal({
         const newFin = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (newFin !== formData.dateFin) setFormData(prev => ({ ...prev, dateFin: newFin }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.heuresPlanifiees, formData.heuresDebutJour, formData.heuresFinJour, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin, formData.modeHoraire]);
+    }, [formData.heuresPlanifiees, formData.heuresDebutJour, formData.heuresFinJour, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin, formData.modeHoraire, formData.etapes]);
 
     // Mode 24/24 : (ré)initialise les quarts depuis le gabarit choisi quand on entre en 24/24 ou
     // qu'on change de gabarit. On ne rebuild que si le NOMBRE de quarts diffère du gabarit (changement
