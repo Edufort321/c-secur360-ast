@@ -3,6 +3,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase, itemsAPI, departmentsAPI, categoriesAPI, movementsAPI } from '../lib/supabase';
+import { invKey } from '../utils/invKey'; // namespacing localStorage par tenant (anti-fuite inter-tenant)
 
 export function useSupabaseSync() {
   const syncInProgress = useRef(false);
@@ -18,13 +19,13 @@ export function useSupabaseSync() {
       // Charger les départements
       const departments = await departmentsAPI.getAll();
       if (departments) {
-        localStorage.setItem('c-secur360-inventory-departments', JSON.stringify(departments));
+        localStorage.setItem(invKey('c-secur360-inventory-departments'), JSON.stringify(departments));
       }
 
       // Charger les catégories
       const categories = await categoriesAPI.getAll();
       if (categories) {
-        localStorage.setItem('c-secur360-inventory-categories', JSON.stringify(categories));
+        localStorage.setItem(invKey('c-secur360-inventory-categories'), JSON.stringify(categories));
       }
 
       // Charger les articles avec leurs localisations
@@ -35,7 +36,7 @@ export function useSupabaseSync() {
           ...item,
           locations: item.item_locations || []
         }));
-        localStorage.setItem('c-secur360-inventory-items', JSON.stringify(transformedItems));
+        localStorage.setItem(invKey('c-secur360-inventory-items'), JSON.stringify(transformedItems));
       }
 
       console.log('✅ Données chargées depuis Supabase');

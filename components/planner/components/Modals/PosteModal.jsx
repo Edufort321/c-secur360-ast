@@ -7,6 +7,10 @@ import { Icon } from '../UI/Icon';
 import { Logo } from '../UI/Logo';
 import { useLanguage } from '../../contexts/LanguageContext.jsx';
 
+// Clé localStorage namespacée par tenant (1er segment d'URL) — anti-fuite inter-tenant.
+const _posteTenant = () => { try { return (window.location.pathname.split('/').filter(Boolean)[0]) || 'local'; } catch { return 'local'; } };
+const deptKey = () => `${_posteTenant()}::departements`;
+
 export function PosteModal({
     isOpen,
     onClose,
@@ -34,7 +38,7 @@ export function PosteModal({
 
     // Charger les départements depuis localStorage
     useEffect(() => {
-        const savedDepartements = JSON.parse(localStorage.getItem('departements') || '[]');
+        const savedDepartements = JSON.parse(localStorage.getItem(deptKey()) || '[]');
         setDepartements(savedDepartements);
     }, [isOpen]);
 
@@ -196,7 +200,7 @@ export function PosteModal({
                                         const nouveauDept = { id: Date.now(), nom: nomDept.trim() };
                                         const nouveauxDepartements = [...departements, nouveauDept];
                                         setDepartements(nouveauxDepartements);
-                                        localStorage.setItem('departements', JSON.stringify(nouveauxDepartements));
+                                        localStorage.setItem(deptKey(), JSON.stringify(nouveauxDepartements));
                                         setFormData(prev => ({ ...prev, departement: nomDept.trim() }));
                                     }
                                 }}

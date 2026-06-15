@@ -45,11 +45,12 @@ export default function ModulesPage() {
   const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0, todo: 0 });
   const [inspStats, setInspStats] = useState({ total: 0, nonConf: 0 });
   const [tsStats, setTsStats] = useState({ total: 0, pending: 0 });
-  // Rapports terrain : données en localStorage (rpt_reports_v1) — comptées côté client.
+  // Rapports terrain : cache localStorage NAMESPACÉ par tenant ({tenant}::rpt_reports_v1) —
+  // compté côté client. Doit rester aligné avec __rptNS() de RapportsApp.jsx (anti-fuite inter-tenant).
   const [rapStats, setRapStats] = useState({ total: 0, in_progress: 0, review: 0, approved: 0, sent: 0 });
   useEffect(() => {
     try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('rpt_reports_v1') : null;
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(`${tenant}::rpt_reports_v1`) : null;
       const list: any[] = raw ? JSON.parse(raw) : [];
       const norm = (s: string) => (s === 'draft' ? 'in_progress' : s === 'final' ? 'approved' : s);
       const c = { total: list.length, in_progress: 0, review: 0, approved: 0, sent: 0 } as any;

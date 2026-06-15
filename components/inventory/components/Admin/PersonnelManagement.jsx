@@ -1,6 +1,7 @@
 // ============== GESTION DU PERSONNEL PAR DÉPARTEMENT ==============
 // Composant pour gérer les employés avec permissions granulaires par onglet
 
+import { invKey } from '../../utils/invKey'; // namespacing localStorage par tenant (anti-fuite inter-tenant)
 import React, { useState, useEffect } from 'react';
 import {
   Plus,
@@ -63,7 +64,7 @@ export const PersonnelManagement = ({ departments = [], onSave, defaultDepartmen
 
   // Charger le personnel depuis localStorage
   useEffect(() => {
-    const savedPersonnel = localStorage.getItem('c-secur360-inventory-personnel');
+    const savedPersonnel = localStorage.getItem(invKey('c-secur360-inventory-personnel'));
     if (savedPersonnel) {
       setPersonnel(JSON.parse(savedPersonnel));
     }
@@ -72,7 +73,7 @@ export const PersonnelManagement = ({ departments = [], onSave, defaultDepartmen
   // Sauvegarder le personnel
   const savePersonnel = (newPersonnel) => {
     setPersonnel(newPersonnel);
-    localStorage.setItem('c-secur360-inventory-personnel', JSON.stringify(newPersonnel));
+    localStorage.setItem(invKey('c-secur360-inventory-personnel'), JSON.stringify(newPersonnel));
     if (onSave) onSave(newPersonnel);
   };
 

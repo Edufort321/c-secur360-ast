@@ -73,12 +73,15 @@ const PlanificateurFullscreen: React.FC<PlanificateurFullscreenProps> = ({ tenan
 
   const gridRef = useRef<HTMLDivElement>(null);
 
+  // Clés localStorage NAMESPACÉES par tenant (anti-fuite inter-tenant dans le même navigateur).
+  const lsKey = (k: string) => `${tenant || 'local'}::${k}`;
+
   // Chargement des données
   useEffect(() => {
-    const savedPersonnel = localStorage.getItem('planificateur-personnel');
-    const savedJobs = localStorage.getItem('planificateur-jobs');
-    const savedEquipements = localStorage.getItem('planificateur-equipements');
-    
+    const savedPersonnel = localStorage.getItem(lsKey('planificateur-personnel'));
+    const savedJobs = localStorage.getItem(lsKey('planificateur-jobs'));
+    const savedEquipements = localStorage.getItem(lsKey('planificateur-equipements'));
+
     if (savedPersonnel) {
       try {
         setPersonnel(JSON.parse(savedPersonnel));
@@ -102,20 +105,20 @@ const PlanificateurFullscreen: React.FC<PlanificateurFullscreenProps> = ({ tenan
         console.error('Erreur chargement équipements');
       }
     }
-  }, []);
+  }, [tenant]);
 
   // Sauvegarde des données
   useEffect(() => {
-    localStorage.setItem('planificateur-personnel', JSON.stringify(personnel));
-  }, [personnel]);
+    localStorage.setItem(lsKey('planificateur-personnel'), JSON.stringify(personnel));
+  }, [personnel, tenant]);
 
   useEffect(() => {
-    localStorage.setItem('planificateur-jobs', JSON.stringify(jobs));
-  }, [jobs]);
+    localStorage.setItem(lsKey('planificateur-jobs'), JSON.stringify(jobs));
+  }, [jobs, tenant]);
 
   useEffect(() => {
-    localStorage.setItem('planificateur-equipements', JSON.stringify(equipements));
-  }, [equipements]);
+    localStorage.setItem(lsKey('planificateur-equipements'), JSON.stringify(equipements));
+  }, [equipements, tenant]);
 
   // Fonctions utilitaires
   const getDatesInPeriod = () => {

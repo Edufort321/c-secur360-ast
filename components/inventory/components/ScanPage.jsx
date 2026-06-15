@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Package, AlertCircle, ArrowLeft, MapPin, Hash, DollarSign, Boxes, Tag } from 'lucide-react';
+import { invKey } from '../utils/invKey'; // namespacing localStorage par tenant (anti-fuite inter-tenant)
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -56,7 +57,7 @@ export function ScanPage() {
       }
       // 2) Repli cache local.
       try {
-        const saved = localStorage.getItem('c-secur360-inventory-items');
+        const saved = localStorage.getItem(invKey('c-secur360-inventory-items'));
         if (saved) {
           const found = findIn(JSON.parse(saved));
           if (found) { setItem(found); setLoading(false); return; }

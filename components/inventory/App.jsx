@@ -98,6 +98,7 @@ import { generateLabelsPdf, LABEL_FORMATS } from './lib/labelPdf';
 
 // Hooks
 import { supabase } from './lib/supabase';
+import { invKey } from './utils/invKey'; // namespacing localStorage par tenant (anti-fuite inter-tenant)
 
 // Catalogue materiel standardise (partage avec Soumissions/Admin)
 import { getCatalogues } from '@/lib/soumissions';
@@ -1537,7 +1538,7 @@ function AppContent() {
 
   // État du Mode Inventaire Global (par département)
   const [globalInventoryMode, setGlobalInventoryMode] = useState(() => {
-    const saved = localStorage.getItem('c-secur360-global-inventory-mode');
+    const saved = localStorage.getItem(invKey('c-secur360-global-inventory-mode'));
     return saved ? JSON.parse(saved) : {
       active: false,
       departmentId: null,
@@ -1731,13 +1732,13 @@ function AppContent() {
     let alive = true;
     const fromLocal = () => {
       // Repli local (cache navigateur) ou valeurs par défaut.
-      const savedItems = localStorage.getItem('c-secur360-inventory-items');
-      const savedMovements = localStorage.getItem('c-secur360-inventory-movements');
-      const savedDepartments = localStorage.getItem('c-secur360-inventory-departments');
-      const savedCategories = localStorage.getItem('c-secur360-inventory-categories');
-      const savedStorageUnits = localStorage.getItem('c-secur360-storage-units');
-      const savedBaseEbitda = localStorage.getItem('app-baseEbitda');
-      const savedTargetEbitda = localStorage.getItem('app-targetEbitda');
+      const savedItems = localStorage.getItem(invKey('c-secur360-inventory-items'));
+      const savedMovements = localStorage.getItem(invKey('c-secur360-inventory-movements'));
+      const savedDepartments = localStorage.getItem(invKey('c-secur360-inventory-departments'));
+      const savedCategories = localStorage.getItem(invKey('c-secur360-inventory-categories'));
+      const savedStorageUnits = localStorage.getItem(invKey('c-secur360-storage-units'));
+      const savedBaseEbitda = localStorage.getItem(invKey('app-baseEbitda'));
+      const savedTargetEbitda = localStorage.getItem(invKey('app-targetEbitda'));
       if (savedItems) setItems(JSON.parse(savedItems)); else setItems(getDefaultItems());
       if (savedMovements) setMovements(JSON.parse(savedMovements));
       // Departements : source UNIQUE = Administration (planner_succursales, effet dedie). On ne
@@ -1773,11 +1774,11 @@ function AppContent() {
           if (s.targetEbitda != null) setTargetEbitda(Number(s.targetEbitda));
           // Miroir local
           try {
-            localStorage.setItem('c-secur360-inventory-items', JSON.stringify(s.items || []));
-            localStorage.setItem('c-secur360-inventory-movements', JSON.stringify(s.movements || []));
-            localStorage.setItem('c-secur360-inventory-departments', JSON.stringify(s.departments || []));
-            localStorage.setItem('c-secur360-inventory-categories', JSON.stringify(s.categories || []));
-            localStorage.setItem('c-secur360-storage-units', JSON.stringify(s.storageUnits || []));
+            localStorage.setItem(invKey('c-secur360-inventory-items'), JSON.stringify(s.items || []));
+            localStorage.setItem(invKey('c-secur360-inventory-movements'), JSON.stringify(s.movements || []));
+            localStorage.setItem(invKey('c-secur360-inventory-departments'), JSON.stringify(s.departments || []));
+            localStorage.setItem(invKey('c-secur360-inventory-categories'), JSON.stringify(s.categories || []));
+            localStorage.setItem(invKey('c-secur360-storage-units'), JSON.stringify(s.storageUnits || []));
           } catch { /* quota */ }
           console.log('✅ Inventaire chargé depuis inventory_state (tenant ' + tenantId + ')');
           cloudLoadOk.current = true;                                    // chargement nuage REUSSI -> on peut ecrire
@@ -1838,7 +1839,7 @@ function AppContent() {
         // les anciens defauts locaux Succursale A/B/Entrepot). En cas d'ERREUR reseau, on a deja
         // fait `return` plus haut -> on garde l'existant.
         setDepartments(mapped);
-        saveLS('c-secur360-inventory-departments', mapped);
+        saveLS(invKey('c-secur360-inventory-departments'), mapped);
       } catch { /* admin indisponible -> on garde l'existant */ }
     })();
     return () => { alive = false; };
@@ -1846,27 +1847,27 @@ function AppContent() {
 
   // Sauvegarder automatiquement - TOUJOURS sauvegarder, même si vide
   useEffect(() => {
-    localStorage.setItem('c-secur360-inventory-items', JSON.stringify(items));
+    localStorage.setItem(invKey('c-secur360-inventory-items'), JSON.stringify(items));
   }, [items]);
 
   useEffect(() => {
-    localStorage.setItem('c-secur360-inventory-movements', JSON.stringify(movements));
+    localStorage.setItem(invKey('c-secur360-inventory-movements'), JSON.stringify(movements));
   }, [movements]);
 
   useEffect(() => {
-    localStorage.setItem('c-secur360-inventory-departments', JSON.stringify(departments));
+    localStorage.setItem(invKey('c-secur360-inventory-departments'), JSON.stringify(departments));
   }, [departments]);
 
   useEffect(() => {
-    localStorage.setItem('c-secur360-inventory-categories', JSON.stringify(categories));
+    localStorage.setItem(invKey('c-secur360-inventory-categories'), JSON.stringify(categories));
   }, [categories]);
 
   useEffect(() => {
-    localStorage.setItem('c-secur360-storage-units', JSON.stringify(storageUnits));
+    localStorage.setItem(invKey('c-secur360-storage-units'), JSON.stringify(storageUnits));
   }, [storageUnits]);
 
   useEffect(() => {
-    localStorage.setItem('c-secur360-global-inventory-mode', JSON.stringify(globalInventoryMode));
+    localStorage.setItem(invKey('c-secur360-global-inventory-mode'), JSON.stringify(globalInventoryMode));
   }, [globalInventoryMode]);
 
   // #55 — Enregistrement nuage débounced par tenant (instantané JSON). Persiste réellement
@@ -2395,7 +2396,7 @@ function AppContent() {
       onConfirm: () => {
         const ids = new Set(selectedItems);
         const deleted = items.filter(item => ids.has(item.id));
-        setItems(prev => { const next = prev.filter(item => !ids.has(item.id)); saveLS('c-secur360-inventory-items', next); return next; });
+        setItems(prev => { const next = prev.filter(item => !ids.has(item.id)); saveLS(invKey('c-secur360-inventory-items'), next); return next; });
         // TRACE D'AUDIT : une suppression laisse desormais un mouvement (qui/quand/combien) -> on sait
         // si un inventaire a fondu a cause d'une suppression et par qui.
         addMovement({
@@ -2537,15 +2538,15 @@ function AppContent() {
   // Gestion des départements (MAJ fonctionnelles ; localStorage calculé depuis prev ; source unique = snapshot)
   const addDepartment = (deptData) => {
     const newDept = { id: Date.now().toString(), ...deptData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-    setDepartments(prev => { const next = [...prev, newDept]; saveLS('c-secur360-departments', next); return next; });
+    setDepartments(prev => { const next = [...prev, newDept]; saveLS(invKey('c-secur360-departments'), next); return next; });
   };
 
   const updateDepartment = (deptId, updates) => {
-    setDepartments(prev => { const next = prev.map(dept => dept.id === deptId ? { ...dept, ...updates, updated_at: new Date().toISOString() } : dept); saveLS('c-secur360-departments', next); return next; });
+    setDepartments(prev => { const next = prev.map(dept => dept.id === deptId ? { ...dept, ...updates, updated_at: new Date().toISOString() } : dept); saveLS(invKey('c-secur360-departments'), next); return next; });
   };
 
   const deleteDepartment = (deptId) => {
-    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setDepartments(prev => { const next = prev.filter(dept => dept.id !== deptId); saveLS('c-secur360-departments', next); return next; }) });
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setDepartments(prev => { const next = prev.filter(dept => dept.id !== deptId); saveLS(invKey('c-secur360-departments'), next); return next; }) });
   };
 
   // Gestion des CODES INTERNES (raisons de mouvement sans projet) — persistés dans le snapshot.
@@ -2558,15 +2559,15 @@ function AppContent() {
   // Gestion des catégories
   const addCategory = (catData) => {
     const newCat = { id: Date.now().toString(), ...catData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-    setCategories(prev => { const next = [...prev, newCat]; saveLS('c-secur360-categories', next); return next; });
+    setCategories(prev => { const next = [...prev, newCat]; saveLS(invKey('c-secur360-categories'), next); return next; });
   };
 
   const updateCategory = (catId, updates) => {
-    setCategories(prev => { const next = prev.map(cat => cat.id === catId ? { ...cat, ...updates, updated_at: new Date().toISOString() } : cat); saveLS('c-secur360-categories', next); return next; });
+    setCategories(prev => { const next = prev.map(cat => cat.id === catId ? { ...cat, ...updates, updated_at: new Date().toISOString() } : cat); saveLS(invKey('c-secur360-categories'), next); return next; });
   };
 
   const deleteCategory = (catId) => {
-    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setCategories(prev => { const next = prev.filter(cat => cat.id !== catId); saveLS('c-secur360-categories', next); return next; }) });
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setCategories(prev => { const next = prev.filter(cat => cat.id !== catId); saveLS(invKey('c-secur360-categories'), next); return next; }) });
   };
 
   // Gestion des unités de stockage
@@ -2578,18 +2579,18 @@ function AppContent() {
       updated_at: new Date().toISOString()
     };
     setStorageUnits([...storageUnits, newUnit]);
-    localStorage.setItem('c-secur360-storage-units', JSON.stringify([...storageUnits, newUnit]));
+    localStorage.setItem(invKey('c-secur360-storage-units'), JSON.stringify([...storageUnits, newUnit]));
   };
 
   const updateStorageUnit = (unitId, updates) => {
     const updatedUnit = { ...storageUnits.find(u => u.id === unitId), ...updates, updated_at: new Date().toISOString() };
     const updatedUnits = storageUnits.map(unit => unit.id === unitId ? updatedUnit : unit);
     setStorageUnits(updatedUnits);
-    localStorage.setItem('c-secur360-storage-units', JSON.stringify(updatedUnits));
+    localStorage.setItem(invKey('c-secur360-storage-units'), JSON.stringify(updatedUnits));
   };
 
   const deleteStorageUnit = (unitId) => {
-    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setStorageUnits(prev => { const next = prev.filter(unit => unit.id !== unitId); saveLS('c-secur360-storage-units', next); return next; }) });
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setStorageUnits(prev => { const next = prev.filter(unit => unit.id !== unitId); saveLS(invKey('c-secur360-storage-units'), next); return next; }) });
   };
 
   const updateQuantity = (itemId, quantityChange, type = 'adjustment', reason = '', departmentCode = null, projectCode = null, user = null) => {
@@ -3138,11 +3139,11 @@ function AppContent() {
       });
       if (newCats.length) {
         const stamp = Date.now().toString(36);
-        setCategories(prev => { const next = [...prev, ...newCats.map((name, i) => ({ id: `ai-${stamp}-c${i}`, name, code: '', subcategories: [], created_at: new Date().toISOString() }))]; saveLS('c-secur360-categories', next); return next; });
+        setCategories(prev => { const next = [...prev, ...newCats.map((name, i) => ({ id: `ai-${stamp}-c${i}`, name, code: '', subcategories: [], created_at: new Date().toISOString() }))]; saveLS(invKey('c-secur360-categories'), next); return next; });
       }
       if (newDepts.length) {
         const stamp = Date.now().toString(36);
-        setDepartments(prev => { const next = [...prev, ...newDepts.map((name, i) => ({ id: `ai-${stamp}-d${i}`, name, code: '', locations: [], created_at: new Date().toISOString() }))]; saveLS('c-secur360-departments', next); return next; });
+        setDepartments(prev => { const next = [...prev, ...newDepts.map((name, i) => ({ id: `ai-${stamp}-d${i}`, name, code: '', locations: [], created_at: new Date().toISOString() }))]; saveLS(invKey('c-secur360-departments'), next); return next; });
       }
 
       // 5) Lignes validees. Adresse = EMPLACEMENT-TABLETTE-POSITION (auto-generee sous le
@@ -3328,7 +3329,7 @@ function AppContent() {
         }
       });
 
-      saveLS('c-secur360-inventory-items', next);
+      saveLS(invKey('c-secur360-inventory-items'), next);
       setItems(next);
     }
 
@@ -3362,7 +3363,7 @@ function AppContent() {
             empCreated++;
           }
         });
-        saveLS('c-secur360-storage-units', nextSU);
+        saveLS(invKey('c-secur360-storage-units'), nextSU);
         return nextSU;
       });
     }
@@ -5802,8 +5803,8 @@ function AppContent() {
       // Sauvegarder dans localStorage
       localStorage.setItem('app-currency', currency);
       localStorage.setItem('app-dateFormat', dateFormat);
-      localStorage.setItem('app-baseEbitda', baseEbitda.toString());
-      localStorage.setItem('app-targetEbitda', targetEbitda.toString());
+      localStorage.setItem(invKey('app-baseEbitda'), baseEbitda.toString());
+      localStorage.setItem(invKey('app-targetEbitda'), targetEbitda.toString());
       notify(t('messages.success.saved'));
     };
 

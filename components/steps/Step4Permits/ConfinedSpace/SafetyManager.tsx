@@ -2,8 +2,17 @@
 "use client";
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
+
+// Tenant courant (1er segment d'URL) — sert à NAMESPACER tout le stockage local des permis
+// (clés manuelles + store persisté) afin d'éviter qu'un permis d'un tenant soit visible sous
+// un autre dans le même navigateur (fuite inter-tenant côté client).
+function csTenant(): string {
+  try { return (typeof window !== 'undefined' && window.location.pathname.split('/').filter(Boolean)[0]) || 'local'; }
+  catch { return 'local'; }
+}
+function permitKey(num: string): string { return `${csTenant()}::permit_${num}`; }
 
 // =================== CONFIGURATION SUPABASE ROBUSTE ===================
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
@@ -1277,12 +1286,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
               console.log('✅ Permit sauvegardé silencieusement dans Supabase');
             } catch (supabaseError) {
               console.error('❌ Erreur Supabase, fallback localStorage:', supabaseError);
-              localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
+              localStorage.setItem(permitKey(permit.permit_number), JSON.stringify(permit));
             }
           } else {
             // Fallback localStorage
-            localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
-            localStorage.setItem('currentPermit', JSON.stringify(permit));
+            localStorage.setItem(permitKey(permit.permit_number), JSON.stringify(permit));
+            localStorage.setItem(`${csTenant()}::currentPermit`, JSON.stringify(permit));
             console.log('✅ Permit sauvegardé silencieusement dans localStorage');
           }
           
@@ -1347,12 +1356,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
               console.log('✅ Permit sauvegardé dans Supabase');
             } catch (supabaseError) {
               console.error('❌ Erreur Supabase, fallback vers localStorage:', supabaseError);
-              localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
+              localStorage.setItem(permitKey(permit.permit_number), JSON.stringify(permit));
             }
           } else {
             // Fallback localStorage
-            localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
-            localStorage.setItem('currentPermit', JSON.stringify(permit));
+            localStorage.setItem(permitKey(permit.permit_number), JSON.stringify(permit));
+            localStorage.setItem(`${csTenant()}::currentPermit`, JSON.stringify(permit));
             console.log('✅ Permit sauvegardé dans localStorage');
           }
           
@@ -1416,7 +1425,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           }
           
           // Fallback localStorage
-          const storedPermit = localStorage.getItem(`permit_${permitNumber}`);
+          const storedPermit = localStorage.getItem(permitKey(permitNumber));
           if (storedPermit) {
             const permit = JSON.parse(storedPermit);
             set({ 
@@ -1483,7 +1492,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
               // Chercher d'autres permis dans localStorage
               for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && key.startsWith('permit_') && key !== `permit_${currentPermit.permit_number}`) {
+                if (key && key.startsWith(`${csTenant()}::permit_`) && key !== permitKey(currentPermit.permit_number)) {
                   try {
                     const permit = JSON.parse(localStorage.getItem(key) || '');
                     if (permit && permit.permit_number) {
@@ -1870,6 +1879,13 @@ Accès: ${permitUrl}`;
     }),
     {
       name: 'safety-manager-storage',
+      // Stockage NAMESPACÉ par tenant : le permis persisté d'un tenant n'est plus lisible
+      // sous un autre tenant dans le même navigateur (anti-fuite inter-tenant).
+      storage: createJSONStorage(() => ({
+        getItem: (n: string) => { try { return localStorage.getItem(`${csTenant()}::${n}`); } catch { return null; } },
+        setItem: (n: string, v: string) => { try { localStorage.setItem(`${csTenant()}::${n}`, v); } catch { /* quota */ } },
+        removeItem: (n: string) => { try { localStorage.removeItem(`${csTenant()}::${n}`); } catch { /* noop */ } },
+      })),
       partialize: (state) => ({
         currentPermit: state.currentPermit,
         permits: state.permits,

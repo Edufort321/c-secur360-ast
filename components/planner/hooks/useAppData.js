@@ -8,6 +8,10 @@ import { useSupabaseSync } from './useSupabaseSync.js';
 import { supabase } from '@/components/planner/lib/supabaseClient.js';
 
 export function useAppData(tenant = null) {
+    // Clé localStorage des préférences/sous-traitants NAMESPACÉE par tenant : sinon les
+    // sous-traitants (données du tenant) d'une org resteraient visibles sous une autre dans
+    // le même navigateur (fuite inter-tenant côté client).
+    const navKey = `${STORAGE_CONFIG.KEY}::${tenant || 'local'}`;
     // ========== SYNC SUPABASE (Offline-first + Realtime) ==========
     const {
         data: jobs,
@@ -109,7 +113,7 @@ export function useAppData(tenant = null) {
     // Les données (jobs, personnel, etc.) sont gérées par useSupabaseSync
     useEffect(() => {
         try {
-            const savedData = localStorage.getItem(STORAGE_CONFIG.KEY);
+            const savedData = localStorage.getItem(navKey);
             if (savedData) {
                 const data = JSON.parse(savedData);
 
@@ -124,7 +128,7 @@ export function useAppData(tenant = null) {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [navKey]);
 
     // Sauvegarder uniquement les préférences locales (navigation)
     // Les données (jobs, personnel, etc.) sont auto-sauvegardées par useSupabaseSync
@@ -137,12 +141,12 @@ export function useAppData(tenant = null) {
         };
 
         try {
-            localStorage.setItem(STORAGE_CONFIG.KEY, JSON.stringify(dataToSave));
+            localStorage.setItem(navKey, JSON.stringify(dataToSave));
             setLastSaved(new Date());
         } catch (error) {
             console.error('Erreur lors de la sauvegarde:', error);
         }
-    }, [sousTraitants, selectedView, selectedDate]);
+    }, [sousTraitants, selectedView, selectedDate, navKey]);
 
     // Auto-sauvegarde avec délai
     useEffect(() => {
@@ -397,7 +401,7 @@ export function useAppData(tenant = null) {
     const resetData = useCallback(() => {
         // Clear local navigation preferences
         setSousTraitants([]);
-        localStorage.removeItem(STORAGE_CONFIG.KEY);
+        localStorage.removeItem(navKey);
 
         // Clear Supabase localStorage caches
         localStorage.removeItem('c-secur360-jobs');
