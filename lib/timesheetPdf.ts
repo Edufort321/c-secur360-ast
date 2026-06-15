@@ -59,7 +59,7 @@ export async function exportTimesheetPdf(opts: {
   const tx = await drawLogo(doc, logoUrl, M, y - 16);
   doc.setFontSize(16); doc.setTextColor(30);
   doc.text(tr('Feuille de temps', 'Timesheet'), tx, y);
-  doc.setFontSize(13); doc.setTextColor(124, 58, 237);
+  doc.setFontSize(13); doc.setTextColor(39, 125, 161); // accent DGA (#277da1)
   doc.text(sheet.employee_name || '—', tx, y + 18);
   doc.setFontSize(9); doc.setTextColor(120);
   const period = (sheet.period_start && sheet.period_end)
@@ -87,8 +87,8 @@ export async function exportTimesheetPdf(opts: {
     body: rows.length ? rows : [['—', '—', tr('Aucune heure saisie', 'No hours entered'), '', '', '', '']],
     foot: [[tr('Totaux', 'Totals'), '', '', h1(tReg), h1(tSup), h1(tMaj), h1(tKm)]],
     styles: { fontSize: 8.5, cellPadding: 4 },
-    headStyles: { fillColor: [124, 58, 237], textColor: 255 },
-    footStyles: { fillColor: [243, 240, 255], textColor: 30, fontStyle: 'bold' },
+    headStyles: { fillColor: [39, 125, 161], textColor: 255 },
+    footStyles: { fillColor: [232, 240, 245], textColor: 30, fontStyle: 'bold' },
     columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
     margin: { left: M, right: M },
   });
@@ -120,6 +120,22 @@ export async function exportTimesheetPdf(opts: {
     });
     y = (doc as any).lastAutoTable?.finalY ?? y;
   }
+
+  // ── Bloc signatures (employé + approbation client) — à faire signer ──
+  const Hp0 = doc.internal.pageSize.getHeight();
+  y += 30;
+  if (y > Hp0 - 110) { doc.addPage(); y = 60; }
+  const colW = (W - 2 * M - 30) / 2;
+  const sigCol = (x: number, titre: string, nom: string) => {
+    if (nom) { doc.setFontSize(9.5); doc.setTextColor(60); doc.text(nom, x, y + 12); }
+    doc.setDrawColor(150); doc.setLineWidth(0.6); doc.line(x, y + 28, x + colW, y + 28);
+    doc.setFontSize(8.5); doc.setTextColor(120); doc.text(titre, x, y + 40);
+    doc.text(tr('Date :', 'Date:'), x, y + 58); doc.line(x + 36, y + 56, x + colW, y + 56);
+  };
+  doc.setFont('helvetica', 'normal');
+  sigCol(M, tr("Signature de l'employé", 'Employee signature'), sheet.employee_name || '');
+  sigCol(M + colW + 30, tr('Signature du client (approbation)', 'Client signature (approval)'), '');
+  y += 70;
 
   // ── Pied de page ──
   const total = doc.getNumberOfPages();
