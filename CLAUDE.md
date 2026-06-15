@@ -16,7 +16,9 @@
 - **RLS obligatoire** sur toute nouvelle table (REVOKE anon sur données sensibles ; passer par routes serveur service_role).
 - Les routes/clients **service_role** ne sont JAMAIS appelés depuis un composant client.
 - **Jamais `git push` ni migration en prod sans l'accord d'Eric.**
-- **Migrations** : Eric/Benjamin les appliquent en **collant le SQL directement dans l'éditeur SQL du BON projet Supabase**, puis Run (PAS `supabase db push`). Les fichiers sont numérotés dans `supabase/migrations/` et **idempotents** (`IF NOT EXISTS`). Toujours **type-check `npx tsc --noEmit` avant de pousser** (transpileModule rate les erreurs de type qui cassent le build Vercel).
+- **Migrations** : Eric/Benjamin les appliquent en **collant le SQL directement dans l'éditeur SQL du BON projet Supabase**, puis Run (PAS `supabase db push`). Les fichiers sont numérotés dans `supabase/migrations/` et **idempotents** (`IF NOT EXISTS`). Toujours **type-check `npx tsc --noEmit` avant de pousser**.
+- **Journal des migrations** (depuis 177) : table `schema_migrations` par projet. **Chaque NOUVELLE migration prend le PROCHAIN numéro libre et finit par s'auto-enregistrer** : `insert into schema_migrations (version) values ('NNN') on conflict (version) do nothing;`. Pour savoir ce qui est appliqué : `select version from schema_migrations order by version;`.
+- ⚠️ **Ne PAS renuméroter les migrations déjà appliquées** (réécrit l'historique, casse la correspondance fichier↔base/journal). Nettoyage = baseline + archive, pas de renommage rétroactif.
 
 ## Synchronisation Git (jamais de zip)
 Le code de référence est sur **GitHub**, pas un zip. **Au début d'une session : `git pull`** pour partir de la dernière version, et `git push` pour envoyer (avec l'accord d'Eric). Nouveau portable = Étape 0 (installer + `gh auth login`) puis `git clone` une fois ; ensuite pull/push fonctionnent (le push exige l'auth GitHub).
