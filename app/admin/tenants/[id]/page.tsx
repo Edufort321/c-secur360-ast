@@ -69,9 +69,11 @@ export default function TenantManagePage() {
       const { data: t } = await supabase.from('tenants').select('*').eq('id', id).maybeSingle();
       setTenant(t); setSavedJson(profileKey(t));
       setVendorId(t?.vendor_id || '');
-      // Forfait IA depuis la table dédiée ai_budgets (clé = sous-domaine).
-      if (t?.subdomain) {
-        try { const { data: ab } = await supabase.from('ai_budgets').select('*').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); setAiRequested((ab as any).renewal_requested === true); } } catch { /* table absente */ }
+      // Forfait IA depuis la table dédiée ai_budgets. CLÉ = id CANONIQUE du tenant (comme
+      // lib/aiBudget.ts et /[tenant]/admin) — PAS le sous-domaine : pour un tenant où
+      // subdomain ≠ id, la clé subdomain désynchronisait le budget de la consommation runtime.
+      {
+        try { const { data: ab } = await supabase.from('ai_budgets').select('*').eq('tenant_id', id).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); setAiRequested((ab as any).renewal_requested === true); } } catch { /* table absente */ }
       }
       // Forfaits IA = source unique (table ai_plans, éditée dans /admin/price-management).
       try { const { data: ap } = await supabase.from('ai_plans').select('id, name_fr, price_cents, active, sort_order').eq('active', true).order('sort_order'); if (ap) setAiPlans(ap.map((p: any) => ({ id: p.id, name_fr: p.name_fr, price_cents: Number(p.price_cents) || 0 }))); } catch { /* migration 132 absente */ }
@@ -220,10 +222,10 @@ export default function TenantManagePage() {
       if (error && /max_sites/i.test(error.message || '')) {
         ({ error } = await supabase.from('tenants').update(base).eq('id', id));
       }
-      // Forfait IA : table DEDIEE ai_budgets (migration 131), clé = sous-domaine. Indépendant de `tenants`.
-      if (tenant.subdomain) {
+      // Forfait IA : table DEDIEE ai_budgets (migration 131), clé = id CANONIQUE (pas subdomain).
+      {
         // En enregistrant le forfait, on EFFACE toute demande d'ajustement en attente (Eric a ajusté).
-        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), tier_cents: Math.max(0, Number(aiTier) || 0), renewal_requested: false, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiRequested(false); } catch { /* table absente avant migration 131/135 */ }
+        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(id), tier_cents: Math.max(0, Number(aiTier) || 0), renewal_requested: false, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiRequested(false); } catch { /* table absente avant migration 131/135 */ }
       }
       if (error) throw error;
       setNotice('Profil enregistré ✓');
@@ -367,7 +369,7 @@ export default function TenantManagePage() {
                       ? 'Forfaits définis dans la Gestion des prix (carte « Gestion des prix des modules », table ai_plans).'
                       : <>Prix : <a href="/admin/price-management" className="underline">Gestion des prix</a>.</>} Budget réel = prix × 70 % (marge 30 %, jamais montrée au client). Consommé : {((aiUsed) / 100).toFixed(2)} $ / {((aiTier * 0.7) / 100).toFixed(2)} $. Le forfait s'utilise jusqu'à épuisement (pas de date).
                   </span>
-                  <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, renewal_requested: false, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); setAiRequested(false); if (aiTier > 0) { const today = new Date().toISOString().slice(0, 10); await supabase.from('tenant_transactions').insert({ tenant_id: id, type: 'ai_token', amount: aiTier / 100, status: 'completed', description: 'Renouvellement forfait Assistant IA', period_start: today }); } setNotice('Conso IA remise à 0 + facturation enregistrée + demande effacée ✓'); load(); } catch { setNotice('Erreur (migrations 131/135 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 + facturer le renouvellement</button>
+                  <button type="button" onClick={async () => { if (id) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(id), used_cents: 0, renewal_requested: false, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); setAiRequested(false); if (aiTier > 0) { const today = new Date().toISOString().slice(0, 10); await supabase.from('tenant_transactions').insert({ tenant_id: id, type: 'ai_token', amount: aiTier / 100, status: 'completed', description: 'Renouvellement forfait Assistant IA', period_start: today }); } setNotice('Conso IA remise à 0 + facturation enregistrée + demande effacée ✓'); load(); } catch { setNotice('Erreur (migrations 131/135 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 + facturer le renouvellement</button>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
                 <label className="block sm:col-span-2">
