@@ -1,8 +1,9 @@
 // Planificateur C-Secur360 — accès sécurisé par le portail hôte (middleware + entitlements).
 // Niveaux : administration/coordination/admin_paie → modification ; autres → consultation.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from './lib/supabaseClient';
+import { useSite } from '@/contexts/SiteContext';
 import { PlanificateurFinal } from './modules/Calendar/PlanificateurFinal.jsx';
 import { NotificationContainer } from './components/UI/NotificationContainer.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
@@ -21,6 +22,19 @@ const ROLES_SALAIRE = ['admin_paie', 'rh', 'direction', 'super_user'];
 function AppContent({ tenant = 'cerdia' }) {
     const appData = useAppDataWithSync(tenant);
     const { notifications, addNotification } = useNotifications();
+    const { siteId } = useSite(); // sélecteur de site global (en-tête hôte)
+
+    // Filtre par SITE : quand un site est choisi dans l'en-tête, on n'affiche que ses mandats (par
+    // succursaleEnCharge = nom). Le personnel/équipement restent complets (assignation inter-sites possible).
+    const siteName = useMemo(() => {
+        if (!siteId || siteId === 'all') return null;
+        const s = (appData.succursales || []).find(x => x.id === siteId);
+        return s ? (s.name || s.nom) : null;
+    }, [siteId, appData.succursales]);
+    const visibleJobs = useMemo(() => {
+        if (!siteName) return appData.jobs;
+        return (appData.jobs || []).filter(j => (j.succursaleEnCharge || j.succursale) === siteName);
+    }, [appData.jobs, siteName]);
 
     const [showCreateEvent, setShowCreateEvent]             = useState(false);
     const [showCongesManagement, setShowCongesManagement]   = useState(false);
@@ -110,7 +124,7 @@ function AppContent({ tenant = 'cerdia' }) {
             </div>
 
             <PlanificateurFinal
-                jobs={appData.jobs}
+                jobs={visibleJobs}
                 personnel={appData.personnel}
                 equipements={appData.equipements}
                 sousTraitants={appData.sousTraitants}
