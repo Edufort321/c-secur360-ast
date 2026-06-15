@@ -18,7 +18,11 @@
 - **Jamais `git push` ni migration en prod sans l'accord d'Eric.**
 - **Migrations** : Eric/Benjamin les appliquent en **collant le SQL directement dans l'éditeur SQL du BON projet Supabase**, puis Run (PAS `supabase db push`). Les fichiers sont numérotés dans `supabase/migrations/` et **idempotents** (`IF NOT EXISTS`). Toujours **type-check `npx tsc --noEmit` avant de pousser** (transpileModule rate les erreurs de type qui cassent le build Vercel).
 
+## Synchronisation Git (jamais de zip)
+Le code de référence est sur **GitHub**, pas un zip. **Au début d'une session : `git pull`** pour partir de la dernière version, et `git push` pour envoyer (avec l'accord d'Eric). Nouveau portable = Étape 0 (installer + `gh auth login`) puis `git clone` une fois ; ensuite pull/push fonctionnent (le push exige l'auth GitHub).
+
 ## Workflow à l'arrivée sur une tâche
+0. **`git pull`** d'abord (partir de la dernière version).
 1. Lire ce CLAUDE.md **+ la mémoire persistante** `C:\Users\ericd\.claude\projects\C--C-Secur360-c-secur360-ast-feat-modular-foundation\memory\MEMORY.md` (index + fichiers liés).
 2. Explorer la structure (`app/[tenant]/`, `supabase/migrations/`, `lib/`, `components/`) et comprendre l'existant AVANT d'écrire.
 3. Demander : « **DÉPANNAGE ou DÉVELOPPEMENT** ? », attendre la consigne précise, proposer un plan.
