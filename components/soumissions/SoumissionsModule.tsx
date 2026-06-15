@@ -815,6 +815,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         </div>
       ) : view === 'edit' ? (
         <div className="space-y-4">
+          {/* Soumission ACCEPTÉE = figée (telle qu'envoyée). On verrouille l'enregistrement. */}
+          {hdr.status === 'accepted' && (
+            <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+              🔒 {tr('Soumission acceptée — figée telle qu\'envoyée (lecture seule). Pour modifier, créez une révision.', 'Quote accepted — frozen as sent (read-only). To change it, create a revision.')}
+            </div>
+          )}
           {/* Gabarits de soumission : charger une structure récurrente (on n'ajuste que les prix) / enregistrer la courante */}
           {canEdit && (
             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm dark:border-indigo-800 dark:bg-indigo-900/20">
@@ -1309,7 +1315,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
           <div className="flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Retour', 'Back')}</button>
-            {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+            {canEdit && hdr.status !== 'accepted' && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
           </div>
         </div>
       ) : (

@@ -510,7 +510,11 @@ export async function accepterSoumission(tenant: string, soumissionId: string): 
     else break;
   }
   if (error) throw error;
-  await supabase.from('soumissions').update({ project_id: data.id, status: 'accepted', updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
+  // Snapshot FIGÉ « tel qu'envoyé » sur la soumission acceptée (traçabilité). Tolérant : si la
+  // colonne accepted_snapshot n'existe pas encore (migration 181), on réessaie sans elle.
+  const acceptedSnapshot = { ...estimate, accepted_at: new Date().toISOString(), numero: s.numero, revision: s.revision };
+  const upd1 = await supabase.from('soumissions').update({ project_id: data.id, status: 'accepted', accepted_snapshot: acceptedSnapshot, updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
+  if (upd1.error) await supabase.from('soumissions').update({ project_id: data.id, status: 'accepted', updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
 
   // Commission de vente : le vendeur (createur) touche sa commission si son poste l'active
   let commission: string | undefined;
