@@ -19,6 +19,7 @@ import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, getPeriods, upsertPeriod, setPeriodStatus, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode, type GLPeriod } from '@/lib/accounting';
 import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
 import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport } from '@/lib/agingReports';
+import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
@@ -5969,6 +5970,27 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   const [arAging, setArAging] = useState<AgingReport | null>(null);
   const [apAging, setApAging] = useState<AgingReport | null>(null);
   const reloadAging = () => Promise.all([getArAging(tenant), getApAging(tenant)]).then(([ar, ap]) => { setArAging(ar); setApAging(ap); }).catch(() => {});
+  // « Transmettre au comptable » : lien read-only (migration 184)
+  const [acctLink, setAcctLink] = useState<{ url: string; last_used_at?: string | null } | null>(null);
+  const [acctBusy, setAcctBusy] = useState(false);
+  const reloadAcctLink = () => fetch(`/api/accounting/accountant-link?tenant=${encodeURIComponent(tenant)}`).then(r => r.ok ? r.json() : null).then(d => setAcctLink(d?.link || null)).catch(() => {});
+  async function genAcctLink() {
+    setAcctBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/accounting/accountant-link', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenant }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Erreur');
+      await reloadAcctLink();
+      try { await navigator.clipboard.writeText(d.url); setNotice(tr('Lien comptable généré et copié.', 'Accountant link generated and copied.')); } catch { setNotice(tr('Lien comptable généré.', 'Accountant link generated.')); }
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setAcctBusy(false);
+  }
+  async function revokeAcctLink() {
+    setAcctBusy(true); setNotice(null);
+    try { await fetch(`/api/accounting/accountant-link?tenant=${encodeURIComponent(tenant)}`, { method: 'DELETE' }); setAcctLink(null); setNotice(tr('Lien comptable révoqué.', 'Accountant link revoked.')); }
+    catch (e: any) { setNotice(e?.message); }
+    setAcctBusy(false);
+  }
 
   // Saisie d'écriture
   const [neDate, setNeDate] = useState(new Date().toISOString().slice(0, 10));
@@ -5986,7 +6008,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     try {
       const [acc, tc, led, tb] = await Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant), getTrialBalance(tenant)]);
       setAccounts(acc); setTaxCodes(tc); setLedger(led); setBal(tb);
-      reloadPeriods(); reloadAging();
+      reloadPeriods(); reloadAging(); reloadAcctLink();
     } catch { setMigMissing(true); }
     setLoading(false);
   }
@@ -6243,6 +6265,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             </div>
           );
           return (
+            <div className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-gray-500">{tr('État des résultats', 'Income statement')}</h3>
@@ -6264,6 +6287,32 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
                   </div>
                 </div>
               </div>
+            </div>
+            {/* Transmettre au comptable — exports + lien read-only (migration 184) */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-1 text-sm font-bold">📤 {tr('Transmettre au comptable', 'Send to accountant')}</h3>
+              <p className="mb-3 text-xs text-gray-500">{tr('Export du grand livre validé (format standard importable) ou accès LECTURE SEULE en direct via un lien sécurisé. Aucune écriture, aucune autre donnée.', 'Export the posted ledger (standard importable format) or live READ-ONLY access via a secure link. No write access, no other data.')}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={async () => { try { await exportAcctJournalCsv(tenant); } catch (e: any) { setNotice(e?.message); } }} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Journal d’écritures (CSV)', 'Journal entries (CSV)')}</button>
+                <button onClick={async () => { try { await exportAcctTrialBalanceCsv(tenant); } catch (e: any) { setNotice(e?.message); } }} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Balance de vérification (CSV)', 'Trial balance (CSV)')}</button>
+              </div>
+              <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                {acctLink ? (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-gray-500">{tr('Lien comptable actif', 'Active accountant link')}{acctLink.last_used_at ? ` · ${tr('dernier accès', 'last access')} ${String(acctLink.last_used_at).slice(0, 10)}` : ` · ${tr('jamais utilisé', 'never used')}`}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input readOnly value={acctLink.url} onFocus={e => e.currentTarget.select()} className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 font-mono text-xs dark:border-gray-700 dark:bg-gray-900/40" />
+                      <button onClick={() => { navigator.clipboard?.writeText(acctLink.url); setNotice(tr('Lien copié.', 'Link copied.')); }} className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600">{tr('Copier', 'Copy')}</button>
+                      <a href={`${acctLink.url}&report=journal&format=csv`} className="rounded-lg border border-emerald-300 px-2 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300">{tr('Tester (CSV)', 'Test (CSV)')}</a>
+                      {canEdit && <button onClick={revokeAcctLink} disabled={acctBusy} className="rounded-lg border border-rose-300 px-2 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:border-rose-800 dark:text-rose-300">{tr('Révoquer', 'Revoke')}</button>}
+                    </div>
+                    <p className="text-xs text-gray-400">{tr('Le comptable ajoute &report=journal|trial et &format=csv|json. Régénérer invalide l’ancien lien.', 'The accountant appends &report=journal|trial and &format=csv|json. Regenerating invalidates the old link.')}</p>
+                  </div>
+                ) : (
+                  canEdit && <button onClick={genAcctLink} disabled={acctBusy} className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{acctBusy ? <Loader2 size={13} className="inline animate-spin" /> : tr('Générer un lien comptable read-only', 'Generate read-only accountant link')}</button>
+                )}
+              </div>
+            </div>
             </div>
           );
         })()
