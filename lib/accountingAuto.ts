@@ -22,6 +22,15 @@ async function ensureAccountMap(tenant: string): Promise<Record<string, string>>
   return m;
 }
 
+/** Compte GL (id) du compte de trésorerie assigné à la transaction (banque/carte de crédit), ou null. */
+async function treasuryGlAccountId(txn: any): Promise<string | null> {
+  if (!txn?.treasury_account_id) return null;
+  try {
+    const { data } = await supabase.from('treasury_accounts').select('gl_account_id').eq('id', txn.treasury_account_id).maybeSingle();
+    return (data as any)?.gl_account_id || null;
+  } catch { return null; } // table absente (migration 185) -> repli sur 1000
+}
+
 async function entryExists(tenant: string, sourceType: string, sourceId: string): Promise<boolean> {
   const { data } = await supabase.from('gl_entries').select('id')
     .eq('tenant_id', tenant).eq('source_type', sourceType).eq('source_id', sourceId).limit(1);
@@ -88,7 +97,9 @@ export async function postTransactionPurchase(
   if (txn.gl_entry_id) return 'skipped';
   if (await entryExists(tenant, 'transaction', txn.id)) return 'skipped';
   const m = accMap || await accountMap(tenant);
-  const payAcc = txn.payment_method === 'on_account' ? m['2000'] : m['1000'];
+  // Réglée comptant -> compte de trésorerie ASSIGNÉ (banque/carte de crédit), sinon 1000 ; à crédit -> Fournisseurs.
+  const treasury = txn.payment_method === 'on_account' ? null : await treasuryGlAccountId(txn);
+  const payAcc = txn.payment_method === 'on_account' ? m['2000'] : (treasury || m['1000']);
   if (!payAcc || !m['5300']) return 'no-accounts';
 
   const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [];
@@ -190,7 +201,9 @@ export async function postTransactionRevenue(
   if (txn.gl_entry_id) return 'skipped';
   if (await entryExists(tenant, 'transaction', txn.id)) return 'skipped';
   const m = accMap || await accountMap(tenant);
-  const recvAcc = txn.payment_method === 'on_account' ? m['1100'] : m['1000']; // Clients (AR) ou Banque
+  // Encaissé comptant -> compte de trésorerie ASSIGNÉ (banque), sinon 1000 ; à recevoir -> Clients (AR).
+  const treasury = txn.payment_method === 'on_account' ? null : await treasuryGlAccountId(txn);
+  const recvAcc = txn.payment_method === 'on_account' ? m['1100'] : (treasury || m['1000']);
   if (!recvAcc || !m['4000']) return 'no-accounts';
   const total = Number(txn.total) || 0;
   if (total <= 0) return 'skipped';

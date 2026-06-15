@@ -21,6 +21,7 @@ import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTrans
 import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport } from '@/lib/agingReports';
 import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
+import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
@@ -6666,8 +6667,12 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
 // ============================================================
 function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [view, setView] = useState<'list' | 'edit' | 'bank'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'bank' | 'accounts'>('list');
   const [txns, setTxns] = useState<Transaction[]>([]);
+  // Comptes de trésorerie (banque / carte de crédit) — migration 185
+  const [treasury, setTreasury] = useState<TreasuryAccount[]>([]);
+  const [newAcct, setNewAcct] = useState<{ name: string; kind: TreasuryKind; last4: string; institution: string }>({ name: '', kind: 'bank', last4: '', institution: '' });
+  const reloadTreasury = () => getTreasuryAccounts(tenant).then(setTreasury).catch(() => {});
   // Rapprochement bancaire (#35)
   const [bankLines, setBankLines] = useState<BankLine[]>([]);
   const [importText, setImportText] = useState('');
@@ -6722,12 +6727,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   // Export CSV des transactions filtrées (separateur ';' + BOM UTF-8 pour Excel FR ; pour
   // le comptable / rapprochement bancaire). Cote client, aucune dependance.
   function exportCsv() {
-    const head = ['No', 'Type', 'Date', 'Tiers', 'Province', 'Paiement', 'Sous-total', 'TPS', 'TVQ', 'PST', 'Total', 'Statut', 'GL'];
+    const acctName = (id?: string | null) => { const a = treasury.find(x => x.id === id); return a ? `${a.name}${a.last4 ? ' ••' + a.last4 : ''}` : ''; };
+    const head = ['No', 'Type', 'Date', 'Tiers', 'Province', 'Paiement', 'Compte', 'Sous-total', 'TPS', 'TVQ', 'PST', 'Total', 'Statut', 'GL', 'Piece jointe (URL)'];
     const rows = filteredTxns.map(t => [
       t.transaction_number || '', t.txn_type === 'revenue' ? 'Revenu' : 'Depense', t.txn_date || '',
-      t.vendor_name || '', t.province || '', t.payment_method === 'on_account' ? 'A credit' : 'Comptant',
+      t.vendor_name || '', t.province || '', t.payment_method === 'on_account' ? 'A credit' : 'Comptant', acctName(t.treasury_account_id),
       Number(t.subtotal) || 0, Number(t.gst_amount) || 0, Number(t.qst_amount) || 0, Number(t.pst_amount) || 0,
-      Number(t.total) || 0, t.status, t.gl_entry_id ? 'oui' : 'non',
+      Number(t.total) || 0, t.status, t.gl_entry_id ? 'oui' : 'non', t.receipt_url || '',
     ]);
     const csv = [head, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -6739,7 +6745,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
 
   async function load() {
     setLoading(true); setMigMissing(false);
-    try { const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]); setTxns(tx); setAccounts(acc); }
+    try { const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]); setTxns(tx); setAccounts(acc); reloadTreasury(); }
     catch { setMigMissing(true); }
     setLoading(false);
   }
@@ -6874,9 +6880,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         {view === 'list' && canEdit && <div className="flex flex-wrap gap-2">
           <button onClick={() => newTxn('revenue')} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Revenu', 'Revenue')}</button>
           <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
+          <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🏦 {tr('Mes comptes', 'My accounts')}</button>
           <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
         </div>}
-        {view === 'bank' && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
+        {(view === 'bank' || view === 'accounts') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
@@ -6892,7 +6899,18 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{isRevenue ? tr('Client', 'Client') : tr('Fournisseur', 'Vendor')}<input value={hdr.vendor_name || ''} onChange={e => setHdr(h => ({ ...h, vendor_name: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.txn_date} onChange={e => setHdr(h => ({ ...h, txn_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={hdr.province} onChange={e => setHdr(h => ({ ...h, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque', 'Cash / bank')}</option><option value="on_account">{isRevenue ? tr('À recevoir (client)', 'Receivable (client)') : tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque / carte', 'Cash / bank / card')}</option><option value="on_account">{isRevenue ? tr('À recevoir (client)', 'Receivable (client)') : tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
+            {hdr.payment_method === 'cash' && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Compte', 'Account')}
+                <div className="mt-1 flex items-center gap-1">
+                  <select value={hdr.treasury_account_id || ''} onChange={e => setHdr(h => ({ ...h, treasury_account_id: e.target.value || null }))} className={`w-full ${inputCls}`}>
+                    <option value="">{tr('— Banque par défaut —', '— Default bank —')}</option>
+                    {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{TREASURY_KIND_LABELS[a.kind][0] === 'Carte de crédit' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+                  </select>
+                  <button type="button" onClick={() => setView('accounts')} className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-600" title={tr('Gérer mes comptes', 'Manage my accounts')}>＋</button>
+                </div>
+              </label>
+            )}
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<input value={hdr.notes || ''} onChange={e => setHdr(h => ({ ...h, notes: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
           </div>
           <div className="mt-4 space-y-2">
@@ -6932,6 +6950,40 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : view === 'accounts' ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-1 text-sm font-bold">🏦 {tr('Mes comptes (banque, carte de crédit, caisse)', 'My accounts (bank, credit card, cash)')}</h3>
+            <p className="mb-3 text-xs text-gray-500">{tr('Créez vos comptes réels et assignez-les à vos transactions : chaque compte a son propre compte au grand livre (suivi du solde). Achat sur carte = passif carte ; sortie d’argent = actif banque.', 'Create your real accounts and assign them to transactions: each has its own ledger account (balance tracking). Card purchase = card liability; cash out = bank asset.')}</p>
+            {canEdit && (
+              <div className="grid gap-2 sm:grid-cols-5">
+                <input value={newAcct.name} onChange={e => setNewAcct(a => ({ ...a, name: e.target.value }))} placeholder={tr('Nom (ex. RBC chèque)', 'Name (e.g. RBC chequing)')} className={`sm:col-span-2 ${inputCls}`} />
+                <select value={newAcct.kind} onChange={e => setNewAcct(a => ({ ...a, kind: e.target.value as TreasuryKind }))} className={inputCls}>
+                  {(Object.keys(TREASURY_KIND_LABELS) as TreasuryKind[]).map(k => <option key={k} value={k}>{tr(TREASURY_KIND_LABELS[k][0], TREASURY_KIND_LABELS[k][1])}</option>)}
+                </select>
+                <input value={newAcct.last4} onChange={e => setNewAcct(a => ({ ...a, last4: e.target.value.replace(/\D/g, '').slice(0, 4) }))} placeholder={tr('4 derniers', 'Last 4')} className={inputCls} />
+                <button onClick={async () => { if (!newAcct.name.trim()) { setNotice(tr('Nom requis.', 'Name required.')); return; } const r = await createTreasuryAccount(tenant, newAcct); if (r.error) { setNotice(r.error); return; } setNewAcct({ name: '', kind: 'bank', last4: '', institution: '' }); reloadTreasury(); setNotice(tr('Compte créé.', 'Account created.')); }} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ {tr('Ajouter', 'Add')}</button>
+              </div>
+            )}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-500 dark:border-gray-700"><th className="px-4 py-2">{tr('Compte', 'Account')}</th><th className="px-3">{tr('Type', 'Type')}</th><th className="px-3">{tr('N°', '#')}</th><th className="px-3">{tr('Statut', 'Status')}</th><th className="px-3"></th></tr></thead>
+              <tbody>
+                {treasury.map(a => (
+                  <tr key={a.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-2 font-semibold">{a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}</td>
+                    <td className="px-3 text-gray-500">{tr(TREASURY_KIND_LABELS[a.kind][0], TREASURY_KIND_LABELS[a.kind][1])}</td>
+                    <td className="px-3 text-gray-500">{a.last4 ? `••${a.last4}` : '—'}</td>
+                    <td className="px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${a.active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{a.active !== false ? tr('Actif', 'Active') : tr('Inactif', 'Inactive')}</span></td>
+                    <td className="px-3 text-right">{canEdit && <button onClick={async () => { await setTreasuryActive(tenant, a.id!, a.active === false); reloadTreasury(); }} className="text-xs font-semibold text-blue-600 hover:underline">{a.active !== false ? tr('Désactiver', 'Deactivate') : tr('Réactiver', 'Reactivate')}</button>}</td>
+                  </tr>
+                ))}
+                {treasury.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{tr('Aucun compte. Ajoutez votre compte bancaire ou votre carte de crédit ci-dessus.', 'No account. Add your bank account or credit card above.')}</td></tr>}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : view === 'bank' ? (

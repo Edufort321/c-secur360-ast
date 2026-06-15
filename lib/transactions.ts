@@ -15,6 +15,7 @@ export type Transaction = {
   subtotal: number; gst_rate: number; qst_rate: number; pst_rate: number;
   gst_amount: number; qst_amount: number; pst_amount: number; total: number;
   receipt_url?: string | null; notes?: string | null; gl_entry_id?: string | null;
+  treasury_account_id?: string | null; // compte de tresorerie assigne (banque/carte) — migration 185
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -62,17 +63,22 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     tenant_id: tenant, transaction_number: header.transaction_number, vendor_id: header.vendor_id ?? null,
     vendor_name: header.vendor_name ?? null, txn_type: header.txn_type || 'expense', txn_date: header.txn_date, province: header.province,
     payment_method: header.payment_method, status: header.status, receipt_url: header.receipt_url ?? null,
-    notes: header.notes ?? null, gl_entry_id: header.gl_entry_id ?? null, ...totals, updated_at: new Date().toISOString(),
+    notes: header.notes ?? null, gl_entry_id: header.gl_entry_id ?? null,
+    treasury_account_id: header.treasury_account_id ?? null, ...totals, updated_at: new Date().toISOString(),
   };
+  // Si la colonne treasury_account_id n'existe pas encore (migration 185), on retire et on réessaie.
+  const isMissingTreasury = (e: any) => /treasury_account_id/i.test(String(e?.message || ''));
   let id = header.id;
   if (id) {
-    const { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
+    let { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
+    if (error && isMissingTreasury(error)) { const { treasury_account_id, ...p2 } = payload; ({ error } = await supabase.from('commerce_transactions').update(p2).eq('id', id)); }
     if (error) throw error;
     await supabase.from('commerce_transaction_items').delete().eq('tenant_id', tenant).eq('transaction_id', id);
   } else {
-    const { data, error } = await supabase.from('commerce_transactions').insert(payload).select('id').single();
+    let { data, error } = await supabase.from('commerce_transactions').insert(payload).select('id').single();
+    if (error && isMissingTreasury(error)) { const { treasury_account_id, ...p2 } = payload; ({ data, error } = await supabase.from('commerce_transactions').insert(p2).select('id').single()); }
     if (error) throw error;
-    id = data.id;
+    id = data?.id;
   }
   const rows = items.map((it, i) => ({
     tenant_id: tenant, transaction_id: id, description: it.description, account_code: it.account_code || '5300',
