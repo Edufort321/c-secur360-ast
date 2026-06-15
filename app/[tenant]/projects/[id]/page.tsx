@@ -88,11 +88,21 @@ export default function ProjectDetailPage() {
     return () => { active = false; };
   }, [id]);
 
-  // Coût réel agrégé depuis les feuilles de temps pointées sur ce projet (R6 : lien Timesheets -> Coûts)
+  // Coût réel agrégé (WIP) : calculé CÔTÉ SERVEUR (les salaires/taux ne transitent pas par le
+  // navigateur) + persiste projects.actuals. R6 : lien Timesheets -> Coûts. Repli client si la
+  // route échoue (ancien comportement).
   useEffect(() => {
     if (!id) { setTsActuals(null); return; }
     let active = true;
-    computeProjectActuals(tenant, id).then(a => { if (active) setTsActuals(a); }).catch(() => { if (active) setTsActuals(null); });
+    (async () => {
+      try {
+        const r = await fetch(`/api/projects/wip?project_id=${encodeURIComponent(id)}&tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+        if (r.ok) { const j = await r.json(); if (active) { setTsActuals(j.actuals); return; } }
+        throw new Error('wip route failed');
+      } catch {
+        try { const a = await computeProjectActuals(tenant, id); if (active) setTsActuals(a); } catch { if (active) setTsActuals(null); }
+      }
+    })();
     return () => { active = false; };
   }, [id, tenant]);
 
