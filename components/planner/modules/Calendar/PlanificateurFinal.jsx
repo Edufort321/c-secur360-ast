@@ -513,6 +513,16 @@ export function PlanificateurFinal({
 
         // Fonction pour obtenir l'horaire spécifique d'une ressource pour un job
         const getResourceSchedule = (job, resourceId, resourceType) => {
+            // Mode 24/24 : la ressource suit son QUART assigné (jour/soir/nuit) ; à défaut, journée
+            // complète en continu. (Corrige l'affichage « 1 h 8-9 » : en 24/24 on ne lit plus la
+            // fenêtre heureDebut/heureFin mais le quart de la ressource ou le continu.)
+            if (job.modeHoraire === '24h-24') {
+                const quartId = job.quartParRessource && job.quartParRessource[resourceId];
+                const quart = Array.isArray(job.quarts) ? job.quarts.find(q => q.id === quartId) : null;
+                if (quart) return { heureDebut: quart.debut, heureFin: quart.fin };
+                return { heureDebut: '00:00', heureFin: '23:59' }; // continu (aucun quart assigné)
+            }
+
             // Vérifier s'il y a un horaire personnalisé pour cette ressource
             const resourceKey = `${resourceType}_${resourceId}`;
             const customSchedule = job.horairesIndividuels && job.horairesIndividuels[resourceKey];
@@ -552,7 +562,10 @@ export function PlanificateurFinal({
             const [finH, finM] = heureFin.split(':').map(Number);
 
             const minutesDebut = debutH * 60 + debutM;
-            const minutesFin = finH * 60 + finM;
+            // Quart traversant minuit (ex. Nuit 22:00→06:00) : on borne la fin à 24h00 pour ce jour
+            // (la portion après minuit appartient au jour suivant) — évite une largeur négative.
+            let minutesFin = finH * 60 + finM;
+            if (minutesFin <= minutesDebut) minutesFin = 24 * 60;
 
             // Timeline de 6h (360min) à 20h (1200min) = 840 minutes
             const timelineStart = 0; // 0h00 (journée complète 24 h)
