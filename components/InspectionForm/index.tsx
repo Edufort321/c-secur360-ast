@@ -687,6 +687,12 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
       if (data) setExistingRow(data as InspectionRow);
     }
 
+    // Interconnexion Inspections→Équipement : une inspection 'retrait' met l'équipement HORS SERVICE ;
+    // 'conforme' le réactive. (status, migration 176 — repli silencieux si colonne absente.)
+    if (effectiveEquipmentId && (result === 'retrait' || result === 'conforme')) {
+      try { await supabase.from('equipment').update({ status: result === 'retrait' ? 'retrait' : 'active' }).eq('id', effectiveEquipmentId); } catch { /* colonne status absente */ }
+    }
+
     setSaving(false);
     savingRef.current = false;
     setSaveMsg(status === 'draft' ? 'Brouillon enregistré' : 'Inspection soumise');

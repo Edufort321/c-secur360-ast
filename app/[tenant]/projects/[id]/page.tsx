@@ -37,6 +37,7 @@ export default function ProjectDetailPage() {
   const [linkedAst,     setLinkedAst]     = useState<any[]>([]);
   const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
   const [linkedReports, setLinkedReports] = useState<any[]>([]);
+  const [linkedSoumissions, setLinkedSoumissions] = useState<any[]>([]);
   // Interconnexions conditionnées aux modules du tenant : on n'affiche un lien que si le module existe
   // (s'il ne prend pas AST/Permis/Rapports, on ne montre ni la section ni le bouton « Créer »).
   const ent = useEntitlements(tenant);
@@ -140,6 +141,19 @@ export default function ProjectDetailPage() {
       try {
         const r = await fetch(`/api/rapports/links?kind=for-project&id=${encodeURIComponent(id)}`, { credentials: 'include' });
         if (r.ok) { const j = await r.json(); if (active) setLinkedReports(j.reports || []); }
+      } catch { /* ignore */ }
+    })();
+    return () => { active = false; };
+  }, [id, tenant]);
+
+  // Soumissions liées à ce projet (soumissions.project_id). Interconnexion Projets↔Soumissions.
+  useEffect(() => {
+    if (!id) { setLinkedSoumissions([]); return; }
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase.from('soumissions').select('id, numero, status, total, created_at').eq('tenant_id', tenant).eq('project_id', id).order('created_at', { ascending: false });
+        if (active) setLinkedSoumissions(data || []);
       } catch { /* ignore */ }
     })();
     return () => { active = false; };
@@ -398,6 +412,25 @@ export default function ProjectDetailPage() {
                     </div>
                   )}
                 </div>}
+
+                {/* Soumissions liées (Projets↔Soumissions, par project_id) */}
+                {linkedSoumissions.length > 0 && (
+                  <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                    <h3 className="mb-2 text-sm font-bold">{tr('Soumissions liées', 'Linked quotes')} ({linkedSoumissions.length})</h3>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {linkedSoumissions.map(s => (
+                        <Link key={s.id} href={`/${tenant}/soumissions?s=${s.id}`}
+                          className="flex items-center justify-between py-2 text-sm hover:text-emerald-600">
+                          <span className="font-medium">{s.numero || s.id}</span>
+                          <span className="flex items-center gap-3 text-xs text-gray-500">
+                            {s.total != null && <span>{Number(s.total).toLocaleString('fr-CA')} $</span>}
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{s.status || 'draft'}</span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Matériel consommé (lien Inventaire — si le tenant a le module Inventaire) */}
                 {hasMod('inventory') && p.project_number && <ConsumeMaterialPanel tenant={tenant} projectNumber={p.project_number} />}
