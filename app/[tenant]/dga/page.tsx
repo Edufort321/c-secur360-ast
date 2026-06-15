@@ -661,7 +661,7 @@ function ListView(p: any) {
       {dossiers.length === 0 && !newT && <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucun transformateur. Clique « Nouveau transformateur ».', 'No transformer yet. Click "New transformer".')}</div>}
       {dossiers.length > 0 && filtered.length === 0 && <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucun résultat pour cette recherche.', 'No results for this search.')}</div>}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((d: Dossier) => {
           const last = d.id ? lastByDossier[d.id] : undefined;
           // État de GAZ : dernière mesure contenant des gaz (un relevé BPC/huile seul ne masque pas l'état ;
@@ -688,7 +688,7 @@ function ListView(p: any) {
           const parentName = parentSerie ? (dossiers.find((x: Dossier) => x.serie === parentSerie)?.ident || `SN ${parentSerie}`) : '';
           return (
             <div key={d.id} onClick={() => (delMode ? toggleSel(d.id!) : openFiche(d))}
-              className={`cursor-pointer rounded-2xl border bg-white p-3 transition dark:bg-gray-800 ${delMode && isSel ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200 dark:border-gray-700'}`}
+              className={`flex h-full cursor-pointer flex-col rounded-2xl border bg-white p-3 transition hover:shadow-md dark:bg-gray-800 ${delMode && isSel ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200 dark:border-gray-700'}`}
               style={due.code === 'overdue' && !delMode ? { borderLeft: '4px solid #e63946' } : undefined}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2">
@@ -718,7 +718,7 @@ function ListView(p: any) {
                   🧪 {pcb.label}{pcb.value != null ? ` · ${pcb.value} ppm` : ''}
                 </span>}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-500">
+              <div className="mt-auto flex items-center gap-2 border-t border-gray-100 pt-2 text-[11px] text-gray-500 dark:border-gray-700/60">
                 <span>{(measuresByDossier?.[d.id!]?.length) ?? 0} {tr('mesure(s)', 'measurement(s)')}</span>
                 {last && <span>· {tr('dern.', 'last')} {last.sample_date} · Duval {zone?.code}</span>}
                 {!delMode && <button className="ml-auto text-gray-300 hover:text-red-500" onClick={e => { e.stopPropagation(); onDeleteOne(d.id!); }}><Trash2 size={13} /></button>}

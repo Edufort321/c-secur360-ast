@@ -27,6 +27,13 @@ export function generateMetadata({ params }: { params: { tenant: string } }): Me
   }
 }
 
+// Portail multi-tenant authentifié : JAMAIS de cache de page. La validation du tenant et
+// l'état d'abonnement doivent être lus en DIRECT à chaque requête — sinon Next.js met en
+// cache le résultat « tenant introuvable » (notFound) et un client fraîchement créé reste
+// en 404 même après sa création. force-dynamic garantit que ça fonctionne à tout coup.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface TenantLayoutProps {
   children: ReactNode
   params: { tenant: string }
