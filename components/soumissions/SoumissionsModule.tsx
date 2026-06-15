@@ -362,6 +362,17 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     try { await navigator.clipboard.writeText(url); setNotice(tr('Lien de la soumission copié.', 'Quote link copied.')); }
     catch { window.prompt(tr('Copie ce lien :', 'Copy this link:'), url); }
   };
+  // Transmettre au client pour APPROBATION : lien tokenisé -> page publique où le client approuve/signe.
+  const transmitForApproval = async () => {
+    if (!hdr.id) { setNotice(tr("Enregistre la soumission d'abord.", 'Save the quote first.')); return; }
+    try {
+      const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'soumission', docId: hdr.id, docNumber: hdr.numero }) });
+      const j = await r.json();
+      if (!r.ok) { setNotice(j.error || tr('Erreur (migration 180 appliquée ?)', 'Error (migration 180 applied?)')); return; }
+      try { await navigator.clipboard.writeText(j.url); setNotice(tr("Lien d'approbation client copié : ", 'Client approval link copied: ') + j.url); }
+      catch { window.prompt(tr("Lien d'approbation client :", 'Client approval link:'), j.url); }
+    } catch { setNotice(tr('Erreur réseau.', 'Network error.')); }
+  };
 
   async function saveCat() {
     if (!catForm) return;
@@ -1119,6 +1130,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{pdfBusy ? '…' : tr('Exporter le PDF (sélection)', 'Export PDF (selection)')}</button>
+                {hdr.id && <button type="button" onClick={transmitForApproval} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">✍️ {tr('Transmettre au client (approbation)', 'Send to client (approval)')}</button>}
                 {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">🔗 {tr('Copier le lien', 'Copy link')}</button>}
               </div>
               <p className="mt-1 text-[11px] text-gray-400">{tr('Coche les sections à inclure (façon DGA). Logo du tenant en haut à gauche (sinon C-Secur360).', 'Tick the sections to include. Tenant logo top-left (else C-Secur360).')}</p>
