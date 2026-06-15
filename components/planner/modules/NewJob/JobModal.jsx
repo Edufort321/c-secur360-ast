@@ -3772,7 +3772,17 @@ export function JobModal({
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                         {L('Heures', 'Hours')}
                                                     </label>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{L('Saisies via « Heures totales » en haut. Total actuel : ', 'Set via “Total hours” above. Current total: ')}<strong>{formData.heuresPlanifiees || 0} h</strong></p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{L('Saisies via « Heures totales » en haut. Total actuel : ', 'Set via “Total hours” above. Current total: ')}<strong>{formData.heuresPlanifiees || 0} {L('h‑personne (effort)', 'man‑h (effort)')}</strong></p>
+                                                    {/* Durée CALENDAIRE (parallèle) : heures‑homme ÷ effectif. Ex. 48 h‑pers ÷ 4 = 12 h.
+                                                        N'altère PAS les heures‑homme (source de vérité paie) — affichage de clarté. */}
+                                                    <p className="mb-2 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                                                      {(() => {
+                                                        const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length) ? formData.personnel.length : (parseInt(formData.nombrePersonnelRequis) || 1));
+                                                        const total = parseFloat(formData.heuresPlanifiees) || 0;
+                                                        const wall = Math.round((total / nb) * 100) / 100;
+                                                        return L(`⏳ Durée calendaire ≈ ${wall} h  (${total} h‑pers ÷ ${nb} en parallèle)`, `⏳ Calendar duration ≈ ${wall} h  (${total} man‑h ÷ ${nb} parallel)`);
+                                                      })()}
+                                                    </p>
 
                                                     {/* Remplir auto depuis les étapes créées (heures + date de fin) */}
                                                     <button
