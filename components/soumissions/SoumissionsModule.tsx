@@ -246,10 +246,42 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     setSaving(true); setNotice(null);
     try {
       await saveSoumissionFull(tenant, { ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } }, items, cat);
+      autoSig.current = JSON.stringify({ hdr, items, clientName });
       setNotice(tr('Soumission enregistrée.', 'Quote saved.')); await load(); setView('list');
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSaving(false);
   }
+
+  // ── Auto-enregistrement BROUILLON : sauve SILENCIEUSEMENT (debounce + en quittant l'édition).
+  // Brouillon seulement (n'écrase jamais une soumission transmise/acceptée) ; capte l'id du nouveau
+  // brouillon pour éviter les doublons ; pas de brouillon vide.
+  const autoSig = useRef('');
+  const autoTimer = useRef<any>(null);
+  const autosaveDraft = async () => {
+    if (view !== 'edit') return;
+    if (hdr.status && hdr.status !== 'draft') return;
+    const hasContent = !!(clientName.trim() || items.some(it => (it.lignes || []).length || (it.name && it.name !== 'Item 1')));
+    if (!hdr.id && !hasContent) return;
+    const sig = JSON.stringify({ hdr, items, clientName });
+    if (sig === autoSig.current) return;
+    try {
+      const newId = await saveSoumissionFull(tenant, { ...hdr, status: hdr.status || 'draft', client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } }, items, cat);
+      autoSig.current = sig;
+      if (newId && !hdr.id) setHdr(h => ({ ...h, id: newId }));
+    } catch { /* silencieux */ }
+  };
+  const autosaveRef = useRef(autosaveDraft); autosaveRef.current = autosaveDraft;
+  // Debounce sur les changements pendant l'édition.
+  useEffect(() => {
+    if (view !== 'edit') return;
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    autoTimer.current = setTimeout(() => { autosaveRef.current(); }, 1800);
+    return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
+  }, [hdr, items, clientName, view]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Flush quand on QUITTE l'édition (bouton Retour) ou au démontage (on sort de la page).
+  const prevView = useRef(view);
+  useEffect(() => { if (prevView.current === 'edit' && view !== 'edit') autosaveRef.current(); prevView.current = view; }, [view]);
+  useEffect(() => () => { autosaveRef.current(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   async function revise(s: Soumission) {
     setNotice(null);
     try { await reviseSoumission(tenant, s.id!); setNotice(tr('Révision créée (originale archivée).', 'Revision created (original archived).')); await load(); }
