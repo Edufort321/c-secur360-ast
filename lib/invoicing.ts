@@ -131,6 +131,9 @@ export async function setInvoiceStatus(tenant: string, id: string, status: Invoi
   if (status === 'paid') patch.paid_date = paidDate || new Date().toISOString().slice(0, 10);
   const { error } = await supabase.from('commerce_invoices').update(patch).eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
+  // Comptabilité d'EXERCICE : constatation auto du revenu/encaissement au changement de statut (best-effort).
+  const { autoPostInvoiceStatus } = await import('@/lib/accountingAuto');
+  await autoPostInvoiceStatus(tenant, id, status);
 }
 
 export async function deleteInvoice(tenant: string, id: string) {

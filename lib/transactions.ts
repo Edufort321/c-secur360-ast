@@ -93,6 +93,9 @@ export async function saveTransaction(tenant: string, header: Transaction, items
 export async function setTransactionStatus(tenant: string, id: string, status: Transaction['status']) {
   const { error } = await supabase.from('commerce_transactions').update({ status, updated_at: new Date().toISOString() }).eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
+  // Comptabilité d'EXERCICE : constatation auto de la charge/paiement au changement de statut (best-effort).
+  const { autoPostTransactionStatus } = await import('@/lib/accountingAuto');
+  await autoPostTransactionStatus(tenant, id, status);
 }
 
 export async function deleteTransaction(tenant: string, id: string) {

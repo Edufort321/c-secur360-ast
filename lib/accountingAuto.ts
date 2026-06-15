@@ -168,6 +168,43 @@ export async function postInvoicePayment(tenant: string, inv: any, accMap?: Reco
   return 'created';
 }
 
+// ── POSTAGE ÉVÉNEMENTIEL (comptabilité d'EXERCICE / accrual) ─────────────────────────────────────
+// Déclenché automatiquement au changement de statut (depuis setInvoiceStatus / setTransactionStatus),
+// pour que « tout se centralise vers Comptabilité » sans clic. EXERCICE : le revenu est constaté à
+// l'ÉMISSION de la facture (DR Clients / CR Ventes), l'encaissement solde le compte Clients ; la charge
+// est constatée à la COMPTABILISATION de l'achat, le paiement solde le compte Fournisseurs.
+// BEST-EFFORT & idempotent : si le plan comptable n'est pas prêt, on n'empêche JAMAIS le changement de
+// statut (la « Synchroniser tout » reste le filet de rattrapage). Tout est avalé silencieusement.
+
+/** Auto-poste une facture selon son nouveau statut (exercice). 'sent'/'paid' -> vente ; 'paid' -> encaissement. */
+export async function autoPostInvoiceStatus(tenant: string, invoiceId: string, status: string): Promise<void> {
+  try {
+    if (status !== 'sent' && status !== 'paid') return; // brouillon/annulée : rien (contre-passation = manuelle)
+    const { data: inv } = await supabase.from('commerce_invoices').select('*').eq('tenant_id', tenant).eq('id', invoiceId).maybeSingle();
+    if (!inv) return;
+    const m = await accountMap(tenant);
+    if (!m['1100'] || !m['4000']) return; // plan comptable absent -> filet = bouton Synchroniser
+    await postInvoiceSale(tenant, inv, m);                       // constatation du revenu (idempotent)
+    if (status === 'paid') await postInvoicePayment(tenant, inv, m); // encaissement (idempotent)
+  } catch { /* best-effort : ne bloque jamais le changement de statut */ }
+}
+
+/** Auto-poste une transaction (achat) selon son statut (exercice). 'posted'/'paid' -> achat ; 'paid' à crédit -> paiement. */
+export async function autoPostTransactionStatus(tenant: string, transactionId: string, status: string): Promise<void> {
+  try {
+    if (status !== 'posted' && status !== 'paid') return;
+    const { data: txn } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).eq('id', transactionId).maybeSingle();
+    if (!txn || (txn.txn_type || 'expense') === 'revenue') return; // les revenus passent par les factures
+    const m = await accountMap(tenant);
+    if (!m['1000'] || !m['2000']) return;
+    if (!txn.gl_entry_id) {
+      const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);
+      await postTransactionPurchase(tenant, txn, its || [], m); // constatation de la charge (idempotent)
+    }
+    if (status === 'paid' && txn.payment_method === 'on_account') await postTransactionPayment(tenant, txn, m);
+  } catch { /* best-effort */ }
+}
+
 /**
  * SYNCHRONISATION GLOBALE vers le grand livre — tout remonte vers Comptabilité en un clic.
  * Poste les écritures MANQUANTES (idempotent) pour : paie (approuvées/payées), ventes de factures
