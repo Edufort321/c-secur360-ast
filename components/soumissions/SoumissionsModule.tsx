@@ -59,8 +59,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [inclCover, setInclCover] = useState(false);
   const [coverTo, setCoverTo] = useState('');     // nom du destinataire (éditable)
   const [coverDate, setCoverDate] = useState(''); // date (défaut aujourd'hui, éditable)
+  const [breakdownMode, setBreakdownMode] = useState<'detaille' | 'par_item' | 'global_desc'>('detaille');
+  const [inclTaux, setInclTaux] = useState(false); // joindre la liste de taux (catalogue)
   useEffect(() => { getSoumissionSettings(tenant).then(setCoverCfg).catch(() => {}); }, [tenant]);
-  useEffect(() => { setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville)); }, [coverCfg]);
+  useEffect(() => { setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville)); if (coverCfg?.default_breakdown_mode) setBreakdownMode(coverCfg.default_breakdown_mode); }, [coverCfg]);
   const [logoUrl, setLogoUrl] = useState('/c-secur360-logo.png');
   const [companyName, setCompanyName] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
@@ -304,7 +306,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         companyName,
       } : null;
       await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
-        cat, logoUrl, companyName, includeSummary: expSummary, coverLetter,
+        cat, logoUrl, companyName, includeSummary: expSummary, coverLetter, breakdownMode, includeTaux: inclTaux,
         itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,
       });
     } catch (e: any) { setNotice(tr('Export PDF impossible : ', 'PDF export failed: ') + (e?.message || e)); }
@@ -949,6 +951,22 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   </div>
                 )}
               </div>
+
+              {/* Ventilation des coûts + joindre la liste de taux */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                <label className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
+                  {tr('Ventilation', 'Breakdown')} :
+                  <select value={breakdownMode} onChange={e => setBreakdownMode(e.target.value as any)} className="rounded-lg border border-gray-300 px-2 py-1 dark:border-gray-600 dark:bg-gray-700">
+                    <option value="detaille">{tr('Tout détaillé', 'Fully detailed')}</option>
+                    <option value="par_item">{tr('Prix par item', 'Price per item')}</option>
+                    <option value="global_desc">{tr('Prix global + descriptions', 'Global price + descriptions')}</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
+                  <input type="checkbox" checked={inclTaux} onChange={e => setInclTaux(e.target.checked)} /> {tr('Joindre la liste de taux', 'Attach rate list')}
+                </label>
+              </div>
+
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{pdfBusy ? '…' : tr('Exporter le PDF (sélection)', 'Export PDF (selection)')}</button>
                 {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">🔗 {tr('Copier le lien', 'Copy link')}</button>}

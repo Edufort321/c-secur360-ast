@@ -26,6 +26,8 @@ export type SoumissionPdfOpts = {
   includeSummary?: boolean;          // inclure la page Sommaire
   itemIndexes?: number[] | null;     // items à inclure (null = tous)
   coverLetter?: CoverLetterData | null; // lettre de présentation (page jointe en tête)
+  breakdownMode?: 'detaille' | 'par_item' | 'global_desc'; // ventilation des coûts
+  includeTaux?: boolean;             // joindre une page « Liste de taux » (catalogue)
   filename?: string;
 };
 
@@ -65,15 +67,22 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   y += 30; line(M, R, y); y += 14;
 
   const wanted = (opts.itemIndexes && opts.itemIndexes.length) ? items.filter((_, i) => opts.itemIndexes!.includes(i)) : items;
+  // Mode de ventilation des coûts : 'detaille' (toutes les lignes + montants), 'par_item' (un prix
+  // par item, sans le détail), 'global_desc' (descriptions des items seulement, prix GLOBAL en bas).
+  const mode = opts.breakdownMode || 'detaille';
 
   // Détail par item
   for (const it of wanted) {
     ensure(40);
     doc.setTextColor(37, 99, 235); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
     doc.text(it.name || 'Item', M, y);
-    doc.setTextColor(17, 24, 39);
-    doc.text(money(computeItemTotal(it, cat)), R, y, { align: 'right' });
+    if (mode !== 'global_desc') { // prix par item masqué en mode « global »
+      doc.setTextColor(17, 24, 39);
+      doc.text(money(computeItemTotal(it, cat)), R, y, { align: 'right' });
+    }
     y += 8; line(M, R, y); y += 14;
+
+    if (mode === 'par_item') { y += 8; continue; } // pas de détail de lignes
 
     for (const c of CATS) {
       const ls = (it.lignes || []).filter(l => l.categorie === c);
@@ -84,6 +93,12 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
       for (const l of ls) {
         ensure(13);
         const desc = l.description || (CATEGORIE_LABELS[c] || '');
+        if (mode === 'global_desc') {
+          // Description seule (ni détail ni montant).
+          const dl = doc.splitTextToSize(String(desc), R - M - 8);
+          doc.text(dl, M + 8, y); y += 13 * Math.max(1, dl.length);
+          continue;
+        }
         let detail = '';
         if (c === 'mo_bureau' || c === 'mo_chantier') detail = `${l.tech || 1} × ${(Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0)} h`;
         else if (c === 'voyagement') detail = `${l.tech || 1} véh. × ${l.quantity || 0} km`;
@@ -113,6 +128,29 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
       y += 13;
     }
     y += 6;
+  }
+
+  // Liste de taux (catalogue) — page optionnelle, mise en page pro.
+  if (opts.includeTaux && cat) {
+    doc.addPage(); y = M; drawHeader();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(17, 24, 39);
+    doc.text('Liste de taux', M, y); y += 8; line(M, R, y); y += 16;
+    const row = (label: string, val: string) => {
+      ensure(14); doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(31, 41, 55);
+      doc.text(String(label), M, y); doc.text(String(val), R, y, { align: 'right' }); y += 14;
+    };
+    const head = (t: string) => { y += 6; ensure(16); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(107, 114, 128); doc.text(t, M, y); y += 12; };
+    row('Main-d’œuvre bureau', money(cat.taux_mo_bureau || 0) + ' /h');
+    row('Main-d’œuvre chantier', money(cat.taux_mo_chantier || 0) + ' /h');
+    row('Majoration temps supplémentaire', '× ' + (cat.mult_supp ?? 1.5));
+    row('Majoration temps double', '× ' + (cat.mult_maj ?? 2));
+    const ex: any = cat.extras || {};
+    const exLabels: Record<string, string> = { km: 'Kilométrage (/km)', sub_h5: 'Subsistance 5h', sub_h12: 'Subsistance 12h', sub_h15: 'Subsistance 15h', sub_nuitee: 'Subsistance nuitée', hebergement: 'Hébergement', fuel_price: 'Carburant (/L)' };
+    const exEntries = Object.keys(exLabels).filter(k => ex[k] != null);
+    if (exEntries.length) { head('AUTRES TAUX'); for (const k of exEntries) row(exLabels[k], money(Number(ex[k]) || 0)); }
+    const cr: any[] = (cat as any).custom_rates || [];
+    if (cr.length) { head('TAUX PERSONNALISÉS'); for (const r of cr) row(r.label || '—', money(Number(r.value) || 0)); }
+    y += 10;
   }
 
   // Total final (majoration appliquée)
