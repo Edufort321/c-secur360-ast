@@ -146,6 +146,7 @@ export interface IncidentReportFormProps {
   onSaved?: (id: string) => void;
   embedded?: boolean;
   siteId?: string | null; // site courant (sélecteur global) -> rattache le rapport au site
+  astPermitNumber?: string | null; // AST des travaux liés (interconnexion Accidents↔AST)
 }
 
 export interface DayCounter {
@@ -1197,6 +1198,7 @@ export default function IncidentReportForm({
   onSaved,
   embedded = false,
   siteId = null,
+  astPermitNumber = null,
 }: IncidentReportFormProps) {
   const { lang } = useLanguage();
   const tr = TR[lang];
@@ -1273,6 +1275,7 @@ export default function IncidentReportForm({
       province: data.province,
       status: submit ? 'submitted' : status,
       site_id: siteId ?? null,
+      ast_permit_number: astPermitNumber ?? null,
       data,
       updated_at: now,
       ...(submit ? { submitted_at: now } : {}),

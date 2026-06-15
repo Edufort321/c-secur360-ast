@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Loader2, AlertTriangle, ArrowLeft, FolderKanban } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useEntitlements } from '@/lib/entitlements';
 import { createClient } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 
@@ -25,6 +26,8 @@ export default function ASTDetailPage() {
   const { lang } = useLanguage();
   const tenant  = (params?.tenant as string) || 'demo';
   const id      = params?.id as string;
+  const ent = useEntitlements(tenant);
+  const hasIncidents = !ent || ent.includes('accidents') || ent.includes('near_miss');
 
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -95,14 +98,20 @@ export default function ASTDetailPage() {
   return (
     <>
       <PortalHeader tenant={tenant} />
-      {linkedProject && (
-        <div className="mx-auto max-w-5xl px-4 pt-3">
+      <div className="mx-auto max-w-5xl px-4 pt-3 flex flex-wrap items-center gap-2">
+        {linkedProject && (
           <Link href={`/${tenant}/projects/${linkedProject.id}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-100">
             <FolderKanban size={14} /> {linkedProject.project_number} — {linkedProject.title || 'Projet'}
           </Link>
-        </div>
-      )}
+        )}
+        {hasIncidents && (
+          <Link href={`/${tenant}/accidents?ast=${encodeURIComponent(id)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-sm font-semibold text-red-700 hover:bg-red-100">
+            <AlertTriangle size={14} /> {lang === 'en' ? 'Report an incident' : 'Déclarer un incident'}
+          </Link>
+        )}
+      </div>
       <ASTPermit
         tenant={tenant}
         language={lang}

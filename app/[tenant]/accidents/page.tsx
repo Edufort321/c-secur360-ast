@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -115,6 +115,8 @@ export default function AccidentsPage() {
   const router = useRouter();
   const tenant = params.tenant as string;
   const { siteId } = useSite(); // sélecteur de site global (en-tête)
+  const searchParams = useSearchParams();
+  const astParam = searchParams.get('ast'); // ?ast=<n° permis> -> incident lié à un AST
   const { lang } = useLanguage();
   const t = T[lang];
 
@@ -161,6 +163,8 @@ export default function AccidentsPage() {
     setDefaultType(type);
     setActiveReport('new');
   }
+  // Arrivée depuis un AST (« Déclarer un incident ») -> ouvre un nouveau rapport lié à cet AST.
+  useEffect(() => { if (astParam) setActiveReport('new'); }, [astParam]);
 
   const filtered = reports
     .filter(r => {
@@ -220,6 +224,7 @@ export default function AccidentsPage() {
           reportId={activeReport === 'new' ? undefined : activeReport}
           defaultType={defaultType}
           siteId={siteId !== 'all' ? siteId : null}
+          astPermitNumber={activeReport === 'new' ? astParam : null}
           onClose={() => { setActiveReport(null); load(); }}
           onSaved={() => {}}
           embedded
