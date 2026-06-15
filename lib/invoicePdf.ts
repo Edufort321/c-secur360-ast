@@ -1,6 +1,7 @@
 // Génération du PDF d'une facture de commerce (jsPDF + autotable).
 // Reprend le logo du tenant (company_settings.logo_url) ou le logo par défaut.
 import { getInvoiceItems, getCompanySettings, TAX_BY_PROVINCE, type Invoice } from '@/lib/invoicing';
+import { applyFooters } from '@/lib/pdf/letterhead';
 
 const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
@@ -43,8 +44,9 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
   y = Math.max(y + 56, ry) + 16;
 
   // Titre + métadonnées
-  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); doc.setTextColor(20);
+  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); doc.setTextColor(39, 125, 161); // accent DGA (#277da1)
   doc.text('FACTURE', M, y);
+  doc.setTextColor(20);
   doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
   doc.text(`N° ${invoice.invoice_number}`, M, y + 16);
   doc.text(`Date : ${invoice.issue_date}`, M, y + 30);
@@ -91,5 +93,7 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
   if (company?.bank_details) { doc.text(`Paiement : ${company.bank_details}`, M, ty); ty += 13; }
   if (invoice.notes) { doc.text(`Notes : ${invoice.notes}`, M, ty, { maxWidth: W - 2 * M }); }
 
+  // Pied de page numéroté (socle partagé — cohérent avec soumission/feuille de temps).
+  applyFooters(doc, `${company?.legal_name || 'C-Secur360'} · Facture ${invoice.invoice_number}`);
   doc.save(`Facture-${invoice.invoice_number}.pdf`);
 }
