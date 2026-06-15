@@ -306,6 +306,12 @@ export default function TimesheetDetailPage() {
     setEntries(prev => prev.map(e => e.id !== id ? e : { ...e, [k]: v }));
   }
 
+  // Auto-arrondi au 15 min (0,25 h) : arrondit toutes les heures saisies au quart d'heure le plus proche.
+  const round15 = (h: number) => Math.round((Number(h) || 0) * 4) / 4;
+  function roundAllTo15() {
+    setEntries(prev => prev.map(e => ({ ...e, hrs_regular: round15(e.hrs_regular), hrs_overtime: round15(e.hrs_overtime), hrs_premium: round15(e.hrs_premium) })));
+  }
+
   // Type d'une ligne : PROJET (avec sélecteur de projet) ou TÂCHE récurrente (catalogue admin).
   function setEntryType(id: string, type: 'project' | RecurringTask) {
     setEntries(prev => prev.map(e => {
@@ -739,6 +745,10 @@ export default function TimesheetDetailPage() {
                       ? <><CheckCircle2 size={12} className="text-emerald-500" /> Auto ✓ {lastAutoSaved.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}</>
                       : <>Auto-enregistrement activé</>}
                 </span>
+                <button onClick={roundAllTo15} title="Arrondir toutes les heures au 15 min (0,25 h)"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  ⏱ Arrondir 15 min
+                </button>
                 <button onClick={() => save(false)} disabled={saving}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
                   {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
