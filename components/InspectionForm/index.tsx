@@ -77,6 +77,7 @@ interface FormState {
   equipmentPhoto: string | null;
   equipmentPhotos: string[];
   inspectorName: string;
+  inspectorId: string | null;
   inspectionDate: string;
   inspectionFrequency: InspectionFrequency | null;
   inspectionShifts: string[];
@@ -110,6 +111,7 @@ const EMPTY_FORM: FormState = {
   equipmentPhoto: null,
   equipmentPhotos: [],
   inspectorName: '',
+  inspectorId: null,
   inspectionDate: new Date().toISOString().split('T')[0],
   inspectionFrequency: null,
   inspectionShifts: [],
@@ -386,7 +388,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
 
   // Annuaire des utilisateurs du tenant pour la recherche dynamique du champ « Inspecteur »
   // (saisie libre toujours permise). Chargé via route serveur sécurisée (jamais la clé anon).
-  const [members, setMembers] = useState<{ id: string; name: string; email: string; role: string }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; email: string; role: string; formation?: string }[]>([]);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const inspectorBoxRef = useRef<HTMLDivElement>(null);
 
@@ -409,9 +411,11 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
   useEffect(() => {
     if (!tenant) return;
     let alive = true;
-    fetch(`/api/tenant/members?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
-      .then(r => (r.ok ? r.json() : { members: [] }))
-      .then(j => { if (alive && Array.isArray(j.members)) setMembers(j.members); })
+    // Source = PERSONNEL RH (planner_personnel) + statut de formation, pour que inspector_id corresponde
+    // au FK et qu'on puisse signaler un inspecteur dont la formation est expirée (Inspections↔certifs).
+    fetch(`/api/permits/espace-clos/people?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { people: [] }))
+      .then(j => { if (alive && Array.isArray(j.people)) setMembers(j.people.map((p: any) => ({ id: p.id, name: p.name, email: p.email || '', role: p.role || '', formation: p.formation_status || '' }))); })
       .catch(() => {});
     return () => { alive = false; };
   }, [tenant]);
@@ -472,6 +476,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
           equipmentPhoto:     row.equipment_photo,
           equipmentPhotos:    row.equipment_photos ?? (row.equipment_photo ? [row.equipment_photo] : []),
           inspectorName:      row.inspector_name ?? '',
+          inspectorId:        (row as any).inspector_id ?? null,
           inspectionDate:     row.inspection_date ?? new Date().toISOString().split('T')[0],
           inspectionFrequency: row.inspection_frequency ?? null,
           results:            row.results ?? {},
@@ -624,6 +629,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
       equipment_photo:      form.equipmentPhotos[0] ?? form.equipmentPhoto ?? null,
       equipment_photos:     form.equipmentPhotos,
       inspector_name:       form.inspectorName || null,
+      inspector_id:         form.inspectorId || null,
       inspection_date:      form.inspectionDate || null,
       inspection_frequency: form.inspectionFrequency || null,
       status,
@@ -995,7 +1001,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
                       <input type="text" value={form.inspectorName} disabled={isReadOnly}
-                        onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value }))}
+                        onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value, inspectorId: null }))}
                         placeholder={I.inspectorPlaceholder}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
                     </div>
@@ -1112,7 +1118,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                   <div ref={inspectorBoxRef} className="relative">
                     <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
                     <input type="text" value={form.inspectorName} disabled={isReadOnly}
-                      onChange={e => { setForm(f => ({ ...f, inspectorName: e.target.value })); setInspectorOpen(true); }}
+                      onChange={e => { setForm(f => ({ ...f, inspectorName: e.target.value, inspectorId: null })); setInspectorOpen(true); }}
                       onFocus={() => setInspectorOpen(true)}
                       autoComplete="off"
                       placeholder={I.inspectorPlaceholder}
@@ -1128,9 +1134,9 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                           {matches.map(m => (
                             <li key={m.id}>
                               <button type="button"
-                                onClick={() => { setForm(f => ({ ...f, inspectorName: m.name })); setInspectorOpen(false); }}
+                                onClick={() => { setForm(f => ({ ...f, inspectorName: m.name, inspectorId: m.id })); setInspectorOpen(false); }}
                                 className="flex w-full flex-col items-start px-3 py-1.5 text-left text-sm hover:bg-teal-50 dark:hover:bg-teal-500/10">
-                                <span className="font-medium text-gray-800 dark:text-gray-100">{m.name}</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-100">{m.name}{m.formation === 'expired' ? ' ⚠ formation expirée' : m.formation === 'expiring' ? ' ⚠ bientôt' : ''}</span>
                                 {m.email && <span className="text-[11px] text-gray-400">{m.email}</span>}
                               </button>
                             </li>
