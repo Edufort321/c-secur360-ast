@@ -12,6 +12,7 @@ import { AnomaliesPanel } from '@/components/dashboard/AnomaliesPanel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
+import { getTenantPermissions, canViewModule, type PermMap } from '@/lib/permissions';
 import { supabase } from '@/lib/supabase';
 import { effectiveNextDate, worstCondition } from '@/lib/dga/fields';
 import { dueStatusByDate } from '@/lib/dga/catalog';
@@ -61,10 +62,23 @@ export default function ModulesPage() {
 
   // Modules activés : tenant hardcodé (cerdia) → liste fixe, sinon Supabase tenant_modules, sinon tout.
   const entitlements = useEntitlements(tenant);
-  const enabledKeys = ENABLED_BY_TENANT[tenant]
+  const baseKeys = ENABLED_BY_TENANT[tenant]
     ?? ((entitlements && entitlements.length > 0)
       ? entitlements
       : MODULES.map(m => m.key));
+
+  // Accès par NIVEAU (matrice de permissions) : on masque les modules sous le seuil « Voir » de la
+  // personne. SÛR : on ne filtre QUE si le niveau est connu (sinon on n'enlève rien -> aucun blocage
+  // accidentel). Le tenant gère les seuils dans Admin > Accès.
+  const [myLevel, setMyLevel] = useState<string | null>(null);
+  const [perms, setPerms] = useState<PermMap | null>(null);
+  useEffect(() => {
+    fetch('/api/me/access').then(r => r.ok ? r.json() : null).then(d => setMyLevel(d?.level ?? null)).catch(() => {});
+    getTenantPermissions(tenant).then(setPerms).catch(() => {});
+  }, [tenant]);
+  const enabledKeys = (perms && myLevel)
+    ? baseKeys.filter(k => canViewModule(perms, k, myLevel))
+    : baseKeys;
 
   useEffect(() => {
     let active = true;
