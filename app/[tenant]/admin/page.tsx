@@ -6441,6 +6441,22 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
               <button onClick={() => setInvView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${invView === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
             </div>
           </div>
+          {/* Comptes à recevoir : factures transmises non payées (+ en retard) + encaissé */}
+          {invoices.length > 0 && (() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const ar = invoices.filter(i => i.status === 'sent');
+            const arTotal = ar.reduce((s, i) => s + (Number(i.total) || 0), 0);
+            const overdue = ar.filter(i => i.due_date && i.due_date < todayStr);
+            const overdueTotal = overdue.reduce((s, i) => s + (Number(i.total) || 0), 0);
+            const paidTotal = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (Number(i.total) || 0), 0);
+            return (
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-lg bg-amber-50 px-3 py-1.5 font-semibold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{tr('À recevoir', 'Receivable')} : {mny(arTotal)} ({ar.length})</span>
+                {overdue.length > 0 && <span className="rounded-lg bg-rose-50 px-3 py-1.5 font-semibold text-rose-700 dark:bg-rose-900/20 dark:text-rose-300">⚠ {tr('En retard', 'Overdue')} : {mny(overdueTotal)} ({overdue.length})</span>}
+                <span className="rounded-lg bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{tr('Encaissé', 'Collected')} : {mny(paidTotal)}</span>
+              </div>
+            );
+          })()}
           {invoices.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune facture.', 'No invoice yet.')}</div>
           ) : (
