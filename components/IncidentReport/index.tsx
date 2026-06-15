@@ -1213,6 +1213,16 @@ export default function IncidentReportForm({
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const readOnly = status === 'submitted' || status === 'closed';
 
+  // Interconnexion Accidents↔Personnel : liste du personnel du tenant pour rattacher l'incident (personnel_id).
+  const [personnelList, setPersonnelList] = useState<{ id: string; name: string }[]>([]);
+  const [personnelId, setPersonnelId] = useState<string | null>(null);
+  useEffect(() => {
+    fetch(`/api/permits/espace-clos/people?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { people: [] }))
+      .then(j => setPersonnelList((j.people || []).map((p: any) => ({ id: p.id, name: p.name }))))
+      .catch(() => {});
+  }, [tenant]);
+
   useEffect(() => {
     if (reportId) loadReport(reportId);
   }, [reportId]);
@@ -1246,6 +1256,7 @@ export default function IncidentReportForm({
       setDbId(data.id);
       setReportNumber(data.report_number);
       setStatus(data.status);
+      setPersonnelId((data as any).personnel_id ?? null); // pré-remplit le rattachement personnel à l'édition
       // Fusionne avec les defauts pour que les rapports anterieurs aient les champs #81 (photos, causes, signatures).
       setReport({ ...emptyReport(data.incident_type, data.province), ...(data.data as Partial<IncidentReportData>) });
     }
@@ -1276,6 +1287,7 @@ export default function IncidentReportForm({
       status: submit ? 'submitted' : status,
       site_id: siteId ?? null,
       ast_permit_number: astPermitNumber ?? null,
+      personnel_id: personnelId ?? null,
       data,
       updated_at: now,
       ...(submit ? { submitted_at: now } : {}),
@@ -1329,7 +1341,7 @@ export default function IncidentReportForm({
 
   function renderSection() {
     switch (section) {
-      case 'general':     return <GeneralSection     report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'general':     return <GeneralSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} personnelId={personnelId} setPersonnelId={setPersonnelId} />;
       case 'location':    return <LocationSection    report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'persons':     return <PersonsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'body':        return <BodySection        report={report} onChange={updateReport} readOnly={readOnly} />;
@@ -1482,10 +1494,13 @@ export default function IncidentReportForm({
 
 // ── Section Components ────────────────────────────────────────────────────────
 
-function GeneralSection({ report, onChange, readOnly }: {
+function GeneralSection({ report, onChange, readOnly, personnelList, personnelId, setPersonnelId }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  personnelList: { id: string; name: string }[];
+  personnelId: string | null;
+  setPersonnelId: (v: string | null) => void;
 }) {
   const { lang } = useLanguage();
   const t = TR[lang];
@@ -1571,6 +1586,19 @@ function GeneralSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4">{t.g.responsible}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+          {personnelList.length > 0 && (
+            <Field label={lang === 'en' ? 'Staff member (links the file)' : 'Personne (personnel — relie au dossier)'}>
+              <select
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:bg-gray-50"
+                value={personnelId || ''}
+                disabled={readOnly}
+                onChange={e => { const pid = e.target.value || null; setPersonnelId(pid); const p = personnelList.find(x => x.id === pid); if (p && !report.reportedBy) up('reportedBy', p.name); }}
+              >
+                <option value="">{lang === 'en' ? '— none —' : '— aucun —'}</option>
+                {personnelList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </Field>
+          )}
           <Field label={t.g.name} required>
             <TextInput value={report.reportedBy} onChange={v => up('reportedBy', v)} placeholder={t.g.namePh} readOnly={readOnly} />
           </Field>

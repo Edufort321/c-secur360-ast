@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       status: it.status || 'draft',
       site_id: it.site_id ?? null, // rattachement au site (filtre par site)
       ast_permit_number: it.ast_permit_number ?? null, // interconnexion Accidents↔AST
+      personnel_id: it.personnel_id ?? null, // interconnexion Accidents↔Personnel
       data: it.data ?? {},
       updated_at: now,
     };
