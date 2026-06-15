@@ -9,8 +9,8 @@ import {
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
   computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo, hoursByCategory,
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
-  getSoumissionSettings,
-  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings,
+  getSoumissionSettings, saveSoumissionSettings,
+  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem,
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
 import { frLongDate } from '@/lib/pdf/letterhead';
@@ -61,8 +61,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [coverDate, setCoverDate] = useState(''); // date (défaut aujourd'hui, éditable)
   const [breakdownMode, setBreakdownMode] = useState<'detaille' | 'par_item' | 'global_desc'>('detaille');
   const [inclTaux, setInclTaux] = useState(false); // joindre la liste de taux (catalogue)
+  const [condSel, setCondSel] = useState<string[]>([]); // ids des conditions cochées à l'export
   useEffect(() => { getSoumissionSettings(tenant).then(setCoverCfg).catch(() => {}); }, [tenant]);
-  useEffect(() => { setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville)); if (coverCfg?.default_breakdown_mode) setBreakdownMode(coverCfg.default_breakdown_mode); }, [coverCfg]);
+  useEffect(() => {
+    setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville));
+    if (coverCfg?.default_breakdown_mode) setBreakdownMode(coverCfg.default_breakdown_mode);
+    setCondSel((coverCfg?.conditions || []).filter(c => c.defaut_coche).map(c => c.id));
+  }, [coverCfg]);
   const [logoUrl, setLogoUrl] = useState('/c-secur360-logo.png');
   const [companyName, setCompanyName] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
@@ -307,6 +312,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
       } : null;
       await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
         cat, logoUrl, companyName, includeSummary: expSummary, coverLetter, breakdownMode, includeTaux: inclTaux,
+        conditions: (coverCfg?.conditions || []).filter(c => condSel.includes(c.id)).map(c => ({ titre: c.titre, contenu: c.contenu })),
         itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,
       });
     } catch (e: any) { setNotice(tr('Export PDF impossible : ', 'PDF export failed: ') + (e?.message || e)); }
@@ -418,6 +424,58 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         )
       ) : sub === 'catalogue' ? (
         <div className="space-y-3">
+          {/* Paramètres de présentation : lettre de présentation + conditions & modalités (modèle tenant) */}
+          {canEdit && (() => {
+            const cl = coverCfg?.cover_letter || {};
+            const conds: ConditionItem[] = coverCfg?.conditions || [];
+            const base = (): SoumissionSettings => coverCfg || { cover_letter: {}, conditions: [], default_breakdown_mode: 'detaille' };
+            const setCL = (patch: any) => setCoverCfg({ ...base(), cover_letter: { ...(base().cover_letter || {}), ...patch } });
+            const setConds = (next: ConditionItem[]) => setCoverCfg({ ...base(), conditions: next });
+            const newId = () => 'c' + Math.random().toString(36).slice(2, 9);
+            const inp = 'w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700';
+            return (
+              <details className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <summary className="cursor-pointer text-sm font-bold text-gray-700 dark:text-gray-200">⚙️ {tr('Paramètres de présentation (lettre + conditions)', 'Presentation settings (cover letter + terms)')}</summary>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Ville (lettre)', 'City (letter)')}<input className={`mt-1 ${inp}`} value={cl.ville || ''} onChange={e => setCL({ ville: e.target.value })} placeholder="Sherbrooke" /></label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Signataire — nom', 'Signatory — name')}<input className={`mt-1 ${inp}`} value={cl.signataire_nom || ''} onChange={e => setCL({ signataire_nom: e.target.value })} /></label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Signataire — titre', 'Signatory — title')}<input className={`mt-1 ${inp}`} value={cl.signataire_titre || ''} onChange={e => setCL({ signataire_titre: e.target.value })} /></label>
+                </div>
+                <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('Corps (canevas de la lettre)', 'Body (letter template)')}<textarea rows={5} className={`mt-1 ${inp}`} value={cl.body || ''} onChange={e => setCL({ body: e.target.value })} /></label>
+                <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('Salutation', 'Closing')}<input className={`mt-1 ${inp}`} value={cl.salutation || ''} onChange={e => setCL({ salutation: e.target.value })} /></label>
+                <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('URL signature (image, optionnel)', 'Signature image URL (optional)')}<input className={`mt-1 ${inp}`} value={cl.signature_url || ''} onChange={e => setCL({ signature_url: e.target.value })} /></label>
+
+                <div className="mt-4 mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">📑 {tr('Conditions et modalités (cochables à l\'export)', 'Terms & conditions (selectable at export)')}</div>
+                <div className="space-y-2">
+                  {conds.map((c, i) => (
+                    <div key={c.id} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <input className={inp} value={c.titre} placeholder={tr('Titre', 'Title')} onChange={e => setConds(conds.map((x, k) => k === i ? { ...x, titre: e.target.value } : x))} />
+                        <label className="flex items-center gap-1 whitespace-nowrap text-[11px] text-gray-500"><input type="checkbox" checked={!!c.defaut_coche} onChange={e => setConds(conds.map((x, k) => k === i ? { ...x, defaut_coche: e.target.checked } : x))} /> {tr('par défaut', 'default')}</label>
+                        <button type="button" onClick={() => setConds(conds.filter((_, k) => k !== i))} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                      </div>
+                      <textarea rows={2} className={`mt-1 ${inp}`} value={c.contenu} placeholder={tr('Contenu', 'Content')} onChange={e => setConds(conds.map((x, k) => k === i ? { ...x, contenu: e.target.value } : x))} />
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setConds([...conds, { id: newId(), titre: '', contenu: '', defaut_coche: false }])} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">+ {tr('Ajouter une condition', 'Add a term')}</button>
+                </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Ventilation par défaut', 'Default breakdown')} :
+                    <select value={coverCfg?.default_breakdown_mode || 'detaille'} onChange={e => setCoverCfg({ ...base(), default_breakdown_mode: e.target.value as any })} className="ml-1 rounded-lg border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700">
+                      <option value="detaille">{tr('Tout détaillé', 'Fully detailed')}</option>
+                      <option value="par_item">{tr('Prix par item', 'Price per item')}</option>
+                      <option value="global_desc">{tr('Prix global + descriptions', 'Global + descriptions')}</option>
+                    </select>
+                  </label>
+                  <button type="button" onClick={async () => {
+                    const { error } = await saveSoumissionSettings(tenant, { cover_letter: coverCfg?.cover_letter, conditions: coverCfg?.conditions, default_breakdown_mode: coverCfg?.default_breakdown_mode });
+                    setNotice(error ? (tr('Erreur (migration 179 appliquée ?) : ', 'Error (migration 179 applied?): ') + (error.message || error)) : tr('Paramètres de présentation enregistrés.', 'Presentation settings saved.'));
+                  }} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Enregistrer les paramètres', 'Save settings')}</button>
+                </div>
+              </details>
+            );
+          })()}
           {catForm && (() => {
             const cf = catForm;
             const setLabel = (k: string, v: string) => setCatForm({ ...cf, labels: { ...(cf.labels || {}), [k]: v } });
@@ -966,6 +1024,20 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <input type="checkbox" checked={inclTaux} onChange={e => setInclTaux(e.target.checked)} /> {tr('Joindre la liste de taux', 'Attach rate list')}
                 </label>
               </div>
+
+              {/* Conditions & modalités à inclure (modèle tenant) */}
+              {(coverCfg?.conditions || []).length > 0 && (
+                <div className="mt-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <div className="mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">📑 {tr('Conditions et modalités à inclure', 'Terms & conditions to include')}</div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                    {(coverCfg?.conditions || []).map(c => (
+                      <label key={c.id} className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                        <input type="checkbox" checked={condSel.includes(c.id)} onChange={e => setCondSel(prev => e.target.checked ? [...prev, c.id] : prev.filter(x => x !== c.id))} /> {c.titre || tr('(sans titre)', '(untitled)')}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{pdfBusy ? '…' : tr('Exporter le PDF (sélection)', 'Export PDF (selection)')}</button>

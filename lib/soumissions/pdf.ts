@@ -28,6 +28,7 @@ export type SoumissionPdfOpts = {
   coverLetter?: CoverLetterData | null; // lettre de présentation (page jointe en tête)
   breakdownMode?: 'detaille' | 'par_item' | 'global_desc'; // ventilation des coûts
   includeTaux?: boolean;             // joindre une page « Liste de taux » (catalogue)
+  conditions?: { titre: string; contenu: string }[]; // conditions & modalités cochées (page jointe)
   filename?: string;
 };
 
@@ -160,6 +161,23 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(17, 24, 39);
   doc.text('TOTAL', M, y); doc.setTextColor(5, 150, 105); doc.text(money(final), R, y, { align: 'right' });
   y += 24;
+  // Conditions & Modalités (page jointe) — seulement celles cochées à l'export.
+  if (opts.conditions && opts.conditions.length) {
+    doc.addPage(); y = M; drawHeader();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(17, 24, 39);
+    doc.text('Conditions et modalités', M, y); y += 8; line(M, R, y); y += 16;
+    let n = 1;
+    for (const c of opts.conditions) {
+      ensure(28);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(17, 24, 39);
+      const tl = doc.splitTextToSize(`${n}. ${c.titre || ''}`, R - M); doc.text(tl, M, y); y += 13 * tl.length + 2;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(55, 65, 81);
+      const cl = doc.splitTextToSize(String(c.contenu || ''), R - M);
+      for (const ln of cl) { ensure(13); doc.text(ln, M, y); y += 13; }
+      y += 8; n++;
+    }
+  }
+
   // Pied de page numéroté sur toutes les pages (socle partagé).
   applyFooters(doc, `${opts.companyName || 'C-Secur360'} · ${s.numero || ''}`);
 
