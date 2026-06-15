@@ -25,7 +25,7 @@ import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
-import { getTaxSummary, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
+import { getTaxSummary, getTaxRemittance, declarationPeriod, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type TaxRemittance, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -6880,6 +6880,10 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
   const [tax, setTax] = useState<TaxSummary | null>(null);
   const [veh, setVeh] = useState<VehicleBenefit[]>([]);
   const [emp, setEmp] = useState<EmployeeFiscal[]>([]);
+  // Remise TPS/TVQ par période de déclaration (mensuel/trimestriel/annuel) — Revenu Québec.
+  const [freq, setFreq] = useState<'annuel' | 'trimestriel' | 'mensuel'>('annuel');
+  const [periodIdx, setPeriodIdx] = useState(1);
+  const [remit, setRemit] = useState<TaxRemittance | null>(null);
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -6896,13 +6900,24 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant, year]);
 
+  // Charge la remise de la période sélectionnée (annuel = année complète).
+  useEffect(() => {
+    if (freq === 'annuel') { setRemit(null); return; }
+    let active = true;
+    const p = declarationPeriod(freq, year, periodIdx);
+    getTaxRemittance(tenant, p.start, p.end, freq).then(r => { if (active) setRemit(r); }).catch(() => { if (active) setRemit(null); });
+    return () => { active = false; };
+  }, [tenant, year, freq, periodIdx]);
+
   const years = (() => { const y = new Date().getFullYear(); return [y + 1, y, y - 1, y - 2, y - 3]; })();
+  const period = declarationPeriod(freq, year, periodIdx);
+  const taxView: TaxSummary | null = freq === 'annuel' ? tax : remit;
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
   if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Rapports fiscaux indisponibles', 'Tax reports unavailable')}</p><p className="mt-1 text-sm">{tr('Exécutez les migrations 085 à 088 dans Supabase, puis rechargez.', 'Run migrations 085-088 in Supabase, then reload.')}</p></div>);
 
-  const csv = () => { try { sub === 'taxes' ? (tax && exportTaxSummaryCsv(tax)) : sub === 'vehicle' ? exportVehicleBenefitsCsv(veh, year) : exportT4RL1Csv(emp, year); } catch (e: any) { setNotice(e?.message); } };
-  const pdf = async () => { try { sub === 'taxes' ? (tax && await exportTaxSummaryPdf(tenant, tax)) : sub === 'vehicle' ? await exportVehicleBenefitsPdf(tenant, veh, year) : await exportT4RL1Pdf(tenant, emp, year); } catch (e: any) { setNotice(e?.message); } };
+  const csv = () => { try { sub === 'taxes' ? (taxView && exportTaxSummaryCsv(taxView)) : sub === 'vehicle' ? exportVehicleBenefitsCsv(veh, year) : exportT4RL1Csv(emp, year); } catch (e: any) { setNotice(e?.message); } };
+  const pdf = async () => { try { sub === 'taxes' ? (taxView && await exportTaxSummaryPdf(tenant, taxView)) : sub === 'vehicle' ? await exportVehicleBenefitsPdf(tenant, veh, year) : await exportT4RL1Pdf(tenant, emp, year); } catch (e: any) { setNotice(e?.message); } };
 
   return (
     <div className="space-y-4">
@@ -6916,6 +6931,20 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
           <select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800">
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
+          {sub === 'taxes' && (
+            <>
+              <select value={freq} onChange={e => { setFreq(e.target.value as any); setPeriodIdx(1); }} className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800" title={tr('Période de déclaration TPS/TVQ', 'GST/QST filing period')}>
+                <option value="annuel">{tr('Annuel', 'Annual')}</option>
+                <option value="trimestriel">{tr('Trimestriel', 'Quarterly')}</option>
+                <option value="mensuel">{tr('Mensuel', 'Monthly')}</option>
+              </select>
+              {freq !== 'annuel' && (
+                <select value={periodIdx} onChange={e => setPeriodIdx(Number(e.target.value))} className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800">
+                  {(freq === 'mensuel' ? Array.from({ length: 12 }, (_, i) => i + 1) : [1, 2, 3, 4]).map(i => <option key={i} value={i}>{declarationPeriod(freq, year, i).label}</option>)}
+                </select>
+              )}
+            </>
+          )}
           <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800">
             <span className="text-gray-400">{tr('Exporter', 'Export')}</span>
             <button onClick={csv} className="rounded-lg px-2 py-1 font-semibold text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">CSV</button>
@@ -6925,25 +6954,26 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
-      {sub === 'taxes' && tax && (
+      {sub === 'taxes' && taxView && (
         <div className="grid gap-4 sm:grid-cols-2">
+          <p className="sm:col-span-2 text-sm font-semibold text-gray-600 dark:text-gray-300">{tr('Période de déclaration', 'Filing period')} : {freq === 'annuel' ? String(year) : `${period.label} (${period.start} → ${period.end})`}</p>
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('TPS / TVH', 'GST / HST')}</div>
             <table className="w-full text-sm"><tbody>
-              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('Taxe perçue (à payer)', 'Collected (payable)')}</td><td className="px-4 py-2 text-right">{mny(tax.gstCollected)}</td></tr>
-              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('CTI à récupérer', 'ITC recoverable')}</td><td className="px-4 py-2 text-right">{mny(tax.gstItc)}</td></tr>
-              <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(tax.gstNet)}</td></tr>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('Taxe perçue (à payer)', 'Collected (payable)')}</td><td className="px-4 py-2 text-right">{mny(taxView.gstCollected)}</td></tr>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('CTI à récupérer', 'ITC recoverable')}</td><td className="px-4 py-2 text-right">{mny(taxView.gstItc)}</td></tr>
+              <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(taxView.gstNet)}</td></tr>
             </tbody></table>
           </div>
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('TVQ', 'QST')}</div>
             <table className="w-full text-sm"><tbody>
-              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('Taxe perçue (à payer)', 'Collected (payable)')}</td><td className="px-4 py-2 text-right">{mny(tax.qstCollected)}</td></tr>
-              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('RTI à récupérer', 'ITR recoverable')}</td><td className="px-4 py-2 text-right">{mny(tax.qstItc)}</td></tr>
-              <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(tax.qstNet)}</td></tr>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('Taxe perçue (à payer)', 'Collected (payable)')}</td><td className="px-4 py-2 text-right">{mny(taxView.qstCollected)}</td></tr>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('RTI à récupérer', 'ITR recoverable')}</td><td className="px-4 py-2 text-right">{mny(taxView.qstItc)}</td></tr>
+              <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(taxView.qstNet)}</td></tr>
             </tbody></table>
           </div>
-          <p className="sm:col-span-2 text-xs text-gray-400">{tr('Basé sur les comptes 2100/2110 (taxe perçue) et 1200/1210 (CTI/RTI) du grand livre pour l\'année sélectionnée.', 'Based on ledger accounts 2100/2110 (collected) and 1200/1210 (ITC/ITR) for the selected year.')}</p>
+          <p className="sm:col-span-2 text-xs text-gray-400">{tr('Comptes 2100/2110 (taxe perçue) et 1200/1210 (CTI/RTI) du grand livre, période sélectionnée. Déclaration obligatoire même si le net est 0.', 'Ledger accounts 2100/2110 (collected) and 1200/1210 (ITC/ITR), selected period. A return is required even if net is 0.')}</p>
         </div>
       )}
 

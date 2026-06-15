@@ -41,6 +41,47 @@ export async function getTaxSummary(tenant: string, year: number): Promise<TaxSu
   };
 }
 
+// Remise TPS/TVQ pour une PÉRIODE DE DÉCLARATION (mensuel / trimestriel / annuel) — Revenu Québec
+// exige une déclaration par période même si le net est 0. Lecture seule sur le GL (aucun postage).
+export type TaxRemittance = TaxSummary & { periodStart: string; periodEnd: string; frequency: string };
+export async function getTaxRemittance(tenant: string, periodStart: string, periodEnd: string, frequency = 'annuel'): Promise<TaxRemittance> {
+  const { data, error } = await supabase.from('gl_lines')
+    .select('debit, credit, gl_accounts!inner(code), gl_entries!inner(posted, tenant_id, entry_date)')
+    .eq('tenant_id', tenant);
+  if (error) throw error;
+  let gstCollected = 0, gstItc = 0, qstCollected = 0, qstItc = 0;
+  for (const l of (data || []) as any[]) {
+    const e = l.gl_entries; if (!e?.posted) continue;
+    const dt = String(e.entry_date || '').slice(0, 10);
+    if (dt < periodStart || dt > periodEnd) continue;
+    const code = (l.gl_accounts as any)?.code; const d = Number(l.debit) || 0, c = Number(l.credit) || 0;
+    if (code === '2100') gstCollected += c - d;
+    else if (code === '2110') qstCollected += c - d;
+    else if (code === '1200') gstItc += d - c;
+    else if (code === '1210') qstItc += d - c;
+  }
+  return {
+    year: Number(periodStart.slice(0, 4)) || new Date().getFullYear(), periodStart, periodEnd, frequency,
+    gstCollected, gstItc, gstNet: gstCollected - gstItc,
+    qstCollected, qstItc, qstNet: qstCollected - qstItc,
+  };
+}
+
+// Bornes d'une période de déclaration : 'mensuel' (mois), 'trimestriel' (Q1-Q4), 'annuel' (année).
+export function declarationPeriod(frequency: string, year: number, index: number): { start: string; end: string; label: string } {
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const eom = (y: number, m: number) => new Date(y, m, 0).getDate(); // m = 1..12
+  if (frequency === 'mensuel') {
+    const m = Math.min(12, Math.max(1, index));
+    return { start: `${year}-${p2(m)}-01`, end: `${year}-${p2(m)}-${p2(eom(year, m))}`, label: `${year}-${p2(m)}` };
+  }
+  if (frequency === 'trimestriel') {
+    const q = Math.min(4, Math.max(1, index)); const m0 = (q - 1) * 3 + 1;
+    return { start: `${year}-${p2(m0)}-01`, end: `${year}-${p2(m0 + 2)}-${p2(eom(year, m0 + 2))}`, label: `${year} T${q}` };
+  }
+  return { start: `${year}-01-01`, end: `${year}-12-31`, label: `${year}` };
+}
+
 // ── 2. AVANTAGE AUTOMOBILE (TP-41.C) ─────────────────────────────────────────
 export type VehicleBenefit = {
   unit_number: string; employee_name: string; regime: string; isSales: boolean;
