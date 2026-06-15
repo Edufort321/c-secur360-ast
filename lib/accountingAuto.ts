@@ -210,6 +210,23 @@ export async function postTransactionRevenue(
   return 'created';
 }
 
+/** Comptabilise MAINTENANT une transaction et renvoie un statut CLAIR (plus de silence). Auto-initialise
+ *  le plan comptable. Utilisé par le bouton Enregistrer pour dire à l'utilisateur si ça a remonté ou non. */
+export async function postTransactionNow(tenant: string, transactionId: string): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const { data: txn } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).eq('id', transactionId).maybeSingle();
+    if (!txn) return { ok: false, reason: 'Transaction introuvable.' };
+    if (txn.gl_entry_id) return { ok: true };
+    const m = await ensureAccountMap(tenant);
+    if (!m['1000'] || !m['4000']) return { ok: false, reason: 'Plan comptable non initialisé — exécutez la migration 085 dans Supabase (tables gl_* + seed), puis réessayez.' };
+    const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);
+    const isRev = (txn.txn_type || 'expense') === 'revenue';
+    const r = isRev ? await postTransactionRevenue(tenant, txn, its || [], m) : await postTransactionPurchase(tenant, txn, its || [], m);
+    if (r === 'no-accounts') return { ok: false, reason: 'Plan comptable non initialisé (comptes 1000/4000 manquants).' };
+    return { ok: true };
+  } catch (e: any) { return { ok: false, reason: e?.message || 'Erreur de comptabilisation.' }; }
+}
+
 // ── POSTAGE ÉVÉNEMENTIEL (comptabilité d'EXERCICE / accrual) ─────────────────────────────────────
 // Déclenché automatiquement au changement de statut (depuis setInvoiceStatus / setTransactionStatus),
 // pour que « tout se centralise vers Comptabilité » sans clic. EXERCICE : le revenu est constaté à

@@ -17,7 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, getPeriods, upsertPeriod, setPeriodStatus, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode, type GLPeriod } from '@/lib/accounting';
-import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionRevenue, postTransactionPayment } from '@/lib/accountingAuto';
+import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionRevenue, postTransactionPayment, postTransactionNow } from '@/lib/accountingAuto';
 import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport } from '@/lib/agingReports';
 import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
@@ -6769,10 +6769,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setSaving(true); setNotice(null);
     try {
       const id = await saveTransaction(tenant, hdr, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0));
-      // « Tout remonte vers comptabilité » (exercice) : on COMPTABILISE immédiatement au grand livre.
-      // setTransactionStatus('posted') déclenche le postage auto (revenu OU dépense), idempotent + best-effort.
-      try { await setTransactionStatus(tenant, id, 'posted'); } catch { /* le bouton « Comptabiliser » reste un filet */ }
-      setNotice(tr('Transaction enregistrée et comptabilisée.', 'Transaction saved and posted.')); await load(); setView('list');
+      // « Tout remonte vers comptabilité » (exercice) : on COMPTABILISE immédiatement au grand livre,
+      // avec un retour CLAIR (succès vs raison de l'échec — fini le silence).
+      await setTransactionStatus(tenant, id, 'posted').catch(() => {});
+      const pr = await postTransactionNow(tenant, id);
+      setNotice(pr.ok
+        ? tr('Transaction enregistrée et comptabilisée au grand livre.', 'Transaction saved and posted to the ledger.')
+        : `${tr('Transaction enregistrée, mais NON comptabilisée :', 'Saved, but NOT posted:')} ${pr.reason}`);
+      await load(); setView('list');
     }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSaving(false);
