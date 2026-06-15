@@ -476,34 +476,77 @@ export function PlanificateurFinal({
         });
     };
 
-    // Nouvelle fonction pour obtenir TOUS les jobs d'une cellule (pour timeline)
+    // Jour précédent (AAAA-MM-JJ) — pour le DÉBORDEMENT des quarts de nuit sur le matin du lendemain.
+    const prevDayStr = (s) => { const dt = new Date(`${s}T12:00:00`); dt.setDate(dt.getDate() - 1); return dt.toISOString().slice(0, 10); };
+    const isWeekendDay = (s) => { const wd = new Date(`${s}T12:00:00`).getDay(); return wd === 0 || wd === 6; };
+    const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+
+    // Horaire EFFECTIF d'une ressource pour un job à une date donnée (null si elle ne travaille pas ce
+    // jour). Mode 24/24 = quart assigné (jour/soir/nuit) sinon continu ; sinon horaire perso ; sinon global.
+    const getResourceScheduleFor = (job, resourceId, resourceType, dayString) => {
+        if (job.modeHoraire === '24h-24') {
+            const quartId = job.quartParRessource && job.quartParRessource[resourceId];
+            const quart = Array.isArray(job.quarts) ? job.quarts.find(q => q.id === quartId) : null;
+            if (quart) return { heureDebut: quart.debut, heureFin: quart.fin };
+            return { heureDebut: '00:00', heureFin: '23:59' }; // continu (aucun quart assigné)
+        }
+        const cs = job.horairesIndividuels && job.horairesIndividuels[`${resourceType}_${resourceId}`];
+        if (cs && cs.mode === 'personnalise') {
+            if (cs.joursTravailles && !cs.joursTravailles.includes(dayString)) return null; // ne travaille pas ce jour
+            return { heureDebut: cs.heureDebut || job.heureDebut || '08:00', heureFin: cs.heureFin || job.heureFin || '17:00' };
+        }
+        return { heureDebut: job.heureDebut || '08:00', heureFin: job.heureFin || '17:00' };
+    };
+
+    // Segments VISIBLES d'un job pour une ressource un jour donné (minutes depuis minuit, + `kind`).
+    //  - quart normal (fin > début) : [début, fin] les jours de DÉMARRAGE.
+    //  - quart de nuit (fin ≤ début, ex. 22:00→06:00) : SOIR [début, 24:00] le jour de démarrage +
+    //    MATIN [00:00, fin] le lendemain d'un jour de démarrage.
+    //  - FINS DE SEMAINE : si includeWeekendsInDuration est faux, AUCUN quart ne DÉMARRE un samedi/
+    //    dimanche (mais le matin qui déborde d'un vendredi soir reste visible le samedi).
+    const getJobDaySegmentsFor = (job, resourceId, resourceType, dayString) => {
+        const jobDebut = (job.dateDebut || '').split('T')[0];
+        const jobFin = job.dateFin ? job.dateFin.split('T')[0] : jobDebut;
+        const weekendsOk = !!job.includeWeekendsInDuration;
+        const isStartDay = (s) => {
+            if (!(s >= jobDebut && s <= jobFin)) return false;
+            if (!weekendsOk && isWeekendDay(s)) return false;          // pas de démarrage le week-end
+            return getResourceScheduleFor(job, resourceId, resourceType, s) != null;
+        };
+        const segs = [];
+        if (isStartDay(dayString)) {                                    // SOIR / journée : quart démarrant ce jour
+            const s = getResourceScheduleFor(job, resourceId, resourceType, dayString);
+            const mD = toMin(s.heureDebut), mF = toMin(s.heureFin);
+            if (mF > mD) segs.push({ start: mD, end: mF, kind: 'day' });
+            else segs.push({ start: mD, end: 24 * 60, kind: 'evening' }); // nuit -> portion du soir
+        }
+        const prev = prevDayStr(dayString);                            // MATIN : débordement d'un quart de nuit de la veille
+        if (isStartDay(prev)) {
+            const s = getResourceScheduleFor(job, resourceId, resourceType, prev);
+            const mD = toMin(s.heureDebut), mF = toMin(s.heureFin);
+            if (mF <= mD && mF > 0) segs.push({ start: 0, end: mF, kind: 'morning' });
+        }
+        return segs;
+    };
+
+    // TOUS les jobs visibles dans une cellule (timeline) : un job apparaît s'il a ≥1 segment ce jour
+    // (gère plage, quart de nuit débordant, exclusion des fins de semaine — source unique de vérité).
     const getAllJobsForCell = (resourceId, day, resourceType) => {
         const dayString = day.fullDate;
-
         if (resourceType === 'job') {
             const jobId = resourceId.replace('job-', '');
             const job = jobs.find(j => j.id.toString() === jobId);
             if (!job) return [];
-
-            const jobDateDebut = (job.dateDebut || '').split('T')[0];
-            const jobDateFin = job.dateFin ? (job.dateFin).split('T')[0] : jobDateDebut;
-
-            return dayString >= jobDateDebut && dayString <= jobDateFin ? [job] : [];
+            return getJobDaySegmentsFor(job, resourceId, resourceType, dayString).length ? [job] : [];
         }
-
         return jobs.filter(job => {
-            const jobDateDebut = (job.dateDebut || '').split('T')[0];
-            const jobDateFin = job.dateFin ? (job.dateFin).split('T')[0] : jobDateDebut;
-
-            // Vérifier si le jour actuel est dans la plage du job
-            if (!(dayString >= jobDateDebut && dayString <= jobDateFin)) return false;
-
-            if (resourceType === 'personnel') {
-                return job.personnel && job.personnel.includes(resourceId);
-            } else if (resourceType === 'equipement') {
-                return job.equipements && job.equipements.includes(resourceId);
-            }
-            return false;
+            const assigned = resourceType === 'personnel'
+                ? (job.personnel && job.personnel.includes(resourceId))
+                : resourceType === 'equipement'
+                    ? (job.equipements && job.equipements.includes(resourceId))
+                    : false;
+            if (!assigned) return false;
+            return getJobDaySegmentsFor(job, resourceId, resourceType, dayString).length > 0;
         });
     };
 
@@ -511,75 +554,15 @@ export function PlanificateurFinal({
     const TimelineCell = ({ jobs, day, onJobClick, resourceId, resourceType }) => {
         if (!jobs || jobs.length === 0) return null;
 
-        // Fonction pour obtenir l'horaire spécifique d'une ressource pour un job
-        const getResourceSchedule = (job, resourceId, resourceType) => {
-            // Mode 24/24 : la ressource suit son QUART assigné (jour/soir/nuit) ; à défaut, journée
-            // complète en continu. (Corrige l'affichage « 1 h 8-9 » : en 24/24 on ne lit plus la
-            // fenêtre heureDebut/heureFin mais le quart de la ressource ou le continu.)
-            if (job.modeHoraire === '24h-24') {
-                const quartId = job.quartParRessource && job.quartParRessource[resourceId];
-                const quart = Array.isArray(job.quarts) ? job.quarts.find(q => q.id === quartId) : null;
-                if (quart) return { heureDebut: quart.debut, heureFin: quart.fin };
-                return { heureDebut: '00:00', heureFin: '23:59' }; // continu (aucun quart assigné)
-            }
+        // Délégué (logique unique au niveau composant — voir getJobDaySegmentsFor).
+        const getDaySegments = (job) => getJobDaySegmentsFor(job, resourceId, resourceType, day.fullDate);
 
-            // Vérifier s'il y a un horaire personnalisé pour cette ressource
-            const resourceKey = `${resourceType}_${resourceId}`;
-            const customSchedule = job.horairesIndividuels && job.horairesIndividuels[resourceKey];
-
-            if (customSchedule && customSchedule.mode === 'personnalise') {
-                // Vérifier si cette ressource travaille ce jour-là
-                const dayString = day.fullDate;
-                if (customSchedule.joursTravailles && !customSchedule.joursTravailles.includes(dayString)) {
-                    return null; // La ressource ne travaille pas ce jour
-                }
-
-                return {
-                    heureDebut: customSchedule.heureDebut || job.heureDebut || '08:00',
-                    heureFin: customSchedule.heureFin || job.heureFin || '17:00'
-                };
-            }
-
-            // Utiliser l'horaire global de l'événement
-            return {
-                heureDebut: job.heureDebut || '08:00',
-                heureFin: job.heureFin || '17:00'
-            };
-        };
-
-        // Fonction pour calculer la position et largeur d'un job dans la timeline
-        const getJobTimelineStyle = (job) => {
-            const schedule = getResourceSchedule(job, resourceId, resourceType);
-
-            // Si la ressource ne travaille pas ce jour, ne pas afficher
-            if (!schedule) return null;
-
-            const heureDebut = schedule.heureDebut;
-            const heureFin = schedule.heureFin;
-
-            // Convertir les heures en minutes depuis minuit
-            const [debutH, debutM] = heureDebut.split(':').map(Number);
-            const [finH, finM] = heureFin.split(':').map(Number);
-
-            const minutesDebut = debutH * 60 + debutM;
-            // Quart traversant minuit (ex. Nuit 22:00→06:00) : on borne la fin à 24h00 pour ce jour
-            // (la portion après minuit appartient au jour suivant) — évite une largeur négative.
-            let minutesFin = finH * 60 + finM;
-            if (minutesFin <= minutesDebut) minutesFin = 24 * 60;
-
-            // Timeline de 6h (360min) à 20h (1200min) = 840 minutes
-            const timelineStart = 0; // 0h00 (journée complète 24 h)
-            const timelineEnd = 24 * 60;   // 24h00
-            const timelineRange = timelineEnd - timelineStart;
-
-            // Calculer pourcentages
-            const left = Math.max(0, ((minutesDebut - timelineStart) / timelineRange) * 100);
-            const width = Math.min(100 - left, ((minutesFin - minutesDebut) / timelineRange) * 100);
-
-            return {
-                left: `${left}%`,
-                width: `${Math.max(8, width)}%` // Minimum 8% de largeur pour visibilité
-            };
+        // Convertit un segment {start,end} (minutes depuis minuit) en position/largeur sur 24 h.
+        const segToStyle = (seg) => {
+            const range = 24 * 60;
+            const left = Math.max(0, (seg.start / range) * 100);
+            const width = Math.min(100 - left, ((seg.end - seg.start) / range) * 100);
+            return { left: `${left}%`, width: `${Math.max(8, width)}%` };
         };
 
         // Fonction pour détecter les conflits d'horaires et organiser en lignes
@@ -709,14 +692,17 @@ export function PlanificateurFinal({
                         {layer.map(({ job }, jobIndex) => {
                             const aControler = jobNeedsControl(job);
                             if (controleOnly && !aControler) return null; // R9 : filtre « à contrôler »
-                            const timelineStyle = getJobTimelineStyle(job);
                             const colorStyle = getJobStyle(job);
-                            const heureDebut = job.heureDebut || '08:00';
-                            const heureFin = job.heureFin || '17:00';
-
-                            return (
+                            // Un job peut avoir PLUSIEURS segments le même jour (quart de nuit : soir + matin
+                            // de la veille) -> on rend une boîte par segment.
+                            const segs = getDaySegments(job);
+                            if (!segs.length) return null;
+                            return segs.map((seg, si) => {
+                                const timelineStyle = segToStyle(seg);
+                                const isMorningSpill = seg.kind === 'morning';
+                                return (
                                 <div
-                                    key={`${job.id}-${layerIndex}-${jobIndex}`}
+                                    key={`${job.id}-${layerIndex}-${jobIndex}-${si}`}
                                     className={`absolute h-full rounded border shadow-sm px-1 cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-white/80 hover:z-20 flex flex-col justify-center overflow-hidden ${aControler ? 'border-amber-400 ring-1 ring-amber-400' : 'border-white/40'}`}
                                     style={{
                                         left: timelineStyle.left,
@@ -729,20 +715,21 @@ export function PlanificateurFinal({
                                         e.stopPropagation();
                                         onJobClick(job);
                                     }}
-                                    title={`${job.numeroJob || `Job-${job.id}`}${job.client ? ` — ${job.client}` : ''}${aControler ? `\n⚠ ${jobControlReasons(job).join(' · ')}` : ''}`}
+                                    title={`${job.numeroJob || `Job-${job.id}`}${job.client ? ` — ${job.client}` : ''}${isMorningSpill ? `\n${tr('↳ Fin du quart de nuit (00:00→fin)', '↳ End of night shift (00:00→end)')}` : ''}${aControler ? `\n⚠ ${jobControlReasons(job).join(' · ')}` : ''}`}
                                 >
                                     {aControler && <span className="absolute right-0 top-0 text-[10px] leading-none" title={jobControlReasons(job).join(' · ')}>⚠️</span>}
                                     {/* Contenu de l'événement (tronqué si étroit) */}
                                     <div className="text-center leading-tight overflow-hidden">
                                         <div className="font-bold truncate">
-                                            {job.numeroJob || `Job-${job.id}`}
+                                            {isMorningSpill && '↳ '}{job.numeroJob || `Job-${job.id}`}
                                         </div>
                                         <div className="truncate opacity-90">
                                             {job.client}
                                         </div>
                                     </div>
                                 </div>
-                            );
+                                );
+                            });
                         })}
                     </div>
                 ))}
