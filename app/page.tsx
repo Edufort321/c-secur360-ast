@@ -194,7 +194,32 @@ export default function LandingPage() {
   const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
   const [aiPlans, setAiPlans] = useState<{ id: string; name_fr: string; name_en: string; price_cents: number; note_fr: string | null; note_en: string | null }[]>([])
   const [selectedModule, setSelectedModule] = useState<string | null>(null)
+  const [orgError, setOrgError] = useState('')
+  const [orgBusy, setOrgBusy] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Accès portail : on résout l'organisation côté serveur (nom, sous-domaine ou id)
+  // vers l'id canonique du tenant, puis on redirige vers /{id}/login. Évite le 404 brut
+  // quand la saisie ne correspond pas exactement à l'identifiant du tenant.
+  const goToOrg = useCallback(async () => {
+    const q = clientSubdomain.trim()
+    if (!q || orgBusy) return
+    setOrgBusy(true); setOrgError('')
+    try {
+      const res = await fetch(`/api/public/resolve-org?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      if (res.ok && data.id) {
+        setMenuOpen(false)
+        window.location.href = `/${data.id}/login`
+        return
+      }
+      setOrgError(data.error || (lang === 'fr' ? 'Organisation introuvable' : 'Organization not found'))
+    } catch {
+      setOrgError(lang === 'fr' ? 'Erreur réseau, réessayez.' : 'Network error, please retry.')
+    } finally {
+      setOrgBusy(false)
+    }
+  }, [clientSubdomain, orgBusy, lang])
 
   const modules = fr ? MODULES_FR : MODULES_EN
   const heroFallback = fr ? HERO_FALLBACK_FR : HERO_FALLBACK_EN
@@ -324,20 +349,21 @@ export default function LandingPage() {
         {menuOpen && (
           <div className="bg-[#111c30] border-t border-white/8">
             <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2">
-              <form onSubmit={e => { e.preventDefault(); if (clientSubdomain.trim()) { setMenuOpen(false); window.location.href = `/${clientSubdomain.trim().toLowerCase()}/login` } }}
+              <form onSubmit={e => { e.preventDefault(); goToOrg() }}
                 className="flex gap-2">
                 <input
                   type="text"
                   value={clientSubdomain}
-                  onChange={e => setClientSubdomain(e.target.value)}
+                  onChange={e => { setClientSubdomain(e.target.value); if (orgError) setOrgError('') }}
                   placeholder={fr ? 'Nom de votre organisation' : 'Your organization name'}
                   className="flex-1 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
                 />
-                <button type="submit"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition">
+                <button type="submit" disabled={orgBusy}
+                  className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-sm font-bold transition">
                   <ArrowRight size={15} />
                 </button>
               </form>
+              {orgError && <p className="text-red-400 text-xs px-1">{orgError}</p>}
               <Link href="/auth/admin" onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-slate-300 transition border border-white/8">
                 <Lock size={14} /> {fr ? 'Acces Admin' : 'Admin Access'}
@@ -463,24 +489,26 @@ export default function LandingPage() {
           <p className="text-slate-400 text-xs mb-4">
             {fr ? 'Entrez le nom de votre organisation pour acceder a votre portail.' : 'Enter your organization name to access your portal.'}
           </p>
-          <form onSubmit={e => { e.preventDefault(); if (clientSubdomain.trim()) window.location.href = `/${clientSubdomain.trim().toLowerCase()}/login` }}
+          <form onSubmit={e => { e.preventDefault(); goToOrg() }}
             className="flex gap-2">
             <input
               type="text"
               value={clientSubdomain}
-              onChange={e => setClientSubdomain(e.target.value)}
-              placeholder={fr ? 'ex: construction-abc' : 'ex: construction-abc'}
+              onChange={e => { setClientSubdomain(e.target.value); if (orgError) setOrgError('') }}
+              placeholder={fr ? "Nom de l'organisation ou sous-domaine" : 'Organization name or subdomain'}
               className="flex-1 min-w-0 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
             />
-            <button type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
+            <button type="submit" disabled={orgBusy}
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
               <ArrowRight size={15} />
-              {fr ? 'Acceder' : 'Go'}
+              {orgBusy ? '…' : (fr ? 'Acceder' : 'Go')}
             </button>
           </form>
-          <p className="text-slate-500 text-xs mt-3">
-            {fr ? 'URL: www.c-secur360.ca/votre-organisation' : 'URL: www.c-secur360.ca/your-organization'}
-          </p>
+          {orgError
+            ? <p className="text-red-400 text-xs mt-3">{orgError}</p>
+            : <p className="text-slate-500 text-xs mt-3">
+                {fr ? 'Entrez le nom de votre organisation (ex. votre compagnie) ou votre sous-domaine.' : 'Enter your organization name (e.g. your company) or your subdomain.'}
+              </p>}
         </div>
       </section>
 

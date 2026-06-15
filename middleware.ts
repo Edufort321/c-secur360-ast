@@ -18,17 +18,14 @@ const protectedRoutes = {
   '/admin': ['super_admin'],
   '/admin/(.*)': ['super_admin'],
   
-  // Client tenant routes (pour chaque entreprise)
-  '/entrepriseabc': ['super_admin', 'client_admin'],
-  '/entrepriseabc/(.*)': ['super_admin', 'client_admin'],
-  '/companyxyz': ['super_admin', 'client_admin'],
-  '/companyxyz/(.*)': ['super_admin', 'client_admin'],
-  '/corpdef': ['super_admin', 'client_admin'],
-  '/corpdef/(.*)': ['super_admin', 'client_admin'],
-  
+  // NB : les routes de tenant /{tenant}/... ne sont PLUS listées en dur ici (les anciens slugs
+  // entrepriseabc/companyxyz/corpdef étaient périmés et ne protégeaient rien). L'isolation par
+  // tenant est désormais GÉNÉRIQUE dans handleAuthentication (un non-super_admin ne peut accéder
+  // qu'à SON propre tenant). Voir le bloc « Isolation tenant » plus bas.
+
   // Legacy client routes (à migrer graduellement)
   '/client/(.*)': ['super_admin', 'client_admin'],
-  
+
   // API routes that need authentication
   '/api/admin/(.*)': ['super_admin'],
   '/api/system/(.*)': ['super_admin'],
@@ -179,7 +176,17 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
       return new NextResponse('Accès refusé', { status: 403 });
     }
 
-    // For client admin, check tenant access
+    // ── Isolation tenant (defense-in-depth) ──────────────────────────────────────
+    // Pour toute route /{tenant}/..., un utilisateur NON super_admin ne peut accéder qu'à
+    // SON propre tenant. Empêche un client_admin/user de l'org A d'ouvrir les pages de l'org B
+    // (en plus du scoping serveur/RLS qui protège déjà les DONNÉES). Le super_admin garde
+    // l'accès global (gestion/support). Les segments non-tenant (admin/auth/api…) sont ignorés.
+    const tenantSeg = pathname.match(/^\/([^/]+)(?:\/|$)/)?.[1];
+    if (tenantSeg && !NON_TENANT_PREFIXES.has(tenantSeg) && user.role !== 'super_admin' && user.tenant_id !== tenantSeg) {
+      return new NextResponse('Accès refusé à ce tenant', { status: 403 });
+    }
+
+    // For client admin, check tenant access (chemin legacy /client/:tenant/…)
     if (user.role === 'client_admin' && pathname.startsWith('/client/')) {
       const tenantFromPath = pathname.split('/')[2];
       if (tenantFromPath && tenantFromPath !== user.tenant_id) {

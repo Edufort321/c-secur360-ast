@@ -677,7 +677,7 @@ export default function AdminDashboard() {
                           Gérer (modules/abonnement)
                         </Link>
                         <Link
-                          href={`/${client.subdomain}/dashboard`}
+                          href={`/${client.id}/dashboard`}
                           style={{
                             color: '#3b82f6',
                             textDecoration: 'none',

@@ -10,11 +10,24 @@ export const runtime = 'nodejs';
 
 const TABLE = (kind: string) => (kind === 'templates' ? 'rapport_templates' : 'rapports');
 
-// GET ?kind=reports|templates -> liste (non supprimés) du tenant de session.
+// Tenant effectif d'une requête : un super_admin peut consulter le tenant DEMANDÉ (celui de
+// l'URL qu'il visite) ; tout autre rôle est verrouillé sur le tenant de sa SESSION — toute
+// demande d'un autre tenant est refusée (403). Anti-fuite inter-tenant.
+function resolveTenant(u: any, requested: string | null): { tenant: string } | { error: NextResponse } {
+  const sessionTenant = u.tenant_id || '';
+  const req = (requested || '').trim();
+  if (u.role === 'super_admin') return { tenant: req || sessionTenant };
+  if (req && req !== sessionTenant) return { error: NextResponse.json({ error: 'Accès refusé' }, { status: 403 }) };
+  return { tenant: sessionTenant };
+}
+
+// GET ?kind=reports|templates&tenant= -> liste (non supprimés) du tenant effectif.
 export async function GET(req: NextRequest) {
   const u = await getSessionUser(req);
   if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
+  const rt = resolveTenant(u, new URL(req.url).searchParams.get('tenant'));
+  if ('error' in rt) return rt.error;
+  const tenant = rt.tenant;
   const kind = new URL(req.url).searchParams.get('kind') || 'reports';
   const { data, error } = await supabaseAdmin.from(TABLE(kind)).select('*').eq('tenant_id', tenant).eq('deleted', false).order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -25,8 +38,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const u = await getSessionUser(req);
   if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  const rt = resolveTenant(u, body.tenant);
+  if ('error' in rt) return rt.error;
+  const tenant = rt.tenant;
   const kind = body.kind === 'templates' ? 'templates' : 'reports';
   const item = body.item || {};
   if (!item.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
@@ -44,8 +59,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const u = await getSessionUser(req);
   if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
   const sp = new URL(req.url).searchParams;
+  const rt = resolveTenant(u, sp.get('tenant'));
+  if ('error' in rt) return rt.error;
+  const tenant = rt.tenant;
   const kind = sp.get('kind') === 'templates' ? 'templates' : 'reports';
   const id = sp.get('id') || '';
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });

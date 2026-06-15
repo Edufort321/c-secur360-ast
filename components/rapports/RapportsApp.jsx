@@ -1,6 +1,11 @@
 "use client";
 // __rpt_storage_shim : data layer base sur localStorage (la version HTML avait window.storage).
-if (typeof window !== "undefined" && !window.storage) { window.storage = { get: async (k)=>{ try{ const v=localStorage.getItem(k); return v==null?null:{value:v}; }catch{ return null; } }, set: async (k,v)=>{ try{ localStorage.setItem(k,v); }catch{} }, delete: async (k)=>{ try{ localStorage.removeItem(k); }catch{} } }; }
+// SÉCURITÉ : le stockage local est NAMESPACÉ par tenant (1er segment d'URL) — sinon le cache
+// (rapports, gabarits, logo, thème, file d'attente) d'un tenant resterait visible sous un autre
+// tenant dans le MÊME navigateur (fuite inter-tenant côté client).
+function __rptTenant(){ try{ return (window.location.pathname.split("/").filter(Boolean)[0]) || "demo"; }catch{ return "demo"; } }
+function __rptNS(k){ return __rptTenant() + "::" + k; }
+if (typeof window !== "undefined" && !window.storage) { window.storage = { get: async (k)=>{ try{ const v=localStorage.getItem(__rptNS(k)); return v==null?null:{value:v}; }catch{ return null; } }, set: async (k,v)=>{ try{ localStorage.setItem(__rptNS(k),v); }catch{} }, delete: async (k)=>{ try{ localStorage.removeItem(__rptNS(k)); }catch{} } }; }
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -261,7 +266,7 @@ async function loadTheme(){ try{ const r=await window.storage.get(THEME_KEY); re
 async function saveTheme(th){ try{ await window.storage.set(THEME_KEY, JSON.stringify(th)); }catch(e){ console.error(e); } }
 // Persistance SERVEUR (Supabase via /api/rapports/data) + cache localStorage pour le hors-ligne.
 async function loadDB(){
-  try{ const r=await fetch("/api/rapports/data?kind=reports",{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ ...(x.data||{}), id:x.id, status:x.status||x.data?.status||"in_progress" })); try{ await window.storage.set(DB_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
+  try{ const r=await fetch("/api/rapports/data?kind=reports&tenant="+encodeURIComponent(__rptTenant()),{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ ...(x.data||{}), id:x.id, status:x.status||x.data?.status||"in_progress" })); try{ await window.storage.set(DB_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
   try{ const c=await window.storage.get(DB_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; } // repli hors-ligne
 }
 async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringify(list)); }catch{} } // cache local (write-through)
@@ -270,8 +275,10 @@ async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringif
 // Toute écriture serveur qui échoue (hors-ligne / erreur réseau) est mise en file dans localStorage
 // et rejouée automatiquement à la reconnexion (événement `online`) — aucune modif n'est perdue.
 const PENDING_KEY = "rpt_pending_v1";
-function loadPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||"[]"); }catch{ return []; } }
-function savePending(q){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(q.slice(-200))); }catch{} }
+// Namespacé par tenant : sinon les écritures hors-ligne d'un tenant seraient rejouées sous un
+// autre tenant (le serveur scope à la session, mais on évite tout mélange de files).
+function loadPending(){ try{ return JSON.parse(localStorage.getItem(__rptNS(PENDING_KEY))||"[]"); }catch{ return []; } }
+function savePending(q){ try{ localStorage.setItem(__rptNS(PENDING_KEY), JSON.stringify(q.slice(-200))); }catch{} }
 function queueOp(op){
   // Déduplique : un upsert du même rapport remplace le précédent en attente.
   const q=loadPending().filter(o=>!(o.kind===op.kind && o.action===op.action && o.id===op.id));
@@ -285,8 +292,8 @@ async function flushPending(){
   for(const op of q){
     try{
       let res;
-      if(op.action==="upsert") res=await fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:op.kind, item:op.item }) });
-      else res=await fetch(`/api/rapports/data?kind=${op.kind}&id=${encodeURIComponent(op.id)}`,{ method:"DELETE", credentials:"include" });
+      if(op.action==="upsert") res=await fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:op.kind, item:op.item, tenant:__rptTenant() }) });
+      else res=await fetch(`/api/rapports/data?kind=${op.kind}&id=${encodeURIComponent(op.id)}&tenant=${encodeURIComponent(__rptTenant())}`,{ method:"DELETE", credentials:"include" });
       if(!res.ok && res.status!==401) keep.push(op); // 401 = session expirée : on n'empile pas indéfiniment
     }catch{ keep.push(op); } // toujours hors-ligne : on garde
   }
@@ -299,20 +306,20 @@ if(typeof window!=="undefined"){ window.addEventListener("online", ()=>{ flushPe
 // Push serveur d'UN rapport (debounce par id, car l'édition déclenche à chaque frappe).
 const _rapTimers={};
 function pushReport(report){ if(!report?.id) return; clearTimeout(_rapTimers[report.id]); _rapTimers[report.id]=setTimeout(()=>{
-  fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report }) })
+  fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report, tenant:__rptTenant() }) })
     .then(r=>{ if(!r.ok && r.status!==401) queueOp({kind:"reports",action:"upsert",id:report.id,item:report}); })
     .catch(()=>queueOp({kind:"reports",action:"upsert",id:report.id,item:report})); // hors-ligne -> file
 },600); }
-function pushDelete(id){ fetch("/api/rapports/data?kind=reports&id="+id,{ method:"DELETE", credentials:"include" })
+function pushDelete(id){ fetch("/api/rapports/data?kind=reports&id="+id+"&tenant="+encodeURIComponent(__rptTenant()),{ method:"DELETE", credentials:"include" })
   .then(r=>{ if(!r.ok && r.status!==401) queueOp({kind:"reports",action:"delete",id}); })
   .catch(()=>queueOp({kind:"reports",action:"delete",id})); }
-function pushTpl(tpl){ if(!tpl?.id) return; fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"templates", item:tpl }) }).catch(()=>{}); }
-function pushTplDelete(id){ fetch("/api/rapports/data?kind=templates&id="+id,{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
+function pushTpl(tpl){ if(!tpl?.id) return; fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"templates", item:tpl, tenant:__rptTenant() }) }).catch(()=>{}); }
+function pushTplDelete(id){ fetch("/api/rapports/data?kind=templates&id="+id+"&tenant="+encodeURIComponent(__rptTenant()),{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
 async function loadLogo(){ try{ const r=await window.storage.get(LOGO_KEY); return r?r.value:null; }catch{ return null; } }
 async function saveLogo(d){ try{ await window.storage.set(LOGO_KEY, d); }catch(e){ console.error(e); } }
 async function clearLogo(){ try{ await window.storage.delete(LOGO_KEY); }catch(e){ console.error(e); } }
 async function loadTemplates(){
-  try{ const r=await fetch("/api/rapports/data?kind=templates",{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ id:x.id, name:x.name, num:x.num, blocks:x.blocks||[] })); try{ await window.storage.set(TPL_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
+  try{ const r=await fetch("/api/rapports/data?kind=templates&tenant="+encodeURIComponent(__rptTenant()),{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ id:x.id, name:x.name, num:x.num, blocks:x.blocks||[] })); try{ await window.storage.set(TPL_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
   try{ const c=await window.storage.get(TPL_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; }
 }
 async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.stringify(list)); }catch{} }
