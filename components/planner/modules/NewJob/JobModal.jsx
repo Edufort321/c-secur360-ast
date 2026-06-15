@@ -17,6 +17,22 @@ import {
     localizedDateString
 } from '../../utils/localizedDateUtils.js';
 
+// ── Quarts de travail (mode 24/24) ──────────────────────────────────────────────────
+// Deux gabarits sélectionnables, heures éditables ensuite. Source unique du modèle de quarts.
+const SHIFT_TEMPLATES = {
+    '3x8': [
+        { id: 'jour', nom: 'Jour', debut: '06:00', fin: '14:00' },
+        { id: 'soir', nom: 'Soir', debut: '14:00', fin: '22:00' },
+        { id: 'nuit', nom: 'Nuit', debut: '22:00', fin: '06:00' },
+    ],
+    '2x12': [
+        { id: 'jour', nom: 'Jour', debut: '06:00', fin: '18:00' },
+        { id: 'nuit', nom: 'Nuit', debut: '18:00', fin: '06:00' },
+    ],
+};
+// Construit la liste de quarts par défaut d'un gabarit (copie — les heures restent éditables).
+const buildQuartsFromGabarit = (gabarit) => (SHIFT_TEMPLATES[gabarit] || SHIFT_TEMPLATES['3x8']).map(q => ({ ...q }));
+
 export function JobModal({
     isOpen,
     onClose,
@@ -76,9 +92,15 @@ export function JobModal({
         dureePreviewHours: '',
         includeWeekendsInDuration: false,
         heuresPlanifiees: '',
-        modeHoraire: 'heures-jour',
-        heuresDebutJour: '08:00',
+        modeHoraire: 'heures-jour',   // SOURCE DE VÉRITÉ unique : 'heures-jour' (fenêtre quotidienne) | '24h-24' (continu)
+        heureDebut: '08:00',          // fenêtre horaire quotidienne (utilisée aussi par les horaires par jour/département)
+        heureFin: '17:00',
+        heuresDebutJour: '08:00',     // miroir de heureDebut/heureFin (UI section « heures planifiées ») — gardés synchronisés
         heuresFinJour: '17:00',
+        // ── Mode 24/24 : quarts de travail (jour/soir/nuit) ──────────────────────────────
+        gabaritQuarts: '3x8',         // '3x8' (jour/soir/nuit) | '2x12' (jour/nuit) — heures éditables ci-dessous
+        quarts: [],                   // [{ id, nom, debut, fin }] — initialisé depuis le gabarit, éditable
+        quartParRessource: {},        // { [personnelId]: quartId } — assignation manuelle d'un quart par ressource
         nombrePersonnelRequis: 1,
         etapes: [],
         preparation: [],
@@ -356,20 +378,20 @@ export function JobModal({
             return;
         }
         // Mode 24/24 (continu) : travail en continu -> fin = début + heures totales (heure ET date).
-        // Ex. 36 h en continu débutant à 7:00 -> fin 19:00 le lendemain.
-        if (formData.modeContinu) {
+        // Ex. 36 h en continu débutant à 6:00 -> fin 18:00 le lendemain. (source unique : modeHoraire)
+        if (formData.modeHoraire === '24h-24') {
             const p2 = (n) => String(n).padStart(2, '0');
-            const start = new Date(`${formData.dateDebut}T${formData.heureDebut || '07:00'}:00`);
+            const start = new Date(`${formData.dateDebut}T${formData.heuresDebutJour || '06:00'}:00`);
             const end = new Date(start.getTime() + total * 3600000);
             const newFinC = `${end.getFullYear()}-${p2(end.getMonth() + 1)}-${p2(end.getDate())}`;
             const newHeureFinC = `${p2(end.getHours())}:${p2(end.getMinutes())}`;
-            if (newFinC !== formData.dateFin || newHeureFinC !== formData.heureFin) {
-                setFormData(prev => ({ ...prev, dateFin: newFinC, heureFin: newHeureFinC }));
+            if (newFinC !== formData.dateFin || newHeureFinC !== formData.heuresFinJour) {
+                setFormData(prev => ({ ...prev, dateFin: newFinC, heuresFinJour: newHeureFinC }));
             }
             return;
         }
         // Avec heures totales -> fin = répartition sur jours ouvrables selon fenêtre horaire et nb de personnes.
-        const hpd = Math.max(0.5, diffHours(formData.heureDebut, formData.heureFin)); // heures/jour (fenêtre)
+        const hpd = Math.max(0.5, diffHours(formData.heuresDebutJour, formData.heuresFinJour)); // heures/jour (fenêtre)
         const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length)
             ? formData.personnel.length
             : (parseInt(formData.nombrePersonnelRequis) || 1));
@@ -386,7 +408,19 @@ export function JobModal({
         const newFin = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (newFin !== formData.dateFin) setFormData(prev => ({ ...prev, dateFin: newFin }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin, formData.modeContinu]);
+    }, [formData.heuresPlanifiees, formData.heuresDebutJour, formData.heuresFinJour, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin, formData.modeHoraire]);
+
+    // Mode 24/24 : (ré)initialise les quarts depuis le gabarit choisi quand on entre en 24/24 ou
+    // qu'on change de gabarit. On ne rebuild que si le NOMBRE de quarts diffère du gabarit (changement
+    // de gabarit ou première entrée) -> les heures éditées par l'utilisateur dans le même gabarit sont conservées.
+    useEffect(() => {
+        if (formData.modeHoraire !== '24h-24') return;
+        const expected = (SHIFT_TEMPLATES[formData.gabaritQuarts] || SHIFT_TEMPLATES['3x8']).length;
+        if (!Array.isArray(formData.quarts) || formData.quarts.length !== expected) {
+            setFormData(prev => ({ ...prev, quarts: buildQuartsFromGabarit(prev.gabaritQuarts) }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.modeHoraire, formData.gabaritQuarts]);
 
     // INTERCONNEXION : le Gantt (étapes) est la source de vérité des HEURES-HOMME. Dès que les étapes
     // changent (ajout, durée, effectif), « heures planifiées » se synchronise -> la date de fin et le
@@ -3694,43 +3728,9 @@ export function JobModal({
                                             />
                                             <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{L('Pilote la date de fin (selon heures/jour et nb de personnes).', 'Drives the end date (per daily window and headcount).')}</p>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                                {L('Heure de début (jour)', 'Start time (day)')}
-                                            </label>
-                                            <input
-                                                type="time"
-                                                value={formData.heureDebut || '08:00'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, heureDebut: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                                {L('Heure de fin (jour)', 'End time (day)')}
-                                            </label>
-                                            <input
-                                                type="time"
-                                                value={formData.heureFin || '17:00'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
-                                                disabled={formData.modeContinu}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
-                                            />
-                                        </div>
-
-                                        {/* Mode 24/24 (continu) : travail en continu, la fin (date+heure) = début + heures totales */}
-                                        <div className="md:col-span-2">
-                                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!!formData.modeContinu}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, modeContinu: e.target.checked }))}
-                                                    className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
-                                                />
-                                                <span>🕛 {L('Travail 24/24 (continu)', '24/7 (continuous) work')}</span>
-                                            </label>
-                                            <p className="ml-6 text-[11px] text-gray-500 dark:text-gray-400">{L('La fin (date + heure) = début + heures totales, sans fenêtre quotidienne. Ex. 36 h dès 7:00 → 19:00 le lendemain.', 'End (date + time) = start + total hours, no daily window. E.g. 36 h from 7:00 → 19:00 next day.')}</p>
-                                        </div>
+                                        {/* Fenêtre horaire + mode 24/24 : UNIFIÉS dans la section « Système d'heures
+                                            planifiées » plus bas (un seul « Mode horaire »). On a retiré ici la 2ᵉ paire
+                                            d'heures et la case 24/24 redondantes (source de confusion). */}
 
                                         {/* Responsable de l'evenement (designe par le coordonnateur ; monte le Gantt) */}
                                         <div className="md:col-span-2">
@@ -3845,7 +3845,7 @@ export function JobModal({
                                                         <input
                                                             type="time"
                                                             value={formData.heuresDebutJour}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, heuresDebutJour: e.target.value }))}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, heuresDebutJour: e.target.value, heureDebut: e.target.value }))}
                                                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                                         />
                                                     </div>
@@ -3856,9 +3856,71 @@ export function JobModal({
                                                         <input
                                                             type="time"
                                                             value={formData.heuresFinJour}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, heuresFinJour: e.target.value }))}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, heuresFinJour: e.target.value, heureFin: e.target.value }))}
                                                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                                         />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {formData.modeHoraire === '24h-24' && (
+                                                <div className="mt-4 space-y-4 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
+                                                    {/* Gabarit de quarts */}
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">🌙 {L('Gabarit de quarts', 'Shift template')}</label>
+                                                        <select
+                                                            value={formData.gabaritQuarts}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, gabaritQuarts: e.target.value, quarts: buildQuartsFromGabarit(e.target.value) }))}
+                                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                                        >
+                                                            <option value="3x8">{L('3 quarts × 8h — Jour / Soir / Nuit', '3 shifts × 8h — Day / Evening / Night')}</option>
+                                                            <option value="2x12">{L('2 quarts × 12h — Jour / Nuit', '2 shifts × 12h — Day / Night')}</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Heures de chaque quart (éditables) */}
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{L('Heures des quarts (modifiables)', 'Shift hours (editable)')}</p>
+                                                        {(formData.quarts || []).map((q, i) => (
+                                                            <div key={q.id} className="flex items-center gap-2">
+                                                                <span className="w-16 text-sm font-semibold text-gray-700 dark:text-gray-200">{q.nom}</span>
+                                                                <input type="time" value={q.debut}
+                                                                    onChange={(e) => setFormData(prev => ({ ...prev, quarts: (prev.quarts || []).map((x, k) => k === i ? { ...x, debut: e.target.value } : x) }))}
+                                                                    className="p-2 border rounded-lg" />
+                                                                <span className="text-gray-400">→</span>
+                                                                <input type="time" value={q.fin}
+                                                                    onChange={(e) => setFormData(prev => ({ ...prev, quarts: (prev.quarts || []).map((x, k) => k === i ? { ...x, fin: e.target.value } : x) }))}
+                                                                    className="p-2 border rounded-lg" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Assignation d'un quart par ressource */}
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{L('Quart par ressource', 'Shift per resource')}</p>
+                                                        {(formData.personnel || []).length === 0 ? (
+                                                            <p className="text-xs text-gray-500">{L("Sélectionnez d'abord des ressources : chacune pourra être affectée à un quart.", 'Select resources first: each can then be assigned to a shift.')}</p>
+                                                        ) : (
+                                                            (formData.personnel || []).map(pid => {
+                                                                const p = (personnel || []).find(x => String(x.id) === String(pid));
+                                                                const nom = p ? (p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id) : pid;
+                                                                return (
+                                                                    <div key={pid} className="flex items-center gap-2">
+                                                                        <span className="flex-1 text-sm text-gray-700 dark:text-gray-200">{nom}</span>
+                                                                        <select
+                                                                            value={formData.quartParRessource?.[pid] || ''}
+                                                                            onChange={(e) => setFormData(prev => ({ ...prev, quartParRessource: { ...(prev.quartParRessource || {}), [pid]: e.target.value } }))}
+                                                                            className="p-2 border rounded-lg text-sm"
+                                                                        >
+                                                                            <option value="">{L('— Quart —', '— Shift —')}</option>
+                                                                            {(formData.quarts || []).map(q => (
+                                                                                <option key={q.id} value={q.id}>{q.nom} ({q.debut}-{q.fin})</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
