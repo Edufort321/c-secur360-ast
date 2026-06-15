@@ -9,7 +9,7 @@ export type Categorie = 'mo_bureau' | 'mo_chantier' | 'voyagement' | 'subsistanc
 export const CATEGORIES_MO: Categorie[] = ['mo_bureau', 'mo_chantier'];
 export const CATEGORIE_LABELS: Record<Categorie, string> = {
   mo_bureau: 'MO Bureau', mo_chantier: 'MO Chantier', voyagement: 'Voyagement',
-  subsistance: 'Subsistance', hebergement: 'Hébergement', materiaux: 'Matériaux',
+  subsistance: 'Subsistance', hebergement: 'Hébergement', materiaux: 'Matériaux/sous-traitance',
 };
 
 export type CatalogueExtras = {
@@ -80,6 +80,13 @@ export function computeLigneMontant(ligne: SoumissionLigne, cat?: CatalogueTaux 
       + (Number(ligne.supp) || 0) * taux * multSupp
       + (Number(ligne.maj) || 0) * taux * multMaj;
     return r2(tech * base);
+  }
+  // MATÉRIAUX/SOUS-TRAITANCE : coût × qté × (1 + marge%). La marge (profit) est stockée dans le
+  // champ `maj` (inutilisé pour cette catégorie). Si le matériel vient du catalogue (prix de vente
+  // = marge déjà incluse), on enregistre coût + margin_pct -> la marge n'est comptée qu'UNE fois.
+  if (ligne.categorie === 'materiaux') {
+    const marge = Number(ligne.maj) || 0;
+    return r2((Number(ligne.quantity) || 0) * (Number(ligne.unit_cost) || 0) * (1 + marge / 100));
   }
   return r2((Number(ligne.quantity) || 0) * (Number(ligne.unit_cost) || 0));
 }

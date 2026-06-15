@@ -64,6 +64,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [breakdownMode, setBreakdownMode] = useState<'detaille' | 'par_item' | 'global_desc'>('detaille');
   const [inclTaux, setInclTaux] = useState(false); // joindre la liste de taux (catalogue)
   const [condSel, setCondSel] = useState<string[]>([]); // ids des conditions cochées à l'export
+  const [matMarge, setMatMarge] = useState(20); // marge à normaliser pour Matériaux/sous-traitance (%)
   useEffect(() => { getSoumissionSettings(tenant).then(setCoverCfg).catch(() => {}); }, [tenant]);
   useEffect(() => {
     setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville));
@@ -280,7 +281,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const updItem = (i: number, patch: Partial<SoumissionItem>) => setItems(p => p.map((it, j) => j === i ? { ...it, ...patch } : it));
   const addItem = () => setItems(p => [...p, { name: `Item ${p.length + 1}`, total: 0, lignes: [] }]);
   const delItem = (i: number) => setItems(p => p.filter((_, j) => j !== i));
-  const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, c === 'voyagement' ? { ...blankLigne(c), tech: 1, unit: 'km', unit_cost: Number(cat?.extras?.km) || 0 } : blankLigne(c)] } : it));
+  const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, c === 'voyagement' ? { ...blankLigne(c), tech: 1, unit: 'km', unit_cost: Number(cat?.extras?.km) || 0 } : c === 'materiaux' ? { ...blankLigne(c), quantity: 1, maj: matMarge } : blankLigne(c)] } : it));
   // Ajoute une ligne pre-remplie depuis un barEme additionnel du catalogue (classe a la bonne categorie).
   const addCatalogueLigne = (i: number, c: Categorie, label: string, value: number) => setItems(p => p.map((it, j) => {
     if (j !== i) return it;
@@ -1148,9 +1149,18 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   if (lignes.length === 0 && !canEdit) return null;
                   return (
                     <div key={c} className="rounded-lg border border-gray-100 dark:border-gray-700">
-                      <div className="flex items-center justify-between bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                      <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
                         <span>{catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c])}</span>
-                        {canEdit && <button onClick={() => addLigne(i, c)} className="text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>}
+                        <span className="flex items-center gap-2">
+                          {c === 'materiaux' && canEdit && (
+                            <span className="flex items-center gap-1 font-normal text-gray-500" title={tr('Applique cette marge de profit à toutes les lignes matériaux (les lignes issues du catalogue gardent leur marge si vous ne cliquez pas).', 'Apply this profit margin to all material lines.')}>
+                              {tr('Normaliser marge', 'Normalize margin')}
+                              <input type="number" value={matMarge} onChange={e => setMatMarge(Number(e.target.value))} className="w-12 rounded border border-gray-300 px-1 py-0.5 text-right dark:border-gray-600 dark:bg-gray-700" /> %
+                              <button type="button" onClick={() => setItems(p => p.map((itx, j) => j === i ? { ...itx, lignes: itx.lignes.map(l => l.categorie === 'materiaux' ? { ...l, maj: matMarge } : l) } : itx))} className="rounded border border-gray-300 px-1.5 py-0.5 font-semibold text-gray-600 hover:bg-white dark:border-gray-600 dark:text-gray-300">{tr('Appliquer', 'Apply')}</button>
+                            </span>
+                          )}
+                          {canEdit && <button onClick={() => addLigne(i, c)} className="text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>}
+                        </span>
                       </div>
                       {/* Barèmes additionnels du catalogue classés dans CETTE section : clic = ligne pré-remplie */}
                       {canEdit && (cat?.custom_rates || []).filter(r => (r.categorie || 'mo_chantier') === c).length > 0 && (
@@ -1190,7 +1200,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                           <table className="w-full text-xs">
                             <thead><tr className="text-left text-gray-400">
                               <th className="px-2 py-1">Description</th>
-                              {isMO(c) ? (<><th className="px-2">Tech</th><th className="px-2">Rég</th><th className="px-2">Supp</th><th className="px-2">Maj</th></>) : c === 'voyagement' ? (<><th className="px-2">{tr('Véhicules', 'Vehicles')}</th><th className="px-2">Km</th><th className="px-2">{tr('Taux/km', 'Rate/km')}</th></>) : (<><th className="px-2">Qté</th><th className="px-2">Unité</th><th className="px-2">Coût</th></>)}
+                              {isMO(c) ? (<><th className="px-2">Tech</th><th className="px-2">Rég</th><th className="px-2">Supp</th><th className="px-2">Maj</th></>) : c === 'voyagement' ? (<><th className="px-2">{tr('Véhicules', 'Vehicles')}</th><th className="px-2">Km</th><th className="px-2">{tr('Taux/km', 'Rate/km')}</th></>) : c === 'materiaux' ? (<><th className="px-2">Qté</th><th className="px-2">{tr('Marge %', 'Margin %')}</th><th className="px-2">{tr('Coût', 'Cost')}</th></>) : (<><th className="px-2">Qté</th><th className="px-2">Unité</th><th className="px-2">Coût</th></>)}
                               <th className="px-2 text-right">Montant</th><th className="px-2"></th>
                             </tr></thead>
                             <tbody>
@@ -1205,7 +1215,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                                         const val = e.target.value;
                                         if (c === 'materiaux') {
                                           const mat = (cat?.materials || []).find(m => m.name === val);
-                                          if (mat) { const price = mat.sale_price ?? mat.cost_price ?? 0; updLigne(i, li, { description: val, unit_cost: price, unit: l.unit || tr('unité', 'unit'), quantity: l.quantity || 1 }); return; }
+                                          // Catalogue : on garde le COÛT + la marge du catalogue (maj) -> la marge n'est comptée qu'une fois.
+                                          if (mat) { updLigne(i, li, { description: val, unit_cost: Number(mat.cost_price) || Number(mat.sale_price) || 0, maj: Number(mat.margin_pct) || 0, quantity: l.quantity || 1 }); return; }
                                         }
                                         updLigne(i, li, { description: val });
                                       }}
@@ -1229,8 +1240,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                                   ) : (
                                     <>
                                       <td className="px-2"><input type="number" value={l.quantity} onChange={e => updLigne(i, li, { quantity: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} /></td>
-                                      <td className="px-2"><input value={l.unit || ''} onChange={e => updLigne(i, li, { unit: e.target.value })} className={`w-16 ${inputCls}`} /></td>
-                                      <td className="px-2"><input type="number" value={l.unit_cost} onChange={e => updLigne(i, li, { unit_cost: Number(e.target.value) })} className={`w-24 text-right ${inputCls}`} /></td>
+                                      {c === 'materiaux'
+                                        ? <td className="px-2"><input type="number" step="0.1" value={l.maj} onChange={e => updLigne(i, li, { maj: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} title={tr('Marge de profit %', 'Profit margin %')} /></td>
+                                        : <td className="px-2"><input value={l.unit || ''} onChange={e => updLigne(i, li, { unit: e.target.value })} className={`w-16 ${inputCls}`} /></td>}
+                                      <td className="px-2"><input type="number" value={l.unit_cost} onChange={e => updLigne(i, li, { unit_cost: Number(e.target.value) })} className={`w-24 text-right ${inputCls}`} title={c === 'materiaux' ? tr('Coût (avant marge)', 'Cost (before margin)') : undefined} /></td>
                                     </>
                                   )}
                                   <td className="px-2 text-right font-medium">{mny(computeLigneMontant(l, cat))}</td>
