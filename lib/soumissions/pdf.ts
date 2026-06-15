@@ -78,6 +78,24 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   // par item, sans le détail), 'global_desc' (descriptions des items seulement, prix GLOBAL en bas).
   const mode = opts.breakdownMode || 'detaille';
 
+  // Calcul lisible d'une ligne (inline) : « 1 tech × 2 h rég × 120,00 $/h », « 5 × 12,00 $ + marge 20 % », etc.
+  const ligneCalcul = (l: any): string => {
+    const c = l.categorie;
+    if (c === 'mo_bureau' || c === 'mo_chantier') {
+      const taux = c === 'mo_bureau' ? (cat?.taux_mo_bureau || 0) : (cat?.taux_mo_chantier || 0);
+      const parts: string[] = [];
+      if (Number(l.reg)) parts.push(`${l.reg} h rég`);
+      if (Number(l.supp)) parts.push(`${l.supp} h supp`);
+      if (Number(l.maj)) parts.push(`${l.maj} h maj`);
+      return `${Number(l.tech) || 1} tech × ${parts.join(' + ') || '0 h'} × ${money(taux)}/h`;
+    }
+    if (c === 'voyagement') return `${Number(l.tech) || 1} véh × ${Number(l.quantity) || 0} km × ${money(Number(l.unit_cost) || 0)}/km`;
+    if (c === 'materiaux') return `${Number(l.quantity) || 0} × ${money(Number(l.unit_cost) || 0)}${Number(l.maj) ? ` + marge ${l.maj} %` : ''}`;
+    return `${Number(l.quantity) || 0} × ${money(Number(l.unit_cost) || 0)}`;
+  };
+  // Une ligne est « remplie » si elle a un montant ou une description.
+  const ligneRemplie = (l: any) => computeLigneMontant(l, cat) > 0 || (l.description && l.description.trim());
+
   // Détail par item
   for (const it of wanted) {
     ensure(40);
@@ -89,31 +107,36 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
     }
     y += 8; line(M, R, y); y += 14;
 
-    if (mode === 'par_item') { y += 8; continue; } // pas de détail de lignes
+    // PRIX PAR ITEM : descriptions des lignes remplies (sans prix) ; le sous-total est en en-tête.
+    if (mode === 'par_item') {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90);
+      for (const l of (it.lignes || [])) {
+        if (!ligneRemplie(l)) continue;
+        const d = l.description || (CATEGORIE_LABELS[l.categorie] || '');
+        if (!d) continue;
+        ensure(12); const dl = doc.splitTextToSize('• ' + String(d), R - M - 8); doc.text(dl, M + 8, y); y += 12 * dl.length;
+      }
+      y += 10; continue;
+    }
 
     for (const c of CATS) {
-      const ls = (it.lignes || []).filter(l => l.categorie === c);
+      // Détaillé : seulement les lignes REMPLIES. global_desc : seulement celles avec description.
+      const ls = (it.lignes || []).filter(l => l.categorie === c && (mode === 'global_desc' ? (l.description && l.description.trim()) : ligneRemplie(l)));
       if (!ls.length) continue;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(107, 114, 128);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(120, 120, 120);
       ensure(16); doc.text(String(CATEGORIE_LABELS[c] || c).toUpperCase(), M, y); y += 12;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(31, 41, 55);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40);
       for (const l of ls) {
-        ensure(13);
         const desc = l.description || (CATEGORIE_LABELS[c] || '');
         if (mode === 'global_desc') {
-          // Description seule (ni détail ni montant).
-          const dl = doc.splitTextToSize(String(desc), R - M - 8);
-          doc.text(dl, M + 8, y); y += 13 * Math.max(1, dl.length);
-          continue;
+          ensure(13); const dl = doc.splitTextToSize(String(desc), R - M - 8); doc.text(dl, M + 8, y); y += 13 * Math.max(1, dl.length); continue;
         }
-        let detail = '';
-        if (c === 'mo_bureau' || c === 'mo_chantier') detail = `${l.tech || 1} × ${(Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0)} h`;
-        else if (c === 'voyagement') detail = `${l.tech || 1} véh. × ${l.quantity || 0} km`;
-        else detail = `${l.quantity || 0} × ${money(Number(l.unit_cost) || 0)}`;
-        doc.text(doc.splitTextToSize(String(desc), 300)[0] || '', M + 8, y);
-        doc.setTextColor(150); doc.text(detail, M + 320, y);
-        doc.setTextColor(31, 41, 55); doc.text(money(computeLigneMontant(l, cat)), R, y, { align: 'right' });
-        y += 13;
+        // Détaillé : description + calcul inline + sous-total, sur la MÊME ligne.
+        ensure(14);
+        doc.setTextColor(40, 40, 40); doc.text(doc.splitTextToSize(String(desc), 190)[0] || '', M + 8, y);
+        doc.setTextColor(120, 120, 120); doc.text(ligneCalcul(l), M + 205, y, { maxWidth: R - (M + 205) - 72 } as any);
+        doc.setTextColor(20, 20, 20); doc.text(money(computeLigneMontant(l, cat)), R, y, { align: 'right' });
+        y += 14;
       }
       y += 4;
     }
