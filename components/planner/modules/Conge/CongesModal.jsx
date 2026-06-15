@@ -41,6 +41,11 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
             return;
         }
 
+        if (!motif.trim()) {
+            alert('Le motif est obligatoire.');
+            return;
+        }
+
         if (new Date(dateDebut) > new Date(dateFin)) {
             alert('La date de début ne peut pas être postérieure à la date de fin');
             return;
@@ -321,13 +326,14 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Motif (optionnel)
+                                    Motif <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     value={motif}
                                     onChange={(e) => setMotif(e.target.value)}
+                                    required
                                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 h-24 resize-none"
-                                    placeholder="Ajoutez des détails sur la demande de congé..."
+                                    placeholder="Précisez le motif de la demande de congé (obligatoire)..."
                                 />
                             </div>
 

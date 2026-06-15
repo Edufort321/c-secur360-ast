@@ -5,12 +5,13 @@
 // le superviseur (client_admin/super_admin) approuve ou refuse. Temps réel + bilingue FR/EN.
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Plus, Check, X, Trash2, Loader2, CalendarDays, Clock, Users, Send } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, X, Trash2, Loader2, CalendarDays, Clock, Send, ArrowLeft } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRealtime } from '@/lib/useRealtime';
 import {
-  getConges, getPersonnel, createConge, decideConge, cancelConge, deleteConge,
+  getConges, getPersonnel, createConge, cancelConge,
   dayCount, CONGE_TYPES, type Conge, type CongeType, type Personnel,
 } from '@/lib/conges';
 
@@ -32,7 +33,6 @@ export default function CongesPage() {
   const [conges, setConges] = useState<Conge[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
-  const [tab, setTab] = useState<'mine' | 'team'>('mine');
 
   // Formulaire de demande
   const [personId, setPersonId] = useState('');
@@ -42,7 +42,8 @@ export default function CongesPage() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const isSupervisor = me?.role === 'client_admin' || me?.role === 'super_admin';
+  // Module Congés = LIBRE-SERVICE : l'utilisateur courant voit/gère SES demandes seulement. La vue
+  // « toutes les demandes » + filtres (site/département) vit dans le planner (onglet Congés), pas ici.
   const persById = useMemo(() => Object.fromEntries(personnel.map(p => [p.id, p])), [personnel]);
   const myPerson = useMemo(
     () => personnel.find(p => p.email && me?.email && p.email.toLowerCase() === me.email.toLowerCase()) || null,
@@ -67,10 +68,9 @@ export default function CongesPage() {
   useEffect(() => { if (myPerson && !personId) setPersonId(myPerson.id); }, [myPerson]); // eslint-disable-line
 
   const mine = useMemo(() => (myPerson ? conges.filter(c => c.personnel_id === myPerson.id) : []), [conges, myPerson]);
-  const pendingTeam = useMemo(() => conges.filter(c => c.status === 'pending'), [conges]);
 
-  // Solde de l'année courante (jours approuvés par type) pour la personne sélectionnée/soi.
-  const balancePersonId = isSupervisor ? personId : (myPerson?.id || '');
+  // Solde de l'année courante (jours approuvés par type) pour soi.
+  const balancePersonId = myPerson?.id || personId || '';
   const balance = useMemo(() => {
     const year = new Date().getFullYear();
     const out: Record<string, number> = {};
@@ -82,6 +82,7 @@ export default function CongesPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!personId || !startDate || !endDate) { setNotice(L('Employé et dates requis.', 'Employee and dates required.')); return; }
+    if (!notes.trim()) { setNotice(L('La note (motif) est obligatoire.', 'The note (reason) is required.')); return; }
     if (endDate < startDate) { setNotice(L('La date de fin précède le début.', 'End date is before start.')); return; }
     setSubmitting(true); setNotice(null);
     try {
@@ -93,41 +94,26 @@ export default function CongesPage() {
     setSubmitting(false);
   }
 
-  async function decide(c: Conge, approve: boolean) {
-    try { await decideConge(tenant, c.id!, approve, me?.email || 'admin'); await load(); }
-    catch (err: any) { setNotice(err?.message); }
-  }
   async function cancel(c: Conge) {
     try { await cancelConge(tenant, c.id!); await load(); } catch (err: any) { setNotice(err?.message); }
-  }
-  async function remove(c: Conge) {
-    try { await deleteConge(tenant, c.id!); await load(); } catch (err: any) { setNotice(err?.message); }
   }
 
   const typeLabel = (t: string) => { const x = CONGE_TYPES.find(y => y.value === t); return x ? `${x.emoji} ${L(x.fr, x.en)}` : t; };
   const fmt = (d: string) => new Date(d + 'T00:00').toLocaleDateString(lang === 'en' ? 'en-CA' : 'fr-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  function CongeRow({ c, canManage }: { c: Conge; canManage: boolean }) {
+  function CongeRow({ c }: { c: Conge }) {
     const st = STATUS[c.status] || STATUS.pending;
     return (
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <span className="text-sm font-semibold text-slate-700">{persById[c.personnel_id]?.name || '—'}</span>
         <span className="text-xs text-slate-500">{typeLabel(c.type)}</span>
         <span className="text-xs text-slate-600"><CalendarDays size={12} className="mr-1 inline" />{fmt(c.start_date)} → {fmt(c.end_date)}</span>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{dayCount(c.start_date, c.end_date)} {L('j', 'd')}</span>
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{L(st.fr, st.en)}</span>
         {c.notes && <span className="text-xs italic text-slate-400">{c.notes}</span>}
         <div className="ml-auto flex items-center gap-2">
-          {canManage && c.status === 'pending' && (
-            <>
-              <button onClick={() => decide(c, true)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"><Check size={12} /> {L('Approuver', 'Approve')}</button>
-              <button onClick={() => decide(c, false)} className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"><X size={12} /> {L('Refuser', 'Reject')}</button>
-            </>
+          {c.status === 'pending' && (
+            <button onClick={() => cancel(c)} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-red-600 hover:underline"><X size={12} /> {L('Annuler', 'Cancel')}</button>
           )}
-          {c.status === 'pending' && !canManage && (
-            <button onClick={() => cancel(c)} className="text-xs font-semibold text-slate-400 hover:text-slate-600 hover:underline">{L('Annuler', 'Cancel')}</button>
-          )}
-          {canManage && <button onClick={() => remove(c)} className="rounded-lg p-1 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>}
         </div>
       </div>
     );
@@ -143,23 +129,21 @@ export default function CongesPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <PortalHeader tenant={tenant} />
       <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-5 lg:px-6">
-        <h1 className="mb-1 text-xl font-bold text-slate-900">{L('Congés', 'Time off')}</h1>
-        <p className="mb-4 text-sm text-slate-500">{L('Demandez vos congés ; votre superviseur les approuve.', 'Request your time off; your supervisor approves it.')}</p>
+        {/* Flèche retour vers les modules (comme les autres modules) */}
+        <Link href={`/${tenant}/modules`} className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-violet-700">
+          <ArrowLeft size={16} /> {L('Modules', 'Modules')}
+        </Link>
+        <h1 className="mb-1 flex items-center gap-2 text-xl font-bold text-slate-900"><Clock size={20} /> {L('Mes congés', 'My time off')}</h1>
+        <p className="mb-4 text-sm text-slate-500">{L('Demandez vos congés et suivez leur statut. Votre superviseur les approuve.', 'Request your time off and track its status. Your supervisor approves it.')}</p>
 
         {notice && <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-800">{notice}</div>}
-
-        {/* Onglets */}
-        <div className="mb-4 flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-          <button onClick={() => setTab('mine')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${tab === 'mine' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}><Clock size={15} /> {L('Mes congés', 'My time off')}</button>
-          {isSupervisor && <button onClick={() => setTab('team')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${tab === 'team' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}><Users size={15} /> {L('Équipe', 'Team')}{pendingTeam.length > 0 && <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">{pendingTeam.length}</span>}</button>}
-        </div>
 
         {/* Formulaire de demande */}
         <form onSubmit={submit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-600"><Plus size={15} /> {L('Nouvelle demande', 'New request')}</div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="text-xs font-semibold text-slate-500">{L('Employé', 'Employee')}
-              <select value={personId} disabled={!isSupervisor && !!myPerson} onChange={e => setPersonId(e.target.value)} className="inp mt-1 w-full">
+              <select value={personId} disabled={!!myPerson} onChange={e => setPersonId(e.target.value)} className="inp mt-1 w-full">
                 <option value="">{L('— Choisir —', '— Select —')}</option>
                 {personnel.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -177,8 +161,8 @@ export default function CongesPage() {
             </label>
           </div>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-            <label className="flex-1 text-xs font-semibold text-slate-500">{L('Note (facultatif)', 'Note (optional)')}
-              <input value={notes} onChange={e => setNotes(e.target.value)} className="inp mt-1 w-full" placeholder={L('Motif, détails…', 'Reason, details…')} />
+            <label className="flex-1 text-xs font-semibold text-slate-500">{L('Note (motif)', 'Note (reason)')} <span className="text-red-500">*</span>
+              <input value={notes} onChange={e => setNotes(e.target.value)} required className="inp mt-1 w-full" placeholder={L('Motif, détails… (obligatoire)', 'Reason, details… (required)')} />
             </label>
             <div className="flex items-center gap-3">
               {startDate && endDate && endDate >= startDate && <span className="text-sm font-semibold text-slate-600">{dayCount(startDate, endDate)} {L('jour(s)', 'day(s)')}</span>}
@@ -201,30 +185,13 @@ export default function CongesPage() {
           </div>
         )}
 
-        {/* Listes */}
-        {tab === 'mine' ? (
-          <div className="space-y-2">
-            {!myPerson && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{L('Aucun profil employé lié à votre courriel — choisissez votre nom dans le formulaire.', 'No employee profile linked to your email — pick your name in the form.')}</div>}
-            {mine.length === 0 ? <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">{L('Aucune demande.', 'No request yet.')}</div>
-              : mine.map(c => <CongeRow key={c.id} c={c} canManage={false} />)}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {pendingTeam.length > 0 && (
-              <div>
-                <div className="mb-2 text-sm font-bold text-amber-700">{L('À approuver', 'To approve')} ({pendingTeam.length})</div>
-                <div className="space-y-2">{pendingTeam.map(c => <CongeRow key={c.id} c={c} canManage />)}</div>
-              </div>
-            )}
-            <div>
-              <div className="mb-2 text-sm font-bold text-slate-600">{L('Toutes les demandes', 'All requests')}</div>
-              <div className="space-y-2">
-                {conges.length === 0 ? <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">{L('Aucune demande.', 'No request yet.')}</div>
-                  : conges.map(c => <CongeRow key={c.id} c={c} canManage />)}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Mes demandes (libre-service) — toutes mes demandes + leur statut */}
+        <div className="space-y-2">
+          <div className="mb-1 text-sm font-bold text-slate-600">{L('Mes demandes', 'My requests')}</div>
+          {!myPerson && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{L('Aucun profil employé lié à votre courriel — choisissez votre nom dans le formulaire.', 'No employee profile linked to your email — pick your name in the form.')}</div>}
+          {mine.length === 0 ? <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">{L('Aucune demande.', 'No request yet.')}</div>
+            : mine.map(c => <CongeRow key={c.id} c={c} />)}
+        </div>
       </div>
 
       <style jsx>{`
