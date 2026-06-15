@@ -259,6 +259,27 @@ export async function saveSoumissionSettings(tenant: string, patch: Partial<Soum
   return { error };
 }
 
+// ── Gabarits de soumission (tâches récurrentes) : on enregistre la STRUCTURE (items + lignes,
+// descriptions, heures/quantités) ; à l'usage on charge le gabarit et on n'ajuste que les prix.
+export type SoumissionTemplate = { id?: string; name: string; data: { items?: SoumissionItem[]; breakdown_mode?: string; notes?: string }; created_at?: string };
+
+export async function getSoumissionTemplates(tenant: string): Promise<SoumissionTemplate[]> {
+  try {
+    const { data } = await supabase.from('soumission_templates').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false });
+    return (data || []) as SoumissionTemplate[];
+  } catch { return []; }
+}
+
+export async function saveSoumissionTemplate(tenant: string, name: string, data: SoumissionTemplate['data']): Promise<{ id?: string; error?: any }> {
+  const { data: d, error } = await supabase.from('soumission_templates').insert({ tenant_id: tenant, name, data }).select('id').single();
+  return { id: d?.id, error };
+}
+
+export async function deleteSoumissionTemplate(tenant: string, id: string): Promise<{ error?: any }> {
+  const { error } = await supabase.from('soumission_templates').delete().eq('tenant_id', tenant).eq('id', id);
+  return { error };
+}
+
 // ── Numérotation (spec client) : <PREFIX><AA><NNN><S|P> ─────────────────────
 // PREFIX = initiales des mots du site (« CERDIA Sherbrooke » -> « CS »). AA = 2 chiffres année.
 // NNN = séquentiel monotone (001+). Suffixe S = soumission, P = projet. Compteurs séparés.

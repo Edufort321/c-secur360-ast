@@ -10,7 +10,8 @@ import {
   computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo, hoursByCategory,
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   getSoumissionSettings, saveSoumissionSettings,
-  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem,
+  getSoumissionTemplates, saveSoumissionTemplate, deleteSoumissionTemplate,
+  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem, type SoumissionTemplate,
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
 import { frLongDate } from '@/lib/pdf/letterhead';
@@ -68,6 +69,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     if (coverCfg?.default_breakdown_mode) setBreakdownMode(coverCfg.default_breakdown_mode);
     setCondSel((coverCfg?.conditions || []).filter(c => c.defaut_coche).map(c => c.id));
   }, [coverCfg]);
+  // Gabarits de soumission (tâches récurrentes)
+  const [templates, setTemplates] = useState<SoumissionTemplate[]>([]);
+  const reloadTemplates = () => getSoumissionTemplates(tenant).then(setTemplates).catch(() => {});
+  useEffect(() => { reloadTemplates(); }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
   const [logoUrl, setLogoUrl] = useState('/c-secur360-logo.png');
   const [companyName, setCompanyName] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
@@ -273,6 +278,26 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   }));
   const updLigne = (i: number, li: number, patch: Partial<SoumissionLigne>) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.map((l, k) => k === li ? { ...l, ...patch } : l) } : it));
   const delLigne = (i: number, li: number) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.filter((_, k) => k !== li) } : it));
+
+  // ── Gabarits de soumission : charger la STRUCTURE (sans id, prix à ajuster) / enregistrer la courante ──
+  const applyTemplate = (tpl: SoumissionTemplate) => {
+    const its = (tpl.data?.items || []).map(it => ({ name: it.name, total: Number(it.total) || 0, year: it.year, lignes: (it.lignes || []).map(({ id, ...l }: any) => ({ ...l })) }));
+    setItems(its.length ? its : [{ name: 'Item 1', total: 0, lignes: [] }]);
+    if (tpl.data?.breakdown_mode) setBreakdownMode(tpl.data.breakdown_mode as any);
+    setNotice(tr('Gabarit chargé : ajustez les prix.', 'Template loaded: adjust the prices.'));
+  };
+  const saveAsTemplate = async () => {
+    const name = window.prompt(tr('Nom du gabarit :', 'Template name:'), (hdr as any).title || hdr.numero || '');
+    if (!name) return;
+    const cleanItems = items.map(it => ({ name: it.name, total: it.total, year: it.year, lignes: (it.lignes || []).map(({ id, ...l }: any) => ({ ...l })) }));
+    const { error } = await saveSoumissionTemplate(tenant, name, { items: cleanItems as any, breakdown_mode: breakdownMode, notes: hdr.notes || '' });
+    if (error) setNotice(tr('Erreur (migration 179 appliquée ?) : ', 'Error (migration 179 applied?): ') + (error.message || error));
+    else { setNotice(tr('Gabarit enregistré.', 'Template saved.')); reloadTemplates(); }
+  };
+  const removeTemplate = async (id?: string) => {
+    if (!id || !window.confirm(tr('Supprimer ce gabarit ?', 'Delete this template?'))) return;
+    await deleteSoumissionTemplate(tenant, id); reloadTemplates();
+  };
 
   // ── Préfixe du numéro = 1re lettre de chaque sélection (tenant + site + département), sans longueur max ──
   const firstAlpha = (s: string) => (String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')[0] || '').toUpperCase();
@@ -733,6 +758,22 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         </div>
       ) : view === 'edit' ? (
         <div className="space-y-4">
+          {/* Gabarits de soumission : charger une structure récurrente (on n'ajuste que les prix) / enregistrer la courante */}
+          {canEdit && (
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm dark:border-indigo-800 dark:bg-indigo-900/20">
+              <span className="font-bold text-gray-700 dark:text-gray-200">🧩 {tr('Gabarits', 'Templates')}</span>
+              <select value="" onChange={e => { const t = templates.find(x => x.id === e.target.value); if (t) applyTemplate(t); }} className={`${inputCls} max-w-[16rem]`}>
+                <option value="">{templates.length ? tr('— Charger un gabarit —', '— Load a template —') : tr('(aucun gabarit)', '(no template)')}</option>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <button type="button" onClick={saveAsTemplate} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-white dark:border-gray-600 dark:text-gray-300">💾 {tr('Enregistrer comme gabarit', 'Save as template')}</button>
+              {templates.length > 0 && (
+                <span className="flex flex-wrap items-center gap-1 text-[11px] text-gray-400">
+                  {templates.map(t => <button key={t.id} type="button" onClick={() => removeTemplate(t.id)} className="inline-flex items-center gap-0.5 rounded border border-gray-200 px-1.5 py-0.5 hover:text-red-600 dark:border-gray-700" title={tr('Supprimer', 'Delete')}>{t.name} <Trash2 size={10} /></button>)}
+                </span>
+              )}
+            </div>
+          )}
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid gap-3 sm:grid-cols-4">
               <label className="text-xs font-semibold text-gray-500">{tr('N° soumission', 'Quote #')}<input value={hdr.numero} onChange={e => setHdr(h => ({ ...h, numero: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
