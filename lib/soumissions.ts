@@ -226,6 +226,39 @@ export async function setPreferredCatalogue(tenant: string, id: string): Promise
   await supabase.from('catalogue_taux').update({ preferred: false }).eq('tenant_id', tenant).neq('id', id);
 }
 
+// ── Paramètres de présentation (lettre, conditions, mode de ventilation) par tenant ──
+export type ConditionItem = { id: string; titre: string; contenu: string; defaut_coche?: boolean };
+export type CoverLetterCfg = { ville?: string; body?: string; salutation?: string; signataire_nom?: string; signataire_titre?: string; signature_url?: string | null };
+export type SoumissionSettings = {
+  cover_letter?: CoverLetterCfg;
+  conditions?: ConditionItem[];
+  default_breakdown_mode?: 'detaille' | 'par_item' | 'global_desc';
+};
+
+const DEFAULT_COVER_BODY =
+  "Pour donner suite à votre demande, nous avons le plaisir de vous présenter notre offre de service pour effectuer les travaux mentionnés en rubrique.\n\n" +
+  "Nous espérons le tout à votre entière satisfaction. N’hésitez pas à communiquer avec nous pour toute information supplémentaire.\n\n" +
+  "Si toutefois vous acceptez notre offre, veuillez nous confirmer votre acceptation par courriel à commande@mdlenergie.com en nous retournant votre bon de commande et en indiquant le numéro de référence de cette offre de service.";
+
+export async function getSoumissionSettings(tenant: string): Promise<SoumissionSettings> {
+  try {
+    const { data } = await supabase.from('soumission_settings').select('*').eq('tenant_id', tenant).maybeSingle();
+    return {
+      cover_letter: { body: DEFAULT_COVER_BODY, salutation: 'Nous vous prions d’agréer, Madame, Monsieur, nos sincères salutations.', ...(data?.cover_letter || {}) },
+      conditions: Array.isArray(data?.conditions) ? data!.conditions : [],
+      default_breakdown_mode: data?.default_breakdown_mode || 'detaille',
+    };
+  } catch {
+    return { cover_letter: { body: DEFAULT_COVER_BODY }, conditions: [], default_breakdown_mode: 'detaille' };
+  }
+}
+
+export async function saveSoumissionSettings(tenant: string, patch: Partial<SoumissionSettings>): Promise<{ error?: any }> {
+  const row: any = { tenant_id: tenant, updated_at: new Date().toISOString(), ...patch };
+  const { error } = await supabase.from('soumission_settings').upsert(row, { onConflict: 'tenant_id' });
+  return { error };
+}
+
 // ── Numérotation (spec client) : <PREFIX><AA><NNN><S|P> ─────────────────────
 // PREFIX = initiales des mots du site (« CERDIA Sherbrooke » -> « CS »). AA = 2 chiffres année.
 // NNN = séquentiel monotone (001+). Suffixe S = soumission, P = projet. Compteurs séparés.

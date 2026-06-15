@@ -5,6 +5,7 @@ import {
   computeLigneMontant, computeItemTotal, computeSoumissionTotal, applyMarkup, hoursByCategory,
   CATEGORIE_LABELS, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
 } from '@/lib/soumissions';
+import { drawCoverLetterPage, applyFooters, type CoverLetterData } from '@/lib/pdf/letterhead';
 
 const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
 const money = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
@@ -24,6 +25,7 @@ export type SoumissionPdfOpts = {
   companyName?: string;
   includeSummary?: boolean;          // inclure la page Sommaire
   itemIndexes?: number[] | null;     // items à inclure (null = tous)
+  coverLetter?: CoverLetterData | null; // lettre de présentation (page jointe en tête)
   filename?: string;
 };
 
@@ -45,6 +47,12 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(107, 114, 128);
     doc.text(`${s.numero || ''}${s.revision && s.revision > 1 ? ` · rév. ${s.revision}` : ''}`, R, y + 32, { align: 'right' });
     y += 50;
+  }
+
+  // Lettre de présentation (page de tête, look pro partagé) — si fournie.
+  if (opts.coverLetter) {
+    drawCoverLetterPage(doc, { ...opts.coverLetter, logo, numero: opts.coverLetter.numero || s.numero });
+    doc.addPage(); y = M;
   }
 
   drawHeader();
@@ -114,8 +122,8 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(17, 24, 39);
   doc.text('TOTAL', M, y); doc.setTextColor(5, 150, 105); doc.text(money(final), R, y, { align: 'right' });
   y += 24;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(160);
-  doc.text(`C-Secur360 · ${s.numero || ''}`, M, 792 - 24);
+  // Pied de page numéroté sur toutes les pages (socle partagé).
+  applyFooters(doc, `${opts.companyName || 'C-Secur360'} · ${s.numero || ''}`);
 
   doc.save(opts.filename || `${s.numero || 'soumission'}.pdf`);
 }

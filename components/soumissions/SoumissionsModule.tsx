@@ -9,9 +9,11 @@ import {
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
   computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo, hoursByCategory,
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
-  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats,
+  getSoumissionSettings,
+  type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings,
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
+import { frLongDate } from '@/lib/pdf/letterhead';
 
 type SubTab = 'liste' | 'catalogue' | 'stats';
 
@@ -52,6 +54,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [expSummary, setExpSummary] = useState(true);
   const [expExcluded, setExpExcluded] = useState<number[]>([]); // items décochés
   const [pdfBusy, setPdfBusy] = useState(false);
+  // Lettre de présentation (style DGA) — paramètres tenant + champs éditables à l'export.
+  const [coverCfg, setCoverCfg] = useState<SoumissionSettings | null>(null);
+  const [inclCover, setInclCover] = useState(false);
+  const [coverTo, setCoverTo] = useState('');     // nom du destinataire (éditable)
+  const [coverDate, setCoverDate] = useState(''); // date (défaut aujourd'hui, éditable)
+  useEffect(() => { getSoumissionSettings(tenant).then(setCoverCfg).catch(() => {}); }, [tenant]);
+  useEffect(() => { setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville)); }, [coverCfg]);
   const [logoUrl, setLogoUrl] = useState('/c-secur360-logo.png');
   const [companyName, setCompanyName] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
@@ -277,8 +286,25 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     if (pdfBusy) return; setPdfBusy(true);
     try {
       const idxs = items.map((_, i) => i).filter(i => !expExcluded.includes(i));
+      // Lettre de présentation (optionnelle) : pré-remplie depuis les paramètres tenant + le client.
+      const cl = coverCfg?.cover_letter || {};
+      const coverLetter = inclCover ? {
+        ville: cl.ville,
+        date: coverDate || frLongDate(new Date(), cl.ville),
+        destinataire: [coverTo, clientName, hdr.client_snapshot?.lieu].filter(Boolean) as string[],
+        objet: (hdr as any).title || (hdr as any).objet || undefined,
+        votreClient: (hdr.client_snapshot as any)?.votre_client || undefined,
+        notreDossier: hdr.numero || undefined,
+        numero: hdr.numero || undefined,
+        body: cl.body,
+        salutation: cl.salutation,
+        signataireNom: cl.signataire_nom,
+        signataireTitre: cl.signataire_titre,
+        signatureUrl: cl.signature_url || null,
+        companyName,
+      } : null;
       await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
-        cat, logoUrl, companyName, includeSummary: expSummary,
+        cat, logoUrl, companyName, includeSummary: expSummary, coverLetter,
         itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,
       });
     } catch (e: any) { setNotice(tr('Export PDF impossible : ', 'PDF export failed: ') + (e?.message || e)); }
@@ -903,6 +929,25 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 {items.map((it, i) => (
                   <label key={i} className="flex items-center gap-1.5 text-gray-600"><input type="checkbox" checked={!expExcluded.includes(i)} onChange={e => setExpExcluded(prev => e.target.checked ? prev.filter(x => x !== i) : [...prev, i])} /> {it.name || `Item ${i + 1}`}</label>
                 ))}
+              </div>
+
+              {/* Lettre de présentation (page de tête, style DGA) */}
+              <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
+                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  <input type="checkbox" checked={inclCover} onChange={e => setInclCover(e.target.checked)} />
+                  ✉️ {tr('Joindre une lettre de présentation', 'Attach a cover letter')}
+                </label>
+                {inclCover && (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Destinataire (nom)', 'Recipient (name)')}
+                      <input value={coverTo} onChange={e => setCoverTo(e.target.value)} placeholder={tr('Ex. Madame Marie-Ève Bédard', 'E.g. Ms. Marie-Ève Bédard')} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                    </label>
+                    <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Date', 'Date')}
+                      <input value={coverDate} onChange={e => setCoverDate(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                    </label>
+                    <p className="text-[11px] text-gray-400 sm:col-span-2">{tr('Texte, signataire et ville viennent des paramètres « Lettre de présentation ». Adresse client pré-remplie.', 'Body, signatory and city come from the cover-letter settings. Client address prefilled.')}</p>
+                  </div>
+                )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{pdfBusy ? '…' : tr('Exporter le PDF (sélection)', 'Export PDF (selection)')}</button>
