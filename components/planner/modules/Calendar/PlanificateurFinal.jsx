@@ -1562,10 +1562,13 @@ export function PlanificateurFinal({
                         </div>
                     )}
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
-                    <div className="flex">
-                        {/* Colonnes fixes pour noms et postes */}
-                        <div className="flex-shrink-0 border-r-2 border-gray-300 dark:border-gray-600">
+                    {/* overflow-auto (X+Y) sur le conteneur borné à la hauteur d'écran : la barre de défilement
+                        HORIZONTALE reste TOUJOURS visible en bas du cadre (plus besoin de descendre parmi 50
+                        ressources pour l'atteindre). La colonne des noms est sticky-left (reste fixe au scroll). */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm max-h-[calc(100vh-200px)] overflow-auto">
+                    <div className="flex w-max min-w-full">
+                        {/* Colonnes fixes pour noms et postes (sticky à gauche) */}
+                        <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-gray-800 border-r-2 border-gray-300 dark:border-gray-600">
                             <table className="border-collapse w-full">
                                 <thead className="bg-gray-900 sticky top-0">
                                     <tr className="h-20">
@@ -1635,8 +1638,8 @@ export function PlanificateurFinal({
                             </table>
                         </div>
 
-                        {/* Section scrollable pour les dates */}
-                        <div className="flex-1 overflow-x-auto">
+                        {/* Section des dates — le défilement horizontal est porté par le conteneur externe borné. */}
+                        <div className="flex-shrink-0">
                             <table className="w-full min-w-max border-collapse">
                                 <thead className="bg-gray-900 sticky top-0">
                                     {/* En-tête avec dates - UNE seule ligne synchronisée */}
