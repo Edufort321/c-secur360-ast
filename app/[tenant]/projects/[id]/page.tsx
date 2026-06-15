@@ -38,6 +38,7 @@ export default function ProjectDetailPage() {
   const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
   const [linkedReports, setLinkedReports] = useState<any[]>([]);
   const [linkedSoumissions, setLinkedSoumissions] = useState<any[]>([]);
+  const [timeRollup, setTimeRollup] = useState<{ reg: number; ot: number; prem: number; total: number; km: number; entries: number; byPerson: { name: string; hrs: number }[] } | null>(null);
   // Interconnexions conditionnées aux modules du tenant : on n'affiche un lien que si le module existe
   // (s'il ne prend pas AST/Permis/Rapports, on ne montre ni la section ni le bouton « Créer »).
   const ent = useEntitlements(tenant);
@@ -158,6 +159,40 @@ export default function ProjectDetailPage() {
     })();
     return () => { active = false; };
   }, [id, tenant]);
+
+  // Rollup TEMPS RÉEL : heures saisies sur ce projet (feuilles de temps), agrégées par personne.
+  // Lien par project_id OU project_number (le punch/feuilles renseignent l'un ou l'autre).
+  useEffect(() => {
+    if (!id) { setTimeRollup(null); return; }
+    let active = true;
+    (async () => {
+      try {
+        const pn = (p as any)?.project_number;
+        const orFilter = pn ? `project_id.eq.${id},project_number.eq.${pn}` : `project_id.eq.${id}`;
+        const { data: ents } = await supabase.from('timesheet_entries')
+          .select('timesheet_id, hrs_regular, hrs_overtime, hrs_premium, km').eq('tenant_id', tenant).or(orFilter);
+        if (!active) return;
+        const rows = ents || [];
+        let reg = 0, ot = 0, prem = 0, km = 0; const byTs: Record<string, number> = {};
+        rows.forEach((e: any) => {
+          const r = Number(e.hrs_regular) || 0, o = Number(e.hrs_overtime) || 0, pm = Number(e.hrs_premium) || 0;
+          reg += r; ot += o; prem += pm; km += Number(e.km) || 0;
+          if (e.timesheet_id) byTs[e.timesheet_id] = (byTs[e.timesheet_id] || 0) + r + o + pm;
+        });
+        let byPerson: { name: string; hrs: number }[] = [];
+        const tsIds = Object.keys(byTs);
+        if (tsIds.length) {
+          const { data: sheets } = await supabase.from('timesheets').select('id, employee_name').in('id', tsIds);
+          const nameOf: Record<string, string> = Object.fromEntries((sheets || []).map((s: any) => [s.id, s.employee_name || '—']));
+          const agg: Record<string, number> = {};
+          tsIds.forEach(tid => { const nm = nameOf[tid] || '—'; agg[nm] = (agg[nm] || 0) + byTs[tid]; });
+          byPerson = Object.entries(agg).map(([name, hrs]) => ({ name, hrs })).sort((a, b) => b.hrs - a.hrs);
+        }
+        if (active) setTimeRollup({ reg, ot, prem, total: reg + ot + prem, km, entries: rows.length, byPerson });
+      } catch { if (active) setTimeRollup(null); }
+    })();
+    return () => { active = false; };
+  }, [id, tenant, (p as any)?.project_number]);
 
   const set = (k: string, v: any) => setP((prev: any) => ({ ...prev, [k]: v }));
 
@@ -429,6 +464,29 @@ export default function ProjectDetailPage() {
                         </Link>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Temps réel sur le projet (feuilles de temps) — alimente le suivi et la facturation */}
+                {timeRollup && timeRollup.total > 0 && (
+                  <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                    <h3 className="mb-2 text-sm font-bold">⏱️ {tr('Temps réel sur le projet', 'Actual time on project')}</h3>
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <span className="rounded-lg bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{tr('Total', 'Total')} : {timeRollup.total.toLocaleString('fr-CA')} h</span>
+                      <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{tr('Rég.', 'Reg.')} {timeRollup.reg} · {tr('Supp.', 'OT')} {timeRollup.ot} · {tr('Maj.', 'Prem.')} {timeRollup.prem}</span>
+                      {timeRollup.km > 0 && <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{timeRollup.km} km</span>}
+                    </div>
+                    {timeRollup.byPerson.length > 0 && (
+                      <div className="mt-2 divide-y divide-gray-100 text-sm dark:divide-gray-700">
+                        {timeRollup.byPerson.map(p2 => (
+                          <div key={p2.name} className="flex items-center justify-between py-1.5">
+                            <span className="text-gray-700 dark:text-gray-200">{p2.name}</span>
+                            <span className="text-xs font-semibold text-gray-500">{p2.hrs.toLocaleString('fr-CA')} h</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-1 text-[11px] text-gray-400">{tr('Heures saisies sur ce projet (feuilles de temps / poinçons). Base pour la facturation au temps.', 'Hours logged on this project (timesheets / punches). Basis for time-based billing.')}</p>
                   </div>
                 )}
 
