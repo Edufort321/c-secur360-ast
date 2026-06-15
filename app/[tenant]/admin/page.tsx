@@ -18,8 +18,9 @@ import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, getPeriods, upsertPeriod, setPeriodStatus, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode, type GLPeriod } from '@/lib/accounting';
 import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
+import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport } from '@/lib/agingReports';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
-import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
+import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
@@ -5962,9 +5963,12 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'statements' | 'periods' | 'new'>('plan');
+  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'statements' | 'periods' | 'aging' | 'new'>('plan');
   const [periods, setPeriods] = useState<GLPeriod[]>([]);
   const reloadPeriods = () => getPeriods(tenant).then(setPeriods).catch(() => {});
+  const [arAging, setArAging] = useState<AgingReport | null>(null);
+  const [apAging, setApAging] = useState<AgingReport | null>(null);
+  const reloadAging = () => Promise.all([getArAging(tenant), getApAging(tenant)]).then(([ar, ap]) => { setArAging(ar); setApAging(ap); }).catch(() => {});
 
   // Saisie d'écriture
   const [neDate, setNeDate] = useState(new Date().toISOString().slice(0, 10));
@@ -5982,7 +5986,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     try {
       const [acc, tc, led, tb] = await Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant), getTrialBalance(tenant)]);
       setAccounts(acc); setTaxCodes(tc); setLedger(led); setBal(tb);
-      reloadPeriods();
+      reloadPeriods(); reloadAging();
     } catch { setMigMissing(true); }
     setLoading(false);
   }
@@ -6064,7 +6068,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['periods', tr('Périodes', 'Periods')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
+          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['aging', tr('Âge des comptes', 'Aging')], ['periods', tr('Périodes', 'Periods')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
@@ -6263,6 +6267,44 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             </div>
           );
         })()
+      ) : sub === 'aging' ? (
+        <div className="space-y-6">
+          {([['AR', tr('Comptes à RECEVOIR (clients)', 'Accounts RECEIVABLE (clients)'), arAging, 'emerald'], ['AP', tr('Comptes à PAYER (fournisseurs)', 'Accounts PAYABLE (vendors)'), apAging, 'rose']] as const).map(([key, title, rep, color]) => (
+            <div key={key}>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300">{title}</h3>
+                {rep && <span className={`text-sm font-bold ${color === 'emerald' ? 'text-emerald-600' : 'text-rose-600'}`}>{mny(rep.grand_total)}</span>}
+              </div>
+              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-500 dark:border-gray-700">
+                    <th className="px-4 py-2">{key === 'AR' ? tr('Client', 'Client') : tr('Fournisseur', 'Vendor')}</th>
+                    {AGING_BUCKETS.map(b => <th key={b} className="px-3 text-right">{tr(AGING_LABELS[b][0], AGING_LABELS[b][1])}</th>)}
+                    <th className="px-4 text-right">{tr('Total', 'Total')}</th>
+                  </tr></thead>
+                  <tbody>
+                    {(rep?.parties || []).map(p => (
+                      <tr key={p.party} className="border-t border-gray-50 dark:border-gray-700/50">
+                        <td className="px-4 py-2 font-semibold">{p.party}</td>
+                        {AGING_BUCKETS.map(b => <td key={b} className={`px-3 text-right ${b !== 'current' && p.buckets[b] > 0 ? 'text-amber-600' : 'text-gray-500'} ${b === 'd90_plus' && p.buckets[b] > 0 ? 'font-bold text-rose-600' : ''}`}>{p.buckets[b] ? mny(p.buckets[b]) : '—'}</td>)}
+                        <td className="px-4 text-right font-bold">{mny(p.total)}</td>
+                      </tr>
+                    ))}
+                    {rep && rep.parties.length > 0 && (
+                      <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-900/30">
+                        <td className="px-4 py-2">{tr('Total', 'Total')}</td>
+                        {AGING_BUCKETS.map(b => <td key={b} className="px-3 text-right">{rep.totals[b] ? mny(rep.totals[b]) : '—'}</td>)}
+                        <td className="px-4 text-right">{mny(rep.grand_total)}</td>
+                      </tr>
+                    )}
+                    {(!rep || rep.parties.length === 0) && <tr><td colSpan={AGING_BUCKETS.length + 2} className="px-4 py-6 text-center text-gray-400">{tr('Aucun solde en cours.', 'No outstanding balance.')}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-gray-400">{tr('Tranches calculées depuis la date d’échéance (ou la date du document si aucune échéance) jusqu’à aujourd’hui. AR = factures émises non payées ; AP = achats « à terme » non payés.', 'Buckets computed from the due date (or document date if none) to today. AR = issued unpaid invoices; AP = unpaid on-account purchases.')}</p>
+        </div>
       ) : sub === 'periods' ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -6740,6 +6782,16 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setBankLines(prev => prev.filter(b => b.id !== id));
     try { await deleteBankLine(tenant, id); } catch (e: any) { setNotice(e?.message); }
   }
+  async function doAutoMatch() {
+    setBankBusy(true); setNotice(null);
+    try {
+      const r = await autoMatchBankLines(tenant, { apply: true });
+      setBankLines(await getBankLines(tenant));
+      const amb = r.suggestions.length;
+      setNotice(`${r.applied} ${tr('ligne(s) rapprochée(s) automatiquement', 'line(s) auto-reconciled')}${amb ? ` · ${amb} ${tr('ambiguë(s) à valider manuellement', 'ambiguous to confirm manually')}` : ''}.`);
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setBankBusy(false);
+  }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
   if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module transactions non initialisé', 'Transactions module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 087 dans Supabase, puis rechargez.', 'Run migration 087 in Supabase, then reload.')}</p></div>);
@@ -6827,6 +6879,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 <input type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await f.text()); }} />
               </label>
               <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
+              {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
               {importText.trim() && <span className="text-xs text-gray-400">{parseBankCsv(importText).length} {tr('lignes détectées', 'lines detected')}</span>}
             </div>
           </div>

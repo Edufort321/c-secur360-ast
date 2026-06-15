@@ -113,3 +113,55 @@ export async function deleteBankLine(tenant: string, id: string): Promise<void> 
   const { error } = await supabase.from('bank_statement_lines').delete().eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
 }
+
+// ── AUTO-RAPPROCHEMENT (exception-driven) ────────────────────────────────────────────────────────
+// Apparie automatiquement chaque ligne bancaire NON rapprochée à une transaction par MONTANT (± tol.)
+// et DATE (fenêtre ± jours). Le SIGNE doit concorder : sortie bancaire (montant -) ↔ dépense ; entrée
+// bancaire (montant +) ↔ revenu. On n'applique QUE les correspondances UNIQUES (une seule candidate)
+// pour éviter les faux positifs ; les ambiguës sont retournées pour décision manuelle.
+export type MatchSuggestion = {
+  bank_line_id: string; bank_date: string; bank_amount: number; description: string;
+  candidates: Array<{ transaction_id: string; number: string; vendor: string; date: string; amount: number; days: number }>;
+};
+export type AutoMatchResult = { applied: number; suggestions: MatchSuggestion[] };
+
+const daysApart = (a: string, b: string) => {
+  const ta = Date.parse((a || '').slice(0, 10) + 'T00:00:00'), tb = Date.parse((b || '').slice(0, 10) + 'T00:00:00');
+  return isNaN(ta) || isNaN(tb) ? 9999 : Math.abs(Math.round((tb - ta) / 86400000));
+};
+
+export async function autoMatchBankLines(
+  tenant: string,
+  opts: { amountTol?: number; dateTol?: number; apply?: boolean } = {},
+): Promise<AutoMatchResult> {
+  const amountTol = opts.amountTol ?? 0.02;
+  const dateTol = opts.dateTol ?? 5;
+  const lines = (await getBankLines(tenant)).filter(l => !l.reconciled && !l.matched_transaction_id && l.id);
+  const { data: txns } = await supabase.from('commerce_transactions')
+    .select('id, transaction_number, vendor_name, txn_date, txn_type, total, status')
+    .eq('tenant_id', tenant).neq('status', 'cancelled');
+  // Montant bancaire signé attendu : revenu = + (entrée), dépense = - (sortie).
+  const cand = (txns || []).map((t: any) => ({
+    transaction_id: t.id as string, number: t.transaction_number || '—', vendor: t.vendor_name || '',
+    date: (t.txn_date || '').slice(0, 10),
+    signed: ((t.txn_type || 'expense') === 'revenue' ? 1 : -1) * (Number(t.total) || 0),
+  }));
+  const used = new Set<string>();
+  const suggestions: MatchSuggestion[] = [];
+  let applied = 0;
+  for (const l of lines) {
+    const matches = cand
+      .filter(c => !used.has(c.transaction_id) && Math.abs(c.signed - l.amount) <= amountTol && daysApart(c.date, l.stmt_date) <= dateTol)
+      .map(c => ({ transaction_id: c.transaction_id, number: c.number, vendor: c.vendor, date: c.date, amount: r2(c.signed), days: daysApart(c.date, l.stmt_date) }))
+      .sort((a, b) => a.days - b.days);
+    if (!matches.length) continue;
+    if (matches.length === 1 && opts.apply) {
+      used.add(matches[0].transaction_id);
+      await updateBankLine(tenant, l.id!, { matched_transaction_id: matches[0].transaction_id, reconciled: true });
+      applied++;
+    } else {
+      suggestions.push({ bank_line_id: l.id!, bank_date: l.stmt_date, bank_amount: l.amount, description: l.description, candidates: matches });
+    }
+  }
+  return { applied, suggestions };
+}
