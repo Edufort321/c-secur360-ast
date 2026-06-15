@@ -116,3 +116,27 @@ export async function reverseEntry(tenant: string, entryId: string, created_by?:
   await supabase.from('gl_entries').update({ reversed_by_id: newId }).eq('id', entryId);
   return newId;
 }
+
+// ── PÉRIODES COMPTABLES (fermeture / verrouillage — anti back-dating, migration 183) ──────────
+export type GLPeriod = { id: string; name: string; start_date: string; end_date: string; status: 'open' | 'closed'; closed_at?: string | null };
+
+export async function getPeriods(tenant: string): Promise<GLPeriod[]> {
+  const { data } = await supabase.from('gl_periods').select('*').eq('tenant_id', tenant).order('start_date', { ascending: false });
+  return (data || []) as GLPeriod[];
+}
+
+/** Crée/ouvre une période (mois '2026-05' ou année '2026'). Idempotent par (tenant, name). */
+export async function upsertPeriod(tenant: string, p: { name: string; start_date: string; end_date: string }): Promise<{ error?: any }> {
+  const { error } = await supabase.from('gl_periods').upsert(
+    { tenant_id: tenant, name: p.name, start_date: p.start_date, end_date: p.end_date, status: 'open' },
+    { onConflict: 'tenant_id,name' },
+  );
+  return { error };
+}
+
+/** Ferme/rouvre une période. Une période FERMÉE bloque toute écriture datée dedans (trigger 183). */
+export async function setPeriodStatus(tenant: string, id: string, status: 'open' | 'closed'): Promise<{ error?: any }> {
+  const patch: any = { status, closed_at: status === 'closed' ? new Date().toISOString() : null };
+  const { error } = await supabase.from('gl_periods').update(patch).eq('id', id).eq('tenant_id', tenant);
+  return { error };
+}

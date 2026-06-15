@@ -16,7 +16,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
-import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
+import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, getPeriods, upsertPeriod, setPeriodStatus, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode, type GLPeriod } from '@/lib/accounting';
 import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
@@ -5962,7 +5962,9 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'statements' | 'new'>('plan');
+  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'statements' | 'periods' | 'new'>('plan');
+  const [periods, setPeriods] = useState<GLPeriod[]>([]);
+  const reloadPeriods = () => getPeriods(tenant).then(setPeriods).catch(() => {});
 
   // Saisie d'écriture
   const [neDate, setNeDate] = useState(new Date().toISOString().slice(0, 10));
@@ -5980,6 +5982,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     try {
       const [acc, tc, led, tb] = await Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant), getTrialBalance(tenant)]);
       setAccounts(acc); setTaxCodes(tc); setLedger(led); setBal(tb);
+      reloadPeriods();
     } catch { setMigMissing(true); }
     setLoading(false);
   }
@@ -6061,7 +6064,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
+          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['periods', tr('Périodes', 'Periods')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
@@ -6260,6 +6263,46 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             </div>
           );
         })()
+      ) : sub === 'periods' ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-1 text-sm font-bold">🔒 {tr('Verrouillage de période (anti back-dating)', 'Period lock (anti back-dating)')}</h3>
+            <p className="mb-3 text-xs text-gray-500">{tr('Une période FERMÉE empêche toute écriture datée dedans — contrôle au niveau base de données (migration 183). Rouvrez-la pour corriger.', 'A CLOSED period blocks any entry dated within it — enforced at the database level (migration 183). Reopen to correct.')}</p>
+            {canEdit && (() => {
+              const now = new Date(); const y = now.getFullYear(); const m = now.getMonth() + 1; const p2 = (n: number) => String(n).padStart(2, '0');
+              const eom = new Date(y, m, 0).getDate();
+              const closeRange = async (name: string, start: string, end: string) => {
+                await upsertPeriod(tenant, { name, start_date: start, end_date: end });
+                const ps = await getPeriods(tenant); const per = ps.find(x => x.name === name);
+                if (per) { const { error } = await setPeriodStatus(tenant, per.id, 'closed'); if (error) { setNotice(error.message); return; } }
+                reloadPeriods(); setNotice(tr(`Période ${name} fermée.`, `Period ${name} closed.`));
+              };
+              return (
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => closeRange(`${y}-${p2(m)}`, `${y}-${p2(m)}-01`, `${y}-${p2(m)}-${p2(eom)}`)} className="rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800">{tr(`Fermer le mois ${y}-${p2(m)}`, `Close month ${y}-${p2(m)}`)}</button>
+                  <button onClick={() => closeRange(`${y}`, `${y}-01-01`, `${y}-12-31`)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">{tr(`Fermer l'année ${y}`, `Close year ${y}`)}</button>
+                </div>
+              );
+            })()}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 text-left text-gray-500 dark:border-gray-700"><th className="px-4 py-2">{tr('Période', 'Period')}</th><th className="px-3">{tr('Du', 'From')}</th><th className="px-3">{tr('Au', 'To')}</th><th className="px-3">{tr('Statut', 'Status')}</th><th className="px-3"></th></tr></thead>
+              <tbody>
+                {periods.map(p => (
+                  <tr key={p.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-2 font-semibold">{p.name}</td>
+                    <td className="px-3 text-gray-500">{p.start_date}</td>
+                    <td className="px-3 text-gray-500">{p.end_date}</td>
+                    <td className="px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.status === 'closed' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'}`}>{p.status === 'closed' ? `🔒 ${tr('Fermée', 'Closed')}` : tr('Ouverte', 'Open')}</span></td>
+                    <td className="px-3 text-right">{canEdit && <button onClick={async () => { const { error } = await setPeriodStatus(tenant, p.id, p.status === 'closed' ? 'open' : 'closed'); if (error) { setNotice(error.message); return; } reloadPeriods(); }} className="text-xs font-semibold text-blue-600 hover:underline">{p.status === 'closed' ? tr('Rouvrir', 'Reopen') : tr('Fermer', 'Close')}</button>}</td>
+                  </tr>
+                ))}
+                {periods.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{tr('Aucune période. Ferme un mois ou une année pour verrouiller la comptabilité.', 'No period. Close a month or year to lock the books.')}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         // Nouvelle écriture
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
