@@ -133,6 +133,70 @@ export async function postTransactionPayment(
   return 'created';
 }
 
+/**
+ * Vente d'une facture (DR 1100 Clients / CR 4000 Ventes + taxes à payer). Idempotent ('invoice').
+ * Même logique que le bouton « Comptabiliser » du module Facture, en lib (réutilisable par la synchro).
+ */
+export async function postInvoiceSale(tenant: string, inv: any, accMap?: Record<string, string>): Promise<'created' | 'skipped' | 'no-accounts'> {
+  if (inv.gl_entry_id) return 'skipped';
+  if (await entryExists(tenant, 'invoice', inv.id)) return 'skipped';
+  const m = accMap || await accountMap(tenant);
+  if (!m['1100'] || !m['4000']) return 'no-accounts';
+  const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
+    { account_id: m['1100'], debit: Number(inv.total) || 0, credit: 0, description: 'Clients' },
+    { account_id: m['4000'], debit: 0, credit: Number(inv.subtotal) || 0, description: 'Ventes et services' },
+  ];
+  const taxFed = (Number(inv.gst_amount) || 0) + (Number(inv.pst_amount) || 0);
+  if (taxFed > 0 && m['2100']) lines.push({ account_id: m['2100'], debit: 0, credit: taxFed, description: 'TPS/TVH/PST a payer' });
+  if ((Number(inv.qst_amount) || 0) > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: Number(inv.qst_amount), description: 'TVQ a payer' });
+  const entryId = await createEntry(tenant, { entry_date: inv.issue_date || new Date().toISOString().slice(0, 10), description: `Vente — facture ${inv.invoice_number}`, reference: inv.invoice_number, journal_code: 'VEN', source_type: 'invoice', source_id: inv.id, lines });
+  await supabase.from('commerce_invoices').update({ gl_entry_id: entryId }).eq('id', inv.id);
+  return 'created';
+}
+
+/** Encaissement d'une facture payée (DR 1000 Banque / CR 1100 Clients). Idempotent ('invoice_payment'). */
+export async function postInvoicePayment(tenant: string, inv: any, accMap?: Record<string, string>): Promise<'created' | 'skipped' | 'no-accounts'> {
+  if (await entryExists(tenant, 'invoice_payment', inv.id)) return 'skipped';
+  const m = accMap || await accountMap(tenant);
+  if (!m['1000'] || !m['1100']) return 'no-accounts';
+  const total = Number(inv.total) || 0; if (total <= 0) return 'skipped';
+  await createEntry(tenant, {
+    entry_date: inv.paid_date || new Date().toISOString().slice(0, 10), description: `Encaissement — facture ${inv.invoice_number}`,
+    reference: inv.invoice_number, journal_code: 'BNK', source_type: 'invoice_payment', source_id: inv.id,
+    lines: [{ account_id: m['1000'], debit: total, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: total, description: 'Clients' }],
+  });
+  return 'created';
+}
+
+/**
+ * SYNCHRONISATION GLOBALE vers le grand livre — tout remonte vers Comptabilité en un clic.
+ * Poste les écritures MANQUANTES (idempotent) pour : paie (approuvées/payées), ventes de factures
+ * (transmises/payées) + encaissements (payées), achats de transactions (comptabilisés/payés) +
+ * paiements fournisseurs (payés à crédit). Politique INCHANGÉE (poste ce que les boutons postent déjà).
+ */
+export async function syncAllToLedger(tenant: string): Promise<{ payroll: number; sales: number; salePayments: number; purchases: number; purchasePayments: number }> {
+  const m = await accountMap(tenant);
+  if (!m['5000'] || !m['2300']) throw new Error('Plan comptable non initialisé (migration 085 puis « Initialiser »).');
+  const pay = await syncPayrollEntries(tenant);
+  let sales = 0, salePayments = 0, purchases = 0, purchasePayments = 0;
+
+  const { data: invs } = await supabase.from('commerce_invoices').select('*').eq('tenant_id', tenant).in('status', ['sent', 'paid']);
+  for (const inv of (invs || [])) {
+    if ((await postInvoiceSale(tenant, inv, m)) === 'created') sales++;
+    if (inv.status === 'paid' && (await postInvoicePayment(tenant, inv, m)) === 'created') salePayments++;
+  }
+
+  const { data: txns } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).in('status', ['posted', 'paid']);
+  for (const txn of (txns || [])) {
+    if (!txn.gl_entry_id) {
+      const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);
+      if ((await postTransactionPurchase(tenant, txn, its || [], m)) === 'created') purchases++;
+    }
+    if (txn.status === 'paid' && txn.payment_method === 'on_account' && (await postTransactionPayment(tenant, txn, m)) === 'created') purchasePayments++;
+  }
+  return { payroll: pay.created, sales, salePayments, purchases, purchasePayments };
+}
+
 /** Génère les écritures de paie manquantes pour toutes les feuilles approuvées/payées. */
 export async function syncPayrollEntries(tenant: string): Promise<{ created: number; skipped: number; empty: number }> {
   const { data, error } = await supabase.from('timesheets').select('*')

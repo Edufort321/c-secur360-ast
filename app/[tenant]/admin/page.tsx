@@ -17,7 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
-import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
+import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
@@ -6032,6 +6032,19 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSyncing(false);
   }
+  // Centralisation : poste TOUT ce qui manque au grand livre (paie + ventes + encaissements + achats
+  // + paiements fournisseurs), idempotent. « Tout remonte vers Comptabilité » en un clic.
+  async function syncAll() {
+    setSyncing(true); setNotice(null);
+    try {
+      const r = await syncAllToLedger(tenant);
+      setNotice(tr(
+        `Grand livre synchronisé : ${r.payroll} paie, ${r.sales} vente(s), ${r.salePayments} encaissement(s), ${r.purchases} achat(s), ${r.purchasePayments} paiement(s) fournisseur.`,
+        `Ledger synced: ${r.payroll} payroll, ${r.sales} sale(s), ${r.salePayments} receipt(s), ${r.purchases} purchase(s), ${r.purchasePayments} vendor payment(s).`));
+      await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setSyncing(false);
+  }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
@@ -6061,9 +6074,14 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             </div>
           )}
           {accounts.length > 0 && canEdit && (
-            <button onClick={syncPay} disabled={syncing} className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40">
-              {syncing ? <Loader2 size={15} className="inline animate-spin" /> : tr('Synchroniser la paie', 'Sync payroll')}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={syncAll} disabled={syncing} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40" title={tr('Poste au grand livre tout ce qui manque : paie, ventes, encaissements, achats, paiements (idempotent).', 'Post all missing entries to the ledger (idempotent).')}>
+                {syncing ? <Loader2 size={15} className="inline animate-spin" /> : `🔄 ${tr('Synchroniser tout vers le grand livre', 'Sync everything to the ledger')}`}
+              </button>
+              <button onClick={syncPay} disabled={syncing} className="rounded-xl border border-indigo-300 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 dark:border-indigo-700 dark:text-indigo-300">
+                {tr('Paie seulement', 'Payroll only')}
+              </button>
+            </div>
           )}
           {accounts.length === 0 && canEdit && (
             <button onClick={init} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Initialiser le plan comptable', 'Initialize chart of accounts')}</button>
