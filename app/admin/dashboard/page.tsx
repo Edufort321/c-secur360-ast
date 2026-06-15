@@ -9,6 +9,8 @@ import AdminAccountsTab from '@/components/admin/AdminAccountsTab';
 import MarketingTab from '@/components/admin/MarketingTab';
 import PriceManager from '../../../components/admin/PriceManager';
 import RevenueForecast from '../../../components/admin/RevenueForecast';
+import GuideOperateurTab from '@/components/admin/GuideOperateurTab';
+import { BookOpen } from 'lucide-react';
 import { computeSubState } from '@/lib/subscription';
 import { CANADIAN_PROVINCES, getProvinceByCode } from '../../../data/provinces';
 import {
@@ -79,7 +81,7 @@ export default function AdminDashboard() {
   const [filterPay, setFilterPay] = useState<'all' | 'upcoming' | 'late' | 'relance'>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Navigation par onglets de modules (au lieu d'une longue page qui défile).
-  const [tab, setTab] = useState<'tableau' | 'clients' | 'vendeurs' | 'admins' | 'marketing' | 'contenu'>('tableau');
+  const [tab, setTab] = useState<'tableau' | 'clients' | 'vendeurs' | 'admins' | 'marketing' | 'contenu' | 'guide'>('tableau');
   const ADMIN_TABS: { k: typeof tab; label: string; icon: any }[] = [
     { k: 'tableau', label: 'Tableau de bord', icon: BarChart3 },
     { k: 'clients', label: 'Clients', icon: Building },
@@ -87,6 +89,7 @@ export default function AdminDashboard() {
     { k: 'admins', label: 'Administrateurs', icon: Shield },
     { k: 'marketing', label: 'Marketing', icon: TrendingUp },
     { k: 'contenu', label: 'Contenu du site', icon: Globe },
+    { k: 'guide', label: 'Guide opérateur', icon: BookOpen },
   ];
 
   const [vendors, setVendors] = useState<any[]>([]);
@@ -1298,6 +1301,8 @@ export default function AdminDashboard() {
         <MarketingTab />
       </div>
       )}
+
+      {tab === 'guide' && <div className="admSection" style={{ padding: '24px 16px' }}><GuideOperateurTab /></div>}
 
       {tab === 'contenu' && (<>
       <div className="admSection" style={{ padding: '40px 32px 0' }}>
