@@ -6478,6 +6478,14 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-xs dark:border-gray-700">
                       <button onClick={() => editInvoice(inv)} className="font-semibold text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
                       <button onClick={() => exportInvoicePdf(tenant, inv).catch((e: any) => setNotice(e?.message || 'PDF erreur'))} className="text-gray-600 hover:underline dark:text-gray-300">PDF</button>
+                      {inv.id && <button onClick={async () => {
+                        try {
+                          const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'invoice', docId: inv.id, docNumber: inv.invoice_number }) });
+                          const j = await r.json();
+                          if (!r.ok) { setNotice(j.error || 'Erreur (migration 180 ?)'); return; }
+                          try { await navigator.clipboard.writeText(j.url); setNotice(tr('Lien client copié : ', 'Client link copied: ') + j.url); } catch { window.prompt(tr('Lien client :', 'Client link:'), j.url); }
+                        } catch { setNotice(tr('Erreur réseau.', 'Network error.')); }
+                      }} className="text-emerald-600 hover:underline">✍️ {tr('Transmettre', 'Send')}</button>}
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {inv.status !== 'paid' && <button onClick={() => markPaid(inv)} className="ml-auto text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
                     </div>

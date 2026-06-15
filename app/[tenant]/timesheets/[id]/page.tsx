@@ -765,6 +765,17 @@ export default function TimesheetDetailPage() {
               className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
               {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export PDF
             </button>
+            <button onClick={async () => {
+              try {
+                const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'timesheet', docId: sheetId }) });
+                const j = await r.json();
+                if (!r.ok) { alert(j.error || 'Erreur (migration 180 ?)'); return; }
+                try { await navigator.clipboard.writeText(j.url); alert('Lien d\'approbation client copié :\n' + j.url); } catch { window.prompt('Lien d\'approbation client :', j.url); }
+              } catch { alert('Erreur réseau'); }
+            }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+              ✍️ Transmettre au client
+            </button>
           </div>
         </div>
 
