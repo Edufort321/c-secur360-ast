@@ -3,31 +3,12 @@
 // dépenses (remboursements) figurent dans leur propre tableau. Importé dynamiquement (await import).
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDF, loadImg, drawHeader, drawTitle, applyFooters } from '@/lib/pdf/letterhead';
 
 type Tr = (fr: string, en: string) => string;
-type Logo = { data: string; w: number; h: number };
 
 const money = (n: number) => `${(Math.round((n || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 const h1 = (n: number) => (Number(n) || 0).toLocaleString('fr-CA', { maximumFractionDigits: 2 });
-
-async function loadImageData(url: string): Promise<Logo | null> {
-  try {
-    const res = await fetch(url); if (!res.ok) return null;
-    const blob = await res.blob();
-    const data: string = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(blob); });
-    const dims = await new Promise<{ w: number; h: number }>(resolve => { const img = new Image(); img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight }); img.onerror = () => resolve({ w: 0, h: 0 }); img.src = data; });
-    return dims.w ? { data, w: dims.w, h: dims.h } : null;
-  } catch { return null; }
-}
-async function drawLogo(doc: jsPDF, logoUrl: string | undefined, x: number, topY: number): Promise<number> {
-  let logo = logoUrl ? await loadImageData(logoUrl) : null;
-  if (!logo) logo = await loadImageData('/c-secur360-logo.png');
-  if (!logo) return x;
-  const h = 36; const w = Math.min((logo.w / logo.h) * h, 150);
-  const fmt = logo.data.includes('image/png') ? 'PNG' : 'JPEG';
-  try { doc.addImage(logo.data, fmt, x, topY, w, h); } catch { return x; }
-  return x + w + 14;
-}
 
 const fmtDate = (d?: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
 
@@ -53,22 +34,18 @@ export async function exportTimesheetPdf(opts: {
   const expenses = (opts.expenses || []).filter(x => Number(x.total) > 0 || (x.description && x.description.trim()) || x.receipt_url);
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  const W = doc.internal.pageSize.getWidth(); const M = 40;
-  let y = 48;
-
-  const tx = await drawLogo(doc, logoUrl, M, y - 16);
-  doc.setFontSize(16); doc.setTextColor(30);
-  doc.text(tr('Feuille de temps', 'Timesheet'), tx, y);
-  doc.setFontSize(13); doc.setTextColor(39, 125, 161); // accent DGA (#277da1)
-  doc.text(sheet.employee_name || '—', tx, y + 18);
-  doc.setFontSize(9); doc.setTextColor(120);
+  const W = PDF.W; const M = PDF.M; // socle DGA (612, 42)
+  const logo = await loadImg(logoUrl || '/c-secur360-logo.png');
   const period = (sheet.period_start && sheet.period_end)
     ? `${new Date(sheet.period_start + 'T00:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })} → ${new Date(sheet.period_end + 'T00:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}`
     : '';
-  doc.text(`${tr('Période', 'Period')} : ${period}`, tx, y + 32);
   const STATUS_LBL: Record<string, string> = { draft: tr('En cours', 'In progress'), submitted: tr('Soumise', 'Submitted'), approved: tr('Validée', 'Approved'), verified: tr('Vérifiée', 'Verified'), paid: tr('Payée', 'Paid'), rejected: tr('Refusée', 'Rejected') };
-  doc.text(`${tr('Statut', 'Status')} : ${STATUS_LBL[sheet.status || ''] || sheet.status || '—'}    ${tr('Généré le', 'Generated')} ${new Date().toLocaleDateString('fr-CA')}`, tx, y + 44);
-  y += 64;
+  const rightLines = [`${tr('Période', 'Period')} : ${period}`, `${tr('Statut', 'Status')} : ${STATUS_LBL[sheet.status || ''] || sheet.status || '—'}`];
+
+  // En-tête de page FIDÈLE DGA (logo ratio + méta + filet) — redessiné à chaque page par autoTable.
+  const pageHeader = () => drawHeader(doc, { logo, rightLines });
+  let y = pageHeader();
+  y = drawTitle(doc, y, tr('Feuille de temps', 'Timesheet'), sheet.employee_name || '—');
 
   const label = (e: TsEntry) => e.category === 'project'
     ? [e.project_number, e.project_title].filter(Boolean).join(' — ') || tr('Projet', 'Project')
@@ -87,10 +64,11 @@ export async function exportTimesheetPdf(opts: {
     body: rows.length ? rows : [['—', '—', tr('Aucune heure saisie', 'No hours entered'), '', '', '', '']],
     foot: [[tr('Totaux', 'Totals'), '', '', h1(tReg), h1(tSup), h1(tMaj), h1(tKm)]],
     styles: { fontSize: 8.5, cellPadding: 4 },
-    headStyles: { fillColor: [39, 125, 161], textColor: 255 },
-    footStyles: { fillColor: [232, 240, 245], textColor: 30, fontStyle: 'bold' },
+    headStyles: { fillColor: [60, 60, 60], textColor: 255 },        // gris DGA
+    footStyles: { fillColor: [235, 235, 235], textColor: 20, fontStyle: 'bold' },
     columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
-    margin: { left: M, right: M },
+    margin: { left: M, right: M, top: 56 },
+    didDrawPage: (data: any) => { if (data.pageNumber > 1) pageHeader(); },
   });
   y = (doc as any).lastAutoTable?.finalY ?? y;
 
@@ -113,10 +91,11 @@ export async function exportTimesheetPdf(opts: {
       body: exRows,
       foot: [[tr('Total dépenses', 'Total expenses'), '', '', '', '', '', money(tExp)]],
       styles: { fontSize: 8.5, cellPadding: 4 },
-      headStyles: { fillColor: [16, 185, 129], textColor: 255 },
-      footStyles: { fillColor: [236, 253, 245], textColor: 30, fontStyle: 'bold' },
+      headStyles: { fillColor: [90, 90, 90], textColor: 255 },       // gris (dépenses)
+      footStyles: { fillColor: [235, 235, 235], textColor: 20, fontStyle: 'bold' },
       columnStyles: { 6: { halign: 'right' } },
-      margin: { left: M, right: M },
+      margin: { left: M, right: M, top: 56 },
+      didDrawPage: (data: any) => { if (data.pageNumber > 1) pageHeader(); },
     });
     y = (doc as any).lastAutoTable?.finalY ?? y;
   }
@@ -137,15 +116,8 @@ export async function exportTimesheetPdf(opts: {
   sigCol(M + colW + 30, tr('Signature du client (approbation)', 'Client signature (approval)'), '');
   y += 70;
 
-  // ── Pied de page ──
-  const total = doc.getNumberOfPages();
-  for (let p = 1; p <= total; p++) {
-    doc.setPage(p);
-    const Hp = doc.internal.pageSize.getHeight();
-    doc.setFontSize(7.5); doc.setTextColor(150);
-    doc.text(tr('Heures seulement — les montants de paie figurent au module Paie.', 'Hours only — pay amounts are in the Payroll module.'), M, Hp - 22);
-    doc.text(`C-Secur360   ·   ${p} / ${total}`, W - M, Hp - 14, { align: 'right' });
-  }
+  // ── Pied de page numéroté (socle partagé DGA) ──
+  applyFooters(doc, tr('Heures seulement — les montants de paie figurent au module Paie.', 'Hours only — pay amounts are in the Payroll module.'));
 
   const safeName = (sheet.employee_name || 'employe').replace(/\s+/g, '_').slice(0, 30);
   doc.save(`feuille-de-temps-${safeName}-${sheet.period_start || ''}.pdf`);
