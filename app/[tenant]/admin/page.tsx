@@ -9,6 +9,7 @@ import { getCatalogueConditions, DEFAULT_EMPLOYEE_FACTOR, type CatalogueConditio
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
+import { FinancialDashboard } from '@/components/finance/FinancialDashboard';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
@@ -236,8 +237,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'integrations'];
+  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'etat-financier', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -277,6 +278,7 @@ export default function AdminPage() {
     { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2, group: 'ventes' },
     { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText, group: 'ventes' },
     { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList, group: 'ventes' },
+    { k: 'etat-financier', label: tr('État financier', 'Financial state'),     icon: TrendingUp, group: 'finance', need: p => p.viewSalary },
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, group: 'finance', need: p => p.viewSalary },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, group: 'finance', need: p => p.manageAll },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, group: 'finance', need: p => p.viewSalary },
@@ -411,6 +413,7 @@ export default function AdminPage() {
         {tab === 'permissions' && <PermissionsMatrix tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user'} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
+        {tab === 'etat-financier' && <FinancialDashboard tenant={tenant} tr={tr} />}
         {tab === 'integrations' && <ErpSharing tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user' || niveauAcces === 'direction'} />}
         {tab === 'rh'         && <RHHub tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
