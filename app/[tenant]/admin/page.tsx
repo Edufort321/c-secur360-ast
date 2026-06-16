@@ -6689,6 +6689,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   // Vérification IA (assistant comptable/fiscal)
   const [aiChecking, setAiChecking] = useState(false);
   const [aiResult, setAiResult] = useState<{ ok?: boolean; summary?: string; issues?: { severity: string; field?: string; message: string; suggestion?: string }[] } | null>(null);
+  // Import par LOT : plusieurs reçus -> IA -> crée toutes les transactions
+  const [batch, setBatch] = useState<{ busy: boolean; done: number; total: number; created: number; failed: number } | null>(null);
   // Filtres de la liste (#35 contrôle) : type, statut, recherche texte (n° / tiers).
   const [fType, setFType] = useState<'all' | 'revenue' | 'expense'>('all');
   const [fStatus, setFStatus] = useState<'all' | 'draft' | 'posted' | 'paid' | 'cancelled'>('all');
@@ -6813,6 +6815,38 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message || tr('Erreur IA.', 'AI error.')); }
     setAiChecking(false);
   }
+  // Import par LOT : on pousse PLUSIEURS reçus à l'IA et on crée+comptabilise une transaction par reçu.
+  async function batchScanCreate(files: File[]) {
+    const list = files.filter(f => /^image\//.test(f.type));
+    if (!list.length) { setNotice(tr('Choisissez des images (JPEG/PNG).', 'Pick images (JPEG/PNG).')); return; }
+    setBatch({ busy: true, done: 0, total: list.length, created: 0, failed: 0 });
+    let created = 0, failed = 0;
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i];
+      try {
+        const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
+        const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl }) });
+        const j = await resp.json();
+        if (!resp.ok) { failed++; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
+        const x = j.extracted || {};
+        const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
+        const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || 0;
+        const taxed = gst > 0 || qst > 0;
+        const isRev = x.type === 'revenue';
+        const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
+        const url = await uploadReceipt(tenant, file).catch(() => null);
+        const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: url };
+        const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
+        const id = await saveTransaction(tenant, header, its);
+        await setTransactionStatus(tenant, id, 'posted').catch(() => {}); // comptabilise au grand livre
+        created++;
+      } catch { failed++; }
+      setBatch(b => b && { ...b, done: i + 1, created, failed });
+    }
+    setBatch(b => b && { ...b, busy: false });
+    setNotice(tr(`${created} transaction(s) créée(s) et comptabilisée(s)${failed ? `, ${failed} échec(s)` : ''}.`, `${created} transaction(s) created and posted${failed ? `, ${failed} failed` : ''}.`));
+    await load();
+  }
   // « Scanner le reçu (IA) » : OCR de la pièce jointe -> pré-remplit + joint le reçu (contrôle comptable).
   async function scanReceiptAI(file: File) {
     setAiChecking(true); setNotice(tr('Lecture du reçu par l’IA…', 'AI reading the receipt…'));
@@ -6921,12 +6955,17 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         {view === 'list' && canEdit && <div className="flex flex-wrap gap-2">
           <button onClick={() => newTxn('revenue')} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Revenu', 'Revenue')}</button>
           <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('Plusieurs reçus -> l’IA crée et comptabilise toutes les transactions', 'Many receipts -> AI creates and posts all transactions')}>
+            {batch?.busy ? <Loader2 size={14} className="animate-spin" /> : '📷'} {tr('Import lot (IA)', 'Batch import (AI)')}
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" disabled={batch?.busy} onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) batchScanCreate(fs); }} />
+          </label>
           <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🏦 {tr('Mes comptes', 'My accounts')}</button>
           <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
         </div>}
         {(view === 'bank' || view === 'accounts') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+      {batch?.busy && <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">📷 {tr('Lecture IA des reçus', 'AI reading receipts')} : {batch.done}/{batch.total} · {batch.created} {tr('créée(s)', 'created')}{batch.failed ? `, ${batch.failed} ${tr('échec(s)', 'failed')}` : ''}</div>}
 
       {view === 'edit' ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
