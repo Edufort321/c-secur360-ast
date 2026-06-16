@@ -29,6 +29,7 @@ import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fis
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { readDraft, writeDraft, clearDraft, useAutoDraft } from '@/lib/useDraft';
+import { getTenantPermissions, canViewAdminTab, type PermMap } from '@/lib/permissions';
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
@@ -259,6 +260,9 @@ export default function AdminPage() {
   }, [tenant]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
+  // Structure d'accès par onglet (configurable par tenant, table tenant_permissions). {} avant chargement = défauts.
+  const [tabPerms, setTabPerms] = useState<PermMap>({});
+  useEffect(() => { if (tenant) getTenantPermissions(tenant).then(setTabPerms).catch(() => {}); }, [tenant]);
 
   // #57 : chaque onglet peut exiger une permission (matrice PERMS). Sans `need`, l'onglet est
   // toujours visible. Les onglets sensibles (finance/paie/abonnement/RH) sont masqués si le
@@ -294,7 +298,8 @@ export default function AdminPage() {
     { k: 'finance', label: tr('Finances', 'Finance'),                    icon: Layers },
     { k: 'systeme', label: tr('Système', 'System'),                      icon: Settings },
   ];
-  const tabs = allTabs.filter(t => !t.need || t.need(perms));
+  // Accès par onglet : structure configurable (tenant_permissions) ; défauts = ancien gating `need`.
+  const tabs = allTabs.filter(t => canViewAdminTab(tabPerms, t.k, niveauAcces));
 
   const activeTab = tabs.find(t => t.k === tab);
   const activeGroup: GroupKey = activeTab?.group || 'org';

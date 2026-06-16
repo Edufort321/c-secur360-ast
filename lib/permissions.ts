@@ -67,7 +67,42 @@ export const MODULE_ROWS = MODULE_ACCESS.flatMap(m => [
 
 export const CAPABILITIES: { key: Capability; fr: string; en: string; group: 'rh' }[] = HR_CAPABILITIES;
 
-// Tier minimal par défaut (RH = matrice historique ; modules = seuils view/edit ci-dessus).
+// ── ACCÈS PAR ONGLET D'ADMINISTRATION (#structure d'accès) ───────────────────────────────────────
+// Chaque onglet de /[tenant]/admin a un niveau minimal requis (tier), configurable par tenant.
+// Capacité = `admintab:<clé>`. Groupes alignés sur la navigation admin (Organisation/Opérations/…).
+// Défauts calés sur l'ancien gating `need` (aucune régression). tier 1 = visible à tout utilisateur admin.
+export const ADMIN_TAB_GROUPS: { key: string; fr: string; en: string }[] = [
+  { key: 'org', fr: 'Organisation & RH', en: 'Organization & HR' },
+  { key: 'ops', fr: 'Opérations', en: 'Operations' },
+  { key: 'ventes', fr: 'Ventes & Achats', en: 'Sales & Purchasing' },
+  { key: 'finance', fr: 'Finances', en: 'Finance' },
+  { key: 'systeme', fr: 'Système', en: 'System' },
+];
+export const ADMIN_TABS: { key: string; fr: string; en: string; group: string; defaultTier: number }[] = [
+  { key: 'sitesdepts',  fr: 'Sites / Dépts',        en: 'Sites / Depts',     group: 'org',     defaultTier: 1 },
+  { key: 'employes',    fr: 'Employés & Accès',     en: 'Employees & Access', group: 'org',    defaultTier: 3 },
+  { key: 'permissions', fr: 'Permissions',          en: 'Permissions',       group: 'org',     defaultTier: 4 },
+  { key: 'rh',          fr: 'RH',                   en: 'HR',                group: 'org',     defaultTier: 5 },
+  { key: 'paie',        fr: 'Paie & Avantages',     en: 'Pay & Benefits',    group: 'org',     defaultTier: 5 },
+  { key: 'vehicules',   fr: 'Véhicules',            en: 'Vehicles',          group: 'ops',     defaultTier: 1 },
+  { key: 'logbook',     fr: 'Carnet de bord',       en: 'Logbook',           group: 'ops',     defaultTier: 1 },
+  { key: 'ressources',  fr: 'Ressources',           en: 'Resources',         group: 'ops',     defaultTier: 1 },
+  { key: 'feuilles',    fr: 'Feuilles de temps',    en: 'Timesheets',        group: 'ops',     defaultTier: 1 },
+  { key: 'clients',     fr: 'Clients',              en: 'Clients',           group: 'ventes',  defaultTier: 1 },
+  { key: 'soumissions', fr: 'Catalogue de taux',    en: 'Rate catalogue',    group: 'ventes',  defaultTier: 1 },
+  { key: 'bons-commande', fr: 'Bons de commande',   en: 'Purchase orders',   group: 'ventes',  defaultTier: 1 },
+  { key: 'factures',    fr: 'Factures',             en: 'Invoices',          group: 'finance', defaultTier: 5 },
+  { key: 'facturation', fr: 'Facturation',          en: 'Billing',           group: 'finance', defaultTier: 7 },
+  { key: 'transactions', fr: 'Transactions',        en: 'Transactions',      group: 'finance', defaultTier: 5 },
+  { key: 'comptabilite', fr: 'Comptabilité',        en: 'Accounting',        group: 'finance', defaultTier: 5 },
+  { key: 'fiscal',      fr: 'Rapports fiscaux',     en: 'Tax reports',       group: 'finance', defaultTier: 5 },
+  { key: 'etat-financier', fr: 'État financier',    en: 'Financial state',   group: 'finance', defaultTier: 5 },
+  { key: 'abonnement',  fr: 'Abonnement',           en: 'Subscription',      group: 'systeme', defaultTier: 7 },
+  { key: 'integrations', fr: 'Intégration ERP / API', en: 'ERP / API',       group: 'systeme', defaultTier: 7 },
+];
+export const adminTabCap = (key: string) => `admintab:${key}`;
+
+// Tier minimal par défaut (RH = matrice historique ; modules = seuils view/edit ; onglets admin).
 export const DEFAULT_MIN_TIER: Record<string, number> = {
   viewEmployees: 3, modifyEmployees: 3, coordinate: 3, managePostes: 3,
   viewAuth: 4, viewSalary: 5, editSalary: 5, evaluate: 5, manageAll: 7,
@@ -75,7 +110,15 @@ export const DEFAULT_MIN_TIER: Record<string, number> = {
     [viewCap(r.modKey, r.sub), r.viewTier],
     [editCap(r.modKey, r.sub), r.editTier],
   ])),
+  ...Object.fromEntries(ADMIN_TABS.map(t => [adminTabCap(t.key), t.defaultTier])),
 };
+
+/** L'utilisateur de ce niveau peut-il accéder à cet onglet d'administration ? */
+export function canViewAdminTab(perms: PermMap, tabKey: string, level?: string | null): boolean {
+  const cap = adminTabCap(tabKey);
+  const min = perms[cap] ?? DEFAULT_MIN_TIER[cap] ?? 1;
+  return tierFromLevel(level) >= min;
+}
 
 /** L'utilisateur de ce niveau peut-il VOIR ce module/sous-module (≥ seuil Voir) ? */
 export function canViewModule(perms: PermMap, modKey: string, level?: string | null, sub?: string): boolean {

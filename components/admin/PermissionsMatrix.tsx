@@ -6,7 +6,7 @@
 //   tier < Voir = BLOQUÉ ; Voir ≤ tier < Éditer = LECTURE SEULE ; tier ≥ Éditer = ÉDITION.
 import React, { useEffect, useState } from 'react';
 import { Loader2, ShieldCheck } from 'lucide-react';
-import { CAPABILITIES, MODULE_ROWS, viewCap, editCap, getTenantPermissions, saveTenantPermission, type Capability, type PermMap } from '@/lib/permissions';
+import { CAPABILITIES, MODULE_ROWS, viewCap, editCap, ADMIN_TABS, ADMIN_TAB_GROUPS, adminTabCap, getTenantPermissions, saveTenantPermission, type Capability, type PermMap } from '@/lib/permissions';
 
 // Niveaux (Guide des niveaux d'accès) — tier 1..8 (+ tier 0 « Externe » pour les modules QR).
 const LEVELS = [
@@ -78,6 +78,35 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
                   <td className="px-4 py-2"><TierSelect cap={editCap(r.modKey, r.sub)} includeExt={r.externalCapable} /></td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ONGLETS D'ADMINISTRATION — niveau minimal requis par onglet (et sous-onglet) */}
+      <div>
+        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200"><ShieldCheck size={15} /> {tr('Accès aux onglets d’administration', 'Admin tab access')}</h3>
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40">
+              <tr><th className="px-4 py-2">{tr('Onglet', 'Tab')}</th><th className="px-4 py-2">{tr('Niveau minimal requis', 'Minimum level required')}</th></tr>
+            </thead>
+            <tbody>
+              {ADMIN_TAB_GROUPS.map(g => {
+                const tabs = ADMIN_TABS.filter(t => t.group === g.key);
+                if (!tabs.length) return null;
+                return (
+                  <React.Fragment key={g.key}>
+                    <tr className="bg-gray-50/60 dark:bg-gray-900/30"><td colSpan={2} className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">{tr(g.fr, g.en)}</td></tr>
+                    {tabs.map(t => (
+                      <tr key={t.key} className="border-t border-gray-100 dark:border-gray-700/50">
+                        <td className="px-4 py-2 pl-6 font-medium text-gray-800 dark:text-gray-100">{tr(t.fr, t.en)}</td>
+                        <td className="px-4 py-2"><TierSelect cap={adminTabCap(t.key)} /></td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
