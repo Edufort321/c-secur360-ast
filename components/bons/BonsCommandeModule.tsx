@@ -53,8 +53,8 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
     try { setBons(await getBonsCommande(tenant)); } catch { setBons([]); }
     try { setCat(await getActiveCatalogue(tenant)); } catch { /* pas de catalogue */ }
     try {
-      const { data } = await supabase.from('projects').select('id, name, project_number').eq('tenant_id', tenant).order('created_at', { ascending: false });
-      setProjects((data || []).map((p: any) => ({ id: p.id, label: `${p.project_number ? p.project_number + ' — ' : ''}${p.name || p.id}` })));
+      const { data } = await supabase.from('projects').select('id, title, project_number').eq('tenant_id', tenant).order('created_at', { ascending: false });
+      setProjects((data || []).map((p: any) => ({ id: p.id, label: `${p.project_number ? p.project_number + ' — ' : ''}${p.title || p.id}` })));
     } catch { setProjects([]); }
     try { const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(); setTenantLogo(t?.logo_url || null); } catch { /* logo défaut */ }
     try {

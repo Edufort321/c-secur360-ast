@@ -6970,25 +6970,25 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   async function batchScanCreate(files: File[]) {
     if (!files.length) return;
     setBatch({ busy: true, done: 0, total: files.length, created: 0, failed: 0 });
-    let created = 0, failed = 0;
+    let created = 0, failed = 0; let lastErr = '';
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
         const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
-        const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, file_name: file.name }) });
-        const j = await resp.json();
-        if (!resp.ok) { failed++; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
+        const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, media_type: file.type, file_name: file.name }) });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) { failed++; lastErr = j.error || `HTTP ${resp.status}`; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
         const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
         if (Array.isArray(j.extractedList)) {            // Excel/CSV -> N transactions (une par ligne)
-          for (const x of j.extractedList) { try { if (await createTxnFromExtracted(x, url)) created++; } catch { failed++; } }
+          for (const x of j.extractedList) { try { if (await createTxnFromExtracted(x, url)) created++; } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
         } else if (j.extracted) {                        // image/PDF -> 1 transaction
-          try { if (await createTxnFromExtracted(j.extracted, url)) created++; else failed++; } catch { failed++; }
-        }
-      } catch { failed++; }
+          try { if (await createTxnFromExtracted(j.extracted, url)) created++; else failed++; } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
+        } else { failed++; lastErr = tr('Réponse IA vide', 'Empty AI response'); }
+      } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
       setBatch(b => b && { ...b, done: i + 1, created, failed });
     }
     setBatch(b => b && { ...b, busy: false });
-    setNotice(tr(`${created} transaction(s) créée(s) — ⏳ À VÉRIFIER (vérifiez puis comptabilisez)${failed ? `, ${failed} échec(s)` : ''}.`, `${created} transaction(s) created — ⏳ TO REVIEW (verify then post)${failed ? `, ${failed} failed` : ''}.`));
+    setNotice(tr(`${created} transaction(s) créée(s) — ⏳ À VÉRIFIER (vérifiez puis comptabilisez)${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created — ⏳ TO REVIEW (verify then post)${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
     setFStatus('draft'); await load();
   }
   // « Scanner le reçu (IA) » : OCR de la pièce jointe -> pré-remplit + joint le reçu (contrôle comptable).
@@ -6996,7 +6996,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setAiChecking(true); setNotice(tr('Lecture du reçu par l’IA…', 'AI reading the receipt…'));
     try {
       const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
-      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, file_name: file.name }) });
+      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, media_type: file.type, file_name: file.name }) });
       const j = await resp.json();
       if (!resp.ok) { setNotice(j?.error || tr('Scan indisponible.', 'Scan unavailable.')); setAiChecking(false); return; }
       // Excel/CSV = liste : on remplit avec la 1re ligne et on invite à l'import par lot pour toutes.
