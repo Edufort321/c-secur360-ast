@@ -6718,6 +6718,17 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
             ))}
             <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={settings.province || 'QC'} onChange={e => setSettings(s => ({ ...s, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
           </div>
+          {/* Relances automatiques (dunning) des factures en retard */}
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <label className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
+              <input type="checkbox" checked={settings.dunning_enabled !== false} onChange={e => setSettings(s => ({ ...s, dunning_enabled: e.target.checked }))} />
+              {tr('Relances automatiques des factures en retard', 'Automatic reminders for overdue invoices')}
+            </label>
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/90">{tr('Notification interne + courriel au client (si courriel connu) aux paliers de retard ci-dessous.', 'Internal notification + email to the client (if known) at the overdue thresholds below.')}</p>
+            <label className="mt-2 block text-xs font-semibold text-gray-500">{tr('Paliers de relance (jours de retard, séparés par des virgules)', 'Reminder thresholds (overdue days, comma-separated)')}
+              <input value={(settings.dunning_days ?? [1, 7, 15, 30]).join(', ')} onChange={e => setSettings(s => ({ ...s, dunning_days: e.target.value.split(',').map(x => parseInt(x.trim(), 10)).filter(n => Number.isFinite(n) && n >= 0) }))} placeholder="1, 7, 15, 30" className={`mt-1 w-full ${inputCls}`} />
+            </label>
+          </div>
           {canEdit && <button onClick={async () => { try { await saveCompanySettings(tenant, settings); setNotice(tr('Paramètres enregistrés.', 'Settings saved.')); } catch (e: any) { setNotice(e?.message); } }} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">{tr('Enregistrer', 'Save')}</button>}
         </div>
       ) : view === 'edit' ? (

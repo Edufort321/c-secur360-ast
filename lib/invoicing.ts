@@ -40,6 +40,8 @@ export type CompanySettings = {
   tenant_id?: string; legal_name?: string; address?: string; city?: string; province?: string; postal_code?: string;
   country?: string; phone?: string; email?: string; website?: string; gst_number?: string; qst_number?: string;
   bank_details?: string; invoice_prefix?: string; default_terms?: string; logo_url?: string;
+  // Relances automatiques (dunning) : activer + paliers de retard (jours).
+  dunning_enabled?: boolean; dunning_days?: number[];
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -63,7 +65,13 @@ export async function getCompanySettings(tenant: string): Promise<CompanySetting
   return (data as CompanySettings) || null;
 }
 export async function saveCompanySettings(tenant: string, s: CompanySettings) {
-  const { error } = await supabase.from('company_settings').upsert({ ...s, tenant_id: tenant, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' });
+  const row: any = { ...s, tenant_id: tenant, updated_at: new Date().toISOString() };
+  let { error } = await supabase.from('company_settings').upsert(row, { onConflict: 'tenant_id' });
+  // Résilience : si une colonne récente n'existe pas encore (migration non appliquée), on la retire et on réessaie.
+  if (error && /(dunning_enabled|dunning_days|stripe_account_id|stripe_charges_enabled|column).*(does not exist|schema cache)/i.test(error.message || '')) {
+    delete row.dunning_enabled; delete row.dunning_days;
+    ({ error } = await supabase.from('company_settings').upsert(row, { onConflict: 'tenant_id' }));
+  }
   if (error) throw error;
 }
 
