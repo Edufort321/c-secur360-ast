@@ -6635,19 +6635,32 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   const totals = computeInvoiceTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
 
+  // Anti-perte : auto-brouillon local de la facture en cours (en-tête + lignes + client).
+  const invDraftKey = `inv.${tenant}.${hdr.id || 'new'}`;
+  useAutoDraft(invDraftKey, { hdr, items, clientName }, view === 'edit');
+
   async function newInvoice() {
+    const d = readDraft<{ hdr: Invoice; items: InvoiceItem[]; clientName: string }>(`inv.${tenant}.new`);
+    if (d?.hdr && (d.clientName || (d.items || []).some(i => i.description?.trim() || (Number(i.unit_price) || 0) > 0)) && window.confirm(tr('Une facture non enregistrée a été retrouvée. La restaurer ?', 'An unsaved invoice was found. Restore it?'))) {
+      setHdr(d.hdr); setItems(d.items?.length ? d.items : [blankItem()]); setClientName(d.clientName || ''); setView('edit'); return;
+    }
+    clearDraft(`inv.${tenant}.new`);
     const num = await nextInvoiceNumber(tenant, settings.invoice_prefix || 'F');
     setHdr({ invoice_number: num, status: 'draft', issue_date: today, province: settings.province || 'QC', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, payment_terms: settings.default_terms });
     setClientName(''); setItems([blankItem()]); setView('edit');
   }
   function editInvoice(inv: Invoice) {
+    const d = inv.id ? readDraft<{ hdr: Invoice; items: InvoiceItem[]; clientName: string }>(`inv.${tenant}.${inv.id}`) : null;
+    if (d?.hdr && window.confirm(tr('Des modifications non enregistrées ont été retrouvées pour cette facture. Les restaurer ?', 'Unsaved changes were found for this invoice. Restore them?'))) {
+      setHdr({ ...d.hdr, id: inv.id }); setItems(d.items?.length ? d.items : [blankItem()]); setClientName(d.clientName || ''); setView('edit'); return;
+    }
     setHdr(inv); setClientName(inv.client_snapshot?.name || '');
     getInvoiceItems(tenant, inv.id!).then(its => setItems(its.length ? its : [blankItem()]));
     setView('edit');
   }
   async function save() {
     setSaving(true); setNotice(null);
-    try { await saveInvoice(tenant, { ...hdr, client_snapshot: { name: clientName } }, items.filter(i => i.description.trim())); setNotice(tr('Facture enregistrée.', 'Invoice saved.')); await load(); setView('list'); }
+    try { await saveInvoice(tenant, { ...hdr, client_snapshot: { name: clientName } }, items.filter(i => i.description.trim())); clearDraft(invDraftKey); setNotice(tr('Facture enregistrée.', 'Invoice saved.')); await load(); setView('list'); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSaving(false);
   }
