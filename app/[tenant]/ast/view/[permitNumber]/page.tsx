@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import {
   Loader2, AlertTriangle, CheckCircle, FileText, Users, Shield,
-  Wrench, ClipboardList, QrCode, Download,
+  Wrench, ClipboardList, QrCode, Download, ArrowLeft, ShieldAlert,
 } from 'lucide-react';
 
 type Lang = 'fr' | 'en';
@@ -187,8 +187,38 @@ export default function ASTPublicView() {
     }
   };
 
+  const ncStatus = d.supervisorSigStatus; // '' | approved | corrective | nonconform
+  const isNC = ncStatus === 'nonconform' || ncStatus === 'corrective';
+  const goBack = () => { if (typeof window !== 'undefined' && window.history.length > 1) window.history.back(); else window.location.href = `/${tenant}/ast`; };
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Barre de retour (sinon on ne peut que quitter l'appli) */}
+      <div className="border-b border-slate-200 bg-white px-4 py-2 lg:px-8 print:hidden">
+        <button onClick={goBack} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-teal-700">
+          <ArrowLeft size={16} /> {tr('Retour', 'Back')}
+        </button>
+      </div>
+
+      {/* Bannière NON-CONFORMITÉ / correctif — qui l'a signalée + détails, pour gérer le problème */}
+      {isNC && (
+        <div className="mx-auto max-w-3xl px-4 pt-4 lg:px-8 print:px-0">
+          <div className={`rounded-xl border-2 p-4 ${ncStatus === 'nonconform' ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'}`}>
+            <div className={`flex items-center gap-2 text-base font-bold ${ncStatus === 'nonconform' ? 'text-red-700' : 'text-orange-700'}`}>
+              <ShieldAlert size={20} /> {ncStatus === 'nonconform' ? tr('⚠ Non-conformité signalée', '⚠ Non-compliance reported') : tr('⚠ Correctif requis (audit)', '⚠ Corrective action required (audit)')}
+            </div>
+            <div className="mt-1.5 text-sm text-slate-800">
+              {tr('Signalée par', 'Reported by')} : <b>{d.supervisorSigName || supervisorName || tr('(non précisé)', '(unspecified)')}</b>
+              {d.supervisorSigCert ? ` · ${d.supervisorSigCert}` : ''}
+              {d.supervisorSigDate ? ` · ${String(d.supervisorSigDate).replace('T', ' ').slice(0, 16)}` : ''}
+            </div>
+            {d.supervisorSigNotes
+              ? <div className="mt-2 rounded-lg bg-white/70 p-2.5 text-sm text-slate-800 whitespace-pre-wrap"><span className="font-semibold">{tr('Détails / correctif', 'Details / corrective')} :</span> {d.supervisorSigNotes}</div>
+              : <div className="mt-1 text-xs italic text-slate-500">{tr('Aucune note détaillée — contactez le signataire pour le suivi.', 'No detailed note — contact the signer for follow-up.')}</div>}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-teal-700 px-4 py-5 lg:px-8 print:bg-teal-100">
         <div className="mx-auto max-w-3xl flex items-start justify-between gap-4">
