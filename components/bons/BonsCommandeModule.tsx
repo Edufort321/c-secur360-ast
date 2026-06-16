@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { siteInitials, getActiveCatalogue, type CatalogueTaux } from '@/lib/soumissions';
 import { PROVINCES } from '@/lib/invoicing';
 import { exportBonCommandePdf } from '@/lib/pdf/bonCommandePdf';
+import { readDraft, clearDraft, useAutoDraft } from '@/lib/useDraft';
 import {
   getBonsCommande, saveBonCommande, deleteBonCommande, genBonNumero, computeBonTotal,
   scanItemsACommander, setJobsApproStatut, receiveToInventory, bonStatusLabel,
@@ -32,6 +33,9 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
   const [tenantLogo, setTenantLogo] = useState<string | null>(null);
   const recFileRef = useRef<HTMLInputElement | null>(null);
   const projectLabelOf = (id?: string | null) => projects.find(p => p.id === id)?.label || null;
+  // Brouillon auto-sauvegardé du bon en cours d'édition (anti-perte si on quitte la page).
+  const draftKey = `bc.${tenant}.${form?.id || 'new'}`;
+  useAutoDraft(draftKey, form, view === 'edit' && !!form);
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const numFR = (s: string) => { const n = Number(String(s).replace(',', '.').replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
@@ -68,10 +72,21 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
 
   async function nouveau() {
     const numero = await genBonNumero(tenant, sitePrefix);
+    const draft = readDraft<BonCommande>(`bc.${tenant}.new`);
+    if (draft && (draft.supplier || (draft.items || []).some(l => l.designation)) && window.confirm(tr('Un brouillon non enregistré a été retrouvé. Le restaurer ?', 'An unsaved draft was found. Restore it?'))) {
+      setForm(draft); setView('edit'); setNotice(tr('Brouillon restauré.', 'Draft restored.')); return;
+    }
+    clearDraft(`bc.${tenant}.new`);
     setForm({ numero, supplier: '', supplier_contact: '', project_id: null, status: 'brouillon', items: [blankLigne()], province: 'QC', expected_date: null, notes: '' });
     setView('edit'); setNotice(null);
   }
-  function editer(b: BonCommande) { setForm({ ...b, items: (b.items || []).map(l => ({ ...l })) }); setView('edit'); setNotice(null); }
+  function editer(b: BonCommande) {
+    const draft = b.id ? readDraft<BonCommande>(`bc.${tenant}.${b.id}`) : null;
+    if (draft && window.confirm(tr('Des modifications non enregistrées ont été retrouvées pour ce bon. Les restaurer ?', 'Unsaved changes were found for this order. Restore them?'))) {
+      setForm({ ...draft, id: b.id }); setView('edit'); setNotice(tr('Brouillon restauré.', 'Draft restored.')); return;
+    }
+    setForm({ ...b, items: (b.items || []).map(l => ({ ...l })) }); setView('edit'); setNotice(null);
+  }
 
   const updLigne = (i: number, patch: Partial<BonCommandeLigne>) => setForm(f => f ? { ...f, items: f.items.map((l, j) => j === i ? { ...l, ...patch } : l) } : f);
   const addLigne = () => setForm(f => f ? { ...f, items: [...f.items, blankLigne()] } : f);
@@ -89,7 +104,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
     setNotice(null);
     // Le statut suit l'état de réception des lignes (reçu/partiel) sans rétrograder un envoi/brouillon.
     const toSave = { ...form, status: computeReceptionStatus(form.items, form.status) };
-    try { await saveBonCommande(tenant, toSave); setNotice(tr('Bon de commande enregistré.', 'Purchase order saved.')); setView('list'); setForm(null); await load(); }
+    try { await saveBonCommande(tenant, toSave); clearDraft(draftKey); setNotice(tr('Bon de commande enregistré.', 'Purchase order saved.')); setView('list'); setForm(null); await load(); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
 
@@ -240,7 +255,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                     <td className="px-3 py-2 text-right font-semibold">{mny(b.total || 0)}</td>
                     <td className="px-3 py-2 text-right">
                       <button onClick={() => editer(b)} className="text-blue-600 hover:underline">{tr('Ouvrir', 'Open')}</button>
-                      {canEdit && <button onClick={async () => { if (window.confirm(tr('Supprimer ce bon ?', 'Delete this order?')) && b.id) { await deleteBonCommande(tenant, b.id); await load(); } }} className="ml-3 text-red-500 hover:text-red-700"><Trash2 size={14} className="inline" /></button>}
+                      {canEdit && <button onClick={async () => { if (window.confirm(tr('Supprimer ce bon ?', 'Delete this order?')) && b.id) { await deleteBonCommande(tenant, b.id); clearDraft(`bc.${tenant}.${b.id}`); await load(); } }} className="ml-3 text-red-500 hover:text-red-700"><Trash2 size={14} className="inline" /></button>}
                     </td>
                   </tr>
                 ))}
