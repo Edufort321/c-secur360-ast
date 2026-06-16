@@ -19,6 +19,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState('');
+  const [needTotp, setNeedTotp] = useState(false); // 2FA : mot de passe OK, code à 6 chiffres requis
+  const [totpCode, setTotpCode] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -42,13 +44,15 @@ function LoginForm() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, rememberMe }),
+        body: JSON.stringify({ email, password, rememberMe, totpCode: totpCode || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.needTotp) setNeedTotp(true);
         setError(data.error || 'Erreur de connexion');
         return;
       }
+      if (data.needTotp) { setNeedTotp(true); setError(''); return; } // mot de passe OK → saisir le code 2FA
       router.replace(redirectTo);
     } catch {
       setError('Erreur réseau — réessaie dans un instant');
@@ -146,6 +150,20 @@ function LoginForm() {
                 />
               </div>
             </div>
+
+            {needTotp && (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-orange-400 mb-1.5">Code d'authentification (2FA)</label>
+                <input
+                  type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus
+                  value={totpCode}
+                  onChange={e => setTotpCode(e.target.value.replace(/\s/g, '').slice(0, 16))}
+                  placeholder="123456"
+                  className="w-full rounded-xl border border-orange-500/40 bg-[#0B1728] py-2.5 px-4 text-center text-lg font-mono tracking-[0.4em] text-white placeholder-slate-600 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30"
+                />
+                <p className="mt-1 text-xs text-slate-500">Saisissez le code de votre application d'authentification (ou un code de secours).</p>
+              </div>
+            )}
 
             <label className="flex cursor-pointer select-none items-center gap-2.5">
               <input

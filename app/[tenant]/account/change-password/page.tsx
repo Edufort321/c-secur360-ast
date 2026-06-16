@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, KeyRound, ShieldCheck } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
+import { TwoFactorSetup } from '@/components/account/TwoFactorSetup';
 
 // Changement de mot de passe par l'utilisateur connecté (1re connexion ou en tout temps).
 export default function ChangePasswordPage() {
@@ -55,6 +56,7 @@ export default function ChangePasswordPage() {
           <button type="submit" disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} Enregistrer</button>
         </form>
         <p className="mt-3 text-center text-xs text-slate-400">Mot de passe oublié ? Déconnectez-vous puis utilisez « Mot de passe oublié » sur la page de connexion.</p>
+        <div className="mt-6"><TwoFactorSetup /></div>
       </div>
     </div>
   );
