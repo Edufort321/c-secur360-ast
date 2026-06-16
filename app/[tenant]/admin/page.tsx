@@ -7102,24 +7102,34 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message || tr('Erreur IA.', 'AI error.')); }
     setAiChecking(false);
   }
-  // Import par LOT : on pousse PLUSIEURS reçus à l'IA et on crée+comptabilise une transaction par reçu.
-  // Crée UNE transaction « à vérifier » à partir des champs extraits par l'IA (image/PDF/ligne Excel).
-  async function createTxnFromExtracted(x: any, receiptUrl: string | null) {
+  // Clé de DÉDOUBLONNAGE d'une transaction : tiers + date + montant total (au cent près).
+  function txnDupKey(vendor: string, date: string, total: number) { return `${(vendor || '').toLowerCase().trim()}|${date || ''}|${(Math.round((Number(total) || 0) * 100) / 100).toFixed(2)}`; }
+  // Import par LOT : on pousse PLUSIEURS reçus/lignes à l'IA et on crée une transaction par ligne — EN ÉVITANT
+  // les doublons (même tiers + date + montant qu'une transaction déjà existante ou déjà importée dans ce lot).
+  // Crée UNE transaction « à vérifier » à partir des champs extraits par l'IA (image/PDF/ligne Excel/CSV banque).
+  async function createTxnFromExtracted(x: any, receiptUrl: string | null, seen?: Set<string>): Promise<'created' | 'duplicate' | 'empty'> {
     const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
     const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || 0;
-    if (Math.abs(sub) < 0.005 && !(Number(x.total) > 0)) return false;
+    if (Math.abs(sub) < 0.005 && !(Number(x.total) > 0)) return 'empty';
+    const total = Math.round((sub + gst + qst + pst) * 100) / 100;
+    const key = txnDupKey(x.vendor || '', x.date || today, total);
+    // Doublon : déjà présent (transactions chargées, possiblement avec pièce jointe) OU déjà importé dans ce lot.
+    if (seen?.has(key)) return 'duplicate';
     const taxed = gst > 0 || qst > 0;
     const isRev = x.type === 'revenue';
     const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
     const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: receiptUrl };
     const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
     await saveTransaction(tenant, header, its);
-    return true;
+    seen?.add(key);
+    return 'created';
   }
   async function batchScanCreate(files: File[]) {
     if (!files.length) return;
     setBatch({ busy: true, done: 0, total: files.length, created: 0, failed: 0 });
-    let created = 0, failed = 0; let lastErr = '';
+    let created = 0, failed = 0, dups = 0; let lastErr = '';
+    // Set des transactions DÉJÀ présentes (tiers+date+montant) → évite de recréer un doublon (même avec pièce jointe).
+    const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
@@ -7128,16 +7138,17 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         const j = await resp.json().catch(() => ({}));
         if (!resp.ok) { failed++; lastErr = j.error || `HTTP ${resp.status}`; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
         const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
-        if (Array.isArray(j.extractedList)) {            // Excel/CSV -> N transactions (une par ligne)
-          for (const x of j.extractedList) { try { if (await createTxnFromExtracted(x, url)) created++; } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
+        const handle = (r: 'created' | 'duplicate' | 'empty') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else failed++; };
+        if (Array.isArray(j.extractedList)) {            // Excel/CSV -> N transactions (une par ligne), dédoublonnées
+          for (const x of j.extractedList) { try { handle(await createTxnFromExtracted(x, url, seen)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
         } else if (j.extracted) {                        // image/PDF -> 1 transaction
-          try { if (await createTxnFromExtracted(j.extracted, url)) created++; else failed++; } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
+          try { handle(await createTxnFromExtracted(j.extracted, url, seen)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
         } else { failed++; lastErr = tr('Réponse IA vide', 'Empty AI response'); }
       } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
       setBatch(b => b && { ...b, done: i + 1, created, failed });
     }
     setBatch(b => b && { ...b, busy: false });
-    setNotice(tr(`${created} transaction(s) créée(s) — ⏳ À VÉRIFIER (vérifiez puis comptabilisez)${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created — ⏳ TO REVIEW (verify then post)${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
+    setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} doublon(s) ignoré(s)` : ''} — ⏳ À VÉRIFIER${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created${dups ? `, ${dups} duplicate(s) skipped` : ''} — ⏳ TO REVIEW${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
     // Ne PAS forcer le filtre sur « Brouillon » : ça masquait les autres transactions (revenus, comptabilisées).
     // Les nouvelles lignes sont déjà badgées « À vérifier » ; on garde le filtre courant.
     await load();
@@ -7210,8 +7221,19 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
   async function removeTxn(t: Transaction) {
-    if (t.gl_entry_id) { setNotice(tr('Transaction comptabilisée : contre-passez l\'écriture dans le grand livre avant de supprimer.', 'Posted transaction: reverse the entry in the ledger before deleting.')); return; }
-    try { await deleteTransaction(tenant, t.id!); await load(); } catch (e: any) { setNotice(e?.message); }
+    const posted = !!t.gl_entry_id;
+    if (!confirm(posted
+      ? tr('Cette transaction est comptabilisée. La supprimer retirera AUSSI son écriture au grand livre. Continuer ?', 'This transaction is posted. Deleting it will ALSO remove its ledger entry. Continue?')
+      : tr('Supprimer cette transaction ?', 'Delete this transaction?'))) return;
+    try {
+      if (posted && t.gl_entry_id) {
+        // Retire l'écriture comptable liée (lignes + en-tête) pour garder les livres cohérents.
+        await supabase.from('gl_lines').delete().eq('tenant_id', tenant).eq('entry_id', t.gl_entry_id);
+        await supabase.from('gl_entries').delete().eq('tenant_id', tenant).eq('id', t.gl_entry_id);
+      }
+      await deleteTransaction(tenant, t.id!);
+      await load();
+    } catch (e: any) { setNotice(e?.message); }
   }
 
   // ── Rapprochement bancaire (#35) ──────────────────────────────────────────
@@ -7268,12 +7290,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       const j = await resp.json();
       if (!resp.ok) { setNotice(j?.error || tr('IA indisponible.', 'AI unavailable.')); setBankBusy(false); return; }
       const itemsX: any[] = Array.isArray(j.extractedList) ? j.extractedList : [];
-      let created = 0;
-      for (const x of itemsX) { try { if (await createTxnFromExtracted(x, null)) created++; } catch { /* skip */ } }
-      // Marque les lignes traitées comme rapprochées (transactions créées à vérifier).
+      // Dédoublonnage : une ligne qui correspond à une transaction DÉJÀ saisie (même avec pièce jointe) n'est PAS recréée.
+      const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
+      let created = 0, dups = 0;
+      for (const x of itemsX) { try { const r = await createTxnFromExtracted(x, null, seen); if (r === 'created') created++; else if (r === 'duplicate') dups++; } catch { /* skip */ } }
+      // Marque les lignes traitées comme rapprochées (créées OU déjà existantes — on ne re-vérifie pas).
       for (const b of lines) { try { await updateBankLine(tenant, b.id!, { reconciled: true }); } catch { /* noop */ } }
       setBankLines(await getBankLines(tenant));
-      setNotice(tr(`${created} transaction(s) créée(s) depuis le relevé — ⏳ À VÉRIFIER.`, `${created} transaction(s) created from the statement — ⏳ TO REVIEW.`));
+      setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} déjà existante(s) (rapprochée(s) sans doublon)` : ''} depuis le relevé — ⏳ À VÉRIFIER.`, `${created} transaction(s) created${dups ? `, ${dups} already existing (matched, no duplicate)` : ''} from the statement — ⏳ TO REVIEW.`));
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
   }
@@ -7566,7 +7590,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                       {(t as any).needs_review && <button onClick={() => verifyTxn(t)} className="font-semibold text-amber-700 hover:underline">{tr('✓ Vérifier', '✓ Verify')}</button>}
                       {!t.gl_entry_id && !(t as any).needs_review && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {t.gl_entry_id && t.status !== 'paid' && <button onClick={() => markPaid(t)} className="text-emerald-600 hover:underline">{tr('Payé', 'Paid')}</button>}
-                      {!t.gl_entry_id && <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>}
+                      <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>{/* supprime aussi l'écriture GL si comptabilisée */}
                     </div>}
                   </td>
                 </tr>
