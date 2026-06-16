@@ -7564,19 +7564,20 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
           <button onClick={exportCsv} disabled={filteredTxns.length === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{tr('Exporter CSV', 'Export CSV')}</button>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="mobile-cards w-full text-sm">
+        {/* Lignes à HAUTEUR FIXE (une ligne, sans retour) + scroll HORIZONTAL si étroit — plus de cartes qui grossissent. Survol = détails via title. */}
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="w-full min-w-[820px] text-sm [&_td]:whitespace-nowrap [&_td]:py-2">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
               <th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Type', 'Type')}</th><th className="px-4">{tr('Date', 'Date')}</th><th className="px-4">{tr('Tiers', 'Party')}</th>
               <th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4">GL</th><th className="px-4"></th>
             </tr></thead>
             <tbody>
               {filteredTxns.map(t => (
-                <tr key={t.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                <tr key={t.id} className="border-t border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
                   <td className="px-4 py-2 font-mono text-xs" data-label="N°">{t.transaction_number}</td>
                   <td className="px-4 py-2" data-label={tr('Type', 'Type')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.txn_type === 'revenue' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{t.txn_type === 'revenue' ? tr('Revenu', 'Revenue') : tr('Dépense', 'Expense')}</span></td>
                   <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{t.txn_date}</td>
-                  <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}>{t.vendor_name || '—'}{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
+                  <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}><span className="inline-block max-w-[220px] truncate align-middle" title={t.vendor_name || ''}>{t.vendor_name || '—'}</span>{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
                   <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(t.total)}</td>
                   <td className="px-4 py-2" data-label={tr('Statut', 'Status')}>
                     {(t as any).needs_review
