@@ -266,6 +266,8 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Facturation depuis un PROJET : ?invoiceProject=<id> (lien « Facturer » de la page projet) → ouvre une facture préremplie.
+  const [initialInvoiceProject] = useState<string | null>(() => { if (typeof window === 'undefined') return null; return new URLSearchParams(window.location.search).get('invoiceProject'); });
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
   // Structure d'accès par onglet (configurable par tenant, table tenant_permissions). {} avant chargement = défauts.
   const [tabPerms, setTabPerms] = useState<PermMap>({});
@@ -424,7 +426,7 @@ export default function AdminPage() {
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
-        {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} initialProject={initialInvoiceProject} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
         {tab === 'bons-commande' && <BonsCommandeModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
@@ -6546,7 +6548,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
 // ============================================================
 // FACTURE DE COMMERCE — facturation client multi-province + écriture de vente
 // ============================================================
-function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean; initialProject?: string | null }) {
   const today = new Date().toISOString().slice(0, 10);
   const [view, setView] = useState<'list' | 'edit' | 'settings'>('list');
   const [invView, setInvView] = useState<'grid' | 'gallery'>('grid'); // liste factures : grille (défaut) / galerie
@@ -6610,6 +6612,15 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
     setHdr(h => ({ ...h, client_snapshot: { ...(h.client_snapshot || {}), name: p.client_name || h.client_snapshot?.name, projet: p.label } }));
     if (p.po_amount && p.po_amount > 0) setItems([{ description: `Travaux — ${p.label}`, quantity: 1, unit_price: Number(p.po_amount), subtotal: Number(p.po_amount), taxable: true }]);
   }
+  // Lien « Facturer » de la page projet (?invoiceProject=) : ouvre une facture préremplie une seule fois, dès que les projets sont chargés.
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    if (!initialProject || prefilled || !projList.length) return;
+    if (!projList.find(p => p.id === initialProject)) return;
+    setPrefilled(true);
+    (async () => { await newInvoice(); fillFromProject(initialProject); })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProject, projList]);
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
