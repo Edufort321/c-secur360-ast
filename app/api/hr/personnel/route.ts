@@ -8,15 +8,25 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// GET ?access=1 -> liste pour la gestion des accès (id, name, email, niveau, access_password).
+// Tenant EFFECTIF : un super_admin peut cibler le tenant de la PAGE admin qu'il visite (param `tenant`)
+// — il a un accès cross-tenant légitime. Tout autre rôle est FORCÉ à son propre tenant de session
+// (anti-contamination : un admin de tenant ne peut JAMAIS toucher un autre tenant). Param vide -> session.
+function effectiveTenant(acc: { level: string; tenant: string }, reqTenant?: string | null): string {
+  const t = (reqTenant || '').trim();
+  if (acc.level === 'super_user' && t) return t;
+  return acc.tenant;
+}
+
+// GET ?access=1[&tenant=...] -> liste pour la gestion des accès (id, name, email, niveau, access_password).
 export async function GET(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
   if (new URL(req.url).searchParams.get('access')) {
-    const r1 = await supabaseAdmin.from('planner_personnel').select('id, name, email, niveauAcces, access_password').eq('tenant_id', acc.tenant).order('name');
+    const r1 = await supabaseAdmin.from('planner_personnel').select('id, name, email, niveauAcces, access_password').eq('tenant_id', tenant).order('name');
     let data: any = r1.data;
-    if (r1.error) { const r2 = await supabaseAdmin.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', acc.tenant).order('name'); data = r2.data; }
+    if (r1.error) { const r2 = await supabaseAdmin.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', tenant).order('name'); data = r2.data; }
     return NextResponse.json({ ok: true, personnel: data || [] });
   }
   return NextResponse.json({ error: 'Paramètre requis' }, { status: 400 });
@@ -28,6 +38,7 @@ export async function PATCH(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  const tenant = effectiveTenant(acc, body.tenant);
 
   if (body.kind === 'access') {
     if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
@@ -35,7 +46,7 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.password === 'string') patch.access_password = body.password;
     if (typeof body.email === 'string' && body.email) patch.email = body.email;
     if (!Object.keys(patch).length) return NextResponse.json({ error: 'Rien à mettre à jour' }, { status: 400 });
-    let q: any = supabaseAdmin.from('planner_personnel').update(patch).eq('tenant_id', acc.tenant);
+    let q: any = supabaseAdmin.from('planner_personnel').update(patch).eq('tenant_id', tenant);
     if (body.id) q = q.eq('id', body.id);
     else if (body.email_match) q = q.ilike('email', body.email_match);
     else return NextResponse.json({ error: 'Cible requise' }, { status: 400 });
@@ -48,10 +59,10 @@ export async function PATCH(req: NextRequest) {
     if (!canHr(acc.level)) return NextResponse.json({ error: 'Accès refusé (salaires)' }, { status: 403 });
     if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
     const payload: any = { ...(body.payload || {}) }; delete payload.tenant_id; delete payload.id;
-    let { error } = await supabaseAdmin.from('planner_personnel').update(payload).eq('id', body.id).eq('tenant_id', acc.tenant);
+    let { error } = await supabaseAdmin.from('planner_personnel').update(payload).eq('id', body.id).eq('tenant_id', tenant);
     if (error && /skill_scores|objectives/i.test(error.message || '')) {
       const { skill_scores, objectives, ...fb } = payload; // migrations 075-076 non exécutées
-      ({ error } = await supabaseAdmin.from('planner_personnel').update(fb).eq('id', body.id).eq('tenant_id', acc.tenant));
+      ({ error } = await supabaseAdmin.from('planner_personnel').update(fb).eq('id', body.id).eq('tenant_id', tenant));
     }
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
@@ -63,8 +74,8 @@ export async function PATCH(req: NextRequest) {
     if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
     const patch: any = { ...(body.patch || {}) }; delete patch.id; delete patch.tenant_id;
     delete patch.access_password; delete patch.current_salary; // champs ultra-sensibles via leurs kinds dédiés
-    let { data, error } = await supabaseAdmin.from('planner_personnel').update(patch).eq('id', body.id).eq('tenant_id', acc.tenant).select();
-    if (error && /next_evaluation_date/i.test(error.message || '')) { const { next_evaluation_date, ...b2 } = patch; ({ data, error } = await supabaseAdmin.from('planner_personnel').update(b2).eq('id', body.id).eq('tenant_id', acc.tenant).select()); }
+    let { data, error } = await supabaseAdmin.from('planner_personnel').update(patch).eq('id', body.id).eq('tenant_id', tenant).select();
+    if (error && /next_evaluation_date/i.test(error.message || '')) { const { next_evaluation_date, ...b2 } = patch; ({ data, error } = await supabaseAdmin.from('planner_personnel').update(b2).eq('id', body.id).eq('tenant_id', tenant).select()); }
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true, row: (data || [])[0] || null });
   }
@@ -78,7 +89,7 @@ export async function POST(req: NextRequest) {
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
-  const row: any = { ...(body.row || {}), tenant_id: acc.tenant };
+  const row: any = { ...(body.row || {}), tenant_id: effectiveTenant(acc, body.tenant) };
   delete row.id; delete row.access_password; delete row.current_salary; // via kinds dédiés
   let { data, error } = await supabaseAdmin.from('planner_personnel').insert(row).select();
   if (error && /next_evaluation_date/i.test(error.message || '')) { const { next_evaluation_date, ...b2 } = row; ({ data, error } = await supabaseAdmin.from('planner_personnel').insert(b2).select()); }
@@ -93,7 +104,8 @@ export async function DELETE(req: NextRequest) {
   if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
-  const { error } = await supabaseAdmin.from('planner_personnel').delete().eq('id', id).eq('tenant_id', acc.tenant);
+  const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
+  const { error } = await supabaseAdmin.from('planner_personnel').delete().eq('id', id).eq('tenant_id', tenant);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
