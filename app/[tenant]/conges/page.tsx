@@ -6,15 +6,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, X, Trash2, Loader2, CalendarDays, Clock, Send, ArrowLeft } from 'lucide-react';
+import { Plus, X, Check, Trash2, Loader2, CalendarDays, Clock, Send, ArrowLeft, Users } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRealtime } from '@/lib/useRealtime';
 import {
-  getConges, getPersonnel, createConge, cancelConge,
+  getConges, getPersonnel, createConge, decideConge, cancelConge,
   dayCount, type Conge, type CongeType, type Personnel,
 } from '@/lib/conges';
-import { getCongeTypes, DEFAULT_CONGE_TYPES, type CongeTypeDef } from '@/lib/congeTypes';
+import { getCongeTypes, DEFAULT_CONGE_TYPES, getPostes, type CongeTypeDef, type Poste } from '@/lib/congeTypes';
 import { uploadReceipt } from '@/lib/transactions';
 import { getCompanySettings } from '@/lib/invoicing';
 import { getLeaveRules, isParentalType } from '@/lib/leaveRules';
@@ -35,6 +35,8 @@ export default function CongesPage() {
   const [me, setMe] = useState<{ email: string; role: string } | null>(null);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [conges, setConges] = useState<Conge[]>([]);
+  const [postes, setPostes] = useState<Poste[]>([]);
+  const [tab, setTab] = useState<'mine' | 'approve'>('mine');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -68,10 +70,29 @@ export default function CongesPage() {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d?.user) setMe({ email: d.user.email || '', role: d.user.role || 'user' }); }).catch(() => {});
   }, []);
 
+  // Routage d'approbation par POSTE : chaque type a un poste approbateur (Admin/RH). Un utilisateur
+  // dont le poste correspond — ou un superviseur (client_admin/super_admin) pour les types sans poste —
+  // voit la file « À approuver ».
+  const isSupervisor = me?.role === 'client_admin' || me?.role === 'super_admin';
+  const myPosteId = useMemo(() => postes.find(p => myPerson?.role && p.name === myPerson.role)?.id || null, [postes, myPerson]);
+  const approvalPosteByType = useMemo(() => Object.fromEntries(typeDefs.map(t => [t.value, t.approval_poste_id || null])), [typeDefs]);
+  const canApprove = (c: Conge) => {
+    const ap = approvalPosteByType[c.type] || null;
+    if (ap) return myPosteId === ap;        // poste désigné -> seul ce poste approuve
+    return isSupervisor;                     // aucun poste désigné -> superviseur
+  };
+  const toApprove = useMemo(() => conges.filter(c => c.status === 'pending' && canApprove(c)), [conges, approvalPosteByType, myPosteId, isSupervisor]); // eslint-disable-line
+  const isApprover = isSupervisor || typeDefs.some(t => t.approval_poste_id && t.approval_poste_id === myPosteId);
+
+  async function decide(c: Conge, approve: boolean) {
+    try { await decideConge(tenant, c.id!, approve, me?.email || 'approbateur'); await load(); setNotice(L(approve ? 'Demande approuvée.' : 'Demande refusée.', approve ? 'Request approved.' : 'Request rejected.')); }
+    catch (e: any) { setNotice(e?.message); }
+  }
+
   async function load() {
     try {
-      const [pers, cgs] = await Promise.all([getPersonnel(tenant), getConges(tenant)]);
-      setPersonnel(pers); setConges(cgs);
+      const [pers, cgs, pos] = await Promise.all([getPersonnel(tenant), getConges(tenant), getPostes(tenant).catch(() => [])]);
+      setPersonnel(pers); setConges(cgs); setPostes(pos);
     } catch { setNotice(L('Exécutez la migration 128, puis rechargez.', 'Run migration 128, then reload.')); }
     setLoading(false);
   }
@@ -119,17 +140,23 @@ export default function CongesPage() {
   const typeLabel = (t: string) => { const x = typeDefs.find(y => y.value === t); return x ? `${x.emoji || ''} ${L(x.label_fr, x.label_en || x.label_fr)}`.trim() : t; };
   const fmt = (d: string) => new Date(d + 'T00:00').toLocaleDateString(lang === 'en' ? 'en-CA' : 'fr-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  function CongeRow({ c }: { c: Conge }) {
+  function CongeRow({ c, manage }: { c: Conge; manage?: boolean }) {
     const st = STATUS[c.status] || STATUS.pending;
     return (
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        {manage && <span className="text-sm font-semibold text-slate-700">{persById[c.personnel_id]?.name || '—'}</span>}
         <span className="text-xs text-slate-500">{typeLabel(c.type)}</span>
         <span className="text-xs text-slate-600"><CalendarDays size={12} className="mr-1 inline" />{fmt(c.start_date)} → {fmt(c.end_date)}</span>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{dayCount(c.start_date, c.end_date)} {L('j', 'd')}</span>
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{L(st.fr, st.en)}</span>
         {c.notes && <span className="text-xs italic text-slate-400">{c.notes}</span>}
         <div className="ml-auto flex items-center gap-2">
-          {c.status === 'pending' && (
+          {manage && c.status === 'pending' ? (
+            <>
+              <button onClick={() => decide(c, true)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"><Check size={12} /> {L('Approuver', 'Approve')}</button>
+              <button onClick={() => decide(c, false)} className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"><X size={12} /> {L('Refuser', 'Reject')}</button>
+            </>
+          ) : c.status === 'pending' && !manage && (
             <button onClick={() => cancel(c)} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-red-600 hover:underline"><X size={12} /> {L('Annuler', 'Cancel')}</button>
           )}
         </div>
@@ -156,6 +183,22 @@ export default function CongesPage() {
 
         {notice && <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-800">{notice}</div>}
 
+        {/* Onglets : Mes congés (libre-service) + À approuver (si je suis approbateur d'un poste/superviseur) */}
+        {isApprover && (
+          <div className="mb-4 flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            <button onClick={() => setTab('mine')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${tab === 'mine' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}><Clock size={15} /> {L('Mes congés', 'My time off')}</button>
+            <button onClick={() => setTab('approve')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${tab === 'approve' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}><Users size={15} /> {L('À approuver', 'To approve')}{toApprove.length > 0 && <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">{toApprove.length}</span>}</button>
+          </div>
+        )}
+
+        {tab === 'approve' ? (
+          <div className="space-y-2">
+            <div className="mb-1 text-sm font-bold text-slate-600">{L('Demandes à approuver (routées vers votre poste)', 'Requests to approve (routed to your position)')}</div>
+            {toApprove.length === 0
+              ? <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">{L('Aucune demande en attente pour vous.', 'No pending request for you.')}</div>
+              : toApprove.map(c => <CongeRow key={c.id} c={c} manage />)}
+          </div>
+        ) : (<>
         {/* Formulaire de demande */}
         <form onSubmit={submit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-600"><Plus size={15} /> {L('Nouvelle demande', 'New request')}</div>
@@ -228,6 +271,7 @@ export default function CongesPage() {
           {mine.length === 0 ? <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">{L('Aucune demande.', 'No request yet.')}</div>
             : mine.map(c => <CongeRow key={c.id} c={c} />)}
         </div>
+        </>)}
       </div>
 
       <style jsx>{`
