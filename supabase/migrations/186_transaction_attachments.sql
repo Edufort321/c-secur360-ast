@@ -1,4 +1,4 @@
--- 187: PIÈCES JOINTES MULTIPLES par transaction (reçus, factures, justificatifs). En plus du reçu
+-- 186: PIÈCES JOINTES MULTIPLES par transaction (reçus, factures, justificatifs). En plus du reçu
 -- principal (commerce_transactions.receipt_url), une transaction peut porter PLUSIEURS documents.
 -- Le comptable y accède via file_url (exports CSV). Idempotent.
 
@@ -22,4 +22,4 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-insert into schema_migrations (version) values ('187') on conflict (version) do nothing;
+insert into schema_migrations (version) values ('186') on conflict (version) do nothing;
