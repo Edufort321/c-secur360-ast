@@ -10,14 +10,20 @@ const csv = (rows: (string | number)[][]) => '﻿' + rows.map(r => r.map(v => `"
 
 async function journalRows(tenant: string): Promise<(string | number)[][]> {
   const { data } = await supabaseAdmin.from('gl_entries')
-    .select('entry_number, entry_date, description, reference, gl_journals(code), gl_lines(debit, credit, description, gl_accounts(code, name, type))')
+    .select('entry_number, entry_date, description, reference, source_type, source_id, gl_journals(code), gl_lines(debit, credit, description, gl_accounts(code, name, type))')
     .eq('tenant_id', tenant).eq('posted', true).order('entry_date', { ascending: true });
-  const rows: (string | number)[][] = [['Date', 'N° écriture', 'Journal', 'Référence', 'Description', 'Compte', 'Nom du compte', 'Type', 'Libellé ligne', 'Débit', 'Crédit']];
+  const receipts: Record<string, string> = {};
+  try {
+    const { data: txns } = await supabaseAdmin.from('commerce_transactions').select('id, receipt_url').eq('tenant_id', tenant).not('receipt_url', 'is', null);
+    for (const t of (txns || []) as any[]) if (t.receipt_url) receipts[t.id] = t.receipt_url;
+  } catch { /* indispo */ }
+  const rows: (string | number)[][] = [['Date', 'N° écriture', 'Journal', 'Référence', 'Description', 'Compte', 'Nom du compte', 'Type', 'Libellé ligne', 'Débit', 'Crédit', 'Pièce jointe (URL)']];
   for (const e of (data || []) as any[]) {
     const j = (e.gl_journals as any)?.code || '';
+    const att = e.source_type === 'transaction' && e.source_id ? (receipts[e.source_id] || '') : '';
     for (const l of (e.gl_lines || []) as any[]) {
       const a = (l.gl_accounts as any) || {};
-      rows.push([String(e.entry_date || '').slice(0, 10), e.entry_number || '', j, e.reference || '', e.description || '', a.code || '', a.name || '', a.type || '', l.description || '', num(l.debit), num(l.credit)]);
+      rows.push([String(e.entry_date || '').slice(0, 10), e.entry_number || '', j, e.reference || '', e.description || '', a.code || '', a.name || '', a.type || '', l.description || '', num(l.debit), num(l.credit), att]);
     }
   }
   return rows;
