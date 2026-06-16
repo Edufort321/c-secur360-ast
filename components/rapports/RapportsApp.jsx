@@ -349,7 +349,7 @@ function isKeyStored(){ try{ return !!localStorage.getItem(APIKEY_LS); }catch{ r
 async function testApiConnection(key){
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:16, messages:[{role:"user",content:"ping"}] }) });
+    body: JSON.stringify({ model:(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens:16, messages:[{role:"user",content:"ping"}] }) });
   if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,200)}`); }
   return true;
 }
@@ -391,7 +391,7 @@ INTERPRÉTATION D'ASSEMBLAGE (CLASSEMENT CORRECT — choisis le BON type de bloc
 Objectif : reproduire EXACTEMENT le contenu du document, BIEN CLASSÉ (zones/sections/tableaux/inspections au bon type et au bon endroit), avec toutes les colonnes et toutes les sections, sans aucune perte.`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:[
+    body: JSON.stringify({ model:(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens:8192, messages:[{ role:"user", content:[
       { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64Pdf } },
       { type:"text", text:prompt } ] }] }) });
   if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
@@ -501,7 +501,7 @@ RÈGLES IMPORTANTES :
 - RÉFÉRENCE PÂLE : si des valeurs IMPRIMÉES TRÈS PÂLES/grises servent de trame de référence et que des valeurs MANUSCRITES (plus foncées) sont écrites par-dessus ou à côté, lis UNIQUEMENT le MANUSCRIT (les valeurs pâles sont l'ancienne version, à ignorer). Si un champ pâle n'a PAS été réécrit à la main, traite-le comme vide.`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:6144, messages:[{ role:"user", content:[
+    body: JSON.stringify({ model:(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens:6144, messages:[{ role:"user", content:[
       { type:"image", source:{ type:"base64", media_type:mediaType||"image/jpeg", data:base64Image } },
       { type:"text", text:prompt } ] }] }) });
   if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
@@ -659,7 +659,7 @@ Retourne UNIQUEMENT le même objet JSON corrigé (même forme, mêmes ids), sans
 Rapport : ${JSON.stringify(payload)}`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
+    body: JSON.stringify({ model:(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
   if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
   const data=await r.json();
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
@@ -700,7 +700,7 @@ RÈGLES :
 Rapport : ${JSON.stringify(payload)}`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
+    body: JSON.stringify({ model:(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
   if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,300)}`); }
   const data=await r.json();
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
@@ -860,7 +860,7 @@ RÈGLES : recopie VERBATIM, n'omets aucune section, garde TOUTES les colonnes de
 ${textChunk}`;
   const r=await fetch("/api/rapports/ai",{ method:"POST",
     headers:{ "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
+    body: JSON.stringify({ model:(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens:8192, messages:[{ role:"user", content:prompt }] }) });
   if(!r.ok){ const e=await r.text(); throw new Error(`${r.status}: ${e.slice(0,200)}`); }
   const data=await r.json();
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");

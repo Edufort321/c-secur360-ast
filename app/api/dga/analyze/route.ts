@@ -97,7 +97,7 @@ Analyse l'évolution et donne ton diagnostic expert.`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'),
         max_tokens: 2048,
         system: KNOWLEDGE,
         messages: [{ role: 'user', content: userMsg }],
@@ -108,7 +108,7 @@ Analyse l'évolution et donne ton diagnostic expert.`;
       return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 });
     }
     const data = await resp.json();
-    if (tenant) { try { const cost = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'analyze' }); } catch { /* best-effort */ } }
+    if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'analyze' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let parsed: any = null;

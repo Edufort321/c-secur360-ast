@@ -42,14 +42,14 @@ Réponds en JSON STRICT, sans texte autour :
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: KNOWLEDGE,
+          model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 2048, system: KNOWLEDGE,
           tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }],
           messages: [{ role: 'user', content: prompt }],
         }),
       });
       if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
       const data = await resp.json();
-      if (tenant) { try { const c = aiCallCostCents('claude-sonnet-4-20250514', data?.usage, 4); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'norm-refresh', province }); } catch {} }
+      if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage, 4); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'norm-refresh', province }); } catch {} }
       const parsed = extractJson(data);
       if (!parsed) return NextResponse.json({ error: 'Réponse IA non parsable' }, { status: 422 });
       return NextResponse.json({ ok: true, province, norm: { ...norm, ...parsed, source: 'ai', updatedAt: new Date().toISOString() }, citations: parsed.citations || [] });
@@ -79,11 +79,11 @@ Réponds en JSON STRICT, sans texte autour :
  "rationale_fr":"justification synthétique selon la norme de la province"}`;
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 3500, system: KNOWLEDGE, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 3500, system: KNOWLEDGE, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
-    if (tenant) { try { const c = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'espace-clos-advise' }); } catch {} }
+    if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'espace-clos-advise' }); } catch {} }
     const parsed = extractJson(data);
     if (!parsed) return NextResponse.json({ error: 'Réponse IA non parsable' }, { status: 422 });
     return NextResponse.json({ ok: true, advice: parsed });

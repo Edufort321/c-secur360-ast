@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 90;
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"matches":[{"index":entier-de-la-ligne-du-bon,"code":"code si lisible","designation":"libellé lu","quantite_recue":nombre}],"extras":[{"code":"","designation":"article reçu NON présent dans le bon","quantite_recue":nombre}]}`;
 const SYS = `Tu es un commis à la RÉCEPTION de marchandises. On te donne (1) les lignes d'un BON DE COMMANDE (avec leur index, code, désignation, quantité commandée) et (2) un BORDEREAU DE RÉCEPTION (bon de livraison). Tâche : déterminer ce qui a été RÉELLEMENT reçu et le rattacher aux lignes du bon.
 - Pour chaque article reçu qui correspond à une ligne du bon, ajoute une entrée dans "matches" avec l'index EXACT de la ligne du bon et la quantité reçue.

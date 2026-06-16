@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"health":"excellent|bon|a_surveiller|critique","summary":"2-3 phrases pour un dirigeant","insights":[{"severity":"info|warning|critical","title":"court","detail":"explication chiffrée"}],"unprofitable":[{"number":"n° projet","reason":"pourquoi non profitable","action":"correctif concret"}],"recommendations":["action priorisée"]}`;
 const SYS = `Tu es un CONTRÔLEUR DE GESTION expérimenté (entreprise de services SST/industriels au Québec). On te fournit les indicateurs d'un portefeuille de projets et la marge par projet. Donne une analyse de DIRIGEANT : santé globale, projets non profitables (marge négative ou faible) avec correctif concret, meilleures vs pires performances, taux de conversion soumission→projet, et 3 à 6 recommandations priorisées et actionnables. Sois concis, chiffré, sans bla-bla. Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
 

@@ -32,7 +32,7 @@ export type AiBudget = {
 const RATES: Record<string, { in: number; out: number }> = {
   'claude-opus-4-8': { in: 5, out: 25 },
   'claude-sonnet-4-6': { in: 3, out: 15 },
-  'claude-sonnet-4-20250514': { in: 3, out: 15 }, // DGA (analyze/inspect/extract/translate)
+  'claude-sonnet-4-5': { in: 3, out: 15 },
   'claude-haiku-4-5-20251001': { in: 1, out: 5 },
   'claude-haiku-4-5': { in: 1, out: 5 },
 };

@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 90;
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","category_hint":"nature","description":"libellé court","confidence":"high|medium|low"}`;
 const SYS_ONE = `Tu es un assistant COMPTABLE. Extrais les infos d'UN reçu/facture pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide : ${SCHEMA}. Montants en nombres (point décimal), 0 si taxe absente, null si illisible. N'invente pas.`;
 const SYS_LIST = `Tu es un assistant COMPTABLE. On te donne des lignes (CSV) d'un relevé ou d'une liste de dépenses/revenus. Extrais CHAQUE opération. Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}. Montants en nombres, 0 si taxe absente. Ignore les en-têtes. N'invente pas.`;

@@ -9,7 +9,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 
 export async function POST(req: NextRequest) {
   const guard = await aiGuard(req); if (guard.err) return guard.err;

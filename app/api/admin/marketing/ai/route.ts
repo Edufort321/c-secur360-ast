@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 
 async function callClaude(apiKey: string, system: string, prompt: string, opts?: { tools?: any[]; maxTokens?: number }) {
   const payload: any = { model: MODEL, max_tokens: opts?.maxTokens || 2048, system, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }] };

@@ -54,7 +54,7 @@ export async function extractDgaFromPdf(pdfBase64: string, tenant: string): Prom
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'),
       max_tokens: 16384, // marge suffisante pour un rapport multi-transformateurs (sinon JSON tronque = transfos perdus)
       messages: [{
         role: 'user',
@@ -67,7 +67,7 @@ export async function extractDgaFromPdf(pdfBase64: string, tenant: string): Prom
   });
   if (!resp.ok) { const e = await resp.text(); throw new DgaExtractError(`Anthropic ${resp.status}: ${e.slice(0, 300)}`, 502); }
   const data = await resp.json();
-  if (tenant) { try { const cost = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'extract' }); } catch { /* best-effort */ } }
+  if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'extract' }); } catch { /* best-effort */ } }
 
   const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
   const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();

@@ -37,11 +37,11 @@ export async function POST(req: NextRequest) {
 Réponds en JSON STRICT : {"references":["…"],"checklist":["…"],"params":{},"citations":[{"title":"","url":""}]}`;
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: SYSTEM, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }], messages: [{ role: 'user', content: prompt }] }),
+        body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 2048, system: SYSTEM, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }], messages: [{ role: 'user', content: prompt }] }),
       });
       if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
       const data = await resp.json();
-      if (tenant) { try { const c = aiCallCostCents('claude-sonnet-4-20250514', data?.usage, 4); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'norm-refresh', type, province }); } catch {} }
+      if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage, 4); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'norm-refresh', type, province }); } catch {} }
       const parsed = extractJson(data); if (!parsed) return NextResponse.json({ error: 'Réponse IA non parsable' }, { status: 422 });
       return NextResponse.json({ ok: true, type, province, ...parsed });
     }
@@ -63,11 +63,11 @@ Produis une analyse SST complète et prudente. Réponds en JSON STRICT, sans tex
  "rationale_fr":"justification selon la norme/province"}`;
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
-    if (tenant) { try { const c = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'advise', type }); } catch {} }
+    if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'advise', type }); } catch {} }
     const parsed = extractJson(data); if (!parsed) return NextResponse.json({ error: 'Réponse IA non parsable' }, { status: 422 });
     return NextResponse.json({ ok: true, type, advice: parsed });
   } catch (e: any) {

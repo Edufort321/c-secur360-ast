@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"health":"excellent|bon|a_surveiller|critique","summary":"2-3 phrases dirigeant","insights":[{"severity":"info|warning|critical","title":"court","detail":"chiffré"}],"recommendations":["action priorisée"]}`;
 const SYS = `Tu es un DIRECTEUR FINANCIER (CFO) pour une PME de services SST/industriels au Québec. On te fournit les KPIs financiers et une série temporelle (CA, charges, marge, masse salariale, croissance). Donne une analyse de dirigeant : santé financière globale, tendances (croissance, marge, ratio masse salariale/CA, trésorerie), risques, et 3 à 6 recommandations priorisées et actionnables. Concis, chiffré. Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
 
