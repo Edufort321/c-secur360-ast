@@ -2,21 +2,22 @@
 // Actionnaires, cap table et dividendes (#32). Données sensibles : tout passe par les routes
 // serveur (lib/shareholders). L'info bancaire n'est révélée qu'à la demande (bouton « Révéler »).
 import { useEffect, useState } from 'react';
-import { Loader2, Trash2, Plus, Eye, Lock, PieChart as PieIcon, Users, Coins } from 'lucide-react';
+import { Loader2, Trash2, Plus, Eye, Lock, PieChart as PieIcon, Users, Coins, TrendingUp, Sparkles, AlertTriangle } from 'lucide-react';
 import {
   getShareholders, saveShareholder, deleteShareholder, revealBanking, saveBanking,
   getShares, saveShareClass, saveShareTxn, deleteShareTxn,
   getDividends, declareDividend, payDividend, cancelDividend,
-  maskAccount, type Shareholder, type ShareholderBanking, type ShareClass, type ShareTransaction,
+  type Shareholder, type ShareholderBanking, type ShareClass, type ShareTransaction,
   type DividendDeclaration, type DividendPayment,
 } from '@/lib/shareholders';
+import { computeValuation, simulateRound, altmanZScore, type BalanceSheet } from '@/lib/valuation';
 
 type Tr = (f: string, e: string) => string;
 const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 const num = (n: number, d = 0) => (Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: d, maximumFractionDigits: d });
 
 export function ShareholdersModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; canEdit: boolean }) {
-  const [view, setView] = useState<'registre' | 'captable' | 'dividendes'>('registre');
+  const [view, setView] = useState<'registre' | 'captable' | 'dividendes' | 'valorisation'>('registre');
   const [notice, setNotice] = useState<string | null>(null);
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
 
@@ -24,7 +25,7 @@ export function ShareholdersModule({ tenant, tr, canEdit }: { tenant: string; tr
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['registre', tr('Registre', 'Registry'), Users], ['captable', tr('Cap table', 'Cap table'), PieIcon], ['dividendes', tr('Dividendes', 'Dividends'), Coins]] as const).map(([k, lbl, Icon]) => (
+          {([['registre', tr('Registre', 'Registry'), Users], ['captable', tr('Cap table', 'Cap table'), PieIcon], ['dividendes', tr('Dividendes', 'Dividends'), Coins], ['valorisation', tr('Valorisation', 'Valuation'), TrendingUp]] as const).map(([k, lbl, Icon]) => (
             <button key={k} onClick={() => { setView(k as any); setNotice(null); }} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${view === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}><Icon size={14} /> {lbl}</button>
           ))}
         </div>
@@ -35,6 +36,7 @@ export function ShareholdersModule({ tenant, tr, canEdit }: { tenant: string; tr
       {view === 'registre' && <Registre tenant={tenant} tr={tr} canEdit={canEdit} inputCls={inputCls} setNotice={setNotice} />}
       {view === 'captable' && <CapTable tenant={tenant} tr={tr} canEdit={canEdit} inputCls={inputCls} setNotice={setNotice} />}
       {view === 'dividendes' && <Dividendes tenant={tenant} tr={tr} canEdit={canEdit} inputCls={inputCls} setNotice={setNotice} />}
+      {view === 'valorisation' && <Valorisation tenant={tenant} tr={tr} canEdit={canEdit} inputCls={inputCls} setNotice={setNotice} />}
     </div>
   );
 }
@@ -350,6 +352,149 @@ function Dividendes({ tenant, tr, canEdit, inputCls, setNotice }: SubProps) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Valorisation : multiple d'EBITDA, prix d'action, dilution + Altman Z + analyse IA ──
+type Snap = { revenue: number; ebitda: number; ebit: number; capex: number; balanceSheet: BalanceSheet; holdings: { id: string; name?: string; shares: number }[]; sharesOutstanding: number };
+function Valorisation({ tenant, tr, inputCls, setNotice }: SubProps) {
+  const [loading, setLoading] = useState(true);
+  const [snap, setSnap] = useState<Snap | null>(null);
+  const [multiple, setMultiple] = useState(4);
+  const [netDebt, setNetDebt] = useState(0);
+  const [investment, setInvestment] = useState(0);
+  const [preMoney, setPreMoney] = useState(0);
+  const [ai, setAi] = useState<any | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await fetch(`/api/finance/valuation-data?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+        const j = await r.json(); if (!r.ok) throw new Error(j.error);
+        setSnap(j); setNetDebt(-(j.balanceSheet?.cash || 0)); // dette nette par défaut = −trésorerie
+      } catch (e: any) { setNotice(e?.message); }
+      setLoading(false);
+    })();
+    /* eslint-disable-next-line */
+  }, [tenant]);
+
+  if (loading) return <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>;
+  if (!snap) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">{tr('Données financières indisponibles (plan comptable / écritures requis).', 'Financial data unavailable (chart of accounts / entries required).')}</div>;
+
+  const val = computeValuation(snap.ebitda, multiple, snap.sharesOutstanding, netDebt);
+  const altman = altmanZScore(snap.balanceSheet, snap.ebit);
+  const effectivePre = preMoney > 0 ? preMoney : val.equityValue;
+  const sim = investment > 0 ? simulateRound(effectivePre, investment, snap.holdings) : null;
+  const zoneColor = altman.zone === 'safe' ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' : altman.zone === 'grey' ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-rose-600 bg-rose-50 dark:bg-rose-900/20';
+
+  async function runAi() {
+    setAiBusy(true); setAi(null);
+    try {
+      const r = await fetch('/api/finance/investor-ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ data: { revenue: snap!.revenue, ebitda: snap!.ebitda, ebit: snap!.ebit, capex: snap!.capex, valuation: val, balanceSheet: snap!.balanceSheet, altman, simulation: sim } }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Erreur IA');
+      setAi(j.analysis);
+    } catch (e: any) { setNotice(e?.message); }
+    setAiBusy(false);
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Valorisation */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <div className="text-sm font-bold text-gray-900 dark:text-white">{tr('Valorisation par multiple d\'EBITDA', 'EBITDA-multiple valuation')}</div>
+          <label className="text-xs font-semibold text-gray-500">{tr('Multiple', 'Multiple')} (×)<input type="number" step="0.5" value={multiple} onChange={e => setMultiple(Number(e.target.value))} className={`mt-1 w-20 ${inputCls}`} /></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Dette nette', 'Net debt')}<input type="number" value={netDebt} onChange={e => setNetDebt(Number(e.target.value))} className={`mt-1 w-28 ${inputCls}`} /></label>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <KCard label="EBITDA" value={mny(snap.ebitda)} />
+          <KCard label={tr('Valeur d\'entreprise', 'Enterprise value')} value={mny(val.enterpriseValue)} />
+          <KCard label={tr('Valeur des capitaux propres', 'Equity value')} value={mny(val.equityValue)} accent />
+          <KCard label={tr('Prix par action', 'Price per share')} value={`${num(val.pricePerShare, 2)} $`} sub={`${num(val.sharesOutstanding)} ${tr('actions', 'shares')}`} accent />
+        </div>
+      </div>
+
+      {/* Alerte de crise — Altman Z'' */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-bold text-gray-900 dark:text-white">{tr('Alerte de crise — score d\'Altman Z″', 'Crisis alert — Altman Z″ score')}</div>
+          <div className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-bold ${zoneColor}`}>{altman.zone !== 'safe' && <AlertTriangle size={15} />} Z″ = {altman.z.toFixed(2)} · {altman.label}</div>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500 sm:grid-cols-4">
+          <span>{tr('Fonds roul./Actif', 'WC/Assets')} : {altman.x1.toFixed(2)}</span>
+          <span>{tr('BNR/Actif', 'RE/Assets')} : {altman.x2.toFixed(2)}</span>
+          <span>EBIT/{tr('Actif', 'Assets')} : {altman.x3.toFixed(2)}</span>
+          <span>{tr('Capitaux/Passif', 'Equity/Liab.')} : {altman.x4.toFixed(2)}</span>
+        </div>
+        <p className="mt-2 text-[11px] text-gray-400">{tr('Zones : > 2,6 sain · 1,1–2,6 zone grise · < 1,1 détresse. Surveille AVANT que ça se dégrade.', 'Zones: > 2.6 safe · 1.1–2.6 grey · < 1.1 distress. Watch BEFORE it deteriorates.')}</p>
+      </div>
+
+      {/* Simulateur de dilution / entrée d'investisseur */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <div className="text-sm font-bold text-gray-900 dark:text-white">{tr('Entrée d\'un investisseur (dilution)', 'New investor (dilution)')}</div>
+          <label className="text-xs font-semibold text-gray-500">{tr('Pré-money', 'Pre-money')}<input type="number" placeholder={num(val.equityValue)} value={preMoney || ''} onChange={e => setPreMoney(Number(e.target.value))} className={`mt-1 w-32 ${inputCls}`} /></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Investissement', 'Investment')}<input type="number" value={investment || ''} onChange={e => setInvestment(Number(e.target.value))} className={`mt-1 w-32 ${inputCls}`} /></label>
+        </div>
+        {!sim ? <div className="text-sm text-gray-400">{tr('Saisir un montant d\'investissement pour simuler la dilution.', 'Enter an investment amount to simulate dilution.')}</div> : (
+          <>
+            <div className="mb-2 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-lg bg-blue-50 px-2 py-1 font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">{tr('Post-money', 'Post-money')} : {mny(sim.postMoney)}</span>
+              <span className="rounded-lg bg-gray-100 px-2 py-1 font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-200">{tr('Prix/action', 'Price/share')} : {num(sim.pricePerShare, 2)} $</span>
+              <span className="rounded-lg bg-emerald-50 px-2 py-1 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{tr('Nouvel investisseur', 'New investor')} : {sim.newInvestorPct.toFixed(1)} % ({num(sim.newShares)} {tr('actions', 'shares')})</span>
+            </div>
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Actionnaire', 'Shareholder')}</th><th className="text-right">{tr('Avant', 'Before')}</th><th className="text-right">{tr('Après', 'After')}</th><th className="text-right">{tr('Dilution', 'Dilution')}</th></tr></thead>
+              <tbody>
+                {sim.rows.map(r => (
+                  <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="py-1.5 text-gray-700 dark:text-gray-200">{r.name}</td>
+                    <td className="text-right text-gray-500">{r.pctBefore.toFixed(1)} %</td>
+                    <td className="text-right font-semibold">{r.pctAfter.toFixed(1)} %</td>
+                    <td className="text-right text-rose-500">−{(r.pctBefore - r.pctAfter).toFixed(1)} pt</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      {/* Analyse IA investisseur / crise */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between">
+          <div className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white"><Sparkles size={15} className="text-violet-600" /> {tr('Analyse IA — investisseur & crise', 'AI analysis — investor & crisis')}</div>
+          <button onClick={runAi} disabled={aiBusy} className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40">{aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {tr('Analyser', 'Analyze')}</button>
+        </div>
+        {ai && (
+          <div className="mt-3 space-y-3 text-sm">
+            {ai.valuationView && <p className="text-gray-700 dark:text-gray-200">{ai.valuationView}</p>}
+            {Array.isArray(ai.investmentThesis) && ai.investmentThesis.length > 0 && (
+              <div><div className="text-xs font-bold uppercase text-gray-400">{tr('Thèse d\'investissement', 'Investment thesis')}</div><ul className="mt-1 list-disc pl-5 text-gray-700 dark:text-gray-200">{ai.investmentThesis.map((t: string, i: number) => <li key={i}>{t}</li>)}</ul></div>
+            )}
+            {ai.crisisRisk && <div className="text-xs">{tr('Risque de crise', 'Crisis risk')} : <span className="font-bold">{ai.crisisRisk}</span></div>}
+            {Array.isArray(ai.earlyWarnings) && ai.earlyWarnings.map((w: any, i: number) => (
+              <div key={i} className={`rounded-lg px-3 py-2 text-xs ${w.severity === 'critical' ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20' : w.severity === 'warning' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20' : 'bg-blue-50 text-blue-700 dark:bg-blue-900/20'}`}><b>{w.title}</b> — {w.detail}</div>
+            ))}
+            {Array.isArray(ai.recommendations) && ai.recommendations.length > 0 && (
+              <div><div className="text-xs font-bold uppercase text-gray-400">{tr('Recommandations froides', 'Cold recommendations')}</div><ul className="mt-1 space-y-1">{ai.recommendations.map((r: any, i: number) => <li key={i} className="text-gray-700 dark:text-gray-200"><b>{typeof r === 'string' ? r : r.action}</b>{r.rationale ? ` — ${r.rationale}` : ''}</li>)}</ul></div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function KCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-3 ${accent ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20' : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'}`}>
+      <div className="text-[11px] font-semibold uppercase text-gray-400">{label}</div>
+      <div className="mt-0.5 text-lg font-extrabold text-gray-900 dark:text-white">{value}</div>
+      {sub && <div className="text-[11px] text-gray-400">{sub}</div>}
     </div>
   );
 }
