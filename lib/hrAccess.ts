@@ -33,6 +33,18 @@ export async function resolveAccess(req: NextRequest): Promise<Access | null> {
   return { userId: u.id, email: u.email || '', tenant, level };
 }
 
+/**
+ * Tenant EFFECTIF d'une opération. Un super_admin (`super_user`) a un accès cross-tenant légitime :
+ * il peut cibler le tenant de la PAGE admin qu'il visite (param `reqTenant`). Tout autre rôle est
+ * FORCÉ à son propre tenant de session (un admin de tenant ne peut JAMAIS toucher un autre tenant).
+ * Param absent -> tenant de session. ANTI-CONTAMINATION inter-tenant.
+ */
+export function effectiveTenant(acc: { level: string; tenant: string }, reqTenant?: string | null): string {
+  const t = (reqTenant || '').trim();
+  if (acc.level === 'super_user' && t) return t;
+  return acc.tenant;
+}
+
 /** Accès aux dossiers RH / salaires (admin_paie, rh, direction, super_user). */
 export function canHr(level: string): boolean { return HR_LEVELS.has(level); }
 /** Accès à la gestion des accès/mots de passe (administration, rh, direction, super_user). */

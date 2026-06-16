@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canHr, canAuth } from '@/lib/hrAccess';
+import { resolveAccess, canHr, canAuth, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Accès SERVEUR aux champs SENSIBLES de planner_personnel : mots de passe d'accès (canAuth) et
@@ -7,15 +7,6 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 // la lecture/écriture directe via la clé anon (fermées par migration 147).
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-// Tenant EFFECTIF : un super_admin peut cibler le tenant de la PAGE admin qu'il visite (param `tenant`)
-// — il a un accès cross-tenant légitime. Tout autre rôle est FORCÉ à son propre tenant de session
-// (anti-contamination : un admin de tenant ne peut JAMAIS toucher un autre tenant). Param vide -> session.
-function effectiveTenant(acc: { level: string; tenant: string }, reqTenant?: string | null): string {
-  const t = (reqTenant || '').trim();
-  if (acc.level === 'super_user' && t) return t;
-  return acc.tenant;
-}
 
 // GET ?access=1[&tenant=...] -> liste pour la gestion des accès (id, name, email, niveau, access_password).
 export async function GET(req: NextRequest) {

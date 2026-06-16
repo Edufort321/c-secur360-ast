@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canHr } from '@/lib/hrAccess';
+import { resolveAccess, canHr, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Accès SERVEUR aux dossiers RH (service role + vérification de niveau + tenant de SESSION).
@@ -22,8 +22,8 @@ async function guard(req: NextRequest) {
 // GET ?list=1  -> liste du personnel (avec salaire) ; ?personnelId=X -> dossier ; ?general=1 -> docs généraux
 export async function GET(req: NextRequest) {
   const g = await guard(req); if (g.err) return g.err;
-  const tenant = g.acc!.tenant;
   const url = new URL(req.url);
+  const tenant = effectiveTenant(g.acc!, url.searchParams.get('tenant')); // super_admin -> tenant de la page
 
   if (url.searchParams.get('list')) {
     const { data } = await supabaseAdmin.from('planner_personnel')
@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
 // POST { table, row } -> insert (tenant_id forcé à la session)
 export async function POST(req: NextRequest) {
   const g = await guard(req); if (g.err) return g.err;
-  const tenant = g.acc!.tenant;
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  const tenant = effectiveTenant(g.acc!, body.tenant);
   if (!TABLES.has(body.table)) return NextResponse.json({ error: 'Table non autorisée' }, { status: 400 });
   const row = { ...(body.row || {}), tenant_id: tenant }; // tenant forcé (anti-usurpation)
   delete row.id;
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
 // PATCH { table, id, patch } -> update (scoping tenant)
 export async function PATCH(req: NextRequest) {
   const g = await guard(req); if (g.err) return g.err;
-  const tenant = g.acc!.tenant;
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  const tenant = effectiveTenant(g.acc!, body.tenant);
   if (!TABLES.has(body.table) || !body.id) return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
   const patch = { ...(body.patch || {}) }; delete patch.id; delete patch.tenant_id;
   const { error } = await supabaseAdmin.from(body.table).update(patch).eq('id', body.id).eq('tenant_id', tenant);
@@ -81,8 +81,8 @@ export async function PATCH(req: NextRequest) {
 // DELETE ?table=&id= -> delete (scoping tenant)
 export async function DELETE(req: NextRequest) {
   const g = await guard(req); if (g.err) return g.err;
-  const tenant = g.acc!.tenant;
   const url = new URL(req.url);
+  const tenant = effectiveTenant(g.acc!, url.searchParams.get('tenant'));
   const table = url.searchParams.get('table') || '';
   const id = url.searchParams.get('id') || '';
   if (!TABLES.has(table) || !id) return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });

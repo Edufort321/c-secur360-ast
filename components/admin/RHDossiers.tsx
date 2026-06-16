@@ -41,17 +41,19 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 
   // Accès RH via routes SERVEUR (service role + vérif niveau + tenant de session) — plus aucune
   // lecture directe des tables sensibles depuis le navigateur (clé anon fermée).
+  // tenant transmis : un super_admin agit sur le tenant de la PAGE (anti-contamination cross-tenant).
+  const tParam = `tenant=${encodeURIComponent(tenant)}`;
   async function hrGet(qs: string): Promise<any> {
-    try { const r = await fetch(`/api/hr/dossier?${qs}`, { credentials: 'include' }); return r.ok ? await r.json() : {}; } catch { return {}; }
+    try { const r = await fetch(`/api/hr/dossier?${qs}&${tParam}`, { credentials: 'include' }); return r.ok ? await r.json() : {}; } catch { return {}; }
   }
   async function hrInsert(table: string, row: any): Promise<any> {
-    try { const r = await fetch('/api/hr/dossier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ table, row }) }); const j = await r.json().catch(() => ({})); return j.row || null; } catch { return null; }
+    try { const r = await fetch('/api/hr/dossier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ table, row, tenant }) }); const j = await r.json().catch(() => ({})); return j.row || null; } catch { return null; }
   }
   async function hrUpdate(table: string, id: string, patch: any): Promise<void> {
-    try { await fetch('/api/hr/dossier', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ table, id, patch }) }); } catch { /* ignore */ }
+    try { await fetch('/api/hr/dossier', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ table, id, patch, tenant }) }); } catch { /* ignore */ }
   }
   async function hrDelete(table: string, id: string): Promise<void> {
-    try { await fetch(`/api/hr/dossier?table=${table}&id=${id}`, { method: 'DELETE', credentials: 'include' }); } catch { /* ignore */ }
+    try { await fetch(`/api/hr/dossier?table=${table}&id=${id}&${tParam}`, { method: 'DELETE', credentials: 'include' }); } catch { /* ignore */ }
   }
 
   useEffect(() => {
