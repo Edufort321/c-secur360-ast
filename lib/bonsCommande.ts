@@ -12,7 +12,8 @@ export type BonCommandeLigne = {
   quantite: number;
   unite?: string;
   cout_unitaire: number;
-  recu?: number;            // quantité reçue (réception partielle)
+  recu?: number;            // quantité reçue (réception partielle, cumulée)
+  recu_synced?: number;     // quantité déjà poussée à l'inventaire (évite le double-comptage sur réceptions partielles)
   taxable?: boolean;        // défaut true
   source_job_id?: string;   // mandat d'origine (si importé du planificateur)
   source_index?: number;    // index dans preparation[] du mandat
@@ -162,12 +163,16 @@ export async function setJobsApproStatut(tenant: string, refs: { job_id: string;
 }
 
 // ── Lien inventaire : réception (best-effort) ────────────────────────────────
-/** Pousse les quantités reçues vers l'inventaire (table items + item_locations). Best-effort, non bloquant. */
+/** Pousse les quantités NOUVELLEMENT reçues vers l'inventaire (delta = recu − recu_synced) et met à jour
+ *  `recu_synced` sur les lignes passées (mutation), pour éviter tout double-comptage sur réceptions partielles.
+ *  Best-effort, non bloquant. */
 export async function receiveToInventory(tenant: string, b: BonCommande, department = 'Réception'): Promise<{ synced: number; errors: number }> {
   let synced = 0, errors = 0;
   for (const l of (b.items || [])) {
     const recu = Number(l.recu) || 0;
-    if (recu <= 0) continue;
+    const already = Number(l.recu_synced) || 0;
+    const delta = recu - already;       // seules les unités non encore comptabilisées sont ajoutées
+    if (delta <= 0) continue;
     try {
       let itemId: string | undefined;
       if (l.code) {
@@ -183,12 +188,36 @@ export async function receiveToInventory(tenant: string, b: BonCommande, departm
       }
       if (!itemId) { errors++; continue; }
       const { data: loc } = await supabase.from('item_locations').select('id, quantity').eq('tenant_id', tenant).eq('item_id', itemId).limit(1).maybeSingle();
-      if (loc?.id) { await supabase.from('item_locations').update({ quantity: (Number(loc.quantity) || 0) + recu }).eq('id', loc.id); }
-      else { await supabase.from('item_locations').insert({ tenant_id: tenant, item_id: itemId, department, quantity: recu, min_quantity: 0, max_quantity: 0 }); }
+      if (loc?.id) { await supabase.from('item_locations').update({ quantity: (Number(loc.quantity) || 0) + delta }).eq('id', loc.id); }
+      else { await supabase.from('item_locations').insert({ tenant_id: tenant, item_id: itemId, department, quantity: delta, min_quantity: 0, max_quantity: 0 }); }
+      l.recu_synced = recu; // marque comme comptabilisé (delta inclus)
       synced++;
     } catch { errors++; }
   }
   return { synced, errors };
+}
+
+// ── Contrôle de réception : quantité reçue vs commandée (best-practice « 3-way / receiving control ») ──
+export type LineReception = 'none' | 'partial' | 'complete' | 'over';
+/** État de réception d'une ligne : rien / partiel / complet / surplus (reçu > commandé). */
+export function lineReception(l: BonCommandeLigne): LineReception {
+  const q = Number(l.quantite) || 0; const r = Number(l.recu) || 0;
+  if (r <= 0) return 'none';
+  if (q > 0 && r > q) return 'over';
+  if (r < q) return 'partial';
+  return 'complete';
+}
+/** Statut global déduit des lignes : tout reçu → recu ; au moins une ligne reçue → partiel ; sinon inchangé. */
+export function computeReceptionStatus(items: BonCommandeLigne[], current: BonCommandeStatus): BonCommandeStatus {
+  if (current === 'annule') return 'annule';
+  const recs = (items || []).map(lineReception);
+  if (recs.length === 0) return current;
+  const anyRecu = recs.some(s => s !== 'none');
+  const allDone = recs.every(s => s === 'complete' || s === 'over');
+  if (allDone) return 'recu';
+  if (anyRecu) return 'partiel';
+  // Plus rien de reçu : on retombe sur « envoyé » si on était en réception, sinon on garde l'état (brouillon/envoyé).
+  return current === 'recu' || current === 'partiel' ? 'envoye' : current;
 }
 
 export function bonStatusLabel(s: BonCommandeStatus, fr = true): string {

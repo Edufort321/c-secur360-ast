@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Loader2, Trash2, Plus, Send, PackageCheck, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Loader2, Trash2, Plus, Send, PackageCheck, Download, FileText, ScanLine } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { siteInitials, getActiveCatalogue, type CatalogueTaux } from '@/lib/soumissions';
 import { PROVINCES } from '@/lib/invoicing';
+import { exportBonCommandePdf } from '@/lib/pdf/bonCommandePdf';
 import {
   getBonsCommande, saveBonCommande, deleteBonCommande, genBonNumero, computeBonTotal,
   scanItemsACommander, setJobsApproStatut, receiveToInventory, bonStatusLabel,
+  computeReceptionStatus, lineReception,
   type BonCommande, type BonCommandeLigne, type BonCommandeStatus, type ItemACommander,
 } from '@/lib/bonsCommande';
 
@@ -25,6 +27,11 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
   const [scanItems, setScanItems] = useState<ItemACommander[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanSel, setScanSel] = useState<Record<number, boolean>>({});
+  const [recScan, setRecScan] = useState(false); // import IA du bordereau de réception en cours
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [tenantLogo, setTenantLogo] = useState<string | null>(null);
+  const recFileRef = useRef<HTMLInputElement | null>(null);
+  const projectLabelOf = (id?: string | null) => projects.find(p => p.id === id)?.label || null;
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const numFR = (s: string) => { const n = Number(String(s).replace(',', '.').replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
@@ -45,6 +52,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
       const { data } = await supabase.from('projects').select('id, name, project_number').eq('tenant_id', tenant).order('created_at', { ascending: false });
       setProjects((data || []).map((p: any) => ({ id: p.id, label: `${p.project_number ? p.project_number + ' — ' : ''}${p.name || p.id}` })));
     } catch { setProjects([]); }
+    try { const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(); setTenantLogo(t?.logo_url || null); } catch { /* logo défaut */ }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -79,7 +87,9 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
   async function save() {
     if (!form) return;
     setNotice(null);
-    try { await saveBonCommande(tenant, form); setNotice(tr('Bon de commande enregistré.', 'Purchase order saved.')); setView('list'); setForm(null); await load(); }
+    // Le statut suit l'état de réception des lignes (reçu/partiel) sans rétrograder un envoi/brouillon.
+    const toSave = { ...form, status: computeReceptionStatus(form.items, form.status) };
+    try { await saveBonCommande(tenant, toSave); setNotice(tr('Bon de commande enregistré.', 'Purchase order saved.')); setView('list'); setForm(null); await load(); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
 
@@ -97,17 +107,28 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
 
-  async function recevoir() {
+  // Valide la réception selon les quantités RÉELLEMENT saisies (réception partielle permise) ;
+  // ne pousse à l'inventaire que le delta non encore comptabilisé. `tout=true` => reçoit tout.
+  async function recevoir(tout = false) {
     if (!form) return;
-    if (!window.confirm(tr('Marquer tout comme reçu et ajouter les quantités à l\'inventaire ?', 'Mark all received and add quantities to inventory?'))) return;
+    const items = form.items.map(l => ({ ...l, recu: tout ? (Number(l.quantite) || 0) : (Number(l.recu) || 0) }));
+    if (!items.some(l => (Number(l.recu) || 0) > (Number(l.recu_synced) || 0))) {
+      setNotice(tr('Aucune quantité reçue à comptabiliser. Saisissez les quantités reçues (ou importez le bordereau) puis réessayez.', 'No received quantity to record. Enter received quantities (or import the slip) then retry.'));
+      return;
+    }
+    const msg = tout
+      ? tr('Marquer TOUT comme reçu et ajouter les quantités à l\'inventaire ?', 'Mark ALL as received and add quantities to inventory?')
+      : tr('Comptabiliser les quantités reçues saisies et les ajouter à l\'inventaire ?', 'Record the entered received quantities and add them to inventory?');
+    if (!window.confirm(msg)) return;
     setNotice(null);
     try {
-      const received = { ...form, status: 'recu' as BonCommandeStatus, items: form.items.map(l => ({ ...l, recu: l.recu && l.recu > 0 ? l.recu : Number(l.quantite) || 0 })) };
+      const res = await receiveToInventory(tenant, { ...form, items }); // met à jour recu_synced (delta only)
+      const status = computeReceptionStatus(items, form.status);
+      const received = { ...form, status, items };
       await saveBonCommande(tenant, received);
-      const res = await receiveToInventory(tenant, received);
-      const refs = (form.items || []).filter(l => l.source_job_id != null && l.source_index != null).map(l => ({ job_id: l.source_job_id!, index: l.source_index! }));
-      if (refs.length) await setJobsApproStatut(tenant, refs, 'recu');
-      setNotice(tr(`Reçu. ${res.synced} article(s) ajoutés à l'inventaire${res.errors ? ` (${res.errors} en erreur)` : ''}.`, `Received. ${res.synced} item(s) added to inventory${res.errors ? ` (${res.errors} errors)` : ''}.`));
+      const refs = items.filter(l => l.source_job_id != null && l.source_index != null).map(l => ({ job_id: l.source_job_id!, index: l.source_index! }));
+      if (refs.length) await setJobsApproStatut(tenant, refs, status === 'recu' ? 'recu' : 'commande');
+      setNotice(tr(`${bonStatusLabel(status)} — ${res.synced} article(s) ajoutés à l'inventaire${res.errors ? ` (${res.errors} en erreur)` : ''}.`, `${bonStatusLabel(status, false)} — ${res.synced} item(s) added to inventory${res.errors ? ` (${res.errors} errors)` : ''}.`));
       setForm(received); await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
@@ -135,6 +156,54 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
     setShowScan(false);
   }
 
+  // ── Import IA du bordereau de réception (image / PDF / Excel) ───────────────
+  async function onReceptionFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = ''; // permet de re-sélectionner le même fichier
+    if (!file || !form) return;
+    if (file.size > 12 * 1024 * 1024) { setNotice(tr('Fichier trop volumineux (max 12 Mo).', 'File too large (max 12 MB).')); return; }
+    setRecScan(true); setNotice(tr('Lecture du bordereau par l\'IA…', 'AI reading the reception slip…'));
+    try {
+      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result || '')); r.onerror = rej; r.readAsDataURL(file); });
+      const resp = await fetch('/api/bons-commande/scan-reception', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ fileBase64: dataUrl, media_type: file.type, file_name: file.name, lines: form.items.map(l => ({ code: l.code, designation: l.designation, quantite: l.quantite, unite: l.unite })) }),
+      });
+      const jr = await resp.json().catch(() => ({}));
+      if (!resp.ok || jr.error) throw new Error(jr.error || `HTTP ${resp.status}`);
+      const matches: any[] = Array.isArray(jr.matches) ? jr.matches : [];
+      const extras: any[] = Array.isArray(jr.extras) ? jr.extras : [];
+      setForm(f => {
+        if (!f) return f;
+        const items = f.items.map(l => ({ ...l }));
+        let applied = 0;
+        for (const m of matches) {
+          const idx = Number(m.index);
+          const qte = Number(m.quantite_recue) || 0;
+          if (Number.isInteger(idx) && idx >= 0 && idx < items.length && qte > 0) { items[idx].recu = qte; applied++; }
+        }
+        // Articles reçus non commandés -> ajoutés en lignes (qté commandée 0, reçu = qté), à valider.
+        for (const ex of extras) {
+          const qte = Number(ex.quantite_recue) || 0; if (qte <= 0) continue;
+          items.push({ designation: `${ex.designation || tr('Article reçu', 'Received item')} ${tr('(non commandé)', '(not ordered)')}`, code: ex.code || '', quantite: 0, unite: 'u.', cout_unitaire: 0, recu: qte, taxable: true });
+        }
+        const status = computeReceptionStatus(items, f.status);
+        setNotice(tr(`Bordereau lu : ${applied} ligne(s) rapprochée(s)${extras.length ? `, ${extras.length} article(s) non commandé(s) ajouté(s)` : ''}. Vérifiez les quantités puis « Recevoir ».`, `Slip read: ${applied} line(s) matched${extras.length ? `, ${extras.length} non-ordered item(s) added` : ''}. Verify quantities then "Receive".`));
+        return { ...f, items, status };
+      });
+    } catch (err: any) {
+      setNotice(tr('Échec de lecture du bordereau : ', 'Reception slip read failed: ') + (err?.message || ''));
+    } finally { setRecScan(false); }
+  }
+
+  async function exportPdf() {
+    if (!form) return;
+    setPdfBusy(true);
+    try { await exportBonCommandePdf({ bon: form, tenant, tenantLogoUrl: tenantLogo, projectLabel: projectLabelOf(form.project_id) }); }
+    catch (e: any) { setNotice(tr('Erreur PDF : ', 'PDF error: ') + (e?.message || '')); }
+    finally { setPdfBusy(false); }
+  }
+
   const totals = form ? computeBonTotal(form.items || [], form.province || 'QC') : { subtotal: 0, taxes: 0, total: 0 };
   const statusBadge = (s: BonCommandeStatus) => {
     const cls: Record<BonCommandeStatus, string> = {
@@ -159,13 +228,14 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500 dark:bg-gray-900/40">
-                <tr><th className="px-3 py-2">{tr('Numéro', 'Number')}</th><th className="px-3 py-2">{tr('Fournisseur', 'Supplier')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right">{tr('Total', 'Total')}</th><th className="px-3 py-2"></th></tr>
+                <tr><th className="px-3 py-2">{tr('Numéro', 'Number')}</th><th className="px-3 py-2">{tr('Fournisseur', 'Supplier')}</th><th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right">{tr('Total', 'Total')}</th><th className="px-3 py-2"></th></tr>
               </thead>
               <tbody>
                 {bons.map(b => (
                   <tr key={b.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-800/40">
                     <td className="px-3 py-2 font-mono">{b.numero}</td>
                     <td className="px-3 py-2">{b.supplier || '—'}</td>
+                    <td className="px-3 py-2 text-xs text-gray-500">{projectLabelOf(b.project_id) || '—'}</td>
                     <td className="px-3 py-2">{statusBadge(b.status)}</td>
                     <td className="px-3 py-2 text-right font-semibold">{mny(b.total || 0)}</td>
                     <td className="px-3 py-2 text-right">
@@ -174,7 +244,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                     </td>
                   </tr>
                 ))}
-                {bons.length === 0 && <tr><td colSpan={5} className="px-3 py-8 text-center text-gray-400">{tr('Aucun bon de commande.', 'No purchase orders.')}</td></tr>}
+                {bons.length === 0 && <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-400">{tr('Aucun bon de commande.', 'No purchase orders.')}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -189,13 +259,23 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
               <h2 className="text-lg font-bold font-mono">{form.numero}</h2>
               {statusBadge(form.status)}
             </div>
-            {canEdit && (
-              <div className="flex flex-wrap items-center gap-2">
-                <button onClick={save} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800"><Download size={15} /> {tr('Enregistrer', 'Save')}</button>
-                {form.status === 'brouillon' && <button onClick={envoyer} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Send size={15} /> {tr('Envoyer', 'Send')}</button>}
-                {form.status !== 'recu' && <button onClick={recevoir} className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"><PackageCheck size={15} /> {tr('Recevoir → inventaire', 'Receive → inventory')}</button>}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={exportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{pdfBusy ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} {tr('PDF', 'PDF')}</button>
+              {canEdit && (
+                <>
+                  <button onClick={save} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800"><Download size={15} /> {tr('Enregistrer', 'Save')}</button>
+                  {form.status === 'brouillon' && <button onClick={envoyer} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Send size={15} /> {tr('Envoyer', 'Send')}</button>}
+                  {form.status !== 'brouillon' && (
+                    <>
+                      <input ref={recFileRef} type="file" accept="image/*,application/pdf,.xls,.xlsx,.csv" className="hidden" onChange={onReceptionFile} />
+                      <button onClick={() => recFileRef.current?.click()} disabled={recScan} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50">{recScan ? <Loader2 size={15} className="animate-spin" /> : <ScanLine size={15} />} {tr('Bordereau (IA)', 'Slip (AI)')}</button>
+                      <button onClick={() => recevoir(false)} className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"><PackageCheck size={15} /> {tr('Valider la réception', 'Confirm receipt')}</button>
+                      {form.status !== 'recu' && <button onClick={() => recevoir(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-400 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-50">{tr('Tout recevoir', 'Receive all')}</button>}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* En-tête */}
@@ -253,7 +333,20 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                       <td className="px-2 py-1">{numInput(`q_${i}`, l.quantite, v => updLigne(i, { quantite: v }), `w-16 text-right ${inputCls}`)}</td>
                       <td className="px-2 py-1"><input value={l.unite || ''} onChange={e => updLigne(i, { unite: e.target.value })} className={`w-14 ${inputCls}`} /></td>
                       <td className="px-2 py-1">{numInput(`c_${i}`, l.cout_unitaire, v => updLigne(i, { cout_unitaire: v }), `w-24 text-right ${inputCls}`)}</td>
-                      <td className="px-2 py-1">{numInput(`r_${i}`, l.recu ?? 0, v => updLigne(i, { recu: v }), `w-16 text-right ${inputCls}`)}</td>
+                      <td className="px-2 py-1">
+                        {(() => {
+                          const st = lineReception(l);
+                          const ring = st === 'over' ? 'border-red-400' : st === 'partial' ? 'border-amber-400' : st === 'complete' ? 'border-green-400' : 'border-gray-200 dark:border-gray-700';
+                          const dot = st === 'over' ? '⚠️' : st === 'partial' ? '⏳' : st === 'complete' ? '✓' : '';
+                          const title = st === 'over' ? tr('Surplus reçu vs commandé', 'Over-received vs ordered') : st === 'partial' ? tr('Partiellement reçu', 'Partially received') : st === 'complete' ? tr('Reçu au complet', 'Fully received') : tr('Rien reçu', 'Nothing received');
+                          return (
+                            <div className="flex items-center justify-end gap-1" title={title}>
+                              {numInput(`r_${i}`, l.recu ?? 0, v => updLigne(i, { recu: v }), `w-14 text-right ${inputCls} ${ring}`)}
+                              <span className="w-3 text-xs">{dot}</span>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" checked={l.taxable !== false} onChange={e => updLigne(i, { taxable: e.target.checked })} /></td>
                       <td className="px-2 py-1 text-right font-medium">{mny((Number(l.quantite) || 0) * (Number(l.cout_unitaire) || 0))}</td>
                       <td className="px-2 py-1 text-right">{canEdit && <button onClick={() => delLigne(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>}</td>
