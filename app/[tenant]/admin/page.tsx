@@ -262,30 +262,42 @@ export default function AdminPage() {
   // #57 : chaque onglet peut exiger une permission (matrice PERMS). Sans `need`, l'onglet est
   // toujours visible. Les onglets sensibles (finance/paie/abonnement/RH) sont masqués si le
   // niveau d'accès ne l'autorise pas (direction/super_user conservent tout).
-  const allTabs: { k: TabKey; label: string; icon: any; need?: (p: typeof perms) => boolean }[] = [
-    { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
-    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat, need: p => p.viewEmployees },
-    { k: 'permissions', label: tr('Permissions', 'Permissions'),             icon: Settings },
-    { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
-    { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen },
-    { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
-    { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2 },
-    { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock },
-    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote, need: p => p.viewSalary },
-    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog, need: p => p.viewSalary || p.manageAll },
-    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, need: p => p.manageAll },
-    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, need: p => p.manageAll },
-    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, need: p => p.viewSalary },
-    { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText },
-    { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList },
-    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, need: p => p.viewSalary },
-    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, need: p => p.viewSalary },
-    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, need: p => p.viewSalary },
-    { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink, need: p => p.manageAll },
+  // Onglets regroupés par GROUPE LOGIQUE (nav à deux niveaux : groupe → onglets du groupe).
+  type GroupKey = 'org' | 'ops' | 'ventes' | 'finance' | 'systeme';
+  const allTabs: { k: TabKey; label: string; icon: any; group: GroupKey; need?: (p: typeof perms) => boolean }[] = [
+    { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin, group: 'org' },
+    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat, group: 'org', need: p => p.viewEmployees },
+    { k: 'permissions', label: tr('Permissions', 'Permissions'),             icon: Settings, group: 'org' },
+    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog, group: 'org', need: p => p.viewSalary || p.manageAll },
+    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote, group: 'org', need: p => p.viewSalary },
+    { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car, group: 'ops' },
+    { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen, group: 'ops' },
+    { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench, group: 'ops' },
+    { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock, group: 'ops' },
+    { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2, group: 'ventes' },
+    { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText, group: 'ventes' },
+    { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList, group: 'ventes' },
+    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, group: 'finance', need: p => p.viewSalary },
+    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, group: 'finance', need: p => p.manageAll },
+    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, group: 'finance', need: p => p.viewSalary },
+    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, group: 'finance', need: p => p.viewSalary },
+    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, group: 'finance', need: p => p.viewSalary },
+    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, group: 'systeme', need: p => p.manageAll },
+    { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink, group: 'systeme', need: p => p.manageAll },
+  ];
+  const GROUPS: { k: GroupKey; label: string; icon: any }[] = [
+    { k: 'org',     label: tr('Organisation & RH', 'Organization & HR'), icon: UserCog },
+    { k: 'ops',     label: tr('Opérations', 'Operations'),               icon: Wrench },
+    { k: 'ventes',  label: tr('Ventes & Achats', 'Sales & Purchasing'),  icon: Building2 },
+    { k: 'finance', label: tr('Finances', 'Finance'),                    icon: Layers },
+    { k: 'systeme', label: tr('Système', 'System'),                      icon: Settings },
   ];
   const tabs = allTabs.filter(t => !t.need || t.need(perms));
 
   const activeTab = tabs.find(t => t.k === tab);
+  const activeGroup: GroupKey = activeTab?.group || 'org';
+  const visibleGroups = GROUPS.filter(g => tabs.some(t => t.group === g.k));
+  const groupTabs = tabs.filter(t => t.group === activeGroup);
 
   // Si l'onglet courant n'est pas (ou plus) accessible au niveau de l'utilisateur, basculer sur le 1er visible.
   const visibleKeys = tabs.map(t => t.k).join(',');
@@ -337,32 +349,51 @@ export default function AdminPage() {
               <svg className={`h-5 w-5 text-gray-400 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
             {mobileMenuOpen && (
-              <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
-                {tabs.map(x => {
-                  const Icon = x.icon as any;
-                  return (
-                    <button key={x.k} onClick={() => { setTab(x.k); setMobileMenuOpen(false); }}
-                      className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold transition ${tab === x.k ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
-                      <Icon size={15} /> {x.label}
-                    </button>
-                  );
-                })}
+              <div className="absolute z-50 mt-1 max-h-[70vh] w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                {visibleGroups.map(g => (
+                  <div key={g.k}>
+                    <div className="bg-gray-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:bg-gray-900/40">{g.label}</div>
+                    {tabs.filter(t => t.group === g.k).map(x => {
+                      const Icon = x.icon as any;
+                      return (
+                        <button key={x.k} onClick={() => { setTab(x.k); setMobileMenuOpen(false); }}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold transition ${tab === x.k ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
+                          <Icon size={15} /> {x.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Desktop plein écran (>= 1024px) : barre d'onglets */}
-        <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:flex">
-          {tabs.map(x => {
-            const Icon = x.icon as any;
-            return (
-              <button key={x.k} onClick={() => setTab(x.k)}
-                className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${tab === x.k ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
-                <Icon size={15} /> {x.label}
-              </button>
-            );
-          })}
+        {/* Desktop (>= 1024px) : nav à DEUX niveaux — groupes logiques puis onglets du groupe actif */}
+        <div className="mb-4 hidden lg:block">
+          <div className="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            {visibleGroups.map(g => {
+              const GI = g.icon as any;
+              const on = g.k === activeGroup;
+              return (
+                <button key={g.k} onClick={() => { const first = tabs.find(t => t.group === g.k); if (first) setTab(first.k); }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold transition ${on ? 'bg-gray-900 text-white dark:bg-gray-700' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'}`}>
+                  <GI size={15} /> {g.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            {groupTabs.map(x => {
+              const Icon = x.icon as any;
+              return (
+                <button key={x.k} onClick={() => setTab(x.k)}
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${tab === x.k ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                  <Icon size={15} /> {x.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
