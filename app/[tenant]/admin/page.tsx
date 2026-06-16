@@ -22,6 +22,7 @@ import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport }
 import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
+import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
@@ -6686,6 +6687,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [items, setItems] = useState<TransactionItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Pièces jointes MULTIPLES (migration 187) — déjà persistées (avec id) ou en attente (sans id, sur une nouvelle transaction).
+  const [attachments, setAttachments] = useState<TxnAttachment[]>([]);
   // Vérification IA (assistant comptable/fiscal)
   const [aiChecking, setAiChecking] = useState(false);
   const [aiResult, setAiResult] = useState<{ ok?: boolean; summary?: string; issues?: { severity: string; field?: string; message: string; suggestion?: string }[] } | null>(null);
@@ -6769,17 +6772,20 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   async function newTxn(kind: 'expense' | 'revenue' = 'expense') {
     const num = await nextTransactionNumber(tenant, kind === 'revenue' ? 'V' : 'A');
     setHdr({ transaction_number: num, vendor_name: '', txn_type: kind, txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
-    setItems([blankItem(kind === 'revenue' ? '4000' : '5300')]); setView('edit');
+    setItems([blankItem(kind === 'revenue' ? '4000' : '5300')]); setAttachments([]); setAiResult(null); setView('edit');
   }
   function editTxn(t: Transaction) {
-    setHdr(t);
+    setHdr(t); setAiResult(null);
     getTransactionItems(tenant, t.id!).then(its => setItems(its.length ? its : [blankItem()]));
+    getAttachments(tenant, t.id!).then(setAttachments).catch(() => setAttachments([]));
     setView('edit');
   }
   async function save() {
     setSaving(true); setNotice(null);
     try {
       const id = await saveTransaction(tenant, hdr, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0));
+      // Persiste les pièces jointes EN ATTENTE (ajoutées sur une nouvelle transaction, donc sans id).
+      for (const a of attachments.filter(x => !x.id)) { await addAttachment(tenant, id, a).catch(() => {}); }
       // « Tout remonte vers comptabilité » (exercice) : on COMPTABILISE immédiatement au grand livre,
       // avec un retour CLAIR (succès vs raison de l'échec — fini le silence).
       await setTransactionStatus(tenant, id, 'posted').catch(() => {});
@@ -6797,6 +6803,21 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     try { const url = await uploadReceipt(tenant, file); setHdr(h => ({ ...h, receipt_url: url })); setNotice(tr('Reçu joint.', 'Receipt attached.')); }
     catch (e: any) { setNotice(e?.message || tr('Erreur téléversement.', 'Upload error.')); }
     setUploading(false);
+  }
+  // Pièces jointes MULTIPLES : téléverse + lie (immédiat si la transaction est déjà sauvegardée, sinon en attente).
+  async function addAttach(file: File) {
+    setUploading(true); setNotice(null);
+    try {
+      const url = await uploadReceipt(tenant, file);
+      const att: TxnAttachment = { file_name: file.name, file_url: url, file_type: file.type || null, file_size: file.size || null };
+      if (hdr.id) { const r = await addAttachment(tenant, hdr.id, att); setAttachments(p => [...p, { ...att, id: r.id, transaction_id: hdr.id }]); }
+      else setAttachments(p => [...p, att]);
+    } catch (e: any) { setNotice(e?.message || tr('Erreur téléversement.', 'Upload error.')); }
+    setUploading(false);
+  }
+  async function removeAttach(att: TxnAttachment, idx: number) {
+    if (att.id) await deleteAttachment(tenant, att.id).catch(() => {});
+    setAttachments(p => p.filter((_, i) => i !== idx));
   }
   // « Vérifier IA » : envoie la transaction (en-tête + lignes) à l'assistant comptable/fiscal.
   async function verifyAI() {
@@ -7031,6 +7052,24 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               {totals.pst_amount > 0 && <div>{taxInfo.pstLabel} ({(taxInfo.pst * 100).toFixed(0)} %) : {mny(totals.pst_amount)}</div>}
               <div className="text-base font-bold">{tr('Total', 'Total')} : {mny(totals.total)}</div>
             </div>
+          </div>
+          {/* Pièces jointes MULTIPLES (reçus, factures, justificatifs) */}
+          <div className="mt-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500">📎 {tr('Pièces jointes', 'Attachments')} ({attachments.length})</span>
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                {uploading ? <Loader2 size={13} className="inline animate-spin" /> : <Paperclip size={13} />} {tr('Ajouter une pièce', 'Add a file')}
+                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) addAttach(f); e.currentTarget.value = ''; }} />
+              </label>
+            </div>
+            {attachments.length === 0
+              ? <div className="text-xs text-gray-400">{tr('Aucune pièce jointe. Le reçu principal et les pièces ajoutées ici accompagnent l’écriture au grand livre.', 'No attachment. The main receipt and files added here accompany the ledger entry.')}</div>
+              : <ul className="space-y-1">{attachments.map((a, i) => (
+                  <li key={a.id || i} className="flex items-center gap-2 text-xs">
+                    <a href={a.file_url} target="_blank" rel="noreferrer" className="flex-1 truncate text-blue-600 hover:underline">📄 {a.file_name}</a>
+                    <button onClick={() => removeAttach(a, i)} className="text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+                  </li>
+                ))}</ul>}
           </div>
           {/* Résultat de la vérification IA */}
           {aiResult && (
