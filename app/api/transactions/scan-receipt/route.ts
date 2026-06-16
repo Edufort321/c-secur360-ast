@@ -16,12 +16,21 @@ const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","category_hint":"nature","description":"libellé court","confidence":"high|medium|low"}`;
 const SYS_ONE = `Tu es un assistant COMPTABLE. Extrais les infos d'UN reçu/facture pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide : ${SCHEMA}. Montants en nombres (point décimal), 0 si taxe absente, null si illisible. N'invente pas.`;
 const SYS_LIST = `Tu es un assistant COMPTABLE. On te donne des lignes (CSV) d'un relevé ou d'une liste de dépenses/revenus. Extrais CHAQUE opération. Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}. Montants en nombres, 0 si taxe absente. Ignore les en-têtes. N'invente pas.`;
+// PDF : peut être un reçu UNIQUE ou un RELEVÉ multi-lignes → extraction EXHAUSTIVE ligne par ligne.
+const SYS_DOC = `Tu es un assistant COMPTABLE MÉTICULEUX pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). On te donne un PDF : soit un REÇU/FACTURE unique, soit un RELEVÉ (bancaire / carte de crédit) qui contient PLUSIEURS opérations.
+RÈGLES STRICTES :
+- Si c'est un RELEVÉ : liste EN DÉTAIL CHAQUE opération, UNE PAR UNE (n'en omets AUCUNE). Pour chacune : date (AAAA-MM-JJ), description/tiers exact, montant POSITIF.
+- N'inscris JAMAIS comme opération une ligne de SOLDE, « solde précédent », « solde courant », sous-total, report, intérêts cumulés ou total de page. UNIQUEMENT les vraies opérations (débits/crédits).
+- Débit / retrait / paiement (argent SORTI) → "type":"expense". Dépôt / crédit / remboursement (argent ENTRÉ) → "type":"revenue".
+- Si c'est un seul reçu/facture : renvoie UN seul item avec les taxes détaillées.
+- Taxes inconnues sur un relevé → 0. N'invente RIEN.
+Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}.`;
 
-async function callAnthropic(apiKey: string, system: string, content: any): Promise<any> {
+async function callAnthropic(apiKey: string, system: string, content: any, maxTokens = 4096): Promise<any> {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4096, system, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content }] }),
   });
   if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
   return resp.json();
@@ -64,17 +73,18 @@ export async function POST(req: NextRequest) {
         { type: 'text', text: 'Extrais les informations de ce reçu en JSON.' },
       ]);
     } else if (isPdf) {
-      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_ONE].join('\n'), [
+      // PDF = potentiellement un RELEVÉ multi-lignes → extraction LISTE exhaustive (max_tokens élevé).
+      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_DOC].join('\n'), [
         { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: raw } },
-        { type: 'text', text: 'Extrais les informations de ce reçu/facture (PDF) en JSON.' },
-      ]);
+        { type: 'text', text: 'Lis ce PDF. Si c\'est un relevé, extrais EN DÉTAIL chaque opération (jamais le solde). Si c\'est un reçu, un seul item. JSON {"items":[...]}.' },
+      ], 8192);
     } else if (isSheet) {
       // Parse Excel/CSV -> CSV texte (1re feuille) -> l'IA extrait la LISTE.
       let csv = '';
       try { const wb = XLSX.read(Buffer.from(raw, 'base64'), { type: 'buffer' }); csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]] || {}); }
       catch { return NextResponse.json({ error: 'Fichier Excel/CSV illisible.' }, { status: 422 }); }
       if (!csv.trim()) return NextResponse.json({ error: 'Fichier vide.' }, { status: 422 });
-      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_LIST].join('\n'), `Lignes (CSV) à extraire :\n${csv.slice(0, 12000)}`);
+      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_LIST].join('\n'), `Lignes (CSV) à extraire :\n${csv.slice(0, 16000)}`, 8192);
     } else {
       return NextResponse.json({ error: 'Format non supporté (image, PDF, Excel ou CSV).' }, { status: 400 });
     }
@@ -83,7 +93,11 @@ export async function POST(req: NextRequest) {
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     const obj = parseJson(text);
     if (!obj) return NextResponse.json({ error: 'Lecture impossible (réponse illisible).' }, { status: 422 });
-    if (isSheet) return NextResponse.json({ extractedList: Array.isArray(obj.items) ? obj.items : (Array.isArray(obj) ? obj : []) });
+    // PDF (relevé) ET tableur → LISTE d'opérations ; image/reçu simple → 1 transaction.
+    if (isSheet || isPdf) {
+      const items = Array.isArray(obj.items) ? obj.items : (Array.isArray(obj) ? obj : (obj.vendor || obj.total != null ? [obj] : []));
+      return NextResponse.json({ extractedList: items });
+    }
     return NextResponse.json({ extracted: obj });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur IA' }, { status: 500 });

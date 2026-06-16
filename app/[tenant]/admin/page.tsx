@@ -6939,6 +6939,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [fType, setFType] = useState<'all' | 'revenue' | 'expense'>('all');
   const [fStatus, setFStatus] = useState<'all' | 'draft' | 'posted' | 'paid' | 'cancelled'>('all');
   const [fSearch, setFSearch] = useState('');
+  const [fAccount, setFAccount] = useState<string>('all'); // filtre par compte de trésorerie ('all' | id | 'none')
+  const [fDoc, setFDoc] = useState(false);                 // afficher uniquement les dépenses SANS pièce jointe
+  const [importAccount, setImportAccount] = useState<string>(''); // compte cible des imports (lot IA / relevé)
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const isRevenue = hdr.txn_type === 'revenue';
@@ -6969,9 +6972,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const filteredTxns = txns.filter(t => {
     if (fType !== 'all' && (t.txn_type || 'expense') !== fType) return false;
     if (fStatus !== 'all' && t.status !== fStatus) return false;
+    if (fAccount === 'none' ? !!t.treasury_account_id : (fAccount !== 'all' && t.treasury_account_id !== fAccount)) return false;
+    if (fDoc && (t.txn_type === 'revenue' || t.receipt_url)) return false; // dépenses sans pièce uniquement
     if (fq && !`${t.transaction_number || ''} ${t.vendor_name || ''}`.toLowerCase().includes(fq)) return false;
     return true;
   });
+  // Suivi : nombre de dépenses EN ATTENTE DE PIÈCE justificative (requise pour déduction / preuve fiscale).
+  const missingDocCount = txns.filter(t => t.txn_type !== 'revenue' && !t.receipt_url).length;
 
   // Export CSV des transactions filtrées (separateur ';' + BOM UTF-8 pour Excel FR ; pour
   // le comptable / rapprochement bancaire). Cote client, aucune dependance.
@@ -7114,7 +7121,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   // Import par LOT : on pousse PLUSIEURS reçus/lignes à l'IA et on crée une transaction par ligne — EN ÉVITANT
   // les doublons (même tiers + date + montant qu'une transaction déjà existante ou déjà importée dans ce lot).
   // Crée UNE transaction « à vérifier » à partir des champs extraits par l'IA (image/PDF/ligne Excel/CSV banque).
-  async function createTxnFromExtracted(x: any, receiptUrl: string | null, seen?: Set<string>): Promise<'created' | 'duplicate' | 'empty'> {
+  async function createTxnFromExtracted(x: any, receiptUrl: string | null, seen?: Set<string>, accountId?: string): Promise<'created' | 'duplicate' | 'empty'> {
     const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
     const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || 0;
     if (Math.abs(sub) < 0.005 && !(Number(x.total) > 0)) return 'empty';
@@ -7125,7 +7132,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     const taxed = gst > 0 || qst > 0;
     const isRev = x.type === 'revenue';
     const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
-    const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: receiptUrl };
+    // Compte assigné au lot d'import → classé sur ce compte ; sinon « à vérifier » (needs_review).
+    const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', treasury_account_id: accountId || null, status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: receiptUrl };
     const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
     await saveTransaction(tenant, header, its);
     seen?.add(key);
@@ -7146,10 +7154,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         if (!resp.ok) { failed++; lastErr = j.error || `HTTP ${resp.status}`; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
         const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
         const handle = (r: 'created' | 'duplicate' | 'empty') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else failed++; };
-        if (Array.isArray(j.extractedList)) {            // Excel/CSV -> N transactions (une par ligne), dédoublonnées
-          for (const x of j.extractedList) { try { handle(await createTxnFromExtracted(x, url, seen)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
-        } else if (j.extracted) {                        // image/PDF -> 1 transaction
-          try { handle(await createTxnFromExtracted(j.extracted, url, seen)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
+        if (Array.isArray(j.extractedList)) {            // PDF relevé / Excel / CSV -> N transactions (une par ligne), dédoublonnées
+          for (const x of j.extractedList) { try { handle(await createTxnFromExtracted(x, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
+        } else if (j.extracted) {                        // image/reçu -> 1 transaction
+          try { handle(await createTxnFromExtracted(j.extracted, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
         } else { failed++; lastErr = tr('Réponse IA vide', 'Empty AI response'); }
       } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
       setBatch(b => b && { ...b, done: i + 1, created, failed });
@@ -7307,7 +7315,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       // Dédoublonnage : une ligne qui correspond à une transaction DÉJÀ saisie (même avec pièce jointe) n'est PAS recréée.
       const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
       let created = 0, dups = 0;
-      for (const x of itemsX) { try { const r = await createTxnFromExtracted(x, null, seen); if (r === 'created') created++; else if (r === 'duplicate') dups++; } catch { /* skip */ } }
+      for (const x of itemsX) { try { const r = await createTxnFromExtracted(x, null, seen, importAccount || undefined); if (r === 'created') created++; else if (r === 'duplicate') dups++; } catch { /* skip */ } }
       // Marque les lignes traitées comme rapprochées (créées OU déjà existantes — on ne re-vérifie pas).
       for (const b of lines) { try { await updateBankLine(tenant, b.id!, { reconciled: true }); } catch { /* noop */ } }
       setBankLines(await getBankLines(tenant));
@@ -7330,7 +7338,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         {view === 'list' && canEdit && <div className="flex flex-wrap gap-2">
           <button onClick={() => newTxn('revenue')} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Revenu', 'Revenue')}</button>
           <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('Plusieurs reçus -> l’IA crée et comptabilise toutes les transactions', 'Many receipts -> AI creates and posts all transactions')}>
+          {/* Compte cible de l'import (relevé/lot) : les opérations sont classées sur CE compte ; sinon « à vérifier ». */}
+          {treasury.filter(a => a.active !== false).length > 0 && (
+            <select value={importAccount} onChange={e => setImportAccount(e.target.value)} className={inputCls} title={tr('Compte des opérations importées', 'Account of imported transactions')}>
+              <option value="">{tr('Import → compte ? (à vérifier)', 'Import → account? (to review)')}</option>
+              {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>→ {a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+            </select>
+          )}
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('Relevé PDF / plusieurs reçus -> l’IA extrait CHAQUE opération en détail et les classe sur le compte choisi', 'PDF statement / many receipts -> AI extracts EACH transaction in detail and assigns to the chosen account')}>
             {batch?.busy ? <Loader2 size={14} className="animate-spin" /> : '📷'} {tr('Import lot (IA)', 'Batch import (AI)')}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" multiple className="hidden" disabled={batch?.busy} onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) batchScanCreate(fs); }} />
           </label>
@@ -7609,6 +7624,18 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             </div>
           </div>
         )}
+        {/* MÉMO — règles comptables : pièces justificatives requises (déduction / preuve fiscale) */}
+        <details className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <summary className="cursor-pointer font-semibold">📎 {tr('Règles — pièces justificatives requises', 'Rules — required supporting documents')}{missingDocCount > 0 ? ` · ${missingDocCount} ${tr('en attente', 'pending')}` : ` · ${tr('tout est en règle', 'all good')} ✓`}</summary>
+          <ul className="mt-2 list-disc space-y-0.5 pl-5">
+            <li>{tr('Toute DÉPENSE déductible exige une pièce (reçu/facture) — ARC & Revenu Québec.', 'Every deductible EXPENSE requires a receipt/invoice — CRA & Revenu Québec.')}</li>
+            <li>{tr('Crédits de taxe (CTI/RTI) : la facture doit montrer la TPS/TVQ et le n° de taxe du fournisseur.', 'Tax credits (ITC/ITR): the invoice must show GST/QST and the supplier tax number.')}</li>
+            <li>{tr('Repas/représentation : reçu détaillé + raison d’affaires (déduction 50 %).', 'Meals/entertainment: detailed receipt + business reason (50% deductible).')}</li>
+            <li>{tr('Immobilisation : facture conservée (amortissement) — voir l’onglet Immobilisations.', 'Capital asset: keep the invoice (depreciation) — see the Fixed assets tab.')}</li>
+            <li>{tr('Conservation : 6 ans après la fin de l’année d’imposition.', 'Retention: 6 years after the end of the tax year.')}</li>
+            <li>{tr('Suivi : le badge « ⚠ pièce » et le filtre « Pièces manquantes » listent les dépenses en attente.', 'Tracking: the “⚠ doc” badge and the “Missing receipts” filter list pending expenses.')}</li>
+          </ul>
+        </details>
         <div className="flex flex-wrap items-center gap-2">
           <select value={fType} onChange={e => setFType(e.target.value as 'all' | 'revenue' | 'expense')} className={inputCls}>
             <option value="all">{tr('Tous les types', 'All types')}</option>
@@ -7622,8 +7649,16 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <option value="paid">{STATUS_LABEL.paid}</option>
             <option value="cancelled">{STATUS_LABEL.cancelled}</option>
           </select>
+          {/* Filtre par COMPTE (banque/carte/caisse) enregistré */}
+          <select value={fAccount} onChange={e => setFAccount(e.target.value)} className={inputCls} title={tr('Filtrer par compte', 'Filter by account')}>
+            <option value="all">{tr('Tous les comptes', 'All accounts')}</option>
+            {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+            <option value="none">{tr('— Sans compte assigné —', '— No account assigned —')}</option>
+          </select>
           <input value={fSearch} onChange={e => setFSearch(e.target.value)} placeholder={tr('Rechercher n° ou tiers…', 'Search # or party…')} className={`min-w-[160px] flex-1 ${inputCls}`} />
-          {(fType !== 'all' || fStatus !== 'all' || fSearch) && <button onClick={() => { setFType('all'); setFStatus('all'); setFSearch(''); }} className="text-xs font-semibold text-gray-500 hover:underline">{tr('Réinitialiser', 'Reset')}</button>}
+          {/* Pièces justificatives manquantes (déduction / preuve fiscale) */}
+          <button onClick={() => setFDoc(v => !v)} className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${fDoc ? 'border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20' : 'border-gray-200 text-gray-500 dark:border-gray-700'}`} title={tr('Dépenses sans pièce justificative', 'Expenses without a receipt')}>⚠ {tr('Pièces manquantes', 'Missing receipts')}{missingDocCount > 0 ? ` (${missingDocCount})` : ''}</button>
+          {(fType !== 'all' || fStatus !== 'all' || fSearch || fAccount !== 'all' || fDoc) && <button onClick={() => { setFType('all'); setFStatus('all'); setFSearch(''); setFAccount('all'); setFDoc(false); }} className="text-xs font-semibold text-gray-500 hover:underline">{tr('Réinitialiser', 'Reset')}</button>}
           <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
           <button onClick={exportCsv} disabled={filteredTxns.length === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{tr('Exporter CSV', 'Export CSV')}</button>
         </div>
