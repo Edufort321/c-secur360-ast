@@ -10,7 +10,12 @@ export const maxDuration = 60;
 
 const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"health":"excellent|bon|a_surveiller|critique","summary":"2-3 phrases dirigeant","insights":[{"severity":"info|warning|critical","title":"court","detail":"chiffré"}],"recommendations":["action priorisée"]}`;
-const SYS = `Tu es un DIRECTEUR FINANCIER (CFO) pour une PME de services SST/industriels au Québec. On te fournit les KPIs financiers et une série temporelle (CA, charges, marge, masse salariale, croissance). Donne une analyse de dirigeant : santé financière globale, tendances (croissance, marge, ratio masse salariale/CA, trésorerie), risques, et 3 à 6 recommandations priorisées et actionnables. Concis, chiffré. Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
+const SYS = `Tu es un DIRECTEUR FINANCIER (CFO) FROID et OBJECTIF pour une PME de services SST/industriels au Québec. Seul critère : la RENTABILITÉ. On te fournit les KPIs + une série temporelle (CA, charges, marge, masse salariale, croissance) — possiblement sur PLUSIEURS ANNÉES.
+Analyse :
+- TENDANCES PLURIANNUELLES (année sur année) et SAISONNALITÉ : identifie les PÉRIODES CREUSES récurrentes.
+- À chaque DÉCISION importante, tranche FROIDEMENT selon la rentabilité, ex. « investir maintenant en CAPEX (maintenance/équipement) » VS « libérer/réduire du staff » : chiffre l'impact sur la marge, le payback, le runway. Recommandation financière pure, sans complaisance.
+- Anticipe : alertes AVANT que ça se dégrade (marge↓, runway court, ratio masse salariale/CA trop élevé en période creuse).
+Donne santé globale, tendances chiffrées, risques, et 3 à 6 recommandations PRIORISÉES, actionnables et chiffrées (ROI/impact). Concis. Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
 
 function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
 
@@ -24,7 +29,7 @@ export async function POST(req: NextRequest) {
   const tenant = guard.user?.tenant_id || '';
   if (tenant) { try { const b = await getAiBudget(tenant); if (b.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé.', exhausted: true }, { status: 402 }); } catch { /* ignore */ } }
 
-  const periods: any[] = Array.isArray(a.periods) ? a.periods.slice(-24) : [];
+  const periods: any[] = Array.isArray(a.periods) ? a.periods.slice(-48) : []; // jusqu'à ~4 ans pour tendances YoY/saisonnalité
   const series = periods.map((p: any) => `${p.label}: CA ${Math.round(p.revenue)}$ | charges ${Math.round(p.expense)}$ | marge ${Math.round(p.margin)}$ | paie ${Math.round(p.payroll)}$${p.growthPct != null ? ` | crois. ${p.growthPct.toFixed(1)}%` : ''}`).join('\n');
   const ctx = `KPIs (${body.granularityLabel || ''}) :
 - CA total: ${Math.round(a.revenueTotal || 0)}$ | Charges: ${Math.round(a.expenseTotal || 0)}$ | Marge: ${Math.round(a.marginTotal || 0)}$ (${(a.marginPct || 0).toFixed(1)}%)
