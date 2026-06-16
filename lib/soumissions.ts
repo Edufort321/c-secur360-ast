@@ -52,6 +52,9 @@ export type Soumission = {
   status: 'draft' | 'sent' | 'accepted' | 'archived'; total: number; notes?: string | null;
   // Suivi (migration 138) : transmission (début relance), heures totales, majoration appliquée.
   sent_at?: string | null; total_hours?: number; markup_pct?: number; created_at?: string;
+  // Prix final CIBLE éditable (override). Si défini, le total final est fixe et la majoration % est DÉDUITE
+  // (peut devenir négative/rouge si les coûts dépassent la cible). Sinon, total = sous-total × (1 + markup_pct).
+  final_override?: number | null;
   // Partage de commission entre vendeurs (migration 140) : [{ seller_id, pct }].
   sellers_split?: { seller_id: string; pct: number }[] | null;
   // Approbation (migration 139).
@@ -391,7 +394,11 @@ export async function getSoumissionFull(tenant: string, id: string): Promise<{ s
 /** Enregistre une soumission complète : upsert en-tête, puis remplace items + lignes (recalcul des montants). */
 export async function saveSoumissionFull(tenant: string, header: Soumission, items: SoumissionItem[], cat?: CatalogueTaux | null): Promise<string> {
   const rawTotal = computeSoumissionTotal(items, cat);
-  const total = applyMarkup(rawTotal, header.markup_pct); // majoration + arrondi -> prix final
+  // Prix final : cible éditable si fournie (override), sinon majoration % + arrondi.
+  const hasOverride = header.final_override != null && Number.isFinite(Number(header.final_override));
+  const total = hasOverride ? Math.round(Number(header.final_override)) : applyMarkup(rawTotal, header.markup_pct);
+  // markup_pct stocké = déduit de la cible si override (assure un total cohérent même si la colonne final_override manque).
+  const effMarkupPct = hasOverride && rawTotal > 0 ? Math.round((Number(header.final_override) / rawTotal - 1) * 1000) / 10 : (Number(header.markup_pct) || 0);
   // Transmission : on pose sent_at la 1re fois que le statut passe à « sent » (début du décompte relance).
   const sentAt = header.status === 'sent' ? (header.sent_at || new Date().toISOString()) : (header.sent_at ?? null);
   const hPayload: any = {
@@ -400,7 +407,7 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
     project_id: header.project_id ?? null, catalogue_id: header.catalogue_id ?? null, seller_id: header.seller_id ?? null,
     status: header.status || 'draft', total, notes: header.notes ?? null, updated_at: new Date().toISOString(),
     // Suivi (migration 138) — retirés automatiquement si les colonnes n'existent pas encore.
-    sent_at: sentAt, total_hours: computeSoumissionHours(items), markup_pct: Number(header.markup_pct) || 0,
+    sent_at: sentAt, total_hours: computeSoumissionHours(items), markup_pct: effMarkupPct, final_override: hasOverride ? Math.round(Number(header.final_override)) : null,
     // Partage de commission (migration 140).
     sellers_split: Array.isArray(header.sellers_split) && header.sellers_split.length ? header.sellers_split : null,
     // Approbation (migration 139).

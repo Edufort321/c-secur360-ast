@@ -443,7 +443,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const STATUS: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Envoyée', 'Sent'), accepted: tr('Acceptée', 'Accepted'), archived: tr('Archivée', 'Archived') };
   const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', accepted: 'bg-emerald-100 text-emerald-700', archived: 'bg-amber-100 text-amber-700' };
   const rawTotal = computeSoumissionTotal(items, cat);
-  const totals = applyMarkup(rawTotal, hdr.markup_pct); // total final (majoration + arrondi)
+  // Prix final : soit une CIBLE éditable (final_override), soit la majoration %. La marge ($) = final − sous-total ;
+  // rouge si négative (sous le coût) — l'utilisateur doit « réattribuer » (baisser les heures ou monter le prix).
+  const hasOverride = hdr.final_override != null && Number.isFinite(Number(hdr.final_override));
+  const totals = hasOverride ? Math.round(Number(hdr.final_override)) : applyMarkup(rawTotal, hdr.markup_pct); // total final
+  const effMarkupPct = hasOverride && rawTotal > 0 ? Math.round((Number(hdr.final_override) / rawTotal - 1) * 1000) / 10 : (Number(hdr.markup_pct) || 0);
+  const marginAmt = totals - rawTotal;           // balance / marge en $
+  const marginNeg = marginAmt < 0;               // sous le coût → rouge
   const editHours = computeSoumissionHours(items);      // heures MO totales (live)
   const editHoursByCat = hoursByCategory(items);        // heures live ventilées Bureau / Chantier
   const planCap = Math.max(1, (Number(planDays) || 1) * (Number(planHoursPerDay) || 1)); // h dispo / personne
@@ -938,7 +944,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-bold text-blue-700 dark:text-blue-300">{editHours || 0}</div><div className="text-[10px] text-blue-600/80">{tr('heures MO', 'labor hours')}</div></div>
               <div className="rounded-lg bg-slate-50 p-2 text-center dark:bg-slate-900/30"><div className="text-sm font-bold text-slate-700 dark:text-slate-200">{mny(rawTotal)}</div><div className="text-[10px] text-slate-500">{tr('sous-total', 'subtotal')}</div></div>
-              <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{mny(totals)}</div><div className="text-[10px] text-emerald-600/80">{tr('total final', 'final total')}</div></div>
+              <div className={`rounded-lg p-2 text-center ${marginNeg ? 'bg-red-50 dark:bg-red-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                {canEdit
+                  ? numInput('final', Math.round(totals), v => setHdr(h => ({ ...h, final_override: v })), `w-full bg-transparent text-center text-xl font-extrabold outline-none ${marginNeg ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`)
+                  : <div className={`text-xl font-extrabold ${marginNeg ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{mny(totals)}</div>}
+                <div className={`text-[10px] ${marginNeg ? 'text-red-600/80' : 'text-emerald-600/80'}`}>{tr('total final', 'final total')}{hasOverride ? ' ✎' : ''}</div>
+              </div>
               <div className="rounded-lg p-2 text-center" style={{ background: editAppr ? (editAppr.color || '#64748b') + '18' : undefined }}>
                 <div className="text-sm font-bold" style={{ color: editAppr?.color || '#64748b' }}>{editAppr ? editAppr.level_name : '—'}</div>
                 <div className="text-[10px] text-gray-400">{tr('approbation', 'approval')}{editAppr?.approver_label ? ` · ${editAppr.approver_label}` : ''}</div>
@@ -947,11 +958,20 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             {canEdit && (
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
                 <span className="text-xs font-semibold text-gray-500">{tr('Majoration / arrondi', 'Markup / rounding')} :</span>
-                <input type="number" step="0.5" value={hdr.markup_pct ?? 0} onChange={e => setHdr(h => ({ ...h, markup_pct: Number(e.target.value) || 0 }))} className={`w-20 text-right ${inputCls}`} />
-                <span className="text-xs text-gray-400">%</span>
-                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 10 }))} className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+10 %</button>
-                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 0 }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700">0 %</button>
-                <span className="ml-auto text-[11px] text-gray-400">{tr('Total arrondi au dollar', 'Total rounded to the dollar')}</span>
+                {/* % éditable — déduit du prix cible si un total final a été saisi ; saisir un % efface la cible. */}
+                <input type="number" step="0.5" value={Math.round(effMarkupPct * 10) / 10}
+                  onChange={e => setHdr(h => ({ ...h, markup_pct: Number(e.target.value) || 0, final_override: null }))}
+                  className={`w-24 text-right ${inputCls} ${effMarkupPct < 0 ? 'border-red-400 font-bold text-red-600' : ''}`} />
+                <span className={`text-xs ${effMarkupPct < 0 ? 'text-red-500' : 'text-gray-400'}`}>%</span>
+                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 10, final_override: null }))} className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+10 %</button>
+                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 0, final_override: null }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700">0 %</button>
+                {/* Marge / balance ($) — rouge si négative (total final sous le coût) : « à réattribuer ». */}
+                <span className={`rounded-lg px-2 py-1 text-xs font-bold ${marginNeg ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}
+                  title={tr('Marge = total final − (heures + frais + matériel). Négative = sous le coût, à réattribuer.', 'Margin = final total − (hours + costs + materials). Negative = below cost, reallocate.')}>
+                  {marginNeg ? '⚠️ ' : ''}{tr('Marge', 'Margin')} : {mny(marginAmt)}{marginNeg ? ` — ${tr('à réattribuer', 'reallocate')}` : ''}
+                </span>
+                {hasOverride && <button type="button" onClick={() => setHdr(h => ({ ...h, final_override: null }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700" title={tr('Revenir au calcul par % (retirer le prix cible)', 'Back to %-driven (clear target price)')}>↺ {tr('Prix cible', 'Target price')}</button>}
+                <span className="ml-auto text-[11px] text-gray-400">{tr('Total final éditable — le % se déduit ; rouge si sous le coût.', 'Final total editable — % is derived; red if below cost.')}</span>
               </div>
             )}
           </div>
