@@ -2813,6 +2813,10 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
         const collapsed = !!status && ast.supervisorSigName.trim().length > 0 && !supEditing;
         const setStatus = (s: '' | 'approved' | 'corrective' | 'nonconform') => onChange(p => ({
           ...p, supervisorSigStatus: s, supervisorSigDate: s && !p.supervisorSigDate ? new Date().toISOString().slice(0, 16) : p.supervisorSigDate,
+          // Non-conformité : pré-remplit un texte explicatif de BASE à compléter (gain de temps + cadre).
+          supervisorSigNotes: ((s === 'corrective' || s === 'nonconform') && !p.supervisorSigNotes.trim())
+            ? tr('Zone de travail mal nettoyée — préciser la non-conformité observée et le correctif requis…', 'Work area poorly cleaned — describe the observed non-compliance and required corrective action…')
+            : p.supervisorSigNotes,
         }));
 
         // Vue repliee (mobile-friendly) : on ne voit que le nom + la pastille de verdict.
@@ -3113,6 +3117,10 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
   const [pdfBusy, setPdfBusy] = useState(false);
 
+  // BLOCAGE STRICT : une non-conformité/correctif signalé(e) exige explication (≥10 car.) + pièce jointe.
+  const ncOpen = ast.supervisorSigStatus === 'corrective' || ast.supervisorSigStatus === 'nonconform';
+  const ncBlocked = ncOpen && (ast.supervisorSigNotes.trim().length < 10 || !(ast.supervisorSigAttachments || []).length);
+
   // Logo pour le PDF : celui du tenant (tenants.logo_url) sinon C-Secur par défaut.
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -3233,14 +3241,20 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
         </span>
       </div>
 
+      {/* BLOCAGE STRICT : non-conformité signalée sans explication + pièce → finalisation impossible. */}
+      {ncBlocked && !readOnly && (
+        <div className="mb-4 rounded-lg border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
+          🚫 {tr('Non-conformité signalée : impossible de finaliser tant qu’une EXPLICATION (≥ 10 caractères) ET au moins une PIÈCE (photo/document) ne sont pas fournies (section Superviseur).', 'Non-compliance reported: cannot finalize until an EXPLANATION (≥ 10 chars) AND at least one FILE (photo/document) are provided (Supervisor section).')}
+        </div>
+      )}
       {!readOnly && (
         <div className="flex flex-wrap gap-3 mb-6">
           {(ast.status === 'draft' || ast.status === 'cancelled') && (
             <button
               type="button"
               onClick={() => onApplyStatus('active')}
-              disabled={completion < 60}
-              title={completion < 60 ? tr('Complétez au moins 60% pour approuver', 'Complete at least 60% to approve') : ''}
+              disabled={completion < 60 || ncBlocked}
+              title={ncBlocked ? tr('Non-conformité : explication + pièce obligatoires', 'Non-compliance: explanation + file required') : completion < 60 ? tr('Complétez au moins 60% pour approuver', 'Complete at least 60% to approve') : ''}
               className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
             >
               <CheckCircle className="w-4 h-4" />
@@ -3251,7 +3265,9 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
             <button
               type="button"
               onClick={() => onApplyStatus('completed')}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              disabled={ncBlocked}
+              title={ncBlocked ? tr('Non-conformité : explication + pièce obligatoires', 'Non-compliance: explanation + file required') : ''}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
             >
               <CheckCircle className="w-4 h-4" />
               {t.complete}
