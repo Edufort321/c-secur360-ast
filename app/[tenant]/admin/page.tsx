@@ -6855,31 +6855,36 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setAiChecking(false);
   }
   // Import par LOT : on pousse PLUSIEURS reçus à l'IA et on crée+comptabilise une transaction par reçu.
+  // Crée UNE transaction « à vérifier » à partir des champs extraits par l'IA (image/PDF/ligne Excel).
+  async function createTxnFromExtracted(x: any, receiptUrl: string | null) {
+    const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
+    const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || 0;
+    if (Math.abs(sub) < 0.005 && !(Number(x.total) > 0)) return false;
+    const taxed = gst > 0 || qst > 0;
+    const isRev = x.type === 'revenue';
+    const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
+    const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: receiptUrl };
+    const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
+    await saveTransaction(tenant, header, its);
+    return true;
+  }
   async function batchScanCreate(files: File[]) {
-    const list = files.filter(f => /^image\//.test(f.type));
-    if (!list.length) { setNotice(tr('Choisissez des images (JPEG/PNG).', 'Pick images (JPEG/PNG).')); return; }
-    setBatch({ busy: true, done: 0, total: list.length, created: 0, failed: 0 });
+    if (!files.length) return;
+    setBatch({ busy: true, done: 0, total: files.length, created: 0, failed: 0 });
     let created = 0, failed = 0;
-    for (let i = 0; i < list.length; i++) {
-      const file = list[i];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       try {
         const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
-        const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl }) });
+        const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, file_name: file.name }) });
         const j = await resp.json();
         if (!resp.ok) { failed++; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
-        const x = j.extracted || {};
-        const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
-        const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || 0;
-        const taxed = gst > 0 || qst > 0;
-        const isRev = x.type === 'revenue';
-        const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
-        const url = await uploadReceipt(tenant, file).catch(() => null);
-        // Pré-rempli par l'IA -> reste « À VÉRIFIER » (needs_review), PAS comptabilisé tant qu'un humain
-        // ne l'a pas confirmé.
-        const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: url };
-        const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
-        await saveTransaction(tenant, header, its); // créée en brouillon « à vérifier » (non comptabilisée)
-        created++;
+        const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
+        if (Array.isArray(j.extractedList)) {            // Excel/CSV -> N transactions (une par ligne)
+          for (const x of j.extractedList) { try { if (await createTxnFromExtracted(x, url)) created++; } catch { failed++; } }
+        } else if (j.extracted) {                        // image/PDF -> 1 transaction
+          try { if (await createTxnFromExtracted(j.extracted, url)) created++; else failed++; } catch { failed++; }
+        }
       } catch { failed++; }
       setBatch(b => b && { ...b, done: i + 1, created, failed });
     }
@@ -6892,10 +6897,15 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setAiChecking(true); setNotice(tr('Lecture du reçu par l’IA…', 'AI reading the receipt…'));
     try {
       const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
-      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl }) });
+      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, file_name: file.name }) });
       const j = await resp.json();
       if (!resp.ok) { setNotice(j?.error || tr('Scan indisponible.', 'Scan unavailable.')); setAiChecking(false); return; }
-      const x = j.extracted || {};
+      // Excel/CSV = liste : on remplit avec la 1re ligne et on invite à l'import par lot pour toutes.
+      if (Array.isArray(j.extractedList)) {
+        if (!j.extractedList.length) { setNotice(tr('Aucune ligne détectée.', 'No line detected.')); setAiChecking(false); return; }
+        if (j.extractedList.length > 1) setNotice(tr(`${j.extractedList.length} lignes détectées — utilisez « Import lot (IA) » pour toutes les créer.`, `${j.extractedList.length} lines detected — use “Batch import (AI)” to create them all.`));
+      }
+      const x = j.extracted || (Array.isArray(j.extractedList) ? j.extractedList[0] : {}) || {};
       const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
       const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || Number(x.total) || 0;
       const taxed = gst > 0 || qst > 0;
@@ -7012,7 +7022,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('Plusieurs reçus -> l’IA crée et comptabilise toutes les transactions', 'Many receipts -> AI creates and posts all transactions')}>
             {batch?.busy ? <Loader2 size={14} className="animate-spin" /> : '📷'} {tr('Import lot (IA)', 'Batch import (AI)')}
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" disabled={batch?.busy} onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) batchScanCreate(fs); }} />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" multiple className="hidden" disabled={batch?.busy} onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) batchScanCreate(fs); }} />
           </label>
           <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🏦 {tr('Mes comptes', 'My accounts')}</button>
           <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
@@ -7080,7 +7090,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               </label>
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA lit le reçu et pré-remplit la transaction (et le joint)', 'AI reads the receipt and pre-fills the transaction (and attaches it)')}>
                 📷 {aiChecking ? <Loader2 size={13} className="inline animate-spin" /> : tr('Scanner le reçu (IA)', 'Scan receipt (AI)')}
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) scanReceiptAI(f); }} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) scanReceiptAI(f); }} />
               </label>
               {hdr.receipt_url && <a href={hdr.receipt_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir le reçu', 'View receipt')}</a>}
               <button onClick={verifyAI} disabled={aiChecking} className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA vérifie la cohérence comptable/fiscale et propose des corrections', 'AI checks accounting/tax coherence and suggests fixes')}>{aiChecking ? <Loader2 size={13} className="animate-spin" /> : '✨'} {tr('Vérifier IA', 'AI check')}</button>

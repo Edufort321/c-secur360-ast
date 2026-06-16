@@ -407,10 +407,10 @@ export default function TimesheetDetailPage() {
     setUploadingId(id); setNotice('Lecture du reçu par l’IA…');
     try {
       const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
-      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl }) });
+      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, file_name: file.name }) });
       const j = await resp.json();
       if (!resp.ok) { setNotice(j?.error || 'Scan indisponible.'); setUploadingId(null); return; }
-      const x = j.extracted || {};
+      const x = j.extracted || (Array.isArray(j.extractedList) ? j.extractedList[0] : {}) || {};
       const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0;
       const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - (Number(x.pst) || 0) : 0) || 0;
       updExpense(id, { supplier: x.vendor || '', date: x.date || undefined as any, description: x.description || x.category_hint || '', subtotal: Math.round(sub * 100) / 100, gst, qst });
@@ -1095,7 +1095,7 @@ export default function TimesheetDetailPage() {
                       {!isReadOnly && (
                         <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-violet-300 bg-violet-100 px-2 py-1 text-[11px] font-semibold text-violet-700" title="L’IA lit le reçu et remplit la dépense">
                           {uploadingId === x.id ? <Loader2 size={11} className="animate-spin" /> : '📷'} IA
-                          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={ev => { const f = ev.target.files?.[0]; if (f) scanExpenseAI(x.id, f); ev.currentTarget.value = ''; }} />
+                          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" className="hidden" onChange={ev => { const f = ev.target.files?.[0]; if (f) scanExpenseAI(x.id, f); ev.currentTarget.value = ''; }} />
                         </label>
                       )}
                       {!isReadOnly && <button onClick={() => delExpense(x.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button>}

@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as XLSX from 'xlsx';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 
-// « Scanner le reçu (IA) » : OCR d'une pièce jointe (reçu/facture) via Claude Vision, pour PRÉ-REMPLIR
-// la transaction ET servir de contrôle comptable (comparaison reçu vs saisie). Proxy SERVEUR (clé
-// Anthropic jamais côté navigateur), budget IA scopé au tenant. Québec : TPS 5 %, TVQ 9,975 %.
+// « Scanner (IA) » d'une pièce jointe pour PRÉ-REMPLIR une (ou plusieurs) transaction(s) :
+//   - IMAGE  -> Claude Vision (OCR du reçu)            -> { extracted } (1 transaction)
+//   - PDF    -> Claude document (lit le PDF nativement) -> { extracted } (1 transaction)
+//   - EXCEL/CSV -> parsé en texte, l'IA extrait une LISTE -> { extractedList } (N transactions)
+// Proxy SERVEUR (clé Anthropic jamais côté navigateur), budget IA scopé au tenant. Québec TPS/TVQ.
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 const MODEL = 'claude-sonnet-4-20250514';
+const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","category_hint":"nature","description":"libellé court","confidence":"high|medium|low"}`;
+const SYS_ONE = `Tu es un assistant COMPTABLE. Extrais les infos d'UN reçu/facture pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide : ${SCHEMA}. Montants en nombres (point décimal), 0 si taxe absente, null si illisible. N'invente pas.`;
+const SYS_LIST = `Tu es un assistant COMPTABLE. On te donne des lignes (CSV) d'un relevé ou d'une liste de dépenses/revenus. Extrais CHAQUE opération. Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}. Montants en nombres, 0 si taxe absente. Ignore les en-têtes. N'invente pas.`;
+
+async function callAnthropic(apiKey: string, system: string, content: any): Promise<any> {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: MODEL, max_tokens: 4096, system, messages: [{ role: 'user', content }] }),
+  });
+  if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
+  return resp.json();
+}
+function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
 
 export async function POST(req: NextRequest) {
   const guard = await aiGuard(req); if (guard.err) return guard.err;
@@ -18,46 +35,49 @@ export async function POST(req: NextRequest) {
 
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
-  // imageBase64 = data URL ("data:image/png;base64,...") ou base64 brut ; media_type optionnel.
-  let raw = String(body.imageBase64 || '');
+  let raw = String(body.imageBase64 || body.fileBase64 || '');
   let media = String(body.media_type || '');
+  const fileName = String(body.file_name || '');
   const m = raw.match(/^data:([^;]+);base64,(.*)$/);
   if (m) { media = media || m[1]; raw = m[2]; }
-  if (!raw) return NextResponse.json({ error: 'imageBase64 requis' }, { status: 400 });
-  if (!media) media = 'image/jpeg';
-  if (!/^image\/(jpeg|png|webp|gif)$/.test(media)) return NextResponse.json({ error: 'Format image non supporté (JPEG/PNG/WebP/GIF). Pour un PDF, fournissez une image.' }, { status: 400 });
+  if (!raw) return NextResponse.json({ error: 'fichier requis' }, { status: 400 });
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  const isImage = /^image\/(jpeg|png|webp|gif)$/.test(media);
+  const isPdf = media === 'application/pdf' || ext === 'pdf';
+  const isSheet = /spreadsheet|excel|csv/.test(media) || ['xls', 'xlsx', 'csv'].includes(ext);
 
   const tenant = guard.user?.tenant_id || '';
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé.', exhausted: true }, { status: 402 }); }
 
-  const system = [
-    ANTI_INJECTION,
-    `Tu es un assistant COMPTABLE. On te donne l'IMAGE d'un reçu/facture. Extrais les informations pour pré-remplir une transaction d'une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide, sans texte autour :
-{"vendor":"nom du commerce/fournisseur","date":"AAAA-MM-JJ","currency":"CAD|USD|...","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","category_hint":"nature de la dépense (ex. essence, restaurant, fournitures)","description":"libellé court","confidence":"high|medium|low"}
-Règles : montants en nombres (pas de symbole), point décimal. Si une taxe est absente, mets 0. Si une valeur est illisible, mets null. N'invente pas. Le total inclut les taxes.`,
-  ].join('\n');
-
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: MODEL, max_tokens: 1200, system,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: media, data: raw } },
-          { type: 'text', text: 'Extrais les informations de ce reçu en JSON.' },
-        ] }],
-      }),
-    });
-    if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
-    const data = await resp.json();
+    let data: any;
+    if (isImage) {
+      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_ONE].join('\n'), [
+        { type: 'image', source: { type: 'base64', media_type: media, data: raw } },
+        { type: 'text', text: 'Extrais les informations de ce reçu en JSON.' },
+      ]);
+    } else if (isPdf) {
+      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_ONE].join('\n'), [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: raw } },
+        { type: 'text', text: 'Extrais les informations de ce reçu/facture (PDF) en JSON.' },
+      ]);
+    } else if (isSheet) {
+      // Parse Excel/CSV -> CSV texte (1re feuille) -> l'IA extrait la LISTE.
+      let csv = '';
+      try { const wb = XLSX.read(Buffer.from(raw, 'base64'), { type: 'buffer' }); csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]] || {}); }
+      catch { return NextResponse.json({ error: 'Fichier Excel/CSV illisible.' }, { status: 422 }); }
+      if (!csv.trim()) return NextResponse.json({ error: 'Fichier vide.' }, { status: 422 });
+      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_LIST].join('\n'), `Lignes (CSV) à extraire :\n${csv.slice(0, 12000)}`);
+    } else {
+      return NextResponse.json({ error: 'Format non supporté (image, PDF, Excel ou CSV).' }, { status: 400 });
+    }
+
     if (tenant) { try { const cost = aiCallCostCents(MODEL, data?.usage); if (cost > 0) await recordAiUsage(tenant, 'transactions', cost, { feature: 'scan-receipt' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    let extracted: any = null;
-    const jm = text.match(/\{[\s\S]*\}/);
-    try { extracted = JSON.parse(jm ? jm[0] : text); } catch { extracted = null; }
-    if (!extracted) return NextResponse.json({ error: 'Lecture du reçu impossible (réponse illisible).' }, { status: 422 });
-    return NextResponse.json({ extracted });
+    const obj = parseJson(text);
+    if (!obj) return NextResponse.json({ error: 'Lecture impossible (réponse illisible).' }, { status: 422 });
+    if (isSheet) return NextResponse.json({ extractedList: Array.isArray(obj.items) ? obj.items : (Array.isArray(obj) ? obj : []) });
+    return NextResponse.json({ extracted: obj });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur IA' }, { status: 500 });
   }
