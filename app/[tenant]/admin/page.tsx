@@ -6694,7 +6694,7 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                       <button onClick={() => exportInvoicePdf(tenant, inv).catch((e: any) => setNotice(e?.message || 'PDF erreur'))} className="text-gray-600 hover:underline dark:text-gray-300">PDF</button>
                       {inv.id && <button onClick={async () => {
                         try {
-                          const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'invoice', docId: inv.id, docNumber: inv.invoice_number }) });
+                          const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'invoice', docId: inv.id, docNumber: inv.invoice_number, tenant }) });
                           const j = await r.json();
                           if (!r.ok) { setNotice(j.error || 'Erreur (migration 180 ?)'); return; }
                           try { await navigator.clipboard.writeText(j.url); setNotice(tr('Lien client copié : ', 'Client link copied: ') + j.url); } catch { window.prompt(tr('Lien client :', 'Client link:'), j.url); }

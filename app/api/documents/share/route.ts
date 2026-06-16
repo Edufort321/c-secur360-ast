@@ -19,6 +19,13 @@ function newToken() {
 }
 const DOC_TYPES = ['soumission', 'invoice', 'timesheet'] as const;
 const isExpired = (s: any) => s.revoked || (s.expires_at && new Date(s.expires_at).getTime() < Date.now());
+// Tenant EFFECTIF : un super_admin agit sur le tenant de la PAGE (param `tenant`), tout autre rôle est
+// FORCÉ à son tenant de session. Corrige le « Document introuvable » (404) quand Eric (super_admin)
+// transmet une soumission depuis l'admin d'un AUTRE tenant que le sien.
+function effTenant(u: any, reqTenant?: string | null): string {
+  if (u?.role === 'super_admin' && reqTenant) return String(reqTenant);
+  return u?.tenant_id || '';
+}
 
 // Normalise un document (par type) pour la page d'approbation : titre, n°, client, date, lignes, total.
 async function loadDocument(tenant: string, docType: string, docId: string): Promise<any | null> {
@@ -57,8 +64,8 @@ async function markDocumentApproved(tenant: string, docType: string, docId: stri
 export async function POST(req: NextRequest) {
   const u = await getSessionUser(req);
   if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  const tenant = effTenant(u, body.tenant);
   const docType = String(body.docType || '');
   const docId = String(body.docId || '');
   if (!DOC_TYPES.includes(docType as any) || !docId) return NextResponse.json({ error: 'docType/docId invalides' }, { status: 400 });
@@ -92,7 +99,7 @@ export async function GET(req: NextRequest) {
   if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   const docId = sp.get('docId') || '';
   const { data } = await supabaseAdmin.from('document_shares').select('token, status, approver_name, decided_at, created_at, revoked')
-    .eq('tenant_id', u.tenant_id || '').eq('doc_id', docId).order('created_at', { ascending: false });
+    .eq('tenant_id', effTenant(u, sp.get('tenant'))).eq('doc_id', docId).order('created_at', { ascending: false });
   return NextResponse.json({ ok: true, shares: data || [] });
 }
 
@@ -120,9 +127,10 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const u = await getSessionUser(req);
   if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const token = new URL(req.url).searchParams.get('token') || '';
+  const sp = new URL(req.url).searchParams;
+  const token = sp.get('token') || '';
   if (!token) return NextResponse.json({ error: 'token requis' }, { status: 400 });
-  const { error } = await supabaseAdmin.from('document_shares').update({ revoked: true }).eq('token', token).eq('tenant_id', u.tenant_id || '');
+  const { error } = await supabaseAdmin.from('document_shares').update({ revoked: true }).eq('token', token).eq('tenant_id', effTenant(u, sp.get('tenant')));
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

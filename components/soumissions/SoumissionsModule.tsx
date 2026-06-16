@@ -399,7 +399,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const transmitForApproval = async () => {
     if (!hdr.id) { setNotice(tr("Enregistre la soumission d'abord.", 'Save the quote first.')); return; }
     try {
-      const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'soumission', docId: hdr.id, docNumber: hdr.numero }) });
+      const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'soumission', docId: hdr.id, docNumber: hdr.numero, tenant }) });
       const j = await r.json();
       if (!r.ok) { setNotice(j.error || tr('Erreur (migration 180 appliquée ?)', 'Error (migration 180 applied?)')); return; }
       try { await navigator.clipboard.writeText(j.url); setNotice(tr("Lien d'approbation client copié : ", 'Client approval link copied: ') + j.url); }

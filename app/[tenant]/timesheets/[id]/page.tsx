@@ -784,7 +784,7 @@ export default function TimesheetDetailPage() {
             </button>
             <button onClick={async () => {
               try {
-                const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'timesheet', docId: sheetId }) });
+                const r = await fetch('/api/documents/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ docType: 'timesheet', docId: sheetId, tenant }) });
                 const j = await r.json();
                 if (!r.ok) { alert(j.error || 'Erreur (migration 180 ?)'); return; }
                 try { await navigator.clipboard.writeText(j.url); alert('Lien d\'approbation client copié :\n' + j.url); } catch { window.prompt('Lien d\'approbation client :', j.url); }
