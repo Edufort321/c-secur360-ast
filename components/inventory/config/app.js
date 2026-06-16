@@ -21,7 +21,7 @@ export const APP_CONFIG = {
 // dans l'app, on utilise le scanner intégré pour faire des mouvements.
 export const getScanUrl = (itemId, itemCode, departmentCode = null) => {
   const origin = APP_CONFIG.APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-  let tenant = 'cerdia';
+  let tenant = ''; // ISOLATION : jamais 'cerdia' par defaut (le segment d'URL est la source)
   if (typeof window !== 'undefined') {
     const seg = window.location.pathname.split('/').filter(Boolean);
     if (seg.length) tenant = seg[0];

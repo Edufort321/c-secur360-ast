@@ -229,7 +229,7 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder, classNam
 
 export default function AdminPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'cerdia';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'integrations';

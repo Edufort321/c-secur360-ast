@@ -16,7 +16,7 @@ const InventoryRoot = dynamic(() => import('@/components/inventory/Root'), {
 
 export default function InventoryPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'cerdia';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <PortalHeader tenant={tenant} subtitle="Inventaire" />

@@ -4,7 +4,8 @@
 // navigateur — fuite inter-tenant côté client (le serveur, lui, scope déjà par tenant_id).
 // Le tenant = 1er segment de l'URL (cohérent avec App.jsx).
 export function invTenant() {
-  try { return (window.location.pathname.split('/').filter(Boolean)[0]) || 'cerdia'; }
-  catch { return 'cerdia'; }
+  // ISOLATION : jamais de repli 'cerdia' (sinon un tenant non résolu partage le cache de cerdia).
+  try { return (window.location.pathname.split('/').filter(Boolean)[0]) || ''; }
+  catch { return ''; }
 }
 export function invKey(name) { return invTenant() + '::' + name; }

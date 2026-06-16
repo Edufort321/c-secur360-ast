@@ -1470,7 +1470,7 @@ function AppContent() {
 
   // #55 — Persistance par tenant via un instantané JSON (table inventory_state).
   // Le tenant provient du 1er segment d'URL (cohérent avec importFromCatalogue).
-  const tenantId = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || 'cerdia') : 'cerdia');
+  const tenantId = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || '') : ''); // ISOLATION : jamais 'cerdia' par defaut
   const initialLoadDone = useRef(false);   // n'enregistre PAS dans le nuage tant que le chargement initial n'est pas fini
   const cloudSaveTimer = useRef(null);
   const cloudLoadOk = useRef(false);       // le chargement nuage a-t-il REUSSI ? (sinon on n'ecrase PAS le nuage)
@@ -2334,7 +2334,7 @@ function AppContent() {
   // Reprend code (sku) / désignation / coûtant / prix de vente. Ignore les codes/noms déjà présents.
   const importFromCatalogue = async () => {
     try {
-      const tenant = (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean)[0] : '') || 'cerdia';
+      const tenant = (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean)[0] : '') || ''; // ISOLATION : jamais 'cerdia'
       const cats = await getCatalogues(tenant);
       const active = cats.find(c => c.preferred && c.status === 'active') || cats.find(c => c.status === 'active') || cats[0];
       const mats = (active && active.materials) || [];
