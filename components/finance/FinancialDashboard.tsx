@@ -2,14 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ResponsiveContainer, ComposedChart, Area, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  ResponsiveContainer, ComposedChart, Area, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell,
 } from 'recharts';
 import {
   DollarSign, TrendingUp, TrendingDown, Percent, Users, Wallet, Activity, Sparkles, Loader2, CalendarClock, AlertTriangle,
 } from 'lucide-react';
 import { getLedger, getAccounts, getTrialBalance } from '@/lib/accounting';
 import {
-  computeFinancialAnalytics, cashAndReceivables, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
+  computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
 } from '@/lib/financialAnalytics';
 
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
@@ -51,6 +51,8 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   }, [tenant]);
 
   const { cash, arTotal, apTotal } = useMemo(() => cashAndReceivables(accounts, balances), [accounts, balances]);
+  const [revByClass, setRevByClass] = useState<{ name: string; value: number }[]>([]);
+  useEffect(() => { revenueByClass(tenant, from || undefined, to || undefined).then(setRevByClass).catch(() => setRevByClass([])); }, [tenant, from, to]);
   const a = useMemo(() => computeFinancialAnalytics(ledger, { granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal }), [ledger, granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal]);
 
   // Prochaine clôture comptable (selon le mois de début d'exercice) — rappel.
@@ -178,6 +180,36 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
               <Bar dataKey="Paie" fill="#8b5cf6" radius={[3, 3, 0, 0]} barSize={18} />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Revenus par classe de produit (ventilation du bilan) */}
+      {revByClass.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Revenus par classe de produit', 'Revenue by product class')}</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={revByClass} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2}>
+                  {revByClass.map((_, i) => <Cell key={i} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'][i % 8]} />)}
+                </Pie>
+                <Tooltip formatter={(v: any) => mny(Number(v))} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="self-center">
+              {revByClass.map((c, i) => {
+                const tot = revByClass.reduce((s, x) => s + x.value, 0) || 1;
+                return (
+                  <div key={i} className="flex items-center justify-between border-b border-slate-100 py-1.5 text-sm dark:border-gray-700">
+                    <span className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'][i % 8] }} />{c.name}</span>
+                    <span className="font-semibold">{mny(c.value)} <span className="text-xs font-normal text-slate-400">({((c.value / tot) * 100).toFixed(0)}%)</span></span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">{tr('Source : lignes de facture classées par produit (catalogue). Classez vos produits pour affiner la ventilation.', 'Source: invoice lines classed by product (catalogue). Class your products to refine the breakdown.')}</p>
         </div>
       )}
 

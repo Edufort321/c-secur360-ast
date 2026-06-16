@@ -124,3 +124,24 @@ export function cashAndReceivables(
 export const GRANULARITY_LABELS: Record<Granularity, string> = {
   day: 'Quotidien', week: 'Hebdomadaire', month: 'Mensuel', quarter: 'Trimestriel', year: 'Annuel',
 };
+
+// Revenus VENTILÉS PAR CLASSE de produit (factures transmises/payées). Lit les lignes de facture
+// (product_class — snapshot mig 194). Async (réseau) — à appeler depuis un composant.
+export async function revenueByClass(tenant: string, from?: string, to?: string): Promise<{ name: string; value: number }[]> {
+  const { supabase } = await import('@/lib/supabase');
+  let q = supabase.from('commerce_invoices')
+    .select('issue_date, status, commerce_invoice_items(subtotal, product_class, description)')
+    .eq('tenant_id', tenant).in('status', ['sent', 'paid']);
+  if (from) q = q.gte('issue_date', from);
+  if (to) q = q.lte('issue_date', to);
+  const { data, error } = await q;
+  if (error) return [];
+  const byClass: Record<string, number> = {};
+  for (const inv of (data || []) as any[]) {
+    for (const l of inv.commerce_invoice_items || []) {
+      const cls = (l.product_class || '').trim() || 'Non classé';
+      byClass[cls] = (byClass[cls] || 0) + (Number(l.subtotal) || 0);
+    }
+  }
+  return Object.entries(byClass).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+}

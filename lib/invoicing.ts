@@ -26,7 +26,7 @@ export const PROVINCES = Object.keys(TAX_BY_PROVINCE);
 // sur intrants), 'exempt' (exonéré — pas de taxe, pas de CTI). Pour le calcul d'une ligne, détaxé et
 // exonéré = 0 taxe ; la catégorie sert au classement fiscal. Rétro-compat : si absent, on lit `taxable`.
 export type TaxCategory = 'standard' | 'zero_rated' | 'exempt';
-export type InvoiceItem = { id?: string; description: string; quantity: number; unit_price: number; subtotal: number; taxable: boolean; tax_category?: TaxCategory; sort_order?: number };
+export type InvoiceItem = { id?: string; description: string; quantity: number; unit_price: number; subtotal: number; taxable: boolean; tax_category?: TaxCategory; sort_order?: number; item_id?: string | null; product_class?: string | null };
 // Une ligne est TAXÉE seulement si sa catégorie est 'standard' (sinon 0). Repli sur l'ancien booléen.
 export const lineIsTaxed = (i: { tax_category?: TaxCategory; taxable?: boolean }) => i.tax_category ? i.tax_category === 'standard' : i.taxable !== false;
 export type Invoice = {
@@ -114,12 +114,20 @@ export async function saveInvoice(tenant: string, header: Invoice, items: Invoic
     unit_price: Number(it.unit_price) || 0, subtotal: r2((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)),
     taxable: lineIsTaxed(it), // synchro avec la catégorie -> taxes correctes même avant migration 182
     tax_category: it.tax_category || (it.taxable === false ? 'exempt' : 'standard'), sort_order: i,
+    item_id: it.item_id || null, product_class: it.product_class || null, // lien produit + classe (revenus par classe, mig 194)
   }));
   if (rows.length) {
+    // Insert résilient : retire les colonnes récentes absentes (tax_category mig 182, item_id/product_class mig 194).
     let { error } = await supabase.from('commerce_invoice_items').insert(rows);
-    if (error && /tax_category/i.test(String(error.message || ''))) { // colonne absente (migration 182) -> retire et réessaie
-      const rows2 = rows.map(({ tax_category, ...r }) => r);
-      ({ error } = await supabase.from('commerce_invoice_items').insert(rows2));
+    let attempt = rows;
+    let g = 0;
+    while (error && g < 4) {
+      const msg = String(error.message || '');
+      const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+      const col = m ? (m[1] || m[2] || m[3]) : (/tax_category/i.test(msg) ? 'tax_category' : null);
+      if (!col) break;
+      attempt = attempt.map((r: any) => { const c = { ...r }; delete c[col]; return c; });
+      ({ error } = await supabase.from('commerce_invoice_items').insert(attempt)); g++;
     }
     if (error) throw error;
   }

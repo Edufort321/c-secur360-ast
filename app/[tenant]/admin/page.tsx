@@ -6559,6 +6559,13 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
   useEffect(() => { setInvMounted(true); }, []);
   const [projList, setProjList] = useState<{ id: string; label: string; po_amount?: number | null; client_name?: string | null }[]>([]);
   useEffect(() => { supabase.from('projects').select('id, title, project_number, client_name, po_amount').eq('tenant_id', tenant).order('created_at', { ascending: false }).then(({ data }) => setProjList((data || []).map((p: any) => ({ id: p.id, label: `${p.project_number ? p.project_number + ' — ' : ''}${p.title || p.id}`, po_amount: p.po_amount, client_name: p.client_name }))), () => {}); }, [tenant]);
+  // Produits numériques (catalogue) — ajout en ligne de facture (porte item_id + classe pour le bilan par classe).
+  const [prodList, setProdList] = useState<{ id: string; name: string; sale_price?: number; product_class?: string | null }[]>([]);
+  useEffect(() => { supabase.from('items').select('id, name, sale_price, product_class').eq('tenant_id', tenant).eq('article_type', 'digital').order('name').then(({ data }) => setProdList((data as any[]) || []), () => {}); }, [tenant]);
+  function addProductLine(pid: string) {
+    const p = prodList.find(x => x.id === pid); if (!p) return;
+    setItems(its => [...its.filter(i => i.description.trim() || (Number(i.unit_price) || 0) > 0), { description: p.name, quantity: 1, unit_price: Number(p.sale_price) || 0, subtotal: Number(p.sale_price) || 0, taxable: true, item_id: p.id, product_class: p.product_class || null }]);
+  }
   function doInvPrint() {
     const prev = document.title; document.title = `Facture-${hdr.invoice_number || ''}`;
     const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
@@ -6698,7 +6705,15 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                 <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
               </div>
             ))}
-            <button onClick={() => setItems(p => [...p, blankItem()])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button onClick={() => setItems(p => [...p, blankItem()])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
+              {prodList.length > 0 && (
+                <select onChange={e => { if (e.target.value) addProductLine(e.target.value); e.currentTarget.value = ''; }} className="rounded-lg border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700">
+                  <option value="">+ {tr('Ajouter un produit (catalogue)', 'Add a product (catalogue)')}</option>
+                  {prodList.map(p => <option key={p.id} value={p.id}>{p.name}{p.product_class ? ` · ${p.product_class}` : ''}</option>)}
+                </select>
+              )}
+            </div>
           </div>
           <div className="mt-4 flex flex-col items-end gap-1 border-t border-gray-100 pt-3 text-sm dark:border-gray-700">
             <div>{tr('Sous-total', 'Subtotal')} : <b>{mny(totals.subtotal)}</b></div>
