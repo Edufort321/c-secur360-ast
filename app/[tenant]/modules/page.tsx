@@ -117,7 +117,7 @@ export default function ModulesPage() {
         // assignées à des mandats actifs aujourd'hui ÷ effectif du roster).
         const todayStr = new Date().toISOString().slice(0, 10);
         const [{ data: jobs }, { count: rosterCount }] = await Promise.all([
-          supabase.from('planner_jobs').select('statut, status, dateDebut, dateFin, start_date, end_date, personnelAssigne, nombrePersonnelRequis').eq('tenant_id', tenant),
+          supabase.from('planner_jobs').select('statut, status, dateDebut, dateFin, start_date, end_date, personnel, personnelAssigne, nombrePersonnelRequis').eq('tenant_id', tenant),
           supabase.from('planner_personnel').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
         ]);
         const yearEnd = todayStr.slice(0, 4) + '-12-31';
