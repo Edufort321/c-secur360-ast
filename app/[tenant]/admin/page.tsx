@@ -6069,8 +6069,8 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     try {
       const r = await syncAllToLedger(tenant);
       setNotice(tr(
-        `Grand livre synchronisé : ${r.payroll} paie, ${r.sales} vente(s), ${r.salePayments} encaissement(s), ${r.purchases} achat(s), ${r.purchasePayments} paiement(s) fournisseur.`,
-        `Ledger synced: ${r.payroll} payroll, ${r.sales} sale(s), ${r.salePayments} receipt(s), ${r.purchases} purchase(s), ${r.purchasePayments} vendor payment(s).`));
+        `Grand livre synchronisé : ${r.payroll} paie, ${r.sales} vente(s), ${r.salePayments} encaissement(s), ${r.purchases} achat(s), ${r.purchasePayments} paiement(s) fournisseur, ${r.expenses} dépense(s) feuille de temps.`,
+        `Ledger synced: ${r.payroll} payroll, ${r.sales} sale(s), ${r.salePayments} receipt(s), ${r.purchases} purchase(s), ${r.purchasePayments} vendor payment(s), ${r.expenses} timesheet expense(s).`));
       await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSyncing(false);

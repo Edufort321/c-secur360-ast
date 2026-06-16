@@ -83,6 +83,39 @@ export async function postTimesheetPayroll(
 }
 
 /**
+ * DÉPENSE saisie dans une FEUILLE DE TEMPS (remboursable ou par carte) -> grand livre.
+ *   DR <charge 5300>          = sous-total
+ *   DR 1200 TPS à récupérer   = gst (CTI)
+ *   DR 1210 TVQ à récupérer   = qst (RTI)
+ *   CR 2300 (remboursable -> à payer à l'employé via la paie) | CR 1000 (non remboursable -> banque/carte) = total
+ * Idempotent par (source_type='timesheet_expense', source_id). La dépense remonte déjà au PROJET
+ * via project_id (rollup WIP) ; ici on la fait remonter à la COMPTABILITÉ.
+ */
+export async function postTimesheetExpense(tenant: string, exp: any, accMap?: Record<string, string>): Promise<'created' | 'skipped' | 'no-accounts'> {
+  if (!exp?.id) return 'skipped';
+  if (await entryExists(tenant, 'timesheet_expense', exp.id)) return 'skipped';
+  const m = accMap || await accountMap(tenant);
+  if (!m['5300'] || !m['2300']) return 'no-accounts';
+  const sub = Number(exp.subtotal) || 0;
+  const gst = Number(exp.gst) || 0, qst = Number(exp.qst) || 0;
+  const total = Number(exp.total) || (sub + gst + qst);
+  if (total <= 0) return 'skipped';
+  const creditAcc = exp.reimbursable ? m['2300'] : (m['1000'] || m['2300']); // à rembourser à l'employé OU banque/carte
+  const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
+    { account_id: m['5300'], debit: sub, credit: 0, description: exp.description || exp.category || 'Dépense (feuille de temps)' },
+  ];
+  if (gst > 0 && m['1200']) lines.push({ account_id: m['1200'], debit: gst, credit: 0, description: 'TPS a recuperer (CTI)' });
+  if (qst > 0 && m['1210']) lines.push({ account_id: m['1210'], debit: qst, credit: 0, description: 'TVQ a recuperer (RTI)' });
+  lines.push({ account_id: creditAcc, debit: 0, credit: total, description: exp.reimbursable ? 'A rembourser a l employe' : 'Banque / carte' });
+  await createEntry(tenant, {
+    entry_date: exp.date || new Date().toISOString().slice(0, 10),
+    description: `Dépense feuille de temps — ${exp.supplier || exp.category || ''}`,
+    reference: `EXP-${String(exp.id).slice(0, 8)}`, journal_code: 'ACH', source_type: 'timesheet_expense', source_id: exp.id, lines,
+  });
+  return 'created';
+}
+
+/**
  * Écriture d'achat pour une transaction (dépense / achat fournisseur).
  *   DR <comptes de charge>          = montants nets ventilés par ligne
  *   DR 5300 (taxe non récupérable)  = PST/RST (hors Québec) capitalisée en charge
@@ -286,11 +319,21 @@ export async function autoPostTransactionStatus(tenant: string, transactionId: s
  * (transmises/payées) + encaissements (payées), achats de transactions (comptabilisés/payés) +
  * paiements fournisseurs (payés à crédit). Politique INCHANGÉE (poste ce que les boutons postent déjà).
  */
-export async function syncAllToLedger(tenant: string): Promise<{ payroll: number; sales: number; salePayments: number; purchases: number; purchasePayments: number }> {
+export async function syncAllToLedger(tenant: string): Promise<{ payroll: number; sales: number; salePayments: number; purchases: number; purchasePayments: number; expenses: number }> {
   const m = await ensureAccountMap(tenant); // initialise le plan comptable si absent
   if (!m['5000'] || !m['2300']) throw new Error('Plan comptable non initialisé — exécutez la migration 085 dans Supabase, puis réessayez.');
   const pay = await syncPayrollEntries(tenant);
-  let sales = 0, salePayments = 0, purchases = 0, purchasePayments = 0;
+  let sales = 0, salePayments = 0, purchases = 0, purchasePayments = 0, expenses = 0;
+
+  // Dépenses des feuilles de temps APPROUVÉES/PAYÉES -> grand livre (en plus du rollup projet).
+  try {
+    const { data: sheets } = await supabase.from('timesheets').select('id').eq('tenant_id', tenant).in('status', ['approved', 'paid']);
+    const ids = (sheets || []).map((s: any) => s.id);
+    if (ids.length) {
+      const { data: exps } = await supabase.from('timesheet_expenses').select('*').in('timesheet_id', ids);
+      for (const e of (exps || [])) if ((await postTimesheetExpense(tenant, e, m)) === 'created') expenses++;
+    }
+  } catch { /* table timesheet_expenses absente -> ignore */ }
 
   const { data: invs } = await supabase.from('commerce_invoices').select('*').eq('tenant_id', tenant).in('status', ['sent', 'paid']);
   for (const inv of (invs || [])) {
@@ -310,7 +353,7 @@ export async function syncAllToLedger(tenant: string): Promise<{ payroll: number
     }
     if (txn.status === 'paid' && !isRev && txn.payment_method === 'on_account' && (await postTransactionPayment(tenant, txn, m)) === 'created') purchasePayments++;
   }
-  return { payroll: pay.created, sales, salePayments, purchases, purchasePayments };
+  return { payroll: pay.created, sales, salePayments, purchases, purchasePayments, expenses };
 }
 
 /** Génère les écritures de paie manquantes pour toutes les feuilles approuvées/payées. */
