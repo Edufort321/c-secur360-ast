@@ -10,6 +10,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { ProjectTimesheetSummary } from '@/components/projet/ProjectTimesheetSummary';
 import { ConsumeMaterialPanel } from '@/components/projet/ConsumeMaterialPanel';
 import { CoutsTab } from '@/components/projet/CoutsTab';
+import { ProjectPerfStrip } from '@/components/projects/ProjectsAnalytics';
 import { FactureTab } from '@/components/projet/FactureTab';
 import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -341,6 +342,9 @@ export default function ProjectDetailPage() {
                 );
               })}
             </div>
+
+            {/* Bandeau performance (visible à l'ouverture, sur tous les onglets) — coût réel live si dispo */}
+            <ProjectPerfStrip project={p as any} liveActualsTotal={(tsActuals && tsActuals.count > 0) ? tsActuals.total : undefined} />
 
             {/* Onglet Projet */}
             {tab === 'projet' && (

@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useSite } from '@/contexts/SiteContext';
 import { PortalHeader } from '@/components/PortalHeader';
 import { BackButton } from '@/components/BackButton';
+import { ProjectsAnalytics } from '@/components/projects/ProjectsAnalytics';
 
 type Client = { id: string; name: string; contact_name: string; contact_phone: string; email: string; address: string; city: string; province: string };
 
@@ -189,13 +190,6 @@ export default function ProjectsPage() {
         .filter(Boolean).some(v => String(v).toLowerCase().includes(q)));
   }, [projects, query, siteId]);
 
-  const stats = useMemo(() => ({
-    total: projects.length,
-    soumission: projects.filter(p => p.status === 'soumission').length,
-    encours: projects.filter(p => p.status === 'en-cours').length,
-    facture: projects.filter(p => p.status === 'facture').length,
-  }), [projects]);
-
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!form.project_number.trim()) return;
@@ -283,20 +277,8 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { k: 'Total', v: stats.total, c: 'text-slate-900' },
-            { k: 'Soumissions', v: stats.soumission, c: 'text-amber-600' },
-            { k: 'En cours', v: stats.encours, c: 'text-blue-600' },
-            { k: 'Facturés', v: stats.facture, c: 'text-emerald-600' },
-          ].map(s => (
-            <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className={`text-2xl font-bold ${s.c}`}>{s.v}</div>
-              <div className="text-sm text-slate-500">{s.k}</div>
-            </div>
-          ))}
-        </div>
+        {/* Tableau de bord ERP « dirigeant » — KPIs, graphiques, classements, analyse IA (vue globale du portefeuille) */}
+        {!loading && projects.length > 0 && <ProjectsAnalytics projects={projects as any} tenant={tenant} />}
 
         {/* Recherche */}
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
