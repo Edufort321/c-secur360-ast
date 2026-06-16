@@ -172,7 +172,7 @@ export function JobModal({
       let alive = true;
       (async () => {
         try {
-          const t = window.location.pathname.split('/')[1] || 'cerdia';
+          const t = window.location.pathname.split('/')[1] || '';
           const { data } = await supabase.from('projects').select('id, project_number, title, client_name, end_client_id, location, status').eq('tenant_id', t).order('project_number', { ascending: false }).limit(500);
           if (alive && Array.isArray(data)) setAllProjects(data.filter(p => p.project_number));
         } catch { /* ignore */ }
@@ -187,7 +187,7 @@ export function JobModal({
       let alive = true;
       (async () => {
         try {
-          const t = window.location.pathname.split('/')[1] || 'cerdia';
+          const t = window.location.pathname.split('/')[1] || '';
           const { data } = await supabase.from('tenant_recurring_tasks').select('id, name, code, active, sort_order').eq('tenant_id', t).eq('active', true).order('sort_order', { ascending: true });
           if (alive && Array.isArray(data)) setRecurringTasks(data.filter(r => r.name));
         } catch { /* table absente — ignore */ }
@@ -683,7 +683,7 @@ export function JobModal({
         clientSearchTimer.current = setTimeout(async () => {
             setClientSearching(true);
             try {
-                const t = window.location.pathname.split('/')[1] || 'cerdia';
+                const t = window.location.pathname.split('/')[1] || '';
                 if (q.length < 2) {
                     // Liste par défaut : tous les clients actifs (max 25), par ordre alphabétique.
                     const { data } = await supabase.from('clients')
@@ -719,7 +719,7 @@ export function JobModal({
             // Cascade : charge les SITES (adresses) et CONTACTS du client (migration 133).
             (async () => {
                 try {
-                    const t = window.location.pathname.split('/')[1] || 'cerdia';
+                    const t = window.location.pathname.split('/')[1] || '';
                     const [sRes, ctRes] = await Promise.all([
                         supabase.from('client_sites').select('id, name, address, city, province, kind').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
                         supabase.from('client_contacts').select('id, site_id, name, title, phone, mobile, email').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
@@ -765,7 +765,7 @@ export function JobModal({
         inventaireFetched.current = true;
         setInventaireLoading(true);
         try {
-            const tenant = window.location.pathname.split('/')[1] || 'cerdia';
+            const tenant = window.location.pathname.split('/')[1] || '';
             const { data } = await supabase
                 .from('items')
                 .select('id, code, name, category, unit, cost_price')
@@ -2676,7 +2676,7 @@ export function JobModal({
         if (!num && !pid) { addNotification?.('Liez ou recherchez d\'abord un projet (issu d\'une soumission acceptée).', 'error'); return; }
         setPrefilling(true);
         try {
-            const tenant = window.location.pathname.split('/')[1] || 'cerdia';
+            const tenant = window.location.pathname.split('/')[1] || '';
             let proj = null;
             if (num) { const { data } = await supabase.from('projects').select('*').eq('tenant_id', tenant).eq('project_number', num).maybeSingle(); proj = data; }
             if (!proj && pid) { const { data } = await supabase.from('projects').select('*').eq('tenant_id', tenant).eq('id', pid).maybeSingle(); proj = data; }

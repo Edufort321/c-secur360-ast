@@ -21,7 +21,7 @@ type Tab = 'projet' | 'temps' | 'couts' | 'facture';
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const tenant = (params?.tenant as string) || 'cerdia';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'cerdia' (contamination)
   const id = params?.id as string;
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);

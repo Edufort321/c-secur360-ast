@@ -34,7 +34,7 @@ export function ScanPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const tenant = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || 'cerdia') : 'cerdia');
+  const tenant = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || '') : ''); // ISOLATION : pas de repli 'cerdia'
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

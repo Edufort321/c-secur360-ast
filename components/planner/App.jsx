@@ -19,7 +19,7 @@ const ROLES_MODIF = ['coordination', 'administration', 'admin_paie', 'rh', 'dire
 // Niveaux qui voient les salaires (tier ≥ 5)
 const ROLES_SALAIRE = ['admin_paie', 'rh', 'direction', 'super_user'];
 
-function AppContent({ tenant = 'cerdia' }) {
+function AppContent({ tenant = '' }) { // ISOLATION : pas de repli 'cerdia' (contamination)
     const appData = useAppDataWithSync(tenant);
     const { notifications, addNotification } = useNotifications();
     const { siteId } = useSite(); // sélecteur de site global (en-tête hôte)
@@ -115,7 +115,7 @@ function AppContent({ tenant = 'cerdia' }) {
             {/* Flèche de retour vers le portail des modules (cohérent avec les autres modules). */}
             <div className="flex items-center px-3 sm:px-4 pt-3">
                 <a
-                    href={`/${tenant || 'cerdia'}/modules`}
+                    href={`/${tenant || ''}/modules`}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title="Retour aux modules"
                 >

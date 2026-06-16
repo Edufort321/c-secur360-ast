@@ -31,7 +31,7 @@ type SurchargeTier = {
 export default function TauxPage() {
   const params = useParams();
   const router = useRouter();
-  const tenant = (params?.tenant as string) || 'cerdia';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
 

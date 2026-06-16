@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function SoumissionsPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'cerdia';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
 

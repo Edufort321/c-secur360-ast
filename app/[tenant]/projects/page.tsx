@@ -46,7 +46,7 @@ const emptyForm = {
 
 export default function ProjectsPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli (contamination inter-tenant)
   const { siteId } = useSite(); // sélecteur de site global (en-tête)
 
   const [projects, setProjects] = useState<Project[]>([]);

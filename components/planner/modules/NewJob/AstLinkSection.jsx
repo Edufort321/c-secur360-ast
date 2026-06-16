@@ -13,7 +13,7 @@ export function AstLinkSection({ formData, setFormData, addNotification }) {
         let cancelled = false;
         (async () => {
             try {
-                const tenant = window.location.pathname.split('/')[1] || 'cerdia';
+                const tenant = window.location.pathname.split('/')[1] || '';
                 let enabled = tenant === 'cerdia' || tenant === 'demo';
                 if (!enabled) {
                     const { data } = await supabase.from('tenant_modules')
@@ -41,7 +41,7 @@ export function AstLinkSection({ formData, setFormData, addNotification }) {
 
     // Ouvre l'AST de création préremplie avec les infos du mandat (avant travaux).
     const openPrefilledAst = () => {
-        const tenant = window.location.pathname.split('/')[1] || 'cerdia';
+        const tenant = window.location.pathname.split('/')[1] || '';
         const workerCount = Array.isArray(formData.personnel) ? formData.personnel.length : (Number(formData.nombrePersonnes) || 1);
         const qs = new URLSearchParams();
         if (formData.numeroJob) qs.set('projectNumber', formData.numeroJob);
