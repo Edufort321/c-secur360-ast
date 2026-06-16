@@ -25,11 +25,19 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
     } catch (err) {
-      console.error('Erreur vérification webhook:', err);
-      return NextResponse.json(
-        { error: 'Signature webhook invalide' },
-        { status: 400 }
-      );
+      // Repli : si les événements « comptes connectés » (direct charges) sont enregistrés comme
+      // endpoint Connect distinct avec SON propre secret, on tente cette signature aussi.
+      const connectSecret = process.env.STRIPE_WEBHOOK_SECRET_CONNECT;
+      if (connectSecret) {
+        try { event = stripe.webhooks.constructEvent(body, sig, connectSecret); }
+        catch (err2) {
+          console.error('Erreur vérification webhook (account + connect):', err2);
+          return NextResponse.json({ error: 'Signature webhook invalide' }, { status: 400 });
+        }
+      } else {
+        console.error('Erreur vérification webhook:', err);
+        return NextResponse.json({ error: 'Signature webhook invalide' }, { status: 400 });
+      }
     }
 
     // Traitement des événements Stripe

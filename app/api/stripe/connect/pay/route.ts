@@ -31,17 +31,17 @@ export async function POST(req: NextRequest) {
   const fee = Math.round(amount * feeBps / 10000);
   const origin = req.headers.get('origin') || new URL(req.url).origin;
   try {
+    // DIRECT CHARGE : la session est créée SUR le compte connecté du tenant (header Stripe-Account).
+    // → le tenant est le commerçant officiel (frais Stripe + litiges sur lui), la plateforme prélève
+    //   application_fee_amount (sa commission). L'événement revient via le webhook « comptes connectés ».
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price_data: { currency: 'cad', product_data: { name: `Facture ${inv.invoice_number}` }, unit_amount: amount }, quantity: 1 }],
-      payment_intent_data: {
-        ...(fee > 0 ? { application_fee_amount: fee } : {}),
-        transfer_data: { destination: cs.stripe_account_id },
-      },
+      ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
       success_url: `${origin}/${tenant}/admin?tab=factures&paid=1`,
       cancel_url: `${origin}/${tenant}/admin?tab=factures&paid=0`,
       metadata: { kind: 'commerce_invoice', tenant, invoice_id: invoiceId },
-    });
+    }, { stripeAccount: cs.stripe_account_id });
     return NextResponse.json({ ok: true, url: session.url });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur Stripe' }, { status: 400 });
