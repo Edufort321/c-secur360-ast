@@ -100,6 +100,8 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
     { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}` },
     { label: tr('Croissance', 'Growth'), value: a.growthPct != null ? `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %` : '—', icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: tr('dernière période', 'last period') },
     { label: tr('Trésorerie', 'Cash'), value: mnyK(a.cash), icon: Wallet, color: 'text-slate-900 dark:text-white', sub: `AR ${mnyK(a.arTotal)} · AP ${mnyK(a.apTotal)}` },
+    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: `${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}` },
+    { label: 'CAPEX', value: mnyK(a.capexTotal), icon: TrendingDown, color: 'text-amber-600', sub: tr('investissements', 'investments') },
   ];
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;

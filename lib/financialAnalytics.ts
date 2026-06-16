@@ -40,7 +40,11 @@ export function periodKey(dateStr: string, g: Granularity, fiscalStartMonth = 1)
   const { fy } = fiscalParts(d, fiscalStartMonth); return { key: `${fy}`, label: `${fy}` };
 }
 
-export type FinPeriod = { key: string; label: string; revenue: number; expense: number; payroll: number; margin: number; growthPct: number | null };
+export type FinPeriod = {
+  key: string; label: string; revenue: number; expense: number; payroll: number; margin: number; growthPct: number | null;
+  // Isolation pour EBITDA (comptes 5600/5700/5800) + investissement (CAPEX = ajouts aux immobilisations 1500).
+  dna: number; interest: number; tax: number; ebitda: number; capex: number;
+};
 export type FinAnalytics = {
   periods: FinPeriod[];
   revenueTotal: number; expenseTotal: number; payrollTotal: number; marginTotal: number;
@@ -48,6 +52,8 @@ export type FinAnalytics = {
   growthPct: number | null;                // dernière période vs précédente (CA)
   cash: number;                            // trésorerie courante (comptes d'actif banque/caisse)
   arTotal: number; apTotal: number;        // créances / dettes (best-effort par nom de compte)
+  // EBITDA & investissement (vue dirigeant / investisseur).
+  dnaTotal: number; interestTotal: number; taxTotal: number; ebitdaTotal: number; ebitdaPct: number; capexTotal: number;
 };
 
 // Agrège le grand livre par période. `cashByType` permet d'injecter la trésorerie depuis la balance.
@@ -68,15 +74,20 @@ export function computeFinancialAnalytics(
     if (isNaN(t) || t < from || t >= to) continue;
     const { key, label } = periodKey(ds, g, fsm);
     let b = buckets.get(key);
-    if (!b) { b = { key, label, revenue: 0, expense: 0, payroll: 0, margin: 0, growthPct: null }; buckets.set(key, b); }
+    if (!b) { b = { key, label, revenue: 0, expense: 0, payroll: 0, margin: 0, growthPct: null, dna: 0, interest: 0, tax: 0, ebitda: 0, capex: 0 }; buckets.set(key, b); }
     for (const l of e.gl_lines || []) {
-      const type = l.gl_accounts?.type; const name = l.gl_accounts?.name || '';
+      const type = l.gl_accounts?.type; const name = l.gl_accounts?.name || ''; const code = String(l.gl_accounts?.code || '');
       const d = n(l.debit), c = n(l.credit);
       if (type === 'revenue') b.revenue += c - d;       // produits : crédit normal
       else if (type === 'expense') {
         const amt = d - c;                               // charges : débit normal
         b.expense += amt;
         if (PAYROLL_RE.test(name)) b.payroll += amt;     // masse salariale (best-effort par nom de compte)
+        if (code === '5600') b.dna += amt;               // amortissement
+        else if (code === '5700') b.interest += amt;     // intérêts et frais financiers
+        else if (code === '5800') b.tax += amt;          // impôts sur le résultat
+      } else if (type === 'asset' && code === '1500') {
+        b.capex += d - c;                                // CAPEX : ajouts nets aux immobilisations
       }
     }
   }
@@ -84,6 +95,8 @@ export function computeFinancialAnalytics(
   const periods = [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key));
   for (let i = 0; i < periods.length; i++) {
     periods[i].margin = periods[i].revenue - periods[i].expense;
+    // EBITDA = résultat net + amortissement + intérêts + impôts (on les rajoute à la marge nette).
+    periods[i].ebitda = periods[i].margin + periods[i].dna + periods[i].interest + periods[i].tax;
     const prev = i > 0 ? periods[i - 1].revenue : null;
     periods[i].growthPct = prev != null && prev !== 0 ? ((periods[i].revenue - prev) / Math.abs(prev)) * 100 : null;
   }
@@ -92,6 +105,11 @@ export function computeFinancialAnalytics(
   const expenseTotal = periods.reduce((s, p) => s + p.expense, 0);
   const payrollTotal = periods.reduce((s, p) => s + p.payroll, 0);
   const marginTotal = revenueTotal - expenseTotal;
+  const dnaTotal = periods.reduce((s, p) => s + p.dna, 0);
+  const interestTotal = periods.reduce((s, p) => s + p.interest, 0);
+  const taxTotal = periods.reduce((s, p) => s + p.tax, 0);
+  const ebitdaTotal = marginTotal + dnaTotal + interestTotal + taxTotal;
+  const capexTotal = periods.reduce((s, p) => s + p.capex, 0);
   const last = periods[periods.length - 1];
 
   return {
@@ -100,6 +118,9 @@ export function computeFinancialAnalytics(
     payrollPct: revenueTotal !== 0 ? (payrollTotal / revenueTotal) * 100 : 0,
     growthPct: last ? last.growthPct : null,
     cash: n(opts.cash), arTotal: n(opts.arTotal), apTotal: n(opts.apTotal),
+    dnaTotal, interestTotal, taxTotal, ebitdaTotal,
+    ebitdaPct: revenueTotal !== 0 ? (ebitdaTotal / revenueTotal) * 100 : 0,
+    capexTotal,
   };
 }
 

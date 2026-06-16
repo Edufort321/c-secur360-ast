@@ -99,6 +99,7 @@ export const ADMIN_TABS: { key: string; fr: string; en: string; group: string; d
   { key: 'comptabilite', fr: 'Comptabilité',        en: 'Accounting',        group: 'finance', defaultTier: 5 },
   { key: 'fiscal',      fr: 'Rapports fiscaux',     en: 'Tax reports',       group: 'finance', defaultTier: 5 },
   { key: 'etat-financier', fr: 'État financier',    en: 'Financial state',   group: 'finance', defaultTier: 5 },
+  { key: 'actionnaires', fr: 'Actionnaires',        en: 'Shareholders',      group: 'finance', defaultTier: 7 },
   { key: 'abonnement',  fr: 'Abonnement',           en: 'Subscription',      group: 'systeme', defaultTier: 7 },
   { key: 'integrations', fr: 'Intégration ERP / API', en: 'ERP / API',       group: 'systeme', defaultTier: 7 },
 ];

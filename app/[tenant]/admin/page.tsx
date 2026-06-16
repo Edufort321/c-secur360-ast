@@ -10,9 +10,10 @@ import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
 import { FinancialDashboard } from '@/components/finance/FinancialDashboard';
+import { ShareholdersModule } from '@/components/admin/ShareholdersModule';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
-import { Package } from 'lucide-react';
+import { Package, PieChart } from 'lucide-react';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
@@ -243,8 +244,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'etat-financier', 'integrations'];
+  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'actionnaires' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'etat-financier', 'actionnaires', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -295,6 +296,7 @@ export default function AdminPage() {
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, group: 'finance', need: p => p.viewSalary },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, group: 'finance', need: p => p.viewSalary },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, group: 'finance', need: p => p.viewSalary },
+    { k: 'actionnaires', label: tr('Actionnaires', 'Shareholders'),          icon: PieChart, group: 'finance', need: p => p.manageAll },
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, group: 'systeme', need: p => p.manageAll },
     { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink, group: 'systeme', need: p => p.manageAll },
   ];
@@ -428,6 +430,7 @@ export default function AdminPage() {
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'etat-financier' && <FinancialDashboard tenant={tenant} tr={tr} />}
+        {tab === 'actionnaires' && <ShareholdersModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'integrations' && <ErpSharing tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user' || niveauAcces === 'direction'} />}
         {tab === 'rh'         && <RHHub tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
