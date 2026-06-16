@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe } from 'lucide-react';
+import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -44,6 +44,18 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   }, [tenant]);
 
   const close = () => setMenuOpen(false);
+
+  // DÉCONNEXION : détruit la session serveur + supprime le cookie, puis purge les éventuelles traces
+  // locales (planner) et redirige vers la connexion du tenant — empêche la reconnexion automatique.
+  async function logout() {
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* ignore */ }
+    try {
+      // Purge des sessions locales connues (planner / divers) pour éviter toute reconnexion auto.
+      Object.keys(localStorage).forEach(k => { if (/auth|session|token|user|connect/i.test(k)) localStorage.removeItem(k); });
+      sessionStorage.clear();
+    } catch { /* ignore */ }
+    window.location.href = tenant ? `/${tenant}/login` : '/auth/admin';
+  }
 
   return (
     <header className="sticky top-0 z-40 bg-gray-900 text-white shadow">
@@ -97,6 +109,17 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
             >
               <Home size={18} />
             </Link>
+          )}
+
+          {tenant && (
+            <button
+              onClick={logout}
+              title={lang === 'fr' ? 'Déconnexion' : 'Log out'}
+              aria-label={lang === 'fr' ? 'Déconnexion' : 'Log out'}
+              className="rounded-lg p-2 text-gray-300 transition hover:bg-red-500/20 hover:text-red-300"
+            >
+              <LogOut size={18} />
+            </button>
           )}
 
           <InstallPWA />
@@ -187,6 +210,15 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                         <ShieldCheck size={16} className="shrink-0 text-emerald-400" />
                         {lang === 'fr' ? 'Mes renseignements (Loi 25)' : 'My personal data (Law 25)'}
                       </Link>
+                    </div>
+
+                    {/* Déconnexion */}
+                    <div className="border-t border-gray-700 px-3 py-2">
+                      <button onClick={() => { close(); logout(); }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10">
+                        <LogOut size={16} className="shrink-0" />
+                        {lang === 'fr' ? 'Déconnexion' : 'Log out'}
+                      </button>
                     </div>
                   </div>
                 </>
