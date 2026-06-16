@@ -90,6 +90,7 @@ export const ADMIN_TABS: { key: string; fr: string; en: string; group: string; d
   { key: 'feuilles',    fr: 'Feuilles de temps',    en: 'Timesheets',        group: 'ops',     defaultTier: 1 },
   { key: 'clients',     fr: 'Clients',              en: 'Clients',           group: 'ventes',  defaultTier: 1 },
   { key: 'fournisseurs', fr: 'Fournisseurs',        en: 'Suppliers',         group: 'ventes',  defaultTier: 1 },
+  { key: 'produits',    fr: 'Produits',             en: 'Products',          group: 'ventes',  defaultTier: 1 },
   { key: 'soumissions', fr: 'Catalogue de taux',    en: 'Rate catalogue',    group: 'ventes',  defaultTier: 1 },
   { key: 'bons-commande', fr: 'Bons de commande',   en: 'Purchase orders',   group: 'ventes',  defaultTier: 1 },
   { key: 'factures',    fr: 'Factures',             en: 'Invoices',          group: 'finance', defaultTier: 5 },

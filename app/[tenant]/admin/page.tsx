@@ -11,6 +11,8 @@ import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
 import { FinancialDashboard } from '@/components/finance/FinancialDashboard';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
+import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
+import { Package } from 'lucide-react';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
@@ -241,8 +243,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'etat-financier', 'integrations'];
+  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'etat-financier', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -284,6 +286,7 @@ export default function AdminPage() {
     { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock, group: 'ops' },
     { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2, group: 'ventes' },
     { k: 'fournisseurs', label: tr('Fournisseurs', 'Suppliers'),             icon: Building2, group: 'ventes' },
+    { k: 'produits',    label: tr('Produits', 'Products'),                   icon: Package, group: 'ventes' },
     { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText, group: 'ventes' },
     { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList, group: 'ventes' },
     { k: 'etat-financier', label: tr('État financier', 'Financial state'),     icon: TrendingUp, group: 'finance', need: p => p.viewSalary },
@@ -413,6 +416,7 @@ export default function AdminPage() {
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
         {tab === 'fournisseurs' && <SuppliersManager tenant={tenant} tr={tr} />}
+        {tab === 'produits'   && <ProductsCatalog tenant={tenant} tr={tr} />}
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
