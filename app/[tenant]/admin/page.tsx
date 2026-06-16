@@ -6994,7 +6994,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     }
     setBatch(b => b && { ...b, busy: false });
     setNotice(tr(`${created} transaction(s) créée(s) — ⏳ À VÉRIFIER (vérifiez puis comptabilisez)${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created — ⏳ TO REVIEW (verify then post)${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
-    setFStatus('draft'); await load();
+    // Ne PAS forcer le filtre sur « Brouillon » : ça masquait les autres transactions (revenus, comptabilisées).
+    // Les nouvelles lignes sont déjà badgées « À vérifier » ; on garde le filtre courant.
+    await load();
   }
   // « Scanner le reçu (IA) » : OCR de la pièce jointe -> pré-remplit + joint le reçu (contrôle comptable).
   async function scanReceiptAI(file: File) {
