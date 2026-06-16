@@ -6813,6 +6813,27 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message || tr('Erreur IA.', 'AI error.')); }
     setAiChecking(false);
   }
+  // « Scanner le reçu (IA) » : OCR de la pièce jointe -> pré-remplit + joint le reçu (contrôle comptable).
+  async function scanReceiptAI(file: File) {
+    setAiChecking(true); setNotice(tr('Lecture du reçu par l’IA…', 'AI reading the receipt…'));
+    try {
+      const dataUrl: string = await new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result || '')); rd.onerror = rej; rd.readAsDataURL(file); });
+      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl }) });
+      const j = await resp.json();
+      if (!resp.ok) { setNotice(j?.error || tr('Scan indisponible.', 'Scan unavailable.')); setAiChecking(false); return; }
+      const x = j.extracted || {};
+      const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
+      const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || Number(x.total) || 0;
+      const taxed = gst > 0 || qst > 0;
+      const isRev = x.type === 'revenue';
+      setHdr(h => ({ ...h, vendor_name: x.vendor || h.vendor_name, txn_date: x.date || h.txn_date, txn_type: isRev ? 'revenue' : (h.txn_type || 'expense') }));
+      setItems([{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }]);
+      // Joint aussi le reçu scanné (pièce justificative liée).
+      uploadReceipt(tenant, file).then(url => setHdr(h => ({ ...h, receipt_url: url }))).catch(() => {});
+      setNotice(tr(`Reçu lu (fiabilité : ${x.confidence || '?'}) — vérifiez les champs pré-remplis, puis « Vérifier IA ».`, `Receipt read (confidence: ${x.confidence || '?'}) — review the pre-filled fields, then “AI check”.`));
+    } catch (e: any) { setNotice(e?.message || tr('Erreur scan.', 'Scan error.')); }
+    setAiChecking(false);
+  }
   async function postPurchase(t: Transaction) {
     setNotice(null);
     if (t.gl_entry_id) { setNotice(tr('Déjà comptabilisée.', 'Already posted.')); return; }
@@ -6956,6 +6977,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
                 <Paperclip size={14} /> {uploading ? <Loader2 size={13} className="inline animate-spin" /> : tr('Joindre un reçu', 'Attach receipt')}
                 <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceipt(f); }} />
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA lit le reçu et pré-remplit la transaction (et le joint)', 'AI reads the receipt and pre-fills the transaction (and attaches it)')}>
+                📷 {aiChecking ? <Loader2 size={13} className="inline animate-spin" /> : tr('Scanner le reçu (IA)', 'Scan receipt (AI)')}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) scanReceiptAI(f); }} />
               </label>
               {hdr.receipt_url && <a href={hdr.receipt_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir le reçu', 'View receipt')}</a>}
               <button onClick={verifyAI} disabled={aiChecking} className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA vérifie la cohérence comptable/fiscale et propose des corrections', 'AI checks accounting/tax coherence and suggests fixes')}>{aiChecking ? <Loader2 size={13} className="animate-spin" /> : '✨'} {tr('Vérifier IA', 'AI check')}</button>
