@@ -6905,7 +6905,8 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
 // ============================================================
 function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [view, setView] = useState<'list' | 'edit' | 'bank' | 'accounts'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'bank' | 'accounts' | 'balances'>('list');
+  const [bal, setBal] = useState<Record<string, { debit: number; credit: number }>>({}); // soldes (balance de vérification)
   const [txns, setTxns] = useState<Transaction[]>([]);
   // Comptes de trésorerie (banque / carte de crédit) — migration 185
   const [treasury, setTreasury] = useState<TreasuryAccount[]>([]);
@@ -6921,6 +6922,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [notice, setNotice] = useState<string | null>(null);
   const blankItem = (code = '5300'): TransactionItem => ({ description: '', account_code: code, amount: 0, taxable: true });
   const [hdr, setHdr] = useState<Transaction>({ transaction_number: '', vendor_name: '', txn_type: 'expense', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+  // Personnel (pour « dépense payée par une personne » → remboursement / investissement).
+  const [persons, setPersons] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => { supabase.from('planner_personnel').select('id, name').eq('tenant_id', tenant).eq('is_active', true).order('name').then(({ data }) => setPersons((data as any[]) || []), () => {}); }, [tenant]);
   const [items, setItems] = useState<TransactionItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -7239,6 +7243,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message); }
   }
 
+  // Soldes de TOUS les comptes (balance de vérification : plan comptable + grand livre).
+  async function openBalances() {
+    setView('balances'); setNotice(null);
+    try { const [acc, tb] = await Promise.all([getAccounts(tenant), getTrialBalance(tenant)]); setAccounts(acc); setBal(tb); }
+    catch (e: any) { setNotice(e?.message || tr('Comptabilité non initialisée (migration 085).', 'Accounting not initialized (migration 085).')); }
+  }
+
   // ── Rapprochement bancaire (#35) ──────────────────────────────────────────
   async function openBank() {
     setView('bank'); setNotice(null); setBankBusy(true);
@@ -7324,9 +7335,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" multiple className="hidden" disabled={batch?.busy} onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) batchScanCreate(fs); }} />
           </label>
           <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🏦 {tr('Mes comptes', 'My accounts')}</button>
+          <button onClick={openBalances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">💰 {tr('Soldes des comptes', 'Account balances')}</button>
           <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
         </div>}
-        {(view === 'bank' || view === 'accounts') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
+        {(view === 'bank' || view === 'accounts' || view === 'balances') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
       {batch?.busy && <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">📷 {tr('Lecture IA des reçus', 'AI reading receipts')} : {batch.done}/{batch.total} · {batch.created} {tr('créée(s)', 'created')}{batch.failed ? `, ${batch.failed} ${tr('échec(s)', 'failed')}` : ''}</div>}
@@ -7353,6 +7365,24 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   </select>
                   <button type="button" onClick={() => setView('accounts')} className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-600" title={tr('Gérer mes comptes', 'Manage my accounts')}>＋</button>
                 </div>
+              </label>
+            )}
+            {/* Dépense engagée par une PERSONNE → remboursement (CR 2300) ou investissement/apport (CR 3100) */}
+            {!isRevenue && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Réglé par', 'Settled by')}
+                <select value={hdr.settlement_kind || 'standard'} onChange={e => setHdr(h => ({ ...h, settlement_kind: e.target.value as any, paid_by_person_id: e.target.value === 'standard' ? null : h.paid_by_person_id }))} className={`mt-1 w-full ${inputCls}`}>
+                  <option value="standard">{tr('Entreprise (banque/fournisseur)', 'Company (bank/vendor)')}</option>
+                  <option value="reimbursement">{tr('Une personne — à rembourser', 'A person — to reimburse')}</option>
+                  <option value="investment">{tr('Une personne — investissement (apport)', 'A person — investment (capital)')}</option>
+                </select>
+              </label>
+            )}
+            {!isRevenue && hdr.settlement_kind && hdr.settlement_kind !== 'standard' && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Personne', 'Person')}
+                <select value={hdr.paid_by_person_id || ''} onChange={e => setHdr(h => ({ ...h, paid_by_person_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
+                  <option value="">{tr('— Choisir dans le personnel —', '— Pick from staff —')}</option>
+                  {persons.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
               </label>
             )}
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<input value={hdr.notes || ''} onChange={e => setHdr(h => ({ ...h, notes: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
@@ -7440,6 +7470,36 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : view === 'balances' ? (
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-1 text-sm font-bold">💰 {tr('Soldes de tous les comptes', 'All account balances')}</h3>
+            <p className="mb-3 text-xs text-gray-500">{tr('Solde (sens normal) de chaque compte du grand livre, d’après toutes les écritures comptabilisées.', 'Balance (normal side) of each ledger account, from all posted entries.')}</p>
+            {accounts.length === 0 ? <div className="text-sm text-gray-400">{tr('Plan comptable non initialisé (onglet Comptabilité → migration 085).', 'Chart of accounts not initialized.')}</div> : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm [&_td]:whitespace-nowrap [&_td]:py-1.5">
+                  <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-400 dark:border-gray-700"><th className="px-3 py-2">{tr('Compte', 'Account')}</th><th>{tr('Type', 'Type')}</th><th className="text-right">{tr('Débit', 'Debit')}</th><th className="text-right">{tr('Crédit', 'Credit')}</th><th className="text-right">{tr('Solde', 'Balance')}</th></tr></thead>
+                  <tbody>
+                    {[...accounts].sort((a, b) => (a.code || '').localeCompare(b.code || '')).map(a => {
+                      const b = bal[a.id] || { debit: 0, credit: 0 };
+                      const net = (Number(b.debit) || 0) - (Number(b.credit) || 0);
+                      const natural = (a.type === 'asset' || a.type === 'expense') ? net : -net; // solde dans le sens normal
+                      return (
+                        <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
+                          <td className="px-3"><span className="font-mono text-xs text-gray-400">{a.code}</span> {a.name}</td>
+                          <td className="text-xs text-gray-500">{tr(ACCOUNT_TYPE_LABELS[a.type]?.[0] || a.type, ACCOUNT_TYPE_LABELS[a.type]?.[1] || a.type)}</td>
+                          <td className="text-right text-gray-500">{(Number(b.debit) || 0) ? mny(b.debit) : '—'}</td>
+                          <td className="text-right text-gray-500">{(Number(b.credit) || 0) ? mny(b.credit) : '—'}</td>
+                          <td className={`text-right font-semibold ${natural < 0 ? 'text-rose-600' : 'text-gray-900 dark:text-gray-100'}`}>{mny(natural)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       ) : view === 'accounts' ? (
@@ -7580,7 +7640,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   <td className="px-4 py-2 font-mono text-xs" data-label="N°">{t.transaction_number}</td>
                   <td className="px-4 py-2" data-label={tr('Type', 'Type')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.txn_type === 'revenue' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{t.txn_type === 'revenue' ? tr('Revenu', 'Revenue') : tr('Dépense', 'Expense')}</span></td>
                   <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{t.txn_date}</td>
-                  <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}><span className="inline-block max-w-[220px] truncate align-middle" title={t.vendor_name || ''}>{t.vendor_name || '—'}</span>{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
+                  <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}><span className="inline-block max-w-[220px] truncate align-middle" title={t.vendor_name || ''}>{t.vendor_name || '—'}</span>{t.receipt_url
+                    ? <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600" title={tr('Pièce jointe', 'Attachment')}><Paperclip size={13} /></a>
+                    : (t.txn_type !== 'revenue' && <span className="ml-2 inline-flex items-center gap-0.5 align-middle rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Pièce justificative manquante — requise pour la déduction / preuve fiscale.', 'Missing receipt — required for deduction / tax proof.')}>⚠ {tr('pièce', 'doc')}</span>)}</td>
                   <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(t.total)}</td>
                   <td className="px-4 py-2" data-label={tr('Statut', 'Status')}>
                     {(t as any).needs_review

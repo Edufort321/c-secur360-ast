@@ -130,9 +130,16 @@ export async function postTransactionPurchase(
   if (txn.gl_entry_id) return 'skipped';
   if (await entryExists(tenant, 'transaction', txn.id)) return 'skipped';
   const m = accMap || await accountMap(tenant);
-  // Réglée comptant -> compte de trésorerie ASSIGNÉ (banque/carte de crédit), sinon 1000 ; à crédit -> Fournisseurs.
+  // Compte de CRÉDIT selon le règlement :
+  //  - 'reimbursement' (dépense payée par un employé/personne) -> 2300 « à rembourser à l'employé »
+  //  - 'investment' (apport : la personne paie comme un investissement dans l'entreprise) -> 3100 Capital
+  //  - sinon : à crédit -> Fournisseurs (2000) ; comptant -> trésorerie assignée (banque/carte) sinon 1000.
+  const kind = txn.settlement_kind || 'standard';
   const treasury = txn.payment_method === 'on_account' ? null : await treasuryGlAccountId(txn);
-  const payAcc = txn.payment_method === 'on_account' ? m['2000'] : (treasury || m['1000']);
+  let payAcc = txn.payment_method === 'on_account' ? m['2000'] : (treasury || m['1000']);
+  let payLabel = txn.payment_method === 'on_account' ? 'Fournisseurs a payer' : 'Banque';
+  if (kind === 'reimbursement' && m['2300']) { payAcc = m['2300']; payLabel = 'A rembourser a l employe'; }
+  else if (kind === 'investment' && m['3100']) { payAcc = m['3100']; payLabel = 'Apport au capital'; }
   if (!payAcc || !m['5300']) return 'no-accounts';
 
   const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [];
@@ -149,7 +156,7 @@ export async function postTransactionPurchase(
   const qst = Number(txn.qst_amount) || 0;
   if (qst > 0 && m['1210']) lines.push({ account_id: m['1210'], debit: qst, credit: 0, description: 'TVQ a recuperer (RTI)' });
   const total = Number(txn.total) || 0;
-  lines.push({ account_id: payAcc, debit: 0, credit: total, description: txn.payment_method === 'on_account' ? 'Fournisseurs a payer' : 'Banque' });
+  lines.push({ account_id: payAcc, debit: 0, credit: total, description: payLabel });
 
   const entryId = await createEntry(tenant, {
     entry_date: txn.txn_date || new Date().toISOString().slice(0, 10),

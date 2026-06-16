@@ -17,6 +17,10 @@ export type Transaction = {
   receipt_url?: string | null; notes?: string | null; gl_entry_id?: string | null;
   treasury_account_id?: string | null; // compte de tresorerie assigne (banque/carte) — migration 185
   needs_review?: boolean; // pre-rempli IA -> a verifier avant comptabilisation (migration 187)
+  // Dépense engagée par une PERSONNE (migration 207) + nature du règlement :
+  //  'standard' (banque/fournisseur) | 'reimbursement' (à rembourser à la personne -> 2300) | 'investment' (apport -> 3100)
+  paid_by_person_id?: string | null;
+  settlement_kind?: 'standard' | 'reimbursement' | 'investment';
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -66,20 +70,23 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     payment_method: header.payment_method, status: header.status, receipt_url: header.receipt_url ?? null,
     notes: header.notes ?? null, gl_entry_id: header.gl_entry_id ?? null,
     treasury_account_id: header.treasury_account_id ?? null,
+    paid_by_person_id: header.paid_by_person_id ?? null,
+    settlement_kind: header.settlement_kind || 'standard',
     ...(header.needs_review !== undefined ? { needs_review: header.needs_review } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
-  // Si une colonne récente n'existe pas encore (migration 185/187), on la retire et on réessaie.
-  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review/i.test(String(e?.message || ''));
+  // Si une colonne récente n'existe pas encore (migration 185/187/207), on la retire et on réessaie.
+  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review|paid_by_person_id|settlement_kind/i.test(String(e?.message || ''));
+  const strip = (p: any) => { const { treasury_account_id, needs_review, paid_by_person_id, settlement_kind, ...rest } = p; return rest; };
   let id = header.id;
   if (id) {
     let { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
-    if (error && isMissingTreasury(error)) { const { treasury_account_id, needs_review, ...p2 } = payload; ({ error } = await supabase.from('commerce_transactions').update(p2).eq('id', id)); }
+    if (error && isMissingTreasury(error)) { ({ error } = await supabase.from('commerce_transactions').update(strip(payload)).eq('id', id)); }
     if (error) throw error;
     await supabase.from('commerce_transaction_items').delete().eq('tenant_id', tenant).eq('transaction_id', id);
   } else {
     let { data, error } = await supabase.from('commerce_transactions').insert(payload).select('id').single();
-    if (error && isMissingTreasury(error)) { const { treasury_account_id, needs_review, ...p2 } = payload; ({ data, error } = await supabase.from('commerce_transactions').insert(p2).select('id').single()); }
+    if (error && isMissingTreasury(error)) { ({ data, error } = await supabase.from('commerce_transactions').insert(strip(payload)).select('id').single()); }
     if (error) throw error;
     id = data?.id;
   }
