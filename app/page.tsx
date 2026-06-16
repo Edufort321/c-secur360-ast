@@ -163,17 +163,7 @@ const STATIC_PLANS_FR: PricingPlan[] = [
   { name_fr: 'Entreprise', name_en: 'Enterprise', monthly: 0, annual: 0, popular: false },
 ]
 
-const TESTIMONIALS_FR = [
-  { name: 'Martin Lavoie', title: 'Directeur securite', company: 'Constructions BFL inc.', text: 'Depuis C-Secur360, nos inspections sont completes en 5 minutes sur le terrain. Les ASTs electroniques ont reduit nos incidents de 40 % en un an.', rating: 5 },
-  { name: 'Sophie Tremblay', title: 'Coordonnatrice SST', company: 'Industries Nordiques Ltee', text: 'La gestion des permis d\'espaces confines est maintenant impeccable. L\'interface mobile est simple et nos travailleurs ont adopte la plateforme en quelques jours.', rating: 5 },
-  { name: 'Jean-Francois Roy', title: 'Surintendant general', company: 'Groupe Construction Atlas', text: 'Le module de feuilles de temps a elimine 8 heures de saisie manuelle par semaine. Le logbook vehicules nous a sauve lors de notre derniere inspection CNESST.', rating: 5 },
-]
-
-const TESTIMONIALS_EN = [
-  { name: 'Martin Lavoie', title: 'Safety Director', company: 'Constructions BFL inc.', text: 'Since C-Secur360, our inspections are completed in 5 minutes in the field. Electronic JSAs reduced our incidents by 40% in one year.', rating: 5 },
-  { name: 'Sophie Tremblay', title: 'OHS Coordinator', company: 'Industries Nordiques Ltee', text: 'Confined space permit management is now flawless. The mobile interface is simple and our workers adopted the platform within days.', rating: 5 },
-  { name: 'Jean-Francois Roy', title: 'General Superintendent', company: 'Groupe Construction Atlas', text: 'The timesheet module eliminated 8 hours of manual entry per week. The vehicle logbook saved us during our last CNESST inspection.', rating: 5 },
-]
+// Témoignages : gérés dans l'admin (table landing_testimonials). Aucun faux avis codé en dur ici.
 
 // ─── Contact mailto ───────────────────────────────────────────────────────────
 
@@ -189,6 +179,7 @@ export default function LandingPage() {
   const [clientSubdomain, setClientSubdomain] = useState('')
   const [slideIdx, setSlideIdx] = useState(0)
   const [dbSlides, setDbSlides] = useState<Slide[] | null>(null)
+  const [dbTestimonials, setDbTestimonials] = useState<any[]>([])
   const [dbModules, setDbModules] = useState<DbModule[]>([])
   const [moduleSlides, setModuleSlides] = useState<Record<string, ModuleSlide[]>>({})
   const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
@@ -223,7 +214,11 @@ export default function LandingPage() {
 
   const modules = fr ? MODULES_FR : MODULES_EN
   const heroFallback = fr ? HERO_FALLBACK_FR : HERO_FALLBACK_EN
-  const testimonials = fr ? TESTIMONIALS_FR : TESTIMONIALS_EN
+  // Témoignages = VRAIS témoignages saisis dans l'admin (table landing_testimonials). Vide -> section masquée.
+  const testimonials = dbTestimonials.map((t: any) => ({
+    name: t.name, title: (fr ? t.title_fr : t.title_en) || t.title_fr || '', company: t.company || '',
+    text: (fr ? t.text_fr : t.text_en) || t.text_fr || '', rating: Number(t.rating) || 5,
+  })).filter(t => t.text)
 
   // Ouvre la carte d'un module si l'URL contient ?module=<key> (lien partageable).
   useEffect(() => {
@@ -244,6 +239,16 @@ export default function LandingPage() {
       .then(({ data }) => {
         if (data && data.length > 0) setDbSlides(data)
       })
+  }, [])
+
+  // Load testimonials from DB (real ones only; section hidden when empty)
+  useEffect(() => {
+    supabase
+      .from('landing_testimonials')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order')
+      .then(({ data }) => { if (data) setDbTestimonials(data) }, () => {})
   }, [])
 
   // Load module prices from DB
@@ -908,7 +913,8 @@ export default function LandingPage() {
         )
       })()}
 
-      {/* ── Testimonials ───────────────────────────────────────────────────── */}
+      {/* ── Testimonials (masqué tant qu'aucun vrai témoignage n'est saisi dans l'admin) ── */}
+      {testimonials.length > 0 && (
       <section className="bg-[#0D1F3C] py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -937,6 +943,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Final CTA ──────────────────────────────────────────────────────── */}
       <section className="py-24 px-4">

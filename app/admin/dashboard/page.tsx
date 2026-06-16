@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PortalHeader } from '@/components/PortalHeader';
 import LandingSlidesTab from '@/components/admin/LandingSlidesTab';
+import TestimonialsTab from '@/components/admin/TestimonialsTab';
 import ModuleSlidesTab from '@/components/admin/ModuleSlidesTab';
 import AdminAccountsTab from '@/components/admin/AdminAccountsTab';
 import MarketingTab from '@/components/admin/MarketingTab';
@@ -1313,6 +1314,15 @@ export default function AdminDashboard() {
           Photos du carrousel principal en haut de la page d'accueil.
         </p>
         <LandingSlidesTab />
+      </div>
+
+      {/* Section : témoignages de la page publique */}
+      <div style={{ background: '#fff', borderRadius: '14px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>Témoignages</h2>
+        <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>
+          Vrais témoignages clients affichés sur la page d'accueil. Vide = section masquée.
+        </p>
+        <TestimonialsTab />
       </div>
 
       {/* Section : captures d'ecran par module */}
