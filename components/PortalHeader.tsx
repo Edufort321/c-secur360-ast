@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut } from 'lucide-react';
+import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut, KeyRound } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -24,6 +24,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   const { sites, siteId, setSiteId } = useSite();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [firstLogin, setFirstLogin] = useState(false); // 1re connexion : inviter à changer le mot de passe
   const entitlements = useEntitlements(tenant || '');
 
   // Modules visibles selon entitlements — admin toujours présent, fallback = tout afficher pendant le chargement
@@ -41,6 +42,12 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
     if (!tenant) return;
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
+
+  // 1re connexion : on invite (sans bloquer) à remplacer le mot de passe fourni par l'admin.
+  useEffect(() => {
+    if (!tenant) return;
+    fetch('/api/auth/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => { if (j?.user?.firstLogin) setFirstLogin(true); }, () => {});
   }, [tenant]);
 
   const close = () => setMenuOpen(false);
@@ -210,6 +217,11 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                         <ShieldCheck size={16} className="shrink-0 text-emerald-400" />
                         {lang === 'fr' ? 'Mes renseignements (Loi 25)' : 'My personal data (Law 25)'}
                       </Link>
+                      <Link href={`/${tenant}/account/change-password`} onClick={close}
+                        className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-300 hover:bg-white/10">
+                        <KeyRound size={16} className="shrink-0 text-amber-400" />
+                        {lang === 'fr' ? 'Mon mot de passe' : 'My password'}
+                      </Link>
                     </div>
 
                     {/* Déconnexion */}
@@ -227,6 +239,14 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
           )}
         </div>
       </div>
+      {/* 1re connexion : invitation (non bloquante) à personnaliser le mot de passe */}
+      {firstLogin && tenant && (
+        <div className="flex items-center justify-center gap-2 bg-amber-500 px-4 py-1.5 text-xs font-semibold text-amber-950">
+          <KeyRound size={13} />
+          {lang === 'fr' ? 'Première connexion — pensez à changer votre mot de passe.' : 'First login — please change your password.'}
+          <Link href={`/${tenant}/account/change-password`} className="ml-1 rounded bg-amber-950/15 px-2 py-0.5 underline hover:bg-amber-950/25">{lang === 'fr' ? 'Changer maintenant' : 'Change now'}</Link>
+        </div>
+      )}
     </header>
   );
 }

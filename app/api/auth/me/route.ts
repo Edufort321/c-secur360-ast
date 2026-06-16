@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   // site_id (assignation) peut ne pas exister avant la migration 172 -> repli sans la colonne.
   let session: any = (await supabaseAdmin
     .from('auth_sessions')
-    .select('users!inner(id, email, name, role, tenant_id, site_id)')
+    .select('users!inner(id, email, name, role, tenant_id, site_id, first_login)')
     .eq('token', token)
     .gt('expires_at', new Date().toISOString())
     .single()).data;
@@ -27,6 +27,6 @@ export async function GET(req: NextRequest) {
 
   const u = session.users as any;
   return NextResponse.json({
-    user: { id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenant_id, siteId: u.site_id ?? null },
+    user: { id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenant_id, siteId: u.site_id ?? null, firstLogin: !!u.first_login },
   });
 }

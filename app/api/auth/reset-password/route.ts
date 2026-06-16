@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
 
     const hash = await hashPassword(password);
     const [updateErr] = await Promise.all([
-      supabaseAdmin.from('users').update({ password: hash }).eq('id', record.user_id).then(r => r.error),
+      // Pose le nouveau mot de passe + lève first_login (résilient si la colonne manque).
+      supabaseAdmin.from('users').update({ password: hash, first_login: false }).eq('id', record.user_id)
+        .then(async r => { if (r.error && /first_login/i.test(r.error.message || '')) return (await supabaseAdmin.from('users').update({ password: hash }).eq('id', record.user_id)).error; return r.error; }),
       supabaseAdmin.from('password_reset_tokens').update({ used_at: new Date().toISOString() }).eq('id', record.id),
       // Invalidate all sessions for this user
       supabaseAdmin.from('auth_sessions').delete().eq('user_id', record.user_id),
