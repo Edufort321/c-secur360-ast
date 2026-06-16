@@ -7005,6 +7005,28 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
   }
+  // IA sur le relevé bancaire : crée des transactions « à vérifier » à partir des lignes NON rapprochées
+  // (l'IA catégorise chaque ligne : fournisseur, compte, revenu/dépense selon le signe).
+  async function doBankAI() {
+    const lines = bankLines.filter(b => !b.reconciled && !b.matched_transaction_id);
+    if (!lines.length) { setNotice(tr('Aucune ligne non rapprochée.', 'No unreconciled line.')); return; }
+    setBankBusy(true); setNotice(tr('L’IA catégorise les lignes bancaires…', 'AI categorizing bank lines…'));
+    try {
+      const csv = 'date,description,montant\n' + lines.map(b => `${b.stmt_date},"${String(b.description || '').replace(/"/g, '""')}",${b.amount}`).join('\n');
+      const b64 = typeof window !== 'undefined' ? window.btoa(unescape(encodeURIComponent(csv))) : '';
+      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ fileBase64: b64, media_type: 'text/csv', file_name: 'releve.csv' }) });
+      const j = await resp.json();
+      if (!resp.ok) { setNotice(j?.error || tr('IA indisponible.', 'AI unavailable.')); setBankBusy(false); return; }
+      const itemsX: any[] = Array.isArray(j.extractedList) ? j.extractedList : [];
+      let created = 0;
+      for (const x of itemsX) { try { if (await createTxnFromExtracted(x, null)) created++; } catch { /* skip */ } }
+      // Marque les lignes traitées comme rapprochées (transactions créées à vérifier).
+      for (const b of lines) { try { await updateBankLine(tenant, b.id!, { reconciled: true }); } catch { /* noop */ } }
+      setBankLines(await getBankLines(tenant));
+      setNotice(tr(`${created} transaction(s) créée(s) depuis le relevé — ⏳ À VÉRIFIER.`, `${created} transaction(s) created from the statement — ⏳ TO REVIEW.`));
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setBankBusy(false);
+  }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
   if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module transactions non initialisé', 'Transactions module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 087 dans Supabase, puis rechargez.', 'Run migration 087 in Supabase, then reload.')}</p></div>);
@@ -7190,6 +7212,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               </label>
               <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
               {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
+              {bankLines.some(b => !b.reconciled && !b.matched_transaction_id) && <button onClick={doBankAI} disabled={bankBusy} className="rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA crée des transactions « à vérifier » à partir des lignes non rapprochées', 'AI creates “to review” transactions from unmatched lines')}>📷 {tr('Transactions du relevé (IA)', 'Statement → transactions (AI)')}</button>}
               {importText.trim() && <span className="text-xs text-gray-400">{parseBankCsv(importText).length} {tr('lignes détectées', 'lines detected')}</span>}
             </div>
           </div>
