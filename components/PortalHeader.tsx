@@ -10,6 +10,7 @@ import { MODULES } from '@/lib/modules/registry';
 import { supabase } from '@/lib/supabase';
 import { useEntitlements } from '@/lib/entitlements';
 import { InstallPWA } from '@/components/InstallPWA';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const QUICK_CREATES = [
   { key: 'project', path: 'projects', labelFr: 'Nouveau projet',  labelEn: 'New project',  icon: FolderKanban, color: 'bg-blue-600' },
@@ -86,6 +87,8 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
               {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
+
+          {tenant && <NotificationBell lang={lang} />}
 
           <button
             onClick={toggle}

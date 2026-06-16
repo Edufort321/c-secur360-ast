@@ -2896,19 +2896,15 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                 {tr('Mot de passe', 'Password')}
                 <span className="text-[10px] text-gray-400 font-normal">{tr('Personnalisable — tapez le vôtre ou ↻ pour générer', 'Custom — type your own or ↻ to generate')}</span>
               </label>
+              {/* Un SEUL champ éditable (aperçu/copie intégrés) — évite la confusion d'un doublon en lecture seule. */}
               <div className="flex gap-1.5">
                 <div className="relative flex-1">
-                  <input type={showPwd ? 'text' : 'password'} className={`${inp2} pr-9 font-mono tracking-wider`} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-                  <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">{showPwd ? '🙈' : '👁'}</button>
+                  <input type={showPwd ? 'text' : 'password'} autoComplete="new-password" placeholder={tr('Tapez un mot de passe ou cliquez ↻', 'Type a password or click ↻')} className={`${inp2} pr-9 font-mono text-base tracking-wider`} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+                  <button type="button" onClick={() => setShowPwd(v => !v)} title={showPwd ? tr('Masquer', 'Hide') : tr('Afficher', 'Show')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">{showPwd ? '🙈' : '👁'}</button>
                 </div>
+                <button type="button" onClick={copyPwd} title={tr('Copier', 'Copy')} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${copied ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10' : 'border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{copied ? '✓' : '📋'}</button>
                 <button type="button" onClick={regenerate} title={tr('Régénérer', 'Regenerate')} className="shrink-0 rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">↻</button>
               </div>
-              {form.password && (
-                <div className="mt-1.5 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-800">
-                  <span className="font-mono text-sm font-bold tracking-widest text-gray-800 dark:text-gray-100 select-all">{form.password}</span>
-                  <button type="button" onClick={copyPwd} className={`text-xs font-semibold transition ${copied ? 'text-emerald-600' : 'text-blue-600 hover:underline'}`}>{copied ? tr('Copié ✓', 'Copied ✓') : tr('Copier', 'Copy')}</button>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-2 pt-1">
