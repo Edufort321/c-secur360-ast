@@ -262,6 +262,7 @@ export async function postTransactionNow(tenant: string, transactionId: string):
   try {
     const { data: txn } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).eq('id', transactionId).maybeSingle();
     if (!txn) return { ok: false, reason: 'Transaction introuvable.' };
+    if (txn.needs_review) return { ok: false, reason: 'À vérifier avant comptabilisation (transaction pré-remplie par l’IA).' };
     if (txn.gl_entry_id) return { ok: true };
     const m = await ensureAccountMap(tenant);
     if (!m['1000'] || !m['4000']) return { ok: false, reason: 'Plan comptable non initialisé — exécutez la migration 085 dans Supabase (tables gl_* + seed), puis réessayez.' };
@@ -300,7 +301,7 @@ export async function autoPostTransactionStatus(tenant: string, transactionId: s
   try {
     if (status !== 'posted' && status !== 'paid') return;
     const { data: txn } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).eq('id', transactionId).maybeSingle();
-    if (!txn) return;
+    if (!txn || txn.needs_review) return; // « à vérifier » (pré-rempli IA) -> pas de postage avant confirmation
     const isRev = (txn.txn_type || 'expense') === 'revenue';
     const m = await ensureAccountMap(tenant); // auto-initialise le plan comptable si absent
     if (!m['1000'] || !m['4000']) return; // migration 085 absente -> filet = bouton Synchroniser
@@ -345,6 +346,7 @@ export async function syncAllToLedger(tenant: string): Promise<{ payroll: number
   // transaction VAUT comptabilisation (la « nouvelle écriture » manuelle ne sert qu'aux corrections).
   const { data: txns } = await supabase.from('commerce_transactions').select('*').eq('tenant_id', tenant).neq('status', 'cancelled');
   for (const txn of (txns || [])) {
+    if (txn.needs_review) continue; // « à vérifier » (pré-rempli IA) -> pas comptabilisé par la synchro
     const isRev = (txn.txn_type || 'expense') === 'revenue';
     if (!txn.gl_entry_id) {
       const { data: its } = await supabase.from('commerce_transaction_items').select('*').eq('transaction_id', txn.id);

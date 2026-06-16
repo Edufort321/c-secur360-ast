@@ -1089,7 +1089,7 @@ export default function TimesheetDetailPage() {
                       ) : !isReadOnly && (
                         <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-violet-300 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">
                           {uploadingId === x.id ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />} Reçu
-                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={ev => { const f = ev.target.files?.[0]; if (f) onReceiptUpload(x.id, f); ev.currentTarget.value = ''; }} />
+                          <input type="file" accept="image/*,.pdf,.xls,.xlsx,.csv" className="hidden" onChange={ev => { const f = ev.target.files?.[0]; if (f) onReceiptUpload(x.id, f); ev.currentTarget.value = ''; }} />
                         </label>
                       )}
                       {!isReadOnly && (

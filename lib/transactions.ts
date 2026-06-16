@@ -16,6 +16,7 @@ export type Transaction = {
   gst_amount: number; qst_amount: number; pst_amount: number; total: number;
   receipt_url?: string | null; notes?: string | null; gl_entry_id?: string | null;
   treasury_account_id?: string | null; // compte de tresorerie assigne (banque/carte) — migration 185
+  needs_review?: boolean; // pre-rempli IA -> a verifier avant comptabilisation (migration 187)
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -64,19 +65,21 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     vendor_name: header.vendor_name ?? null, txn_type: header.txn_type || 'expense', txn_date: header.txn_date, province: header.province,
     payment_method: header.payment_method, status: header.status, receipt_url: header.receipt_url ?? null,
     notes: header.notes ?? null, gl_entry_id: header.gl_entry_id ?? null,
-    treasury_account_id: header.treasury_account_id ?? null, ...totals, updated_at: new Date().toISOString(),
+    treasury_account_id: header.treasury_account_id ?? null,
+    ...(header.needs_review !== undefined ? { needs_review: header.needs_review } : {}),
+    ...totals, updated_at: new Date().toISOString(),
   };
-  // Si la colonne treasury_account_id n'existe pas encore (migration 185), on retire et on réessaie.
-  const isMissingTreasury = (e: any) => /treasury_account_id/i.test(String(e?.message || ''));
+  // Si une colonne récente n'existe pas encore (migration 185/187), on la retire et on réessaie.
+  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review/i.test(String(e?.message || ''));
   let id = header.id;
   if (id) {
     let { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
-    if (error && isMissingTreasury(error)) { const { treasury_account_id, ...p2 } = payload; ({ error } = await supabase.from('commerce_transactions').update(p2).eq('id', id)); }
+    if (error && isMissingTreasury(error)) { const { treasury_account_id, needs_review, ...p2 } = payload; ({ error } = await supabase.from('commerce_transactions').update(p2).eq('id', id)); }
     if (error) throw error;
     await supabase.from('commerce_transaction_items').delete().eq('tenant_id', tenant).eq('transaction_id', id);
   } else {
     let { data, error } = await supabase.from('commerce_transactions').insert(payload).select('id').single();
-    if (error && isMissingTreasury(error)) { const { treasury_account_id, ...p2 } = payload; ({ data, error } = await supabase.from('commerce_transactions').insert(p2).select('id').single()); }
+    if (error && isMissingTreasury(error)) { const { treasury_account_id, needs_review, ...p2 } = payload; ({ data, error } = await supabase.from('commerce_transactions').insert(p2).select('id').single()); }
     if (error) throw error;
     id = data?.id;
   }
@@ -94,6 +97,12 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     if (error) throw error;
   }
   return id as string;
+}
+
+/** Lève le drapeau « à vérifier » (transaction pré-remplie IA confirmée par un humain). Migration 187. */
+export async function setTransactionReviewed(tenant: string, id: string): Promise<void> {
+  try { await supabase.from('commerce_transactions').update({ needs_review: false }).eq('id', id).eq('tenant_id', tenant); }
+  catch { /* colonne absente (migration 187) -> ignore */ }
 }
 
 export async function setTransactionStatus(tenant: string, id: string, status: Transaction['status']) {

@@ -20,7 +20,7 @@ import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBa
 import { syncPayrollEntries, syncAllToLedger, postTransactionPurchase, postTransactionRevenue, postTransactionPayment, postTransactionNow } from '@/lib/accountingAuto';
 import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport } from '@/lib/agingReports';
 import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
-import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
+import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, setTransactionReviewed, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
@@ -6788,7 +6788,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   async function save() {
     setSaving(true); setNotice(null);
     try {
-      const id = await saveTransaction(tenant, hdr, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0));
+      // Enregistrer = VÉRIFIER : on lève le drapeau « à vérifier » (puis on comptabilise plus bas).
+      const id = await saveTransaction(tenant, { ...hdr, needs_review: false }, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0));
       // Persiste les pièces jointes EN ATTENTE (ajoutées sur une nouvelle transaction, donc sans id).
       for (const a of attachments.filter(x => !x.id)) { await addAttachment(tenant, id, a).catch(() => {}); }
       // « Tout remonte vers comptabilité » (exercice) : on COMPTABILISE immédiatement au grand livre,
@@ -6861,17 +6862,18 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         const isRev = x.type === 'revenue';
         const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
         const url = await uploadReceipt(tenant, file).catch(() => null);
-        const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: url };
+        // Pré-rempli par l'IA -> reste « À VÉRIFIER » (needs_review), PAS comptabilisé tant qu'un humain
+        // ne l'a pas confirmé.
+        const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: url };
         const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
-        const id = await saveTransaction(tenant, header, its);
-        await setTransactionStatus(tenant, id, 'posted').catch(() => {}); // comptabilise au grand livre
+        await saveTransaction(tenant, header, its); // créée en brouillon « à vérifier » (non comptabilisée)
         created++;
       } catch { failed++; }
       setBatch(b => b && { ...b, done: i + 1, created, failed });
     }
     setBatch(b => b && { ...b, busy: false });
-    setNotice(tr(`${created} transaction(s) créée(s) et comptabilisée(s)${failed ? `, ${failed} échec(s)` : ''}.`, `${created} transaction(s) created and posted${failed ? `, ${failed} failed` : ''}.`));
-    await load();
+    setNotice(tr(`${created} transaction(s) créée(s) — ⏳ À VÉRIFIER (vérifiez puis comptabilisez)${failed ? `, ${failed} échec(s)` : ''}.`, `${created} transaction(s) created — ⏳ TO REVIEW (verify then post)${failed ? `, ${failed} failed` : ''}.`));
+    setFStatus('draft'); await load();
   }
   // « Scanner le reçu (IA) » : OCR de la pièce jointe -> pré-remplit + joint le reçu (contrôle comptable).
   async function scanReceiptAI(file: File) {
@@ -6918,6 +6920,21 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       if (r === 'no-accounts') { setNotice(tr('Plan comptable non initialisé.', 'Chart of accounts not initialized.')); return; }
       await setTransactionStatus(tenant, t.id!, 'paid');
       setNotice(tr('Paiement comptabilisé.', 'Payment posted.')); await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  // Vérifie une transaction pré-remplie par l'IA : lève le drapeau « à vérifier » PUIS comptabilise.
+  async function verifyTxn(t: Transaction) {
+    setNotice(null);
+    try { await setTransactionReviewed(tenant, t.id!); await postPurchase({ ...t, needs_review: false }); setNotice(tr('Vérifiée et comptabilisée.', 'Verified and posted.')); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  // Marque une transaction PAYÉE (encaissée/réglée). Pour une dépense à crédit, comptabilise le paiement.
+  async function markPaid(t: Transaction) {
+    setNotice(null);
+    try {
+      if (!t.gl_entry_id) await postPurchase(t);
+      await setTransactionStatus(tenant, t.id!, 'paid');
+      setNotice(tr('Marquée payée.', 'Marked paid.')); await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
   async function removeTxn(t: Transaction) {
@@ -7047,7 +7064,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <div className="flex items-center gap-3 text-sm">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
                 <Paperclip size={14} /> {uploading ? <Loader2 size={13} className="inline animate-spin" /> : tr('Joindre un reçu', 'Attach receipt')}
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceipt(f); }} />
+                <input type="file" accept="image/*,application/pdf,.xls,.xlsx,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceipt(f); }} />
               </label>
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA lit le reçu et pré-remplit la transaction (et le joint)', 'AI reads the receipt and pre-fills the transaction (and attaches it)')}>
                 📷 {aiChecking ? <Loader2 size={13} className="inline animate-spin" /> : tr('Scanner le reçu (IA)', 'Scan receipt (AI)')}
@@ -7070,7 +7087,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <span className="text-xs font-semibold text-gray-500">📎 {tr('Pièces jointes', 'Attachments')} ({attachments.length})</span>
               <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
                 {uploading ? <Loader2 size={13} className="inline animate-spin" /> : <Paperclip size={13} />} {tr('Ajouter une pièce', 'Add a file')}
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) addAttach(f); e.currentTarget.value = ''; }} />
+                <input type="file" accept="image/*,application/pdf,.xls,.xlsx,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) addAttach(f); e.currentTarget.value = ''; }} />
               </label>
             </div>
             {attachments.length === 0
@@ -7242,13 +7259,18 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{t.txn_date}</td>
                   <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}>{t.vendor_name || '—'}{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
                   <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(t.total)}</td>
-                  <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[t.status]}`}>{STATUS_LABEL[t.status]}</span></td>
+                  <td className="px-4 py-2" data-label={tr('Statut', 'Status')}>
+                    {(t as any).needs_review
+                      ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">⏳ {tr('À vérifier', 'To review')}</span>
+                      : <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[t.status]}`}>{STATUS_LABEL[t.status]}</span>}
+                  </td>
                   <td className="px-4 py-2" data-label="GL">{t.gl_entry_id ? <Check size={15} className="text-emerald-600" /> : <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-2 text-right" data-label="">
                     {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
                       <button onClick={() => editTxn(t)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
-                      {!t.gl_entry_id && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
-                      {t.txn_type !== 'revenue' && t.payment_method === 'on_account' && t.status !== 'paid' && <button onClick={() => payTxn(t)} className="text-emerald-600 hover:underline">{tr('Payer', 'Pay')}</button>}
+                      {(t as any).needs_review && <button onClick={() => verifyTxn(t)} className="font-semibold text-amber-700 hover:underline">{tr('✓ Vérifier', '✓ Verify')}</button>}
+                      {!t.gl_entry_id && !(t as any).needs_review && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
+                      {t.gl_entry_id && t.status !== 'paid' && <button onClick={() => markPaid(t)} className="text-emerald-600 hover:underline">{tr('Payé', 'Paid')}</button>}
                       {!t.gl_entry_id && <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>}
                     </div>}
                   </td>
