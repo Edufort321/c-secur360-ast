@@ -94,6 +94,7 @@ export const ADMIN_TABS: { key: string; fr: string; en: string; group: string; d
   { key: 'soumissions', fr: 'Catalogue de taux',    en: 'Rate catalogue',    group: 'ventes',  defaultTier: 1 },
   { key: 'bons-commande', fr: 'Bons de commande',   en: 'Purchase orders',   group: 'ventes',  defaultTier: 1 },
   { key: 'factures',    fr: 'Factures',             en: 'Invoices',          group: 'finance', defaultTier: 5 },
+  { key: 'recurrents',  fr: 'Abonnements',          en: 'Subscriptions',     group: 'finance', defaultTier: 5 },
   { key: 'facturation', fr: 'Facturation',          en: 'Billing',           group: 'finance', defaultTier: 7 },
   { key: 'transactions', fr: 'Transactions',        en: 'Transactions',      group: 'finance', defaultTier: 5 },
   { key: 'comptabilite', fr: 'Comptabilité',        en: 'Accounting',        group: 'finance', defaultTier: 5 },
