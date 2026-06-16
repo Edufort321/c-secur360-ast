@@ -6686,6 +6686,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [items, setItems] = useState<TransactionItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Vérification IA (assistant comptable/fiscal)
+  const [aiChecking, setAiChecking] = useState(false);
+  const [aiResult, setAiResult] = useState<{ ok?: boolean; summary?: string; issues?: { severity: string; field?: string; message: string; suggestion?: string }[] } | null>(null);
   // Filtres de la liste (#35 contrôle) : type, statut, recherche texte (n° / tiers).
   const [fType, setFType] = useState<'all' | 'revenue' | 'expense'>('all');
   const [fStatus, setFStatus] = useState<'all' | 'draft' | 'posted' | 'paid' | 'cancelled'>('all');
@@ -6792,6 +6795,23 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     try { const url = await uploadReceipt(tenant, file); setHdr(h => ({ ...h, receipt_url: url })); setNotice(tr('Reçu joint.', 'Receipt attached.')); }
     catch (e: any) { setNotice(e?.message || tr('Erreur téléversement.', 'Upload error.')); }
     setUploading(false);
+  }
+  // « Vérifier IA » : envoie la transaction (en-tête + lignes) à l'assistant comptable/fiscal.
+  async function verifyAI() {
+    setAiChecking(true); setAiResult(null); setNotice(null);
+    try {
+      const payload = {
+        txn_type: hdr.txn_type, province: hdr.province, payment_method: hdr.payment_method,
+        vendor_name: hdr.vendor_name, has_receipt: !!hdr.receipt_url,
+        subtotal: totals.subtotal, gst_amount: totals.gst_amount, qst_amount: totals.qst_amount, pst_amount: totals.pst_amount, total: totals.total,
+        lines: items.map(i => ({ description: i.description, account_code: i.account_code, account_name: lineAccounts.find(a => a.code === i.account_code)?.name, amount: i.amount, tax_category: i.tax_category || (i.taxable === false ? 'exempt' : 'standard') })),
+      };
+      const r = await fetch('/api/transactions/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ transaction: payload }) });
+      const j = await r.json();
+      if (!r.ok) { setNotice(j?.error || tr('Vérification IA indisponible.', 'AI check unavailable.')); }
+      else setAiResult(j.result || { ok: true, issues: [] });
+    } catch (e: any) { setNotice(e?.message || tr('Erreur IA.', 'AI error.')); }
+    setAiChecking(false);
   }
   async function postPurchase(t: Transaction) {
     setNotice(null);
@@ -6938,6 +6958,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceipt(f); }} />
               </label>
               {hdr.receipt_url && <a href={hdr.receipt_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir le reçu', 'View receipt')}</a>}
+              <button onClick={verifyAI} disabled={aiChecking} className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA vérifie la cohérence comptable/fiscale et propose des corrections', 'AI checks accounting/tax coherence and suggests fixes')}>{aiChecking ? <Loader2 size={13} className="animate-spin" /> : '✨'} {tr('Vérifier IA', 'AI check')}</button>
             </div>
             <div className="flex flex-col items-end gap-1 text-sm">
               <div>{tr('Sous-total', 'Subtotal')} : <b>{mny(totals.subtotal)}</b></div>
@@ -6947,6 +6968,23 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <div className="text-base font-bold">{tr('Total', 'Total')} : {mny(totals.total)}</div>
             </div>
           </div>
+          {/* Résultat de la vérification IA */}
+          {aiResult && (
+            <div className={`mt-3 rounded-xl border p-3 text-sm ${aiResult.ok && !(aiResult.issues || []).length ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100'}`}>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="font-bold">✨ {tr('Vérification IA', 'AI check')}{aiResult.summary ? ` — ${aiResult.summary}` : ''}</span>
+                <button onClick={() => setAiResult(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              {(!aiResult.issues || aiResult.issues.length === 0)
+                ? <div>{tr('✓ Aucune incohérence détectée.', '✓ No issue detected.')}</div>
+                : <ul className="space-y-1">{aiResult.issues.map((it, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span>{it.severity === 'error' ? '🔴' : it.severity === 'warning' ? '🟠' : 'ℹ️'}</span>
+                      <span><b>{it.field ? `${it.field} : ` : ''}</b>{it.message}{it.suggestion ? <em className="block text-xs opacity-80">→ {it.suggestion}</em> : null}</span>
+                    </li>
+                  ))}</ul>}
+            </div>
+          )}
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
