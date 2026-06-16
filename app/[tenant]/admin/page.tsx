@@ -11,6 +11,7 @@ import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
+import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
 import { ErpSharing } from '@/components/admin/ErpSharing';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -5759,8 +5760,8 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 // RESSOURCES HUMAINES — hub 360 : Dossiers (agrege existant + manquant) + Communications
 // ============================================================
 function RHHub({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  const [sub, setSub] = useState<'dossiers' | 'comms'>('dossiers');
-  const subTab = (k: 'dossiers' | 'comms', label: string) => (
+  const [sub, setSub] = useState<'dossiers' | 'comms' | 'conges'>('dossiers');
+  const subTab = (k: 'dossiers' | 'comms' | 'conges', label: string) => (
     <button onClick={() => setSub(k)} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200'}`}>{label}</button>
   );
   return (
@@ -5768,8 +5769,11 @@ function RHHub({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => s
       <div className="flex flex-wrap gap-2">
         {subTab('dossiers', tr('Dossiers 360', '360 files'))}
         {subTab('comms', tr('Communications RH', 'HR communications'))}
+        {subTab('conges', tr('Types de congé', 'Leave types'))}
       </div>
-      {sub === 'dossiers' ? <RHDossiers tenant={tenant} tr={tr} /> : <RHModule tenant={tenant} tr={tr} />}
+      {sub === 'dossiers' ? <RHDossiers tenant={tenant} tr={tr} />
+        : sub === 'conges' ? <CongeTypesManager tenant={tenant} tr={tr} canEdit />
+        : <RHModule tenant={tenant} tr={tr} />}
     </div>
   );
 }
