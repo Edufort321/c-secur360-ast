@@ -7,7 +7,7 @@ import {
   getCatalogues, saveCatalogue, deleteCatalogue, setPreferredCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
   reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, deleteSoumission,
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
-  computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo, hoursByCategory,
+  computeSoumissionHours, applyMarkup, discountAmount, approvalForAmount, relanceInfo, hoursByCategory,
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   getSoumissionSettings, saveSoumissionSettings,
   getSoumissionTemplates, saveSoumissionTemplate, deleteSoumissionTemplate,
@@ -15,6 +15,7 @@ import {
   type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem, type SoumissionTemplate, type SoumissionAttachment,
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
+import { useAutoDraft, readDraft, clearDraft, hasDraft } from '@/lib/useDraft';
 import { frLongDate } from '@/lib/pdf/letterhead';
 import { createPortal } from 'react-dom';
 import { SoumissionPrintReport, SOUM_PRINT_CSS, type SoumissionSections } from '@/components/soumissions/SoumissionPrintReport';
@@ -129,6 +130,15 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   };
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState<CatalogueTaux | null>(null);
+  // AUTOSAVE du catalogue de taux EN COURS (anti-perte sur refresh/pause). Brouillon local namespacé tenant.
+  const CAT_DRAFT_KEY = `soum-cat.${tenant}`;
+  useAutoDraft(CAT_DRAFT_KEY, catForm, !!catForm);
+  const [catDraftAvail, setCatDraftAvail] = useState(false);
+  useEffect(() => { setCatDraftAvail(hasDraft(CAT_DRAFT_KEY)); /* eslint-disable-next-line */ }, []);
+  // AUTOSAVE du constructeur de SOUMISSION en cours (hdr + items + client), namespacé par tenant + id|new.
+  const SOUM_DRAFT_KEY = `soum.${tenant}.${hdr.id || 'new'}`;
+  useAutoDraft(SOUM_DRAFT_KEY, { hdr, items, clientName }, view === 'edit');
+  const [soumDraftAvail, setSoumDraftAvail] = useState(false);
   const [sitePrefix, setSitePrefix] = useState('XX'); // initiales du site de l'utilisateur, pour la numerotation
   const [globalMargin, setGlobalMargin] = useState(''); // marge % appliquée à tous les articles du catalogue
   const [numDraft, setNumDraft] = useState<Record<string, string>>({}); // texte en cours de frappe pour les champs numériques (permet . ou , et décimales)
@@ -252,17 +262,20 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     const numero = await genSoumissionNumero(tenant, px);
     const def = catalogues.find(c => c.preferred) || catalogues[0] || null;
     setHdr({ ...blankHdr(), numero, seller_id: sellerId, catalogue_id: def?.id || null }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
+    setSoumDraftAvail(hasDraft(`soum.${tenant}.new`)); // propose la restauration d'un brouillon « new » perdu
   }
   async function editSoumission(s: Soumission) {
     const full = await getSoumissionFull(tenant, s.id!);
     if (!full) return;
     setHdr(full.soumission); setClientName(full.soumission.client_snapshot?.name || ''); setItems(full.items.length ? full.items : [{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
+    setSoumDraftAvail(hasDraft(`soum.${tenant}.${s.id}`));
   }
   async function save() {
     setSaving(true); setNotice(null);
     try {
       await saveSoumissionFull(tenant, { ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } }, items, cat);
       autoSig.current = JSON.stringify({ hdr, items, clientName });
+      clearDraft(SOUM_DRAFT_KEY); setSoumDraftAvail(false); // brouillon purgé après enregistrement réel
       setNotice(tr('Soumission enregistrée.', 'Quote saved.')); await load(); setView('list');
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setSaving(false);
@@ -433,6 +446,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     try {
       // Le repli local (lib) garantit la persistance de toutes les sections meme si une colonne manque encore en base.
       await saveCatalogue(tenant, catForm);
+      clearDraft(CAT_DRAFT_KEY); setCatDraftAvail(false); // brouillon purgé après enregistrement réel
       setNotice(tr('Catalogue enregistré.', 'Catalogue saved.'));
       setCatForm(null);
       await load();
@@ -470,6 +484,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const totals = hasOverride ? Math.round(Number(hdr.final_override)) : applyMarkup(rawTotal, hdr.markup_pct); // total final
   const effMarkupPct = hasOverride && rawTotal > 0 ? Math.round((Number(hdr.final_override) / rawTotal - 1) * 1000) / 10 : (Number(hdr.markup_pct) || 0);
   const marginAmt = totals - rawTotal;           // balance / marge en $
+  // Escompte global ($ ou %) appliqué au prix final → total NET présenté au client.
+  const discAmt = discountAmount(totals, hdr.discount_type, hdr.discount_value);
+  const netTotal = Math.max(0, Math.round(totals - discAmt));
   const marginNeg = marginAmt < 0;               // sous le coût → rouge
   const editHours = computeSoumissionHours(items);      // heures MO totales (live)
   const editHoursByCat = hoursByCategory(items);        // heures live ventilées Bureau / Chantier
@@ -533,6 +550,16 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         )
       ) : sub === 'catalogue' ? (
         <div className="space-y-3">
+          {/* Restauration d'un catalogue EN COURS perdu (refresh / pause) */}
+          {catDraftAvail && !catForm && canEdit && (() => { const d = readDraft<CatalogueTaux>(CAT_DRAFT_KEY); if (!d) return null; return (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
+              <span className="font-semibold text-amber-800 dark:text-amber-200">💾 {tr('Brouillon de catalogue non enregistré retrouvé', 'Unsaved catalogue draft found')}{d.name ? ` — « ${d.name} »` : ''}</span>
+              <span className="flex gap-2">
+                <button onClick={() => { setCatForm(d); setCatDraftAvail(false); }} className="rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700">{tr('Restaurer', 'Restore')}</button>
+                <button onClick={() => { clearDraft(CAT_DRAFT_KEY); setCatDraftAvail(false); }} className="rounded-lg border border-amber-300 px-3 py-1 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-300">{tr('Ignorer', 'Discard')}</button>
+              </span>
+            </div>
+          ); })()}
           {/* Paramètres de présentation : lettre de présentation + conditions & modalités (modèle tenant) */}
           {canEdit && (() => {
             const cl = coverCfg?.cover_letter || {};
@@ -848,6 +875,16 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         </div>
       ) : view === 'edit' ? (
         <div className="space-y-4">
+          {/* Restauration d'une soumission EN COURS perdue (refresh / pause) */}
+          {soumDraftAvail && canEdit && (() => { const d = readDraft<{ hdr: Soumission; items: SoumissionItem[]; clientName: string }>(SOUM_DRAFT_KEY); if (!d?.hdr) return null; return (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
+              <span className="font-semibold text-amber-800 dark:text-amber-200">💾 {tr('Brouillon de soumission non enregistré retrouvé', 'Unsaved quote draft found')}</span>
+              <span className="flex gap-2">
+                <button onClick={() => { setHdr(d.hdr); setItems(d.items?.length ? d.items : items); setClientName(d.clientName || ''); setSoumDraftAvail(false); }} className="rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700">{tr('Restaurer', 'Restore')}</button>
+                <button onClick={() => { clearDraft(SOUM_DRAFT_KEY); setSoumDraftAvail(false); }} className="rounded-lg border border-amber-300 px-3 py-1 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-300">{tr('Ignorer', 'Discard')}</button>
+              </span>
+            </div>
+          ); })()}
           {/* Soumission ACCEPTÉE = figée (telle qu'envoyée). On verrouille l'enregistrement. */}
           {hdr.status === 'accepted' && (
             <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
@@ -999,6 +1036,31 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 </span>
                 {hasOverride && <button type="button" onClick={() => setHdr(h => ({ ...h, final_override: null }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700" title={tr('Revenir au calcul par % (retirer le prix cible)', 'Back to %-driven (clear target price)')}>↺ {tr('Prix cible', 'Target price')}</button>}
                 <span className="ml-auto text-[11px] text-gray-400">{tr('Total final éditable — le % se déduit ; rouge si sous le coût.', 'Final total editable — % is derived; red if below cost.')}</span>
+              </div>
+            )}
+            {/* ESCOMPTE global ($ ou %) — appliqué au prix final, présenté comme remise au client */}
+            {canEdit && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-700">
+                <span className="text-xs font-semibold text-gray-500">{tr('Escompte', 'Discount')} :</span>
+                <input type="number" step="0.01" min="0" value={hdr.discount_value ?? ''} placeholder="0"
+                  onChange={e => setHdr(h => ({ ...h, discount_value: e.target.value === '' ? null : (Number(e.target.value) || 0) }))}
+                  className={`w-28 text-right ${inputCls}`} />
+                <div className="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+                  {(['amount', 'percent'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setHdr(h => ({ ...h, discount_type: t }))}
+                      className={`px-2.5 py-1 text-xs font-bold ${(hdr.discount_type || 'amount') === t ? 'bg-rose-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                      {t === 'amount' ? '$' : '%'}
+                    </button>
+                  ))}
+                </div>
+                {discAmt > 0 && (
+                  <>
+                    <span className="rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-900/20 dark:text-rose-300">− {mny(discAmt)}</span>
+                    <span className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-extrabold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">{tr('Net', 'Net')} : {mny(netTotal)}</span>
+                    <button type="button" onClick={() => setHdr(h => ({ ...h, discount_value: null }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700">✕</button>
+                  </>
+                )}
+                <span className="ml-auto text-[11px] text-gray-400">{tr('Remise client en $ ou %, appliquée sur le total final.', 'Client discount in $ or %, applied to the final total.')}</span>
               </div>
             )}
           </div>

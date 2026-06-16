@@ -5,7 +5,7 @@
 // Visible UNIQUEMENT à l'impression (classe .soum-print-only). Sections cochables à l'export.
 import React from 'react';
 import {
-  computeLigneMontant, computeItemTotal, computeSoumissionTotal, applyMarkup,
+  computeLigneMontant, computeItemTotal, computeSoumissionTotal, applyMarkup, discountAmount,
   CATEGORIE_LABELS, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
 } from '@/lib/soumissions';
 
@@ -25,7 +25,10 @@ export function SoumissionPrintReport(props: {
   const { soumission: s, items, cat, companyName, logo, headerColor, sections, breakdownMode, conditions, cover, preparedBy } = props;
   const band = headerColor || '#0f52ba';
   const raw = computeSoumissionTotal(items, cat);
-  const final = applyMarkup(raw, s.markup_pct);
+  // Prix de base = cible éditable (final_override) si fournie, sinon majoration. Escompte ($/%) appliqué ensuite.
+  const basePrice = (s.final_override != null && Number.isFinite(Number(s.final_override))) ? Math.round(Number(s.final_override)) : applyMarkup(raw, s.markup_pct);
+  const disc = discountAmount(basePrice, s.discount_type, s.discount_value);
+  const final = Math.max(0, Math.round(basePrice - disc));
   const mode = breakdownMode || 'detaille';
   const today = new Date().toLocaleDateString('fr-CA');
   const clientName = s.client_snapshot?.name || '—';
@@ -187,9 +190,15 @@ export function SoumissionPrintReport(props: {
               </div>
             )}
 
-            {/* Total final */}
+            {/* Escompte (remise client) + Total final */}
+            {disc > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 14px', marginTop: 10, fontSize: 12, fontWeight: 700, color: '#9f1239' }}>
+                <span>{s.discount_type === 'percent' ? `Escompte (${Number(s.discount_value) || 0} %)` : 'Escompte'}</span>
+                <span>− {money(disc)}</span>
+              </div>
+            )}
             <div style={SP.totalBox}>
-              <span>TOTAL{s.markup_pct ? ` (majoration ${s.markup_pct} %)` : ''}</span>
+              <span>TOTAL{s.markup_pct ? ` (majoration ${s.markup_pct} %)` : ''}{disc > 0 ? ' net' : ''}</span>
               <span>{money(final)}</span>
             </div>
 

@@ -55,6 +55,9 @@ export type Soumission = {
   // Prix final CIBLE éditable (override). Si défini, le total final est fixe et la majoration % est DÉDUITE
   // (peut devenir négative/rouge si les coûts dépassent la cible). Sinon, total = sous-total × (1 + markup_pct).
   final_override?: number | null;
+  // Escompte global appliqué au prix (après majoration/cible). En $ ('amount') ou en % ('percent').
+  discount_type?: 'amount' | 'percent' | null;
+  discount_value?: number | null;
   // Partage de commission entre vendeurs (migration 140) : [{ seller_id, pct }].
   sellers_split?: { seller_id: string; pct: number }[] | null;
   // Approbation (migration 139).
@@ -124,6 +127,13 @@ export function hoursByCategory(items: SoumissionItem[]): { bureau: number; chan
 export function applyMarkup(total: number, markupPct?: number): number {
   const m = Number(markupPct) || 0;
   return Math.round((Number(total) || 0) * (1 + m / 100));
+}
+
+/** Montant d'escompte ($) calculé sur `base` selon le type ('amount' = $, 'percent' = %). */
+export function discountAmount(base: number, type?: 'amount' | 'percent' | null, value?: number | null): number {
+  const v = Number(value) || 0; if (v <= 0) return 0;
+  const d = type === 'percent' ? (Number(base) || 0) * v / 100 : v;
+  return Math.min(Math.max(0, d), Math.max(0, Number(base) || 0)); // borné [0, base]
 }
 
 /** Niveau d'approbation requis selon le montant (catalogue.approval_levels). */
@@ -396,7 +406,9 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
   const rawTotal = computeSoumissionTotal(items, cat);
   // Prix final : cible éditable si fournie (override), sinon majoration % + arrondi.
   const hasOverride = header.final_override != null && Number.isFinite(Number(header.final_override));
-  const total = hasOverride ? Math.round(Number(header.final_override)) : applyMarkup(rawTotal, header.markup_pct);
+  const basePrice = hasOverride ? Math.round(Number(header.final_override)) : applyMarkup(rawTotal, header.markup_pct);
+  // Escompte global ($ ou %) appliqué APRÈS la majoration/cible. Le total ne descend jamais sous 0.
+  const total = Math.max(0, Math.round(basePrice - discountAmount(basePrice, header.discount_type, header.discount_value)));
   // markup_pct stocké = déduit de la cible si override (assure un total cohérent même si la colonne final_override manque).
   const effMarkupPct = hasOverride && rawTotal > 0 ? Math.round((Number(header.final_override) / rawTotal - 1) * 1000) / 10 : (Number(header.markup_pct) || 0);
   // Transmission : on pose sent_at la 1re fois que le statut passe à « sent » (début du décompte relance).
@@ -408,6 +420,8 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
     status: header.status || 'draft', total, notes: header.notes ?? null, updated_at: new Date().toISOString(),
     // Suivi (migration 138) — retirés automatiquement si les colonnes n'existent pas encore.
     sent_at: sentAt, total_hours: computeSoumissionHours(items), markup_pct: effMarkupPct, final_override: hasOverride ? Math.round(Number(header.final_override)) : null,
+    // Escompte global (migration 203) — retiré automatiquement si les colonnes manquent.
+    discount_type: header.discount_value ? (header.discount_type || 'amount') : null, discount_value: Number(header.discount_value) || null,
     // Partage de commission (migration 140).
     sellers_split: Array.isArray(header.sellers_split) && header.sellers_split.length ? header.sellers_split : null,
     // Approbation (migration 139).
