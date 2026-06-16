@@ -12,8 +12,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useRealtime } from '@/lib/useRealtime';
 import {
   getConges, getPersonnel, createConge, cancelConge,
-  dayCount, CONGE_TYPES, type Conge, type CongeType, type Personnel,
+  dayCount, type Conge, type CongeType, type Personnel,
 } from '@/lib/conges';
+import { getCongeTypes, DEFAULT_CONGE_TYPES, type CongeTypeDef } from '@/lib/congeTypes';
+import { uploadReceipt } from '@/lib/transactions';
 
 const STATUS = {
   pending:   { fr: 'En attente', en: 'Pending',  cls: 'bg-amber-100 text-amber-700' },
@@ -41,6 +43,13 @@ export default function CongesPage() {
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Types configurés par le tenant (Admin/RH) — justification requise, etc. Repli sur défauts.
+  const [typeDefs, setTypeDefs] = useState<CongeTypeDef[]>(DEFAULT_CONGE_TYPES);
+  const [justifFile, setJustifFile] = useState<File | null>(null);
+  useEffect(() => { getCongeTypes(tenant).then(setTypeDefs).catch(() => {}); }, [tenant]);
+  const selType = useMemo(() => typeDefs.find(t => t.value === type), [typeDefs, type]);
+  const days = startDate && endDate && endDate >= startDate ? dayCount(startDate, endDate) : 0;
+  const justifRequired = !!selType?.requires_justification && days >= (selType?.justification_after_days || 0);
 
   // Module Congés = LIBRE-SERVICE : l'utilisateur courant voit/gère SES demandes seulement. La vue
   // « toutes les demandes » + filtres (site/département) vit dans le planner (onglet Congés), pas ici.
@@ -84,10 +93,14 @@ export default function CongesPage() {
     if (!personId || !startDate || !endDate) { setNotice(L('Employé et dates requis.', 'Employee and dates required.')); return; }
     if (!notes.trim()) { setNotice(L('La note (motif) est obligatoire.', 'The note (reason) is required.')); return; }
     if (endDate < startDate) { setNotice(L('La date de fin précède le début.', 'End date is before start.')); return; }
+    if (justifRequired && !justifFile) { setNotice(L(`Pièce justificative requise (${selType?.justification_label || 'justificatif'}).`, `Justification required (${selType?.justification_label || 'document'}).`)); return; }
     setSubmitting(true); setNotice(null);
     try {
-      await createConge(tenant, { personnel_id: personId, start_date: startDate, end_date: endDate, type, notes, requested_by: me?.email });
-      setStartDate(''); setEndDate(''); setNotes('');
+      // Justificatif (billet du médecin, doc RQAP…) -> téléversé et joint à la note pour l'approbateur.
+      let fullNotes = notes;
+      if (justifFile) { try { const url = await uploadReceipt(tenant, justifFile); fullNotes = `${notes} | ${selType?.justification_label || 'Justificatif'}: ${url}`; } catch { /* upload échoué -> on garde la note */ } }
+      await createConge(tenant, { personnel_id: personId, start_date: startDate, end_date: endDate, type, notes: fullNotes, requested_by: me?.email });
+      setStartDate(''); setEndDate(''); setNotes(''); setJustifFile(null);
       await load();
       setNotice(L('Demande envoyée.', 'Request submitted.'));
     } catch (err: any) { setNotice('Erreur : ' + (err?.message || 'DB')); }
@@ -98,7 +111,7 @@ export default function CongesPage() {
     try { await cancelConge(tenant, c.id!); await load(); } catch (err: any) { setNotice(err?.message); }
   }
 
-  const typeLabel = (t: string) => { const x = CONGE_TYPES.find(y => y.value === t); return x ? `${x.emoji} ${L(x.fr, x.en)}` : t; };
+  const typeLabel = (t: string) => { const x = typeDefs.find(y => y.value === t); return x ? `${x.emoji || ''} ${L(x.label_fr, x.label_en || x.label_fr)}`.trim() : t; };
   const fmt = (d: string) => new Date(d + 'T00:00').toLocaleDateString(lang === 'en' ? 'en-CA' : 'fr-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 
   function CongeRow({ c }: { c: Conge }) {
@@ -150,7 +163,7 @@ export default function CongesPage() {
             </label>
             <label className="text-xs font-semibold text-slate-500">{L('Type', 'Type')}
               <select value={type} onChange={e => setType(e.target.value as CongeType)} className="inp mt-1 w-full">
-                {CONGE_TYPES.map(t => <option key={t.value} value={t.value}>{t.emoji} {L(t.fr, t.en)}</option>)}
+                {typeDefs.map(t => <option key={t.value} value={t.value}>{t.emoji || ''} {L(t.label_fr, t.label_en || t.label_fr)}</option>)}
               </select>
             </label>
             <label className="text-xs font-semibold text-slate-500">{L('Du', 'From')}
@@ -164,6 +177,12 @@ export default function CongesPage() {
             <label className="flex-1 text-xs font-semibold text-slate-500">{L('Note (motif)', 'Note (reason)')} <span className="text-red-500">*</span>
               <input value={notes} onChange={e => setNotes(e.target.value)} required className="inp mt-1 w-full" placeholder={L('Motif, détails… (obligatoire)', 'Reason, details… (required)')} />
             </label>
+            {justifRequired && (
+              <label className="text-xs font-semibold text-amber-700">📎 {selType?.justification_label || L('Justificatif', 'Justification')} <span className="text-red-500">*</span>
+                <input type="file" accept="image/*,application/pdf,.pdf" onChange={e => setJustifFile(e.target.files?.[0] || null)} className="mt-1 block w-full text-xs" />
+                {justifFile && <span className="text-[11px] text-emerald-600">✓ {justifFile.name}</span>}
+              </label>
+            )}
             <div className="flex items-center gap-3">
               {startDate && endDate && endDate >= startDate && <span className="text-sm font-semibold text-slate-600">{dayCount(startDate, endDate)} {L('jour(s)', 'day(s)')}</span>}
               <button type="submit" disabled={submitting} className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
@@ -176,10 +195,10 @@ export default function CongesPage() {
         {/* Solde année courante */}
         {balancePersonId && Object.keys(balance).length > 0 && (
           <div className="mb-6 flex flex-wrap gap-3">
-            {CONGE_TYPES.filter(t => balance[t.value]).map(t => (
+            {typeDefs.filter(t => balance[t.value]).map(t => (
               <div key={t.value} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
                 <div className="text-lg font-bold text-slate-800">{balance[t.value]} {L('j', 'd')}</div>
-                <div className="text-xs text-slate-500">{t.emoji} {L(t.fr, t.en)} · {new Date().getFullYear()}</div>
+                <div className="text-xs text-slate-500">{t.emoji} {L(t.label_fr, t.label_en || t.label_fr)} · {new Date().getFullYear()}</div>
               </div>
             ))}
           </div>
