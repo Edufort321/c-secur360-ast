@@ -6554,6 +6554,31 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
   const [clientName, setClientName] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
+  // Stripe Connect (encaissement en ligne par le tenant). On ne stocke jamais de clé — uniquement le statut.
+  const [stripeStatus, setStripeStatus] = useState<{ connected: boolean; chargesEnabled: boolean } | null>(null);
+  const [stripeBusy, setStripeBusy] = useState(false);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  useEffect(() => { fetch(`/api/stripe/connect/onboard?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => j && setStripeStatus(j)).catch(() => {}); }, [tenant]);
+  async function connectStripe() {
+    setStripeBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/stripe/connect/onboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant }) });
+      const j = await r.json();
+      if (!r.ok || !j.url) { setNotice(j.error || tr('Stripe non configuré.', 'Stripe not configured.')); }
+      else window.location.href = j.url; // redirige vers l'onboarding Express hébergé par Stripe
+    } catch { setNotice(tr('Erreur réseau.', 'Network error.')); }
+    setStripeBusy(false);
+  }
+  async function payInvoice(inv: Invoice) {
+    if (!inv.id) return; setPayingId(inv.id); setNotice(null);
+    try {
+      const r = await fetch('/api/stripe/connect/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, invoiceId: inv.id }) });
+      const j = await r.json();
+      if (!r.ok || !j.url) { setNotice(j.error || tr('Paiement indisponible.', 'Payment unavailable.')); }
+      else { try { await navigator.clipboard.writeText(j.url); } catch { /* noop */ } window.open(j.url, '_blank'); setNotice(tr('Lien de paiement ouvert (et copié).', 'Payment link opened (and copied).')); }
+    } catch { setNotice(tr('Erreur réseau.', 'Network error.')); }
+    setPayingId(null);
+  }
   // Export PRO (HTML imprimable, même présentation que Soumission/DGA) + projets pour facturation projet.
   const [invMounted, setInvMounted] = useState(false);
   useEffect(() => { setInvMounted(true); }, []);
@@ -6752,6 +6777,25 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
               <button onClick={() => setInvView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${invView === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
             </div>
           </div>
+          {/* Encaissement en ligne (Stripe Connect) : statut + bouton de connexion */}
+          {canEdit && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs dark:border-indigo-800 dark:bg-indigo-900/20">
+              <span className="font-semibold text-indigo-700 dark:text-indigo-300">💳 {tr('Encaissement en ligne', 'Online payments')} :</span>
+              {!stripeStatus?.connected ? (
+                <>
+                  <span className="text-indigo-600 dark:text-indigo-300">{tr('non connecté', 'not connected')}</span>
+                  <button onClick={connectStripe} disabled={stripeBusy} className="rounded-lg bg-indigo-600 px-3 py-1 font-semibold text-white hover:bg-indigo-700 disabled:opacity-40">{stripeBusy ? <Loader2 size={12} className="inline animate-spin" /> : tr('Connecter Stripe', 'Connect Stripe')}</button>
+                </>
+              ) : stripeStatus.chargesEnabled ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-600"><Check size={13} /> {tr('Stripe actif — paiements activés', 'Stripe active — payments enabled')}</span>
+              ) : (
+                <>
+                  <span className="font-semibold text-amber-600">{tr('Stripe connecté — vérification en cours', 'Stripe connected — verification pending')}</span>
+                  <button onClick={connectStripe} disabled={stripeBusy} className="rounded-lg border border-indigo-300 px-2 py-1 font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-300">{tr('Compléter', 'Complete')}</button>
+                </>
+              )}
+            </div>
+          )}
           {/* Comptes à recevoir : factures transmises non payées (+ en retard) + encaissé */}
           {invoices.length > 0 && (() => {
             const todayStr = new Date().toISOString().slice(0, 10);
@@ -6798,6 +6842,7 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                         } catch { setNotice(tr('Erreur réseau.', 'Network error.')); }
                       }} className="text-emerald-600 hover:underline">✍️ {tr('Transmettre', 'Send')}</button>}
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
+                      {inv.status !== 'paid' && stripeStatus?.chargesEnabled && <button onClick={() => payInvoice(inv)} disabled={payingId === inv.id} className="font-semibold text-indigo-600 hover:underline disabled:opacity-40">{payingId === inv.id ? <Loader2 size={12} className="inline animate-spin" /> : `💳 ${tr('Payer', 'Pay')}`}</button>}
                       {inv.status !== 'paid' && <button onClick={() => markPaid(inv)} className="ml-auto text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
                     </div>
                   )}

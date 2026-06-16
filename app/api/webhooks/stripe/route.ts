@@ -62,6 +62,10 @@ export async function POST(request: NextRequest) {
         await handleMandateUpdated(event.data.object as Stripe.Mandate);
         break;
 
+      case 'account.updated':
+        await handleAccountUpdated(event.data.object as Stripe.Account);
+        break;
+
       default:
         console.log(`Événement non géré: ${event.type}`);
     }
@@ -81,7 +85,29 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log('🎉 Checkout complété:', session.id);
-  
+
+  // === Connect : paiement d'une FACTURE de tenant (Commerce) ===
+  // La session a été créée avec metadata.kind = 'commerce_invoice' (route /api/stripe/connect/pay).
+  if (session.metadata?.kind === 'commerce_invoice') {
+    const tenant = session.metadata.tenant || '';
+    const invoiceId = session.metadata.invoice_id || '';
+    if (tenant && invoiceId) {
+      try {
+        // setInvoiceStatus marque payée + auto-poste vente & encaissement au GL (idempotent par gl_entry_id).
+        const { setInvoiceStatus } = await import('@/lib/invoicing');
+        await setInvoiceStatus(tenant, invoiceId, 'paid');
+        // Référence de paiement Stripe (best-effort ; colonne optionnelle).
+        await supabase.from('commerce_invoices')
+          .update({ stripe_payment_intent: (session.payment_intent as string) || null })
+          .eq('id', invoiceId).eq('tenant_id', tenant);
+        console.log(`✅ Facture ${invoiceId} (${tenant}) payée via Stripe Connect.`);
+      } catch (error) {
+        console.error('Erreur paiement facture Connect:', error);
+      }
+    }
+    return; // ne pas exécuter la logique de billing plateforme
+  }
+
   try {
     // Mettre à jour le statut de la session
     await supabase
@@ -305,6 +331,19 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   } catch (error) {
     console.error('Erreur handleSubscriptionDeleted:', error);
+  }
+}
+
+// Suivi de l'onboarding Connect d'un tenant : active l'encaissement quand Stripe confirme charges_enabled.
+async function handleAccountUpdated(account: Stripe.Account) {
+  console.log('🔗 Compte Connect mis à jour:', account.id, 'charges_enabled=', account.charges_enabled);
+  try {
+    await supabase
+      .from('company_settings')
+      .update({ stripe_charges_enabled: !!account.charges_enabled, updated_at: new Date().toISOString() })
+      .eq('stripe_account_id', account.id);
+  } catch (error) {
+    console.error('Erreur handleAccountUpdated:', error);
   }
 }
 

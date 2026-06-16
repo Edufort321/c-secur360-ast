@@ -24,11 +24,14 @@
    - `STRIPE_SECRET_KEY` (live), `STRIPE_WEBHOOK_SECRET` (live), `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_ANNUAL` (plans plateforme).
    - Redéployer après modification (sinon les nouvelles clés ne sont pas prises).
 
-## 3. Ce que je construis ensuite (code #34)
-- **Onboarding tenant** : route `POST /api/stripe/connect/onboard` → crée un compte Connect Express + **account link** (lien d'onboarding) ; stocke `stripe_account_id` dans `company_settings`. Bouton **« Connecter Stripe »** dans Admin (paramètres société).
-- **Bouton « Payer » sur la facture** : route `POST /api/stripe/connect/pay` → Checkout *destination charge* vers le compte du tenant + `application_fee_amount` (ta commission) → retourne l'URL de paiement.
-- **Webhook** : branche `commerce_invoice` (payée → statut + écriture GL) et `account.updated` (active le tenant quand `charges_enabled`).
-- **Migration** : `company_settings.stripe_account_id` + `stripe_charges_enabled`.
+## 3. Code livré (#34) ✅
+- **Onboarding tenant** : `POST /api/stripe/connect/onboard` → crée/retrouve un compte Connect **Express** + **account link** ; stocke `stripe_account_id` dans `company_settings` (jamais de clé secrète). `GET ?tenant=` → statut `{connected, chargesEnabled}`. Bouton **« Connecter Stripe »** dans Admin → Factures.
+- **Bouton « Payer »** (visible quand `chargesEnabled`) : `POST /api/stripe/connect/pay` → Checkout *destination charge* (`transfer_data.destination` = compte du tenant) + `application_fee_amount` = `total × STRIPE_PLATFORM_FEE_BPS/10000` → ouvre l'URL de paiement.
+- **Webhook** (`app/api/webhooks/stripe/route.ts`) :
+  - `checkout.session.completed` avec `metadata.kind==='commerce_invoice'` → `setInvoiceStatus(tenant,id,'paid')` (auto-poste vente + encaissement au GL, idempotent) + stocke `stripe_payment_intent`.
+  - `account.updated` → met `company_settings.stripe_charges_enabled` à jour.
+- **Migration 196** : `company_settings.stripe_account_id` + `stripe_charges_enabled` + `commerce_invoices.stripe_payment_intent`.
+- **Env optionnelle** : `STRIPE_PLATFORM_FEE_BPS` (commission plateforme en points de base ; 0/absent = pas de commission).
 
 ## 4. Test recommandé (réel, petit montant)
 1. Connecter le compte Stripe d'un tenant (onboarding Express).
