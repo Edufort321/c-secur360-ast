@@ -44,7 +44,22 @@ export function ProductsCatalog({ tenant, tr }: { tenant: string; tr: (f: string
   function onPhoto(file?: File) { if (!file) return; const r = new FileReader(); r.onload = () => setForm(f => ({ ...f, photo_url: String(r.result) })); r.readAsDataURL(file); }
 
   const classes = useMemo(() => Array.from(new Set(rows.map(r => r.product_class).filter(Boolean))) as string[], [rows]);
-  const filtered = rows.filter(r => !q.trim() || [r.name, r.code, r.product_class].some(v => (v || '').toLowerCase().includes(q.trim().toLowerCase())));
+  // Tri (défaut : prix décroissant = du plus gros au plus petit).
+  const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'name' | 'class' | 'sales_desc'>('price_desc');
+  const filtered = useMemo(() => {
+    const list = rows.filter(r => !q.trim() || [r.name, r.code, r.product_class].some(v => (v || '').toLowerCase().includes(q.trim().toLowerCase())));
+    const px = (r: DigitalProduct) => Number(r.sale_price) || 0;
+    const rev = (r: DigitalProduct) => (r.id ? (sales[r.id]?.revenue || 0) : 0);
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case 'price_asc': return px(a) - px(b);
+        case 'name': return (a.name || '').localeCompare(b.name || '', 'fr');
+        case 'class': return (a.product_class || '').localeCompare(b.product_class || '', 'fr') || px(b) - px(a);
+        case 'sales_desc': return rev(b) - rev(a);
+        default: return px(b) - px(a); // price_desc
+      }
+    });
+  }, [rows, q, sortBy, sales]);
 
   if (loading) return <div className="flex items-center gap-2 p-6 text-gray-500"><Loader2 className="animate-spin" size={18} /> {tr('Chargement…', 'Loading…')}</div>;
 
@@ -57,7 +72,16 @@ export function ProductsCatalog({ tenant, tr }: { tenant: string; tr: (f: string
             <p className="text-xs text-gray-500">{tr('Produits illimités (modules, logiciels, services). Ajoutables en soumission/facture ; revenus ventilés par classe.', 'Unlimited products (modules, software, services). Addable to quotes/invoices; revenue split by class.')}</p></div>
           <button onClick={reset} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouveau', 'New')}</button>
         </div>
-        <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700"><Search size={15} className="text-gray-400" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Rechercher (nom, code, classe)…', 'Search…')} className="w-full bg-transparent text-sm outline-none" /></div>
+        <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700">
+          <Search size={15} className="text-gray-400" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Rechercher (nom, code, classe)…', 'Search…')} className="flex-1 bg-transparent text-sm outline-none" />
+          <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} title={tr('Trier', 'Sort')} className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800">
+            <option value="price_desc">{tr('Prix ↓ (gros → petit)', 'Price ↓ (big → small)')}</option>
+            <option value="price_asc">{tr('Prix ↑ (petit → gros)', 'Price ↑ (small → big)')}</option>
+            <option value="sales_desc">{tr('Ventes ↓', 'Sales ↓')}</option>
+            <option value="name">{tr('Nom (A→Z)', 'Name (A→Z)')}</option>
+            <option value="class">{tr('Classe', 'Class')}</option>
+          </select>
+        </div>
         {notice && <div className="px-4 pt-2 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
