@@ -62,6 +62,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [coverCfg, setCoverCfg] = useState<SoumissionSettings | null>(null);
   const [inclCover, setInclCover] = useState(false);
   const [coverTo, setCoverTo] = useState('');     // nom du destinataire (éditable)
+  const [preparedBy, setPreparedBy] = useState(''); // « soumission faite par » (éditable, défaut = signataire)
   const [coverDate, setCoverDate] = useState(''); // date (défaut aujourd'hui, éditable)
   const [breakdownMode, setBreakdownMode] = useState<'detaille' | 'par_item' | 'global_desc'>('detaille');
   const [inclTaux, setInclTaux] = useState(false); // joindre la liste de taux (catalogue)
@@ -84,6 +85,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     setCoverDate(frLongDate(new Date(), coverCfg?.cover_letter?.ville));
     if (coverCfg?.default_breakdown_mode) setBreakdownMode(coverCfg.default_breakdown_mode);
     setCondSel((coverCfg?.conditions || []).filter(c => c.defaut_coche).map(c => c.id));
+    setPreparedBy(p => p || (coverCfg?.cover_letter?.signataire_nom || ''));
   }, [coverCfg]);
   // Gabarits de soumission (tâches récurrentes)
   const [templates, setTemplates] = useState<SoumissionTemplate[]>([]);
@@ -1137,105 +1139,33 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {tab === 'sommaire' && (
             <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
               <div className="mb-2 text-sm font-bold">📄 {tr('Export PDF / partage', 'PDF export / share')}</div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                <label className="flex items-center gap-1.5 font-semibold text-gray-600"><input type="checkbox" checked={expSummary} onChange={e => setExpSummary(e.target.checked)} /> {tr('Sommaire', 'Summary')}</label>
-                {items.map((it, i) => (
-                  <label key={i} className="flex items-center gap-1.5 text-gray-600"><input type="checkbox" checked={!expExcluded.includes(i)} onChange={e => setExpExcluded(prev => e.target.checked ? prev.filter(x => x !== i) : [...prev, i])} /> {it.name || `Item ${i + 1}`}</label>
-                ))}
+              <p className="mb-3 text-xs text-gray-500">{tr('Toutes les options d’export (sections, ventilation, lettre, conditions, pièces jointes) sont dans le bouton « Exporter (PDF — rapport) ».', 'All export options (sections, breakdown, letter, terms, attachments) are inside the “Export (PDF — report)” button.')}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setShowPrint(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">📄 {tr('Exporter (PDF — rapport)', 'Export (PDF — report)')}</button>
+                <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-300">{pdfBusy ? '…' : tr('PDF simple (jsPDF)', 'Simple PDF (jsPDF)')}</button>
+                {hdr.id && <button type="button" onClick={transmitForApproval} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">✍️ {tr('Transmettre au client (approbation)', 'Send to client (approval)')}</button>}
+                {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">🔗 {tr('Copier le lien', 'Copy link')}</button>}
               </div>
-
-              {/* Lettre de présentation (page de tête, style DGA) */}
-              <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  <input type="checkbox" checked={inclCover} onChange={e => setInclCover(e.target.checked)} />
-                  ✉️ {tr('Joindre une lettre de présentation', 'Attach a cover letter')}
-                </label>
-                {inclCover && (
-                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Destinataire (nom)', 'Recipient (name)')}
-                      <input value={coverTo} onChange={e => setCoverTo(e.target.value)} placeholder={tr('Ex. Madame Marie-Ève Bédard', 'E.g. Ms. Marie-Ève Bédard')} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
-                    </label>
-                    <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Date', 'Date')}
-                      <input value={coverDate} onChange={e => setCoverDate(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
-                    </label>
-                    <p className="text-[11px] text-gray-400 sm:col-span-2">{tr('Texte, signataire et ville viennent des paramètres « Lettre de présentation ». Adresse client pré-remplie.', 'Body, signatory and city come from the cover-letter settings. Client address prefilled.')}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Ventilation des coûts + joindre la liste de taux */}
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                <label className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
-                  {tr('Ventilation', 'Breakdown')} :
-                  <select value={breakdownMode} onChange={e => setBreakdownMode(e.target.value as any)} className="rounded-lg border border-gray-300 px-2 py-1 dark:border-gray-600 dark:bg-gray-700">
-                    <option value="detaille">{tr('Tout détaillé', 'Fully detailed')}</option>
-                    <option value="par_item">{tr('Prix par item', 'Price per item')}</option>
-                    <option value="global_desc">{tr('Prix global + descriptions', 'Global price + descriptions')}</option>
-                  </select>
-                </label>
-                <label className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-300">
-                  <input type="checkbox" checked={inclTaux} onChange={e => setInclTaux(e.target.checked)} /> {tr('Joindre la liste de taux', 'Attach rate list')}
-                </label>
-              </div>
-
-              {/* Conditions & modalités à inclure (modèle tenant) */}
-              {(coverCfg?.conditions || []).length > 0 && (
-                <div className="mt-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                  <div className="mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">📑 {tr('Conditions et modalités à inclure', 'Terms & conditions to include')}</div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    {(coverCfg?.conditions || []).map(c => (
-                      <label key={c.id} className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
-                        <input type="checkbox" checked={condSel.includes(c.id)} onChange={e => setCondSel(prev => e.target.checked ? [...prev, c.id] : prev.filter(x => x !== c.id))} /> {c.titre || tr('(sans titre)', '(untitled)')}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Pièces jointes PDF (bibliothèque réutilisable) — fusionnées en fin de document */}
-              <div className="mt-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300">📎 {tr('Pièces jointes PDF', 'PDF attachments')}</span>
-                  <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:underline">
-                    {attachBusy ? '…' : `+ ${tr('Importer un PDF', 'Upload a PDF')}`}
-                    <input type="file" accept="application/pdf" className="hidden" disabled={attachBusy} onChange={e => { uploadAttach(e.target.files?.[0]); e.currentTarget.value = ''; }} />
-                  </label>
-                </div>
-                {attachLib.length === 0 ? (
-                  <p className="text-[11px] text-gray-400">{tr('Importe des PDF (conditions, formulaires…) à annexer à l\'export.', 'Upload PDFs (terms, forms…) to append to the export.')}</p>
-                ) : (
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    {attachLib.map(a => (
-                      <span key={a.id} className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
-                        <input type="checkbox" checked={!!a.id && attachSel.includes(a.id)} onChange={e => a.id && setAttachSel(prev => e.target.checked ? [...prev, a.id!] : prev.filter(x => x !== a.id))} /> {a.filename || tr('(PDF)', '(PDF)')}
-                        <button type="button" onClick={() => a.id && deleteSoumissionAttachment(tenant, a.id).then(reloadAttach)} className="text-gray-300 hover:text-red-500" title={tr('Supprimer', 'Delete')}><Trash2 size={11} /></button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setShowPrint(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">📄 {tr('Exporter (PDF — rapport)', 'Export (PDF — report)')}</button>
-                <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-300">{pdfBusy ? '…' : tr('PDF simple (jsPDF)', 'Simple PDF (jsPDF)')}</button>
-                {hdr.id && <button type="button" onClick={transmitForApproval} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">✍️ {tr('Transmettre au client (approbation)', 'Send to client (approval)')}</button>}
-                {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">🔗 {tr('Copier le lien', 'Copy link')}</button>}
-              </div>
-              <p className="mt-1 text-[11px] text-gray-400">{tr('Coche les sections à inclure (façon DGA). Logo du tenant en haut à gauche (sinon C-Secur360).', 'Tick the sections to include. Tenant logo top-left (else C-Secur360).')}</p>
             </div>
           )}
 
-          {/* MODALE EXPORT (façon DGA) : sections à inclure + ventilation, puis fenêtre d'impression */}
+          {/* MODALE EXPORT (façon DGA) : TOUTES les options ici, puis fenêtre d'impression */}
           {showPrint && (
             <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 print:hidden" onClick={() => setShowPrint(false)}>
-              <div className="w-full max-w-md rounded-2xl bg-white p-5 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
-                <h2 className="mb-2 text-lg font-bold text-gray-900 dark:text-gray-100">{tr('Exporter la soumission', 'Export quote')}</h2>
-                <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Sections à inclure', 'Sections to include')}</div>
+              <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl bg-white p-5 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+                <h2 className="mb-1 text-lg font-bold text-gray-900 dark:text-gray-100">{tr('Exporter la soumission', 'Export quote')}</h2>
+                <p className="mb-3 text-[11px] text-gray-400">{hdr.numero ? `N° ${hdr.numero} · ` : ''}{clientName}</p>
+
+                {/* Sections à inclure */}
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{tr('Sections à inclure', 'Sections to include')}</div>
                 {([['cover', tr('Lettre de présentation', 'Cover letter')], ['items', tr('Détail des items / coûts', 'Items / cost detail')], ['conditions', tr('Conditions et modalités', 'Terms & conditions')], ['rates', tr('Liste de taux', 'Rate list')]] as [keyof SoumissionSections, string][]).map(([k, lbl]) => (
                   <label key={k} className="flex cursor-pointer items-center gap-2 py-1 text-sm text-gray-700 dark:text-gray-200">
                     <input type="checkbox" className="accent-rose-600" checked={printSections[k]} onChange={() => setPrintSections(p => ({ ...p, [k]: !p[k] }))} /> {lbl}
                   </label>
                 ))}
+                <p className="mb-2 mt-1 text-[10px] text-gray-400">{tr('La page couverture (client + n° soumission) est toujours incluse.', 'The cover page (client + quote #) is always included.')}</p>
+
+                {/* Ventilation */}
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <span className="font-semibold text-gray-600 dark:text-gray-300">{tr('Ventilation', 'Breakdown')} :</span>
                   <select value={breakdownMode} onChange={e => setBreakdownMode(e.target.value as any)} className="rounded-lg border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700">
@@ -1244,9 +1174,30 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     <option value="global_desc">{tr('Prix global + descriptions', 'Global + descriptions')}</option>
                   </select>
                 </div>
+
+                {/* Lettre de présentation : destinataire + préparé par + date (si section cover) */}
+                {printSections.cover && (
+                  <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
+                    <div className="mb-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">✉️ {tr('Lettre de présentation', 'Cover letter')}</div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Destinataire (nom)', 'Recipient (name)')}
+                        <input value={coverTo} onChange={e => setCoverTo(e.target.value)} placeholder={tr('Ex. Mme Marie-Ève Bédard', 'E.g. Ms. Marie-Ève Bédard')} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                      </label>
+                      <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Soumission faite par', 'Prepared by')}
+                        <input value={preparedBy} onChange={e => setPreparedBy(e.target.value)} placeholder={tr('Nom du préparateur', 'Preparer name')} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                      </label>
+                      <label className="text-xs text-gray-600 dark:text-gray-300 sm:col-span-2">{tr('Date', 'Date')}
+                        <input value={coverDate} onChange={e => setCoverDate(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                      </label>
+                    </div>
+                    <p className="mt-1 text-[10px] text-gray-400">{tr('Texte, signataire (signature légale) et ville viennent des paramètres « Lettre de présentation ».', 'Body, signatory (legal signature) and city come from the cover-letter settings.')}</p>
+                  </div>
+                )}
+
+                {/* Conditions à cocher */}
                 {printSections.conditions && (coverCfg?.conditions || []).length > 0 && (
-                  <div className="mt-2 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-                    <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Conditions à cocher', 'Terms to include')}</div>
+                  <div className="mt-3 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                    <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Conditions à inclure', 'Terms to include')}</div>
                     {(coverCfg?.conditions || []).map(c => (
                       <label key={c.id} className="flex items-center gap-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-300">
                         <input type="checkbox" checked={condSel.includes(c.id)} onChange={e => setCondSel(prev => e.target.checked ? [...prev, c.id] : prev.filter(x => x !== c.id))} /> {c.titre || tr('(sans titre)', '(untitled)')}
@@ -1254,9 +1205,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     ))}
                   </div>
                 )}
-                <p className="mt-2 text-[11px] text-gray-400">{tr("Le PDF s'ouvre via la fenêtre d'impression — choisis « Enregistrer en PDF » (format Lettre).", 'The PDF opens via the print dialog — choose "Save as PDF" (Letter size).')}</p>
+
+                <p className="mt-3 text-[11px] text-gray-400">{tr("Le PDF s'ouvre via la fenêtre d'impression — choisis « Enregistrer en PDF » (format Lettre).", 'The PDF opens via the print dialog — choose "Save as PDF" (Letter size).')}</p>
                 <div className="mt-3 flex gap-2">
-                  <button className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50" disabled={!Object.values(printSections).some(Boolean)} onClick={doPrint}>{tr('Générer le PDF', 'Generate PDF')}</button>
+                  <button className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50" disabled={!printSections.items && !printSections.cover && !printSections.conditions && !printSections.rates} onClick={doPrint}>{tr('Générer le PDF', 'Generate PDF')}</button>
                   <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300" onClick={() => setShowPrint(false)}>{tr('Annuler', 'Cancel')}</button>
                 </div>
               </div>
@@ -1269,7 +1221,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             <SoumissionPrintReport
               soumission={{ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission}
               items={items} cat={cat} companyName={companyName} logo={logoUrl} headerColor={coverCfg?.cover_letter?.header_color || '#0f52ba'}
-              sections={printSections} breakdownMode={breakdownMode}
+              sections={printSections} breakdownMode={breakdownMode} preparedBy={preparedBy}
               conditions={(coverCfg?.conditions || []).filter(c => condSel.includes(c.id)).map(c => ({ titre: c.titre, contenu: c.contenu }))}
               cover={{ to: coverTo || clientName, date: coverDate, body: coverCfg?.cover_letter?.body, salutation: coverCfg?.cover_letter?.salutation, signataire_nom: coverCfg?.cover_letter?.signataire_nom, signataire_titre: coverCfg?.cover_letter?.signataire_titre, signature_url: coverCfg?.cover_letter?.signature_url, ville: coverCfg?.cover_letter?.ville }}
             />, document.body)}
