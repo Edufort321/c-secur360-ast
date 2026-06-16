@@ -45,7 +45,12 @@ export function effectiveTenant(acc: { level: string; tenant: string }, reqTenan
   return acc.tenant;
 }
 
+// Niveaux ayant accès aux données ACTIONNARIALES / dividendes (très sensible : direction+).
+const SHAREHOLDER_LEVELS = new Set(['direction', 'super_user']);
+
 /** Accès aux dossiers RH / salaires (admin_paie, rh, direction, super_user). */
 export function canHr(level: string): boolean { return HR_LEVELS.has(level); }
+/** Accès actionnaires / cap table / dividendes (direction, super_user uniquement). */
+export function canShareholders(level: string): boolean { return SHAREHOLDER_LEVELS.has(level); }
 /** Accès à la gestion des accès/mots de passe (administration, rh, direction, super_user). */
 export function canAuth(level: string): boolean { return AUTH_LEVELS.has(level); }
