@@ -16,6 +16,8 @@ import {
 } from '@/lib/conges';
 import { getCongeTypes, DEFAULT_CONGE_TYPES, type CongeTypeDef } from '@/lib/congeTypes';
 import { uploadReceipt } from '@/lib/transactions';
+import { getCompanySettings } from '@/lib/invoicing';
+import { getLeaveRules, isParentalType } from '@/lib/leaveRules';
 
 const STATUS = {
   pending:   { fr: 'En attente', en: 'Pending',  cls: 'bg-amber-100 text-amber-700' },
@@ -46,10 +48,13 @@ export default function CongesPage() {
   // Types configurés par le tenant (Admin/RH) — justification requise, etc. Repli sur défauts.
   const [typeDefs, setTypeDefs] = useState<CongeTypeDef[]>(DEFAULT_CONGE_TYPES);
   const [justifFile, setJustifFile] = useState<File | null>(null);
-  useEffect(() => { getCongeTypes(tenant).then(setTypeDefs).catch(() => {}); }, [tenant]);
+  const [province, setProvince] = useState('QC'); // province du tenant (règles RQAP/AE)
+  useEffect(() => { getCongeTypes(tenant).then(setTypeDefs).catch(() => {}); getCompanySettings(tenant).then(s => s?.province && setProvince(s.province)).catch(() => {}); }, [tenant]);
   const selType = useMemo(() => typeDefs.find(t => t.value === type), [typeDefs, type]);
   const days = startDate && endDate && endDate >= startDate ? dayCount(startDate, endDate) : 0;
   const justifRequired = !!selType?.requires_justification && days >= (selType?.justification_after_days || 0);
+  const parental = isParentalType(type) || isParentalType(selType?.label_fr);
+  const rules = useMemo(() => getLeaveRules(province), [province]);
 
   // Module Congés = LIBRE-SERVICE : l'utilisateur courant voit/gère SES demandes seulement. La vue
   // « toutes les demandes » + filtres (site/département) vit dans le planner (onglet Congés), pas ici.
@@ -190,6 +195,18 @@ export default function CongesPage() {
               </button>
             </div>
           </div>
+          {/* Cadre CONGÉ PARENTAL selon la PROVINCE du tenant (RQAP au QC / AE ailleurs) + Relevé d'emploi */}
+          {parental && (
+            <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-200">
+              <div className="mb-1 font-bold">👶 {L('Congé parental', 'Parental leave')} — {province} · {rules.plan === 'RQAP' ? 'RQAP' : L('Assurance-emploi (AE)', 'Employment Insurance (EI)')}</div>
+              <ul className="ml-4 list-disc space-y-0.5">
+                <li>{L(`Maternité ≈ ${rules.maternityWeeks} sem.`, `Maternity ≈ ${rules.maternityWeeks} wk`)}{rules.paternityWeeks ? L(`, paternité ≈ ${rules.paternityWeeks} sem.`, `, paternity ≈ ${rules.paternityWeeks} wk`) : ''} · {L(`parental ≈ ${rules.parentalWeeks} sem.`, `parental ≈ ${rules.parentalWeeks} wk`)}{rules.parentalWeeksExtended ? L(` (ou ${rules.parentalWeeksExtended} sem. prolongé)`, ` (or ${rules.parentalWeeksExtended} wk extended)`) : ''}</li>
+                <li>{L(`Prestation ≈ ${rules.benefitRatePct} % du revenu (max assurable ${rules.maxInsurableAnnual.toLocaleString('fr-CA')} $).`, `Benefit ≈ ${rules.benefitRatePct}% of income (max insurable $${rules.maxInsurableAnnual.toLocaleString('en-CA')}).`)}</li>
+                <li className="font-semibold">{L(`📄 Relevé d'emploi requis (cessation temporaire, code « ${rules.roeCode} ») → la paie est interrompue pendant le congé.`, `📄 Record of Employment required (temporary stop, code “${rules.roeCode}”) → payroll is interrupted during the leave.`)}</li>
+                <li className="italic opacity-80">{rules.note}</li>
+              </ul>
+            </div>
+          )}
         </form>
 
         {/* Solde année courante */}
