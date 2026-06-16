@@ -23,6 +23,7 @@ import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as expo
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
+import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
@@ -6753,7 +6754,11 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
 
   async function load() {
     setLoading(true); setMigMissing(false);
-    try { const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]); setTxns(tx); setAccounts(acc); reloadTreasury(); }
+    try {
+      await ensureFiscalAccounts(tenant).catch(() => {}); // provisionne les comptes des classes fiscales
+      const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]);
+      setTxns(tx); setAccounts(acc); reloadTreasury();
+    }
     catch { setMigMissing(true); }
     setLoading(false);
   }
@@ -7018,8 +7023,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-12 items-center gap-2">
                 <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-4 ${inputCls}`} />
-                <select value={it.account_code} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, account_code: e.target.value } : x))} className={`col-span-4 ${inputCls}`}>
-                  {lineAccounts.map(a => <option key={a.id} value={a.code}>{a.code} · {a.name}</option>)}
+                {/* Classe fiscale GUIDÉE : choisit le compte GL + la catégorie de taxe. */}
+                <select value={fiscalByCode(it.account_code)?.key || ''} onChange={e => { const c = FISCAL_CATEGORIES.find(x => x.key === e.target.value); if (c) setItems(p => p.map((x, j) => j === i ? { ...x, account_code: c.glCode, tax_category: c.tax, taxable: c.tax === 'standard' } : x)); }} className={`col-span-4 ${inputCls}`} title={tr('Catégorie (classe fiscale)', 'Category (fiscal class)')}>
+                  <option value="">{it.account_code ? `${it.account_code}${lineAccounts.find(a => a.code === it.account_code)?.name ? ' · ' + lineAccounts.find(a => a.code === it.account_code)!.name : ''}` : tr('— Catégorie —', '— Category —')}</option>
+                  {Array.from(new Set(FISCAL_CATEGORIES.filter(c => c.kind === (isRevenue ? 'revenue' : 'expense')).map(c => c.group))).map(g => (
+                    <optgroup key={g} label={g}>
+                      {FISCAL_CATEGORIES.filter(c => c.kind === (isRevenue ? 'revenue' : 'expense') && c.group === g).map(c => <option key={c.key} value={c.key}>{tr(c.fr, c.en)}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
                 <input type="number" placeholder={tr('Montant', 'Amount')} value={it.amount} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
                 <select value={it.tax_category || (it.taxable === false ? 'exempt' : 'standard')} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, tax_category: e.target.value as any, taxable: e.target.value === 'standard' } : x))} className="col-span-1 rounded border border-gray-300 px-1 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700" title={tr('Catégorie de taxe', 'Tax category')}>
