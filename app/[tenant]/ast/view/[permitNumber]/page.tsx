@@ -215,6 +215,19 @@ export default function ASTPublicView() {
             {d.supervisorSigNotes
               ? <div className="mt-2 rounded-lg bg-white/70 p-2.5 text-sm text-slate-800 whitespace-pre-wrap"><span className="font-semibold">{tr('Détails / correctif', 'Details / corrective')} :</span> {d.supervisorSigNotes}</div>
               : <div className="mt-1 text-xs italic text-slate-500">{tr('Aucune note détaillée — contactez le signataire pour le suivi.', 'No detailed note — contact the signer for follow-up.')}</div>}
+            {/* Pièces justificatives de la non-conformité (photos / documents) */}
+            {Array.isArray(d.supervisorSigAttachments) && d.supervisorSigAttachments.length > 0 && (
+              <div className="mt-2">
+                <div className="mb-1 text-xs font-semibold text-slate-600">{tr('Pièces justificatives', 'Supporting files')} ({d.supervisorSigAttachments.length})</div>
+                <div className="flex flex-wrap gap-2">
+                  {d.supervisorSigAttachments.map((a: any, i: number) => (
+                    a.type?.startsWith('image/')
+                      ? <a key={i} href={a.url} target="_blank" rel="noreferrer" title={a.name}><img src={a.url} alt={a.name} className="h-20 w-20 rounded-lg border border-slate-300 object-cover" /></a>
+                      : <a key={i} href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">📄 {a.name}</a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -142,6 +142,8 @@ export interface ASTPermit {
   supervisorSigNotes: string;
   // Verdict du superviseur responsable : '' (non statue) | approved (vert) | corrective (orange, visible a l'audit) | nonconform (rouge)
   supervisorSigStatus?: '' | 'approved' | 'corrective' | 'nonconform';
+  // Non-conformité/correctif : pièces jointes OBLIGATOIRES (photo/document) — data URL dans le JSON de l'AST.
+  supervisorSigAttachments?: { name: string; type: string; url: string }[];
 
   supervisor_name: string;
   supervisor_cert: string;
@@ -2876,6 +2878,28 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
                       );
                     })}
                   </div>
+                  {/* RÈGLE : non-conformité/correctif -> explication (notes ci-dessus) + pièce justificative OBLIGATOIRES */}
+                  {(status === 'corrective' || status === 'nonconform') && (
+                    <div className="mt-3 rounded-lg border-2 border-red-300 bg-red-50 p-3 dark:border-red-700 dark:bg-red-900/20">
+                      <div className="mb-2 text-xs font-bold text-red-700 dark:text-red-300">{tr('Non-conformité — OBLIGATOIRE : explication (notes ci-dessus) + pièce justificative (photo/document).', 'Non-compliance — REQUIRED: explanation (notes above) + supporting file (photo/document).')}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {(ast.supervisorSigAttachments || []).map((a, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-800">
+                            {a.type?.startsWith('image/') ? <img src={a.url} alt={a.name} className="h-8 w-8 rounded object-cover" /> : <span>📄</span>}
+                            <span className="max-w-[8rem] truncate">{a.name}</span>
+                            <button type="button" onClick={() => onChange(p => ({ ...p, supervisorSigAttachments: (p.supervisorSigAttachments || []).filter((_, j) => j !== i) }))} className="text-slate-400 hover:text-red-500">✕</button>
+                          </span>
+                        ))}
+                        <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-red-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:bg-slate-800 dark:text-red-300">
+                          📎 {tr('Ajouter photo/document', 'Add photo/document')}
+                          <input type="file" accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 4_000_000) { alert(tr('Fichier trop volumineux (max 4 Mo).', 'File too large (max 4MB).')); return; } const rd = new FileReader(); rd.onload = () => onChange(p => ({ ...p, supervisorSigAttachments: [...(p.supervisorSigAttachments || []), { name: f.name, type: f.type, url: String(rd.result || '') }] })); rd.readAsDataURL(f); (e.currentTarget as HTMLInputElement).value = ''; }} />
+                        </label>
+                      </div>
+                      {(!ast.supervisorSigNotes.trim() || !(ast.supervisorSigAttachments || []).length) && (
+                        <div className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">⚠ {tr('Ajoutez une explication ET au moins une pièce (photo/document) avant de finaliser.', 'Add an explanation AND at least one file before finalizing.')}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
