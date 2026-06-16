@@ -34,6 +34,8 @@ import { getTenantPermissions, canViewAdminTab, type PermMap } from '@/lib/permi
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
+import { createPortal } from 'react-dom';
+import { InvoicePrintReport, INV_PRINT_CSS } from '@/components/admin/InvoicePrintReport';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
 import { getTaxSummary, getTaxRemittance, declarationPeriod, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type TaxRemittance, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
 
@@ -6548,6 +6550,24 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
   const [clientName, setClientName] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
+  // Export PRO (HTML imprimable, même présentation que Soumission/DGA) + projets pour facturation projet.
+  const [invMounted, setInvMounted] = useState(false);
+  useEffect(() => { setInvMounted(true); }, []);
+  const [projList, setProjList] = useState<{ id: string; label: string; po_amount?: number | null; client_name?: string | null }[]>([]);
+  useEffect(() => { supabase.from('projects').select('id, title, project_number, client_name, po_amount').eq('tenant_id', tenant).order('created_at', { ascending: false }).then(({ data }) => setProjList((data || []).map((p: any) => ({ id: p.id, label: `${p.project_number ? p.project_number + ' — ' : ''}${p.title || p.id}`, po_amount: p.po_amount, client_name: p.client_name }))), () => {}); }, [tenant]);
+  function doInvPrint() {
+    const prev = document.title; document.title = `Facture-${hdr.invoice_number || ''}`;
+    const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
+    window.addEventListener('afterprint', restore);
+    setTimeout(() => window.print(), 150);
+  }
+  // Préremplir une facture depuis un projet (client + ligne au montant du BC).
+  function fillFromProject(pid: string) {
+    const p = projList.find(x => x.id === pid); if (!p) return;
+    setClientName(p.client_name || clientName);
+    setHdr(h => ({ ...h, client_snapshot: { ...(h.client_snapshot || {}), name: p.client_name || h.client_snapshot?.name, projet: p.label } }));
+    if (p.po_amount && p.po_amount > 0) setItems([{ description: `Travaux — ${p.label}`, quantity: 1, unit_price: Number(p.po_amount), subtotal: Number(p.po_amount), taxable: true }]);
+  }
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
@@ -6683,10 +6703,26 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
             {totals.pst_amount > 0 && <div>{taxInfo.pstLabel} ({(taxInfo.pst * 100).toFixed(0)} %) : {mny(totals.pst_amount)}</div>}
             <div className="text-base font-bold">{tr('Total', 'Total')} : {mny(totals.total)}</div>
           </div>
-          <div className="mt-3 flex justify-end gap-2">
+          {/* Facturation depuis un PROJET : préremplit client + ligne au montant du BC */}
+          {projList.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs dark:bg-blue-900/20">
+              <span className="font-semibold text-blue-700 dark:text-blue-300">{tr('Facturer un projet', 'Invoice a project')} :</span>
+              <select onChange={e => { if (e.target.value) fillFromProject(e.target.value); e.currentTarget.value = ''; }} className="rounded-lg border border-blue-200 px-2 py-1 dark:border-blue-800 dark:bg-gray-700">
+                <option value="">{tr('— Choisir un projet (préremplir) —', '— Pick a project (prefill) —')}</option>
+                {projList.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
+            <button onClick={doInvPrint} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">📄 {tr('Exporter (PDF — facture)', 'Export (PDF — invoice)')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
           </div>
+          {/* Facture imprimable (portail body) — même présentation pro que Soumission/DGA */}
+          <style>{INV_PRINT_CSS}</style>
+          {invMounted && createPortal(
+            <InvoicePrintReport invoice={{ ...hdr, ...totals, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Invoice} items={items} settings={settings} logo={settings.logo_url || '/logo.png'} clientName={clientName} />,
+            document.body)}
         </div>
       ) : (
         <div className="space-y-3">
