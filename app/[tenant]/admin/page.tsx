@@ -27,6 +27,7 @@ import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } f
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
+import { readDraft, writeDraft, clearDraft, useAutoDraft } from '@/lib/useDraft';
 import { tsLabel, tsCls, isPayrollProcessable } from '@/lib/timesheetStatus';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
@@ -3849,6 +3850,10 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   const [siteFilter, setSiteFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [genDate, setGenDate] = useState('');
+  // Anti-perte : auto-brouillon local des lignes non enregistrées (ajouts/édits avant « Enregistrer »).
+  const draftKey = `personnel.${tenant}`;
+  const cleanSig = React.useRef('');     // signature des lignes telles qu'en base (état « propre »)
+  const [pendingDraft, setPendingDraft] = useState<Row[] | null>(null);
 
   async function load() {
     setLoading(true);
@@ -3865,12 +3870,27 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
     const allSites = (suc || []).filter((r: any) => !r.parent_id);
     const allDepts = (suc || []).filter((r: any) => r.parent_id);
     setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
-    setRows((data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '', hire_date: r.hire_date || '', next_evaluation_date: r.next_evaluation_date || '' })));
+    const mapped = (data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '', hire_date: r.hire_date || '', next_evaluation_date: r.next_evaluation_date || '' }));
+    setRows(mapped);
+    cleanSig.current = JSON.stringify(mapped);  // état « propre » de référence
+    // Brouillon d'une session précédente (lignes non enregistrées) ? On propose de le restaurer.
+    const d = readDraft<Row[]>(draftKey);
+    if (d && Array.isArray(d) && JSON.stringify(d) !== cleanSig.current) setPendingDraft(d); else setPendingDraft(null);
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
   // Re-render auto quand les postes changent (postesTick incrémente)
   useEffect(() => { /* trigger re-render via closure */ }, [postesTick]);
+  // Auto-brouillon : dès que les lignes diffèrent de l'état en base, on persiste localement (debounce) ; sinon on purge.
+  useEffect(() => {
+    if (loading) return;
+    const id = setTimeout(() => {
+      const sig = JSON.stringify(rows);
+      if (sig !== cleanSig.current) writeDraft(draftKey, rows); else clearDraft(draftKey);
+    }, 800);
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, loading]);
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   // Le nouvel employé hérite du site/dépt filtré en cours — sinon (succursale vide) il serait masqué
@@ -3928,6 +3948,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       }
     }
     setNotice(`✓ ${ok} enregistré(s)${err ? ` · ✗ ${err} erreur(s)` : ''}${errs.length ? `\n${errs.slice(0, 4).join('\n')}` : ''}`);
+    if (!err) clearDraft(draftKey); // tout enregistré → plus de brouillon en attente
     await load();
     setSaving(false);
   }
@@ -3988,6 +4009,14 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
         </div>
         <span className="self-center text-[11px] text-gray-400">{filtered.length}/{rows.length}</span>
       </div>
+      {/* Brouillon non enregistré retrouvé (session précédente) — proposer la restauration. */}
+      {pendingDraft && (
+        <div className="mx-4 mt-3 flex flex-wrap items-center gap-2 rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          <span className="flex-1">💾 {tr('Des modifications non enregistrées ont été retrouvées (vous aviez quitté sans enregistrer).', 'Unsaved changes were found (you left without saving).')}</span>
+          <button type="button" onClick={() => { setRows(pendingDraft); setPendingDraft(null); }} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">{tr('Restaurer', 'Restore')}</button>
+          <button type="button" onClick={() => { clearDraft(draftKey); setPendingDraft(null); }} className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40">{tr('Ignorer', 'Dismiss')}</button>
+        </div>
+      )}
       {/* Notice persistante en bandeau si erreur */}
       {notice && (
         <div className={`mx-4 mt-3 rounded-lg border-2 px-3 py-2 text-sm whitespace-pre-line font-medium ${
@@ -6795,15 +6824,29 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const totals = computeTransactionTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
 
+  // Anti-perte : auto-brouillon local de la transaction en cours (en-tête + lignes).
+  const txnDraftKey = `txn.${tenant}.${hdr.id || 'new'}`;
+  useAutoDraft(txnDraftKey, { hdr, items }, view === 'edit');
+
   async function newTxn(kind: 'expense' | 'revenue' = 'expense') {
+    const d = readDraft<{ hdr: Transaction; items: TransactionItem[] }>(`txn.${tenant}.new`);
+    if (d?.hdr && (d.hdr.vendor_name || (d.items || []).some(i => i.description?.trim() || (Number(i.amount) || 0) > 0)) && window.confirm(tr('Une transaction non enregistrée a été retrouvée. La restaurer ?', 'An unsaved transaction was found. Restore it?'))) {
+      setHdr(d.hdr); setItems(d.items?.length ? d.items : [blankItem()]); setAttachments([]); setAiResult(null); setView('edit'); return;
+    }
+    clearDraft(`txn.${tenant}.new`);
     const num = await nextTransactionNumber(tenant, kind === 'revenue' ? 'V' : 'A');
     setHdr({ transaction_number: num, vendor_name: '', txn_type: kind, txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
     setItems([blankItem(kind === 'revenue' ? '4000' : '5300')]); setAttachments([]); setAiResult(null); setView('edit');
   }
   function editTxn(t: Transaction) {
-    setHdr(t); setAiResult(null);
-    getTransactionItems(tenant, t.id!).then(its => setItems(its.length ? its : [blankItem()]));
+    const d = t.id ? readDraft<{ hdr: Transaction; items: TransactionItem[] }>(`txn.${tenant}.${t.id}`) : null;
+    setAiResult(null);
     getAttachments(tenant, t.id!).then(setAttachments).catch(() => setAttachments([]));
+    if (d?.hdr && window.confirm(tr('Des modifications non enregistrées ont été retrouvées pour cette transaction. Les restaurer ?', 'Unsaved changes were found for this transaction. Restore them?'))) {
+      setHdr({ ...d.hdr, id: t.id }); setItems(d.items?.length ? d.items : [blankItem()]); setView('edit'); return;
+    }
+    setHdr(t);
+    getTransactionItems(tenant, t.id!).then(its => setItems(its.length ? its : [blankItem()]));
     setView('edit');
   }
   async function save() {
@@ -6817,6 +6860,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       // avec un retour CLAIR (succès vs raison de l'échec — fini le silence).
       await setTransactionStatus(tenant, id, 'posted').catch(() => {});
       const pr = await postTransactionNow(tenant, id);
+      clearDraft(txnDraftKey); clearDraft(`txn.${tenant}.new`); // brouillon comptabilisé → purge
       setNotice(pr.ok
         ? tr('Transaction enregistrée et comptabilisée au grand livre.', 'Transaction saved and posted to the ledger.')
         : `${tr('Transaction enregistrée, mais NON comptabilisée :', 'Saved, but NOT posted:')} ${pr.reason}`);
