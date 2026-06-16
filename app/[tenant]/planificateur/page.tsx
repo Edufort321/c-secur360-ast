@@ -11,7 +11,9 @@ const PlannerApp = dynamic(() => import('@/components/planner/App'), {
 
 export default function PlanificateurPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'cerdia';
+  // ISOLATION : JAMAIS de repli sur 'cerdia' (contamination inter-tenant). Le segment d'URL est la
+  // source de vérité ; s'il manque, on ne charge/écrit rien plutôt que de polluer un autre tenant.
+  const tenant = (params?.tenant as string) || '';
   return (
     <div className="planner-app">
       <PunchWidget tenant={tenant} />

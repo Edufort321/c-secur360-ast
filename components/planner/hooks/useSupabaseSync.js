@@ -49,14 +49,15 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
 
   // Sync initial depuis Supabase (si configuré et online)
   useEffect(() => {
-    if (!isSupabaseConfigured() || !isOnline) {
+    // ISOLATION : sans tenant on NE LIT PAS Supabase (sinon `select *` sans filtre = FUITE de TOUS les
+    // tenants). Mode local-only tant que le tenant n'est pas résolu.
+    if (!isSupabaseConfigured() || !isOnline || !tenantId) {
       return;
     }
 
     const syncFromSupabase = async () => {
       try {
-        let q = supabase.from(table).select('*');
-        if (tenantId) q = q.eq('tenant_id', tenantId);
+        const q = supabase.from(table).select('*').eq('tenant_id', tenantId);
         const { data: remoteData, error } = await q.order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -72,11 +73,11 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
     };
 
     syncFromSupabase();
-  }, [table, storageKey, isOnline]);
+  }, [table, storageKey, isOnline, tenantId]);
 
   // Écoute temps réel Supabase (si configuré)
   useEffect(() => {
-    if (!isSupabaseConfigured() || !isOnline) return;
+    if (!isSupabaseConfigured() || !isOnline || !tenantId) return;
 
     // Créer le canal de realtime
     const channel = supabase
@@ -130,7 +131,7 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [table, storageKey, isOnline]);
+  }, [table, storageKey, isOnline, tenantId]);
 
   // Écouter online/offline
   useEffect(() => {
@@ -172,6 +173,12 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
   const syncToSupabase = async (type, item, itemId = null) => {
     if (!isSupabaseConfigured()) {
       return { success: true, local: true };
+    }
+    // ISOLATION : sans tenant, on N'ÉCRIT JAMAIS dans Supabase (anti-contamination inter-tenant).
+    // Les données restent locales jusqu'à ce que le tenant soit résolu.
+    if (!tenantId) {
+      console.warn(`[${table}] Écriture ignorée : tenant absent (anti-contamination).`);
+      return { success: false, error: 'no-tenant' };
     }
 
     if (!isOnline) {

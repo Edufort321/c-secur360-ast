@@ -212,11 +212,13 @@ function AppContent({ tenant = 'cerdia' }) {
     );
 }
 
-export function App({ tenant = 'cerdia' }) {
+export function App({ tenant }) {
+    // ISOLATION TENANT : on ne DOIT JAMAIS retomber sur 'cerdia' (contamination inter-tenant). Si le
+    // tenant est absent, on n'écrit nulle part (AppContent reçoit '' -> les syncs sont désactivées).
     return (
         <ThemeProvider>
             <LanguageProvider>
-                <AppContent tenant={tenant} />
+                <AppContent tenant={tenant || ''} />
             </LanguageProvider>
         </ThemeProvider>
     );
