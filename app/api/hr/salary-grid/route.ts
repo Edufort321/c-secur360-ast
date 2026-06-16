@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canHr } from '@/lib/hrAccess';
+import { resolveAccess, canHr, effectiveLevelFor } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Accès SERVEUR aux GRILLES SALARIALES (poste_salary_grids / poste_salary_tiers) — données
@@ -11,8 +11,9 @@ export const runtime = 'nodejs';
 async function guard(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return { err: NextResponse.json({ error: 'Non authentifié' }, { status: 401 }) };
-  if (!canHr(acc.level)) return { err: NextResponse.json({ error: 'Accès refusé (salaires)' }, { status: 403 }) };
   if (!acc.tenant) return { err: NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 }) };
+  // Scopé au tenant de SESSION ; on applique l'accès restreint sur ce tenant (cohérence).
+  if (!canHr(await effectiveLevelFor(acc, acc.tenant))) return { err: NextResponse.json({ error: 'Accès refusé (salaires)' }, { status: 403 }) };
   return { acc };
 }
 

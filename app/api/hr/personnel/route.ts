@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canHr, canAuth, effectiveTenant } from '@/lib/hrAccess';
+import { resolveAccess, canHr, canAuth, effectiveTenant, effectiveLevelFor } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Accès SERVEUR aux champs SENSIBLES de planner_personnel : mots de passe d'accès (canAuth) et
@@ -12,8 +12,8 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
+  if (!canAuth(await effectiveLevelFor(acc, tenant))) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   if (new URL(req.url).searchParams.get('access')) {
     const r1 = await supabaseAdmin.from('planner_personnel').select('id, name, email, niveauAcces, access_password').eq('tenant_id', tenant).order('name');
     let data: any = r1.data;
@@ -30,9 +30,10 @@ export async function PATCH(req: NextRequest) {
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const tenant = effectiveTenant(acc, body.tenant);
+  const level = await effectiveLevelFor(acc, tenant); // niveau effectif sur le tenant cible (accès restreint)
 
   if (body.kind === 'access') {
-    if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+    if (!canAuth(level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     const patch: any = {};
     if (typeof body.password === 'string') patch.access_password = body.password;
     if (typeof body.email === 'string' && body.email) patch.email = body.email;
@@ -47,7 +48,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.kind === 'eval') {
-    if (!canHr(acc.level)) return NextResponse.json({ error: 'Accès refusé (salaires)' }, { status: 403 });
+    if (!canHr(level)) return NextResponse.json({ error: 'Accès refusé (salaires)' }, { status: 403 });
     if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
     const payload: any = { ...(body.payload || {}) }; delete payload.tenant_id; delete payload.id;
     let { error } = await supabaseAdmin.from('planner_personnel').update(payload).eq('id', body.id).eq('tenant_id', tenant);
@@ -61,7 +62,7 @@ export async function PATCH(req: NextRequest) {
 
   // Mise à jour de PROFIL (nom, rôle, niveauAcces…) — canAuth (niveauAcces = privilège).
   if (body.kind === 'profile') {
-    if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+    if (!canAuth(level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
     const patch: any = { ...(body.patch || {}) }; delete patch.id; delete patch.tenant_id;
     delete patch.access_password; delete patch.current_salary; // champs ultra-sensibles via leurs kinds dédiés
@@ -78,9 +79,10 @@ export async function PATCH(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
-  const row: any = { ...(body.row || {}), tenant_id: effectiveTenant(acc, body.tenant) };
+  const tenant = effectiveTenant(acc, body.tenant);
+  if (!canAuth(await effectiveLevelFor(acc, tenant))) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  const row: any = { ...(body.row || {}), tenant_id: tenant };
   delete row.id; delete row.access_password; delete row.current_salary; // via kinds dédiés
   let { data, error } = await supabaseAdmin.from('planner_personnel').insert(row).select();
   if (error && /(next_evaluation_date|hire_date)/i.test(error.message || '')) { const { next_evaluation_date, hire_date, ...b2 } = row; ({ data, error } = await supabaseAdmin.from('planner_personnel').insert(b2).select()); }
@@ -92,10 +94,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  if (!canAuth(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
   const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
+  if (!canAuth(await effectiveLevelFor(acc, tenant))) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const { error } = await supabaseAdmin.from('planner_personnel').delete().eq('id', id).eq('tenant_id', tenant);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
