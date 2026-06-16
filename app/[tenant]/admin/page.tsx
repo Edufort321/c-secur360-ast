@@ -6837,8 +6837,20 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       };
       const r = await fetch('/api/transactions/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ transaction: payload }) });
       const j = await r.json();
-      if (!r.ok) { setNotice(j?.error || tr('Vérification IA indisponible.', 'AI check unavailable.')); }
-      else setAiResult(j.result || { ok: true, issues: [] });
+      // Rapprochement déterministe REVENU <-> FACTURE : ce paiement correspond-il à un projet facturé ?
+      const extra: { severity: string; field?: string; message: string; suggestion?: string }[] = [];
+      try {
+        if (hdr.txn_type === 'revenue' && totals.total > 0) {
+          const invs = await getInvoices(tenant);
+          const tol = Math.max(1, totals.total * 0.02);
+          for (const iv of invs.filter(v => v.status !== 'cancelled' && Math.abs((Number(v.total) || 0) - totals.total) <= tol).slice(0, 3)) {
+            const cl = (iv.client_snapshot as any)?.name || (iv.client_snapshot as any)?.legal_name || '';
+            extra.push({ severity: 'info', field: tr('Rapprochement facture', 'Invoice match'), message: tr(`Montant proche de la facture ${iv.invoice_number}${cl ? ` (${cl})` : ''} — paiement d’un projet facturé ?`, `Amount close to invoice ${iv.invoice_number}${cl ? ` (${cl})` : ''} — payment of an invoiced project?`), suggestion: iv.status === 'paid' ? tr('Facture déjà payée.', 'Invoice already paid.') : tr('Si c’est l’encaissement, marquez la facture payée.', 'If this is the receipt, mark the invoice paid.') });
+          }
+        }
+      } catch { /* pas de facture -> ignore */ }
+      if (!r.ok) { setNotice(j?.error || tr('Vérification IA indisponible.', 'AI check unavailable.')); if (extra.length) setAiResult({ ok: false, issues: extra }); }
+      else { const base = j.result || { ok: true, issues: [] }; setAiResult({ ...base, issues: [...(base.issues || []), ...extra] }); }
     } catch (e: any) { setNotice(e?.message || tr('Erreur IA.', 'AI error.')); }
     setAiChecking(false);
   }
