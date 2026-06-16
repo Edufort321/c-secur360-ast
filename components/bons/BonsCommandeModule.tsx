@@ -31,6 +31,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
   const [recScan, setRecScan] = useState(false); // import IA du bordereau de réception en cours
   const [pdfBusy, setPdfBusy] = useState(false);
   const [tenantLogo, setTenantLogo] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<{ name: string; contact_name?: string; province?: string }[]>([]);
   const recFileRef = useRef<HTMLInputElement | null>(null);
   const projectLabelOf = (id?: string | null) => projects.find(p => p.id === id)?.label || null;
   // Brouillon auto-sauvegardé du bon en cours d'édition (anti-perte si on quitte la page).
@@ -57,6 +58,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
       setProjects((data || []).map((p: any) => ({ id: p.id, label: `${p.project_number ? p.project_number + ' — ' : ''}${p.title || p.id}` })));
     } catch { setProjects([]); }
     try { const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(); setTenantLogo(t?.logo_url || null); } catch { /* logo défaut */ }
+    try { const { data: sup } = await supabase.from('suppliers').select('name, contact_name, province').eq('tenant_id', tenant).order('name'); setSuppliers((sup as any[]) || []); } catch { /* répertoire fournisseurs absent */ }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -296,7 +298,8 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
           {/* En-tête */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block"><span className="text-xs font-semibold text-gray-500">{tr('Fournisseur', 'Supplier')}</span>
-              <input value={form.supplier || ''} onChange={e => setForm(f => f ? { ...f, supplier: e.target.value } : f)} className={`mt-1 w-full ${inputCls}`} /></label>
+              <input value={form.supplier || ''} list="bc-suppliers" onChange={e => { const v = e.target.value; const m = suppliers.find(s => s.name === v); setForm(f => f ? { ...f, supplier: v, supplier_contact: m?.contact_name || f.supplier_contact, province: m?.province || f.province } : f); }} className={`mt-1 w-full ${inputCls}`} placeholder={tr('Choisir / saisir…', 'Pick / type…')} />
+              <datalist id="bc-suppliers">{suppliers.map((s, i) => <option key={i} value={s.name} />)}</datalist></label>
             <label className="block"><span className="text-xs font-semibold text-gray-500">{tr('Contact fournisseur', 'Supplier contact')}</span>
               <input value={form.supplier_contact || ''} onChange={e => setForm(f => f ? { ...f, supplier_contact: e.target.value } : f)} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="block"><span className="text-xs font-semibold text-gray-500">{tr('Projet (optionnel)', 'Project (optional)')}</span>
