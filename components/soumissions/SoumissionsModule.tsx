@@ -888,6 +888,14 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   ))}
                 </select>
               </label>
+              {/* Note : la récurrence des taux passe par le Catalogue des prix (Admin → Catalogue de taux). */}
+              <div className={`sm:col-span-2 rounded-lg border px-3 py-2 text-xs ${catalogues.length === 0 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200' : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200'}`}>
+                {catalogues.length === 0
+                  ? tr('⚠️ Aucun catalogue de taux. Créez votre liste de taux horaires et le détail des coûts dans Admin → « Catalogue de taux ». Vous pouvez saisir des montants manuellement ci-dessous, mais pour des taux récurrents et cohérents d’une soumission à l’autre, passez par le Catalogue des prix.',
+                       '⚠️ No rate catalogue. Create your hourly-rate list and cost details in Admin → “Rate catalogue”. You can enter amounts manually below, but for recurring, consistent rates across quotes, use the price Catalogue.')
+                  : tr('💡 Les taux et coûts proviennent du Catalogue de taux (Admin). La saisie manuelle reste possible, mais la récurrence (taux standards) doit passer par le Catalogue des prix.',
+                       '💡 Rates and costs come from the Rate catalogue (Admin). Manual entry stays possible, but recurring (standard) rates should go through the price Catalogue.')}
+              </div>
               <label className="text-xs font-semibold text-gray-500">{tr('Statut de suivi', 'Tracking status')}
                 <select value={hdr.status || 'draft'} onChange={e => setHdr(h => ({ ...h, status: e.target.value as any }))} className={`mt-1 w-full ${inputCls}`}>
                   <option value="draft">{tr('Brouillon', 'Draft')}</option>

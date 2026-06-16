@@ -237,14 +237,24 @@ export default function AdminPage() {
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'integrations';
   const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'integrations'];
-  const [tab, setTab] = useState<TabKey>('sitesdepts');
-  // Ouverture directe d'un onglet via ?tab=... (ex. lien « Catalogue » depuis les Soumissions).
+  const [tab, setTabState] = useState<TabKey>('sitesdepts');
+  // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
+  const setTab = (k: TabKey) => {
+    setTabState(k);
+    try { if (typeof window !== 'undefined' && tenant) localStorage.setItem(`csecur360.admin.tab.${tenant}`, k); } catch { /* ignore */ }
+  };
+  // Onglet initial : ?tab=... (lien direct) prioritaire, sinon dernier onglet mémorisé pour ce tenant.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const q = new URLSearchParams(window.location.search).get('tab');
-    if (q && (TAB_KEYS as string[]).includes(q)) setTab(q as TabKey);
+    if (q && (TAB_KEYS as string[]).includes(q)) { setTabState(q as TabKey); return; }
+    if (!tenant) return;
+    try {
+      const saved = localStorage.getItem(`csecur360.admin.tab.${tenant}`);
+      if (saved && (TAB_KEYS as string[]).includes(saved)) setTabState(saved as TabKey);
+    } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tenant]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
 
@@ -1513,7 +1523,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
   regime: VRegime; label: string; items: { r: VRow; i: number }[];
   onAdd: () => void; upd: (i: number, k: keyof VRow, v: any) => void;
   del: (i: number) => void; tr: (f: string, e: string) => string; inp: string;
-  personnelSuggestions: string[]; tenantUsers: { id: string; name: string; email: string }[];
+  personnelSuggestions: string[]; tenantUsers: { id: string; name: string; email: string; is_active?: boolean }[];
   onPhotoUpload: (i: number, url: string) => void;
   tenant: string;
 }) {
@@ -1611,7 +1621,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
                       className="min-w-[160px]"
                       options={[
                         { value: '', label: `— ${tr(isB ? 'Propriétaire' : 'Aucun', isB ? 'Owner' : 'None')} —` },
-                        ...tenantUsers.map(u => ({ value: u.id, label: u.name || u.email })),
+                        ...tenantUsers.map(u => ({ value: u.id, label: (u.name || u.email) + (u.is_active === false ? ` (${tr('inactif', 'inactive')})` : '') })),
                       ]}
                     />
                   </td>
@@ -2304,7 +2314,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [personnelSuggestions, setPersonnelSuggestions] = useState<string[]>([]);
-  const [tenantUsers, setTenantUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<{ id: string; name: string; email: string; is_active?: boolean }[]>([]);
   const [activeRegime, setActiveRegime] = useState<VRegime>('A_achat');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
@@ -2316,10 +2326,12 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   ];
 
   useEffect(() => {
-    supabase.from('planner_personnel').select('id, name, email').eq('tenant_id', tenant).eq('is_active', true).order('name')
+    // TOUS les employés (pas seulement is_active) — un véhicule peut être attitré à n'importe qui ;
+    // on garde aussi ceux sans nom (repli courriel) pour ne pas en « perdre » dans la liste.
+    supabase.from('planner_personnel').select('id, name, email, is_active').eq('tenant_id', tenant).order('name')
       .then(({ data: personnel }) => {
-        const list = (personnel || []).map((p: any) => ({ id: p.id, name: p.name?.trim() || '', email: p.email || '' })).filter(p => p.name);
-        setPersonnelSuggestions(list.map(p => p.name));
+        const list = (personnel || []).map((p: any) => ({ id: p.id, name: p.name?.trim() || '', email: p.email || '', is_active: p.is_active !== false })).filter(p => p.name || p.email);
+        setPersonnelSuggestions(list.filter(p => p.name).map(p => p.name));
         setTenantUsers(list);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3822,8 +3834,8 @@ function RecurringTasksPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: st
 }
 
 function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSubclasses, postesTick, perms }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclass_ids?: string[] }[]; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; postesTick: number; perms: typeof PERMS[AccessLevel] }) {
-  type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string; next_evaluation_date: string };
-  const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '', next_evaluation_date: '' });
+  type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string; hire_date: string; next_evaluation_date: string };
+  const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '', hire_date: '', next_evaluation_date: '' });
   const [rows, setRows] = useState<Row[]>([]);
   const [siteTree, setSiteTree] = useState<{ id: string; name: string; depts: { id: string; name: string }[] }[]>([]);
   const postes = sharedPostes; // ← utilise les postes partagés par le parent (toujours frais)
@@ -3842,18 +3854,18 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
     setLoading(true);
     const [{ data: suc }, persRes] = await Promise.all([
       supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'),
-      supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale, next_evaluation_date').eq('tenant_id', tenant).order('name'),
+      supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale, hire_date, next_evaluation_date').eq('tenant_id', tenant).order('name'),
     ]);
-    // Repli si la colonne next_evaluation_date n'existe pas encore
+    // Repli si une colonne récente (next_evaluation_date / hire_date) n'existe pas encore sur ce projet
     let data: any[] | null = persRes.data;
-    if (persRes.error && /next_evaluation_date/i.test(persRes.error.message || '')) {
+    if (persRes.error && /(next_evaluation_date|hire_date)/i.test(persRes.error.message || '')) {
       const r2 = await supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name');
       data = r2.data;
     }
     const allSites = (suc || []).filter((r: any) => !r.parent_id);
     const allDepts = (suc || []).filter((r: any) => r.parent_id);
     setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
-    setRows((data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '', next_evaluation_date: r.next_evaluation_date || '' })));
+    setRows((data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '', hire_date: r.hire_date || '', next_evaluation_date: r.next_evaluation_date || '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -3861,7 +3873,9 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   useEffect(() => { /* trigger re-render via closure */ }, [postesTick]);
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
-  const add = () => setRows(p => [...p, empty()]);
+  // Le nouvel employé hérite du site/dépt filtré en cours — sinon (succursale vide) il serait masqué
+  // par le filtre actif et « Ajouter » paraîtrait ne rien faire quand on cible un site précis.
+  const add = () => setRows(p => [...p, { ...empty(), succursale: siteFilter ? (deptFilter ? `${siteFilter} / ${deptFilter}` : siteFilter) : '' }]);
   // Lignes filtrées (index original conservé pour upd/del)
   const filtered = useMemo(() => rows.map((r, i) => ({ r, i })).filter(({ r }) => {
     const suc = r.succursale || '';
@@ -3893,6 +3907,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       if (r.niveauAcces) base.niveauAcces = r.niveauAcces;
       if (r.succursale != null) base.succursale = r.succursale || null;
       if (r.subclass != null) base.subclass = r.subclass || null;
+      base.hire_date = r.hire_date || null;
       base.next_evaluation_date = r.next_evaluation_date || null;
 
       console.log('[Personnel save] payload pour', r.name, ':', base, 'id existant ?', r.id);
@@ -4004,6 +4019,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
             <th className="px-2">{tr('Poste / Sous-classe', 'Position / Sub-class')}</th>
             <th className="px-2">{tr('Site / Dépt', 'Site / Dept')}</th>
+            <th className="px-2">{tr('Embauche', 'Hired')}</th>
             {/* Évaluer sera ajouté avant Trash si perms.viewSalary */}
             <th className="px-2">{tr('Téléphone', 'Phone')}</th>
             <th className="px-2">{tr('Courriel', 'Email')}</th>
@@ -4067,6 +4083,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                     <input className={`${inp} min-w-[140px]`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)} placeholder={tr('Site libre', 'Free text')} />
                   )}
                 </td>
+                <td className="px-2" data-label={tr('Embauche', 'Hired')}><input type="date" className={`${inp} w-36`} value={r.hire_date || ''} onChange={e => upd(i, 'hire_date', e.target.value)} title={tr("Date d'embauche", 'Hire date')} /></td>
                 <td className="px-2" data-label={tr('Téléphone', 'Phone')}><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
                 <td className="px-2" data-label={tr('Courriel', 'Email')}><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
                 <td className="px-2" data-label={tr("Niveau d'accès", 'Access level')}>

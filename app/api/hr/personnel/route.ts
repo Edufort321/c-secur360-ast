@@ -66,7 +66,7 @@ export async function PATCH(req: NextRequest) {
     const patch: any = { ...(body.patch || {}) }; delete patch.id; delete patch.tenant_id;
     delete patch.access_password; delete patch.current_salary; // champs ultra-sensibles via leurs kinds dédiés
     let { data, error } = await supabaseAdmin.from('planner_personnel').update(patch).eq('id', body.id).eq('tenant_id', tenant).select();
-    if (error && /next_evaluation_date/i.test(error.message || '')) { const { next_evaluation_date, ...b2 } = patch; ({ data, error } = await supabaseAdmin.from('planner_personnel').update(b2).eq('id', body.id).eq('tenant_id', tenant).select()); }
+    if (error && /(next_evaluation_date|hire_date)/i.test(error.message || '')) { const { next_evaluation_date, hire_date, ...b2 } = patch; ({ data, error } = await supabaseAdmin.from('planner_personnel').update(b2).eq('id', body.id).eq('tenant_id', tenant).select()); }
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true, row: (data || [])[0] || null });
   }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   const row: any = { ...(body.row || {}), tenant_id: effectiveTenant(acc, body.tenant) };
   delete row.id; delete row.access_password; delete row.current_salary; // via kinds dédiés
   let { data, error } = await supabaseAdmin.from('planner_personnel').insert(row).select();
-  if (error && /next_evaluation_date/i.test(error.message || '')) { const { next_evaluation_date, ...b2 } = row; ({ data, error } = await supabaseAdmin.from('planner_personnel').insert(b2).select()); }
+  if (error && /(next_evaluation_date|hire_date)/i.test(error.message || '')) { const { next_evaluation_date, hire_date, ...b2 } = row; ({ data, error } = await supabaseAdmin.from('planner_personnel').insert(b2).select()); }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true, row: (data || [])[0] || null });
 }

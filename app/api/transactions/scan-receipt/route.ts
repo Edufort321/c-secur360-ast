@@ -29,6 +29,7 @@ async function callAnthropic(apiKey: string, system: string, content: any): Prom
 function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
 
 export async function POST(req: NextRequest) {
+ try {
   const guard = await aiGuard(req); if (guard.err) return guard.err;
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configurée (ANTHROPIC_API_KEY absente).' }, { status: 503 });
@@ -36,18 +37,24 @@ export async function POST(req: NextRequest) {
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   let raw = String(body.imageBase64 || body.fileBase64 || '');
-  let media = String(body.media_type || '');
+  let media = String(body.media_type || '').toLowerCase();
   const fileName = String(body.file_name || '');
   const m = raw.match(/^data:([^;]+);base64,(.*)$/);
-  if (m) { media = media || m[1]; raw = m[2]; }
+  if (m) { media = media || m[1].toLowerCase(); raw = m[2]; }
   if (!raw) return NextResponse.json({ error: 'fichier requis' }, { status: 400 });
   const ext = (fileName.split('.').pop() || '').toLowerCase();
-  const isImage = /^image\/(jpeg|png|webp|gif)$/.test(media);
+  // Normalisation des types d'image fréquents (jpg→jpeg, heic non supporté par l'API Vision).
+  if (media === 'image/jpg' || ext === 'jpg' || ext === 'jpeg') media = 'image/jpeg';
+  else if (ext === 'png' && !media) media = 'image/png';
+  else if (ext === 'webp' && !media) media = 'image/webp';
+  const isImage = /^image\/(jpeg|png|webp|gif)$/.test(media) || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
   const isPdf = media === 'application/pdf' || ext === 'pdf';
   const isSheet = /spreadsheet|excel|csv/.test(media) || ['xls', 'xlsx', 'csv'].includes(ext);
+  if (isImage && !/^image\/(jpeg|png|webp|gif)$/.test(media)) media = 'image/jpeg'; // repli si type absent
 
   const tenant = guard.user?.tenant_id || '';
-  if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé.', exhausted: true }, { status: 402 }); }
+  // Lecture du budget « best-effort » : une erreur de lecture ne doit JAMAIS bloquer le scan (sinon 500 opaque).
+  if (tenant) { try { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé.', exhausted: true }, { status: 402 }); } catch { /* ignore lecture budget */ } }
 
   try {
     let data: any;
@@ -81,4 +88,8 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur IA' }, { status: 500 });
   }
+ } catch (e: any) {
+   // Filet de sécurité : aucune exception (garde, parsing, budget…) ne doit produire un 500 opaque sans message.
+   return NextResponse.json({ error: `Échec du scan : ${e?.message || e}` }, { status: 500 });
+ }
 }
