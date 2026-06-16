@@ -9,6 +9,21 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
     const [typeConge, setTypeConge] = useState('vacances');
     const [motif, setMotif] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Filtres de la vue « toutes les demandes » (par structure/site et département)
+    const [filterSite, setFilterSite] = useState('');
+    const [filterDept, setFilterDept] = useState('');
+
+    // Accès TOLÉRANT aux champs : données canoniques (status/start_date/personnel_id/notes) OU legacy
+    // (statut/dateDebut/personnelId/motif). Statuts canoniques : pending/approved/rejected/cancelled.
+    const cStatus = (c) => c?.status ?? c?.statut;
+    const isPending = (c) => ['pending', 'en_attente'].includes(cStatus(c));
+    const isApproved = (c) => ['approved', 'approuve'].includes(cStatus(c));
+    const isRejected = (c) => ['rejected', 'refuse', 'refused'].includes(cStatus(c));
+    const cStart = (c) => c?.start_date ?? c?.dateDebut;
+    const cEnd = (c) => c?.end_date ?? c?.dateFin ?? c?.start_date ?? c?.dateDebut;
+    const cPid = (c) => c?.personnel_id ?? c?.personnelId;
+    const cNotes = (c) => c?.notes ?? c?.motif;
+    const persOf = (c) => (personnel || []).find(p => String(p.id) === String(cPid(c)));
 
     const typesConge = [
         { value: 'vacances', label: '🏖️ Vacances', couleur: '#3B82F6' },
@@ -105,25 +120,11 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
         }
     };
 
-    const getStatutColor = (statut) => {
-        switch (statut) {
-            case 'approuve': return 'text-green-700 bg-green-100';
-            case 'refuse': return 'text-red-700 bg-red-100';
-            case 'en_attente': return 'text-yellow-700 bg-yellow-100';
-            default: return 'text-gray-700 bg-gray-100';
-        }
-    };
-
-    const getStatutLabel = (statut) => {
-        switch (statut) {
-            case 'approuve': return 'Approuvé';
-            case 'refuse': return 'Refusé';
-            case 'en_attente': return 'En attente';
-            default: return 'Inconnu';
-        }
-    };
+    const getStatutColor = (c) => isApproved(c) ? 'text-green-700 bg-green-100' : isRejected(c) ? 'text-red-700 bg-red-100' : isPending(c) ? 'text-yellow-700 bg-yellow-100' : 'text-gray-700 bg-gray-100';
+    const getStatutLabel = (c) => isApproved(c) ? 'Approuvé' : isRejected(c) ? 'Refusé' : isPending(c) ? 'En attente' : 'Inconnu';
 
     const formatDate = (date) => {
+        if (!date) return '—';
         return new Date(date).toLocaleDateString('fr-FR', {
             day: '2-digit',
             month: '2-digit',
@@ -137,9 +138,21 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
         return diffDays;
     };
 
-    const congesEnAttente = conges.filter(c => c.statut === 'en_attente');
-    const congesApprouves = conges.filter(c => c.statut === 'approuve');
-    const congesRefuses = conges.filter(c => c.statut === 'refuse');
+    // Sites/départements disponibles (depuis le personnel) pour les filtres.
+    const sites = Array.from(new Set((personnel || []).map(p => p.succursale).filter(Boolean))).sort();
+    const departements = Array.from(new Set((personnel || []).map(p => p.departement).filter(Boolean))).sort();
+
+    // Filtre par structure/site + département, appliqué à TOUTES les demandes.
+    const matchFilter = (c) => {
+        const p = persOf(c);
+        if (filterSite && (!p || p.succursale !== filterSite)) return false;
+        if (filterDept && (!p || p.departement !== filterDept)) return false;
+        return true;
+    };
+    const congesFiltres = (conges || []).filter(matchFilter);
+    const congesEnAttente = congesFiltres.filter(isPending);
+    const congesApprouves = congesFiltres.filter(isApproved);
+    const congesRefuses = congesFiltres.filter(isRejected);
 
     if (!isOpen) return null;
 
@@ -196,6 +209,26 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+                    {/* Filtres par structure/site + département (toutes les demandes) */}
+                    {(sites.length > 0 || departements.length > 0) && (
+                        <div className="mb-4 flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-500">🔎 Filtrer :</span>
+                            {sites.length > 0 && (
+                                <select value={filterSite} onChange={e => setFilterSite(e.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+                                    <option value="">Tous les sites</option>
+                                    {sites.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            )}
+                            {departements.length > 0 && (
+                                <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+                                    <option value="">Tous les départements</option>
+                                    {departements.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                            )}
+                            {(filterSite || filterDept) && <button onClick={() => { setFilterSite(''); setFilterDept(''); }} className="text-xs font-semibold text-blue-600 hover:underline">Réinitialiser</button>}
+                            <span className="ml-auto text-xs text-gray-400">{congesFiltres.length} demande(s)</span>
+                        </div>
+                    )}
                     {/* Tab Demandes */}
                     {activeTab === 'demandes' && (
                         <div className="space-y-4">
@@ -210,9 +243,9 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-3 mb-2">
-                                                    <h3 className="font-medium text-lg">{conge.personnelNom}</h3>
-                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatutColor(conge.statut)}`}>
-                                                        {getStatutLabel(conge.statut)}
+                                                    <h3 className="font-medium text-lg">{persOf(conge)?.nom || persOf(conge)?.name || conge.personnelNom || '—'}</h3>
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatutColor(conge)}`}>
+                                                        {getStatutLabel(conge)}
                                                     </span>
                                                     <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                                                         {typesConge.find(t => t.value === conge.type)?.label || conge.type}
@@ -220,8 +253,8 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                                 </div>
 
                                                 <div className="text-sm text-gray-600 space-y-1">
-                                                    <p><strong>Période:</strong> {formatDate(conge.dateDebut)} - {formatDate(conge.dateFin)} ({calculateDuration(conge.dateDebut, conge.dateFin)} jour{calculateDuration(conge.dateDebut, conge.dateFin) > 1 ? 's' : ''})</p>
-                                                    {conge.motif && <p><strong>Motif:</strong> {conge.motif}</p>}
+                                                    <p><strong>Période:</strong> {formatDate(cStart(conge))} - {formatDate(cEnd(conge))} ({calculateDuration(cStart(conge), cEnd(conge))} jour{calculateDuration(cStart(conge), cEnd(conge)) > 1 ? 's' : ''})</p>
+                                                    {cNotes(conge) && <p><strong>Motif:</strong> {cNotes(conge)}</p>}
                                                     <p><strong>Demandé le:</strong> {formatDate(conge.dateCreation)}</p>
                                                 </div>
                                             </div>
@@ -381,7 +414,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="flex items-center space-x-3 mb-2">
-                                                        <h3 className="font-medium text-lg">{conge.personnelNom}</h3>
+                                                        <h3 className="font-medium text-lg">{persOf(conge)?.nom || persOf(conge)?.name || conge.personnelNom || '—'}</h3>
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatutColor(conge.statut)}`}>
                                                             {getStatutLabel(conge.statut)}
                                                         </span>
@@ -391,8 +424,8 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                                     </div>
 
                                                     <div className="text-sm text-gray-600 space-y-1">
-                                                        <p><strong>Période:</strong> {formatDate(conge.dateDebut)} - {formatDate(conge.dateFin)} ({calculateDuration(conge.dateDebut, conge.dateFin)} jour{calculateDuration(conge.dateDebut, conge.dateFin) > 1 ? 's' : ''})</p>
-                                                        {conge.motif && <p><strong>Motif:</strong> {conge.motif}</p>}
+                                                        <p><strong>Période:</strong> {formatDate(cStart(conge))} - {formatDate(cEnd(conge))} ({calculateDuration(cStart(conge), cEnd(conge))} jour{calculateDuration(cStart(conge), cEnd(conge)) > 1 ? 's' : ''})</p>
+                                                        {cNotes(conge) && <p><strong>Motif:</strong> {cNotes(conge)}</p>}
                                                         <p><strong>Demandé le:</strong> {formatDate(conge.dateCreation)}</p>
                                                         {conge.dateApprobation && (
                                                             <p><strong>Traité le:</strong> {formatDate(conge.dateApprobation)}</p>
