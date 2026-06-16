@@ -660,8 +660,27 @@ export function PlanificateurFinal({
         const hiddenLayers = allLayers.length - jobLayers.length;
         const layerHeight = Math.floor(usableH / jobLayers.length);
 
+        // CONGÉ du jour pour cette personne : la demande EN ATTENTE s'affiche en ROUGE sur le calendrier
+        // (approuvée = vert). Tolère les deux conventions de champs (snake_case canonique / legacy camelCase).
+        const dayConge = (resourceType === 'personnel') ? (conges || []).find(c => {
+            const pid = c.personnel_id ?? c.personnelId;
+            if (String(pid) !== String(resourceId)) return false;
+            const st = String(c.start_date ?? c.dateDebut ?? '').slice(0, 10);
+            const en = String(c.end_date ?? c.dateFin ?? st).slice(0, 10);
+            const status = c.status ?? c.statut;
+            if (status === 'cancelled' || status === 'annule' || status === 'rejected' || status === 'refuse') return false;
+            return day.fullDate >= st && day.fullDate <= en;
+        }) : null;
+        const congePending = dayConge && (((dayConge.status ?? dayConge.statut) === 'pending') || ((dayConge.status ?? dayConge.statut) === 'en_attente'));
+
         return (
             <div className="relative w-full h-20 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded">
+                {/* Congé : bande ROUGE = en attente d'approbation ; verte = approuvé */}
+                {dayConge && (
+                    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-1 overflow-hidden px-1" style={{ height: 13, backgroundColor: congePending ? '#ef4444' : '#10b981' }} title={congePending ? tr('Congé EN ATTENTE d\'approbation', 'Leave PENDING approval') : tr('Congé approuvé', 'Approved leave')}>
+                        <span className="truncate text-[8px] font-bold text-white">{congePending ? `⏳ ${tr('Congé — en attente', 'Leave — pending')}` : `🌴 ${tr('Congé', 'Leave')}`}</span>
+                    </div>
+                )}
                 {/* Grille d'heures en arrière-plan */}
                 <div className="absolute inset-0 flex opacity-25">
                     {Array.from({length: 12}, (_, i) => (
