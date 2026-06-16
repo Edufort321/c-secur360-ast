@@ -128,15 +128,19 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
   // Synchro temps réel : recharge le panneau quand un module change (migration 109 requise).
   useRealtime(['ast_permits', 'equipment_inspections', 'incident_reports'], tenant, load);
 
+  const [archiveErr, setArchiveErr] = useState<string | null>(null);
   const archive = useCallback(async (key: string) => {
     setArchived(prev => { const n = new Set(prev); n.add(key); return n; }); // optimiste
-    try { await supabase.from('dashboard_archived_anomalies').upsert({ tenant_id: tenant, item_key: key, archived_by: me }, { onConflict: 'tenant_id,item_key' }); }
-    catch { /* migration 134 manquante */ }
+    // L'archivage DOIT persister : on remonte l'erreur (ex. RLS/migration) au lieu de l'avaler — sinon
+    // l'anomalie « revient » au rechargement sans qu'on sache pourquoi.
+    const { error } = await supabase.from('dashboard_archived_anomalies').upsert({ tenant_id: tenant, item_key: key, archived_by: me }, { onConflict: 'tenant_id,item_key' });
+    if (error) { setArchiveErr(`Archivage non enregistré : ${error.message} (appliquez la migration 189).`); setArchived(prev => { const n = new Set(prev); n.delete(key); return n; }); }
+    else setArchiveErr(null);
   }, [tenant, me]);
   const restore = useCallback(async (key: string) => {
     setArchived(prev => { const n = new Set(prev); n.delete(key); return n; }); // optimiste
     try { await supabase.from('dashboard_archived_anomalies').delete().eq('tenant_id', tenant).eq('item_key', key); }
-    catch { /* migration 134 manquante */ }
+    catch { /* noop */ }
   }, [tenant]);
 
   const ICON = { ast: ShieldAlert, inspection: Wrench, incident: FileWarning };
@@ -165,6 +169,23 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
           <span className="text-[11px] text-gray-400">{canSeeAll ? 'Vue coordination (tout le tenant)' : 'Mes dossiers'}</span>
         </div>
       </div>
+      {/* Façade : nombre par CATÉGORIE (selon la vue active/archivée). */}
+      {(() => {
+        const src = items.filter(it => showArchived ? archived.has(it.key) : !archived.has(it.key));
+        const byCat = src.reduce((m: Record<string, { n: number; red: number }>, it) => { (m[it.module] ||= { n: 0, red: 0 }); m[it.module].n++; if (it.severity === 'red') m[it.module].red++; return m; }, {});
+        const cats = Object.entries(byCat);
+        if (!cats.length) return null;
+        return (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {cats.map(([mod, c]) => (
+              <span key={mod} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                {mod} <span className={`rounded-full px-1.5 text-[10px] text-white ${c.red ? 'bg-red-600' : 'bg-amber-500'}`}>{c.n}</span>
+              </span>
+            ))}
+          </div>
+        );
+      })()}
+      {archiveErr && <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">⚠️ {archiveErr}</div>}
       {visible.length === 0 ? (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
           <CheckCircle2 size={16} /> {showArchived ? 'Aucune anomalie archivée.' : 'Aucune non-conformité à traiter.'}
