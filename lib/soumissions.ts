@@ -238,7 +238,7 @@ export async function setPreferredCatalogue(tenant: string, id: string): Promise
 
 // ── Paramètres de présentation (lettre, conditions, mode de ventilation) par tenant ──
 export type ConditionItem = { id: string; titre: string; contenu: string; defaut_coche?: boolean };
-export type CoverLetterCfg = { ville?: string; body?: string; salutation?: string; signataire_nom?: string; signataire_titre?: string; signature_url?: string | null };
+export type CoverLetterCfg = { ville?: string; body?: string; salutation?: string; signataire_nom?: string; signataire_titre?: string; signature_url?: string | null; header_color?: string };
 export type SoumissionSettings = {
   cover_letter?: CoverLetterCfg;
   conditions?: ConditionItem[];

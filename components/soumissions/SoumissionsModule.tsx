@@ -382,6 +382,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
       } : null;
       await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
         cat, logoUrl, companyName, includeSummary: expSummary, coverLetter, breakdownMode, includeTaux: inclTaux,
+        headerColor: coverCfg?.cover_letter?.header_color || null,
         conditions: (coverCfg?.conditions || []).filter(c => condSel.includes(c.id)).map(c => ({ titre: c.titre, contenu: c.contenu })),
         attachments: attachLib.filter(a => a.id && attachSel.includes(a.id) && a.file_url).map(a => ({ url: a.file_url!, filename: a.filename })),
         itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,
@@ -528,6 +529,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Ville (lettre)', 'City (letter)')}<input className={`mt-1 ${inp}`} value={cl.ville || ''} onChange={e => setCL({ ville: e.target.value })} placeholder="Sherbrooke" /></label>
                   <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Signataire — nom', 'Signatory — name')}<input className={`mt-1 ${inp}`} value={cl.signataire_nom || ''} onChange={e => setCL({ signataire_nom: e.target.value })} /></label>
                   <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Signataire — titre', 'Signatory — title')}<input className={`mt-1 ${inp}`} value={cl.signataire_titre || ''} onChange={e => setCL({ signataire_titre: e.target.value })} /></label>
+                </div>
+                {/* Couleur de la bande d'en-tête du PDF (paramétrable, façon rapport DGA) */}
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-gray-600 dark:text-gray-300">{tr('Couleur de la bande d’en-tête (PDF)', 'Header band color (PDF)')}</span>
+                  <input type="color" value={cl.header_color || '#0f52ba'} onChange={e => setCL({ header_color: e.target.value })} className="h-8 w-12 cursor-pointer rounded border border-gray-300 dark:border-gray-600" />
+                  <input className={`${inp} !w-28`} value={cl.header_color || ''} onChange={e => setCL({ header_color: e.target.value })} placeholder="#0f52ba" />
                 </div>
                 <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('Corps (canevas de la lettre)', 'Body (letter template)')}<textarea rows={5} className={`mt-1 ${inp}`} value={cl.body || ''} onChange={e => setCL({ body: e.target.value })} /></label>
                 <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('Salutation', 'Closing')}<input className={`mt-1 ${inp}`} value={cl.salutation || ''} onChange={e => setCL({ salutation: e.target.value })} /></label>

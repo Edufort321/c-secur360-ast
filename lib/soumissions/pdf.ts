@@ -30,8 +30,17 @@ export type SoumissionPdfOpts = {
   includeTaux?: boolean;             // joindre une page « Liste de taux » (catalogue)
   conditions?: { titre: string; contenu: string }[]; // conditions & modalités cochées (page jointe)
   attachments?: { url: string; filename?: string }[]; // PDF supplémentaires à annexer (fusion pdf-lib)
+  headerColor?: string | null;       // couleur de la bande d'en-tête (hex), paramétrable par tenant
   filename?: string;
 };
+
+// #rrggbb -> [r,g,b] (défaut bleu C-Secur si invalide).
+function hexRgb(hex?: string | null): [number, number, number] {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return [15, 82, 186];
+  const i = parseInt(m[1], 16);
+  return [(i >> 16) & 255, (i >> 8) & 255, i & 255];
+}
 
 export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[], opts: SoumissionPdfOpts = {}): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
@@ -39,6 +48,7 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' }); // 612 x 792
   const M = 42, W = 612, R = W - M; // marge DGA
+  const BAND = hexRgb(opts.headerColor); // couleur de la bande d'en-tête (paramétrable)
   let y = M;
 
   const ensure = (need: number) => { if (y + need > 792 - 50) { doc.addPage(); drawHeader(); } };
@@ -46,12 +56,14 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
 
   // En-tête de page FIDÈLE DGA : logo (ratio préservé, hauteur 24) + métadonnées à droite + filet à y=50.
   function drawHeader() {
+    // Bande d'en-tête colorée (couleur paramétrable par tenant) — look « rapport » DGA/chantier.
+    doc.setFillColor(BAND[0], BAND[1], BAND[2]); doc.rect(0, 0, W, 8, 'F');
     drawLogo(doc, logo, M, 22, 24);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(BAND[0], BAND[1], BAND[2]);
     doc.text(opts.companyName || 'C-Secur360', R, 30, { align: 'right' });
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(90);
     doc.text(`Soumission ${s.numero || ''}${s.revision && s.revision > 1 ? ` · rév. ${s.revision}` : ''}`, R, 42, { align: 'right' });
-    doc.setDrawColor(210); doc.setLineWidth(0.6); doc.line(M, 50, R, 50);
+    doc.setDrawColor(BAND[0], BAND[1], BAND[2]); doc.setLineWidth(1.2); doc.line(M, 50, R, 50);
     y = 60;
   }
 
