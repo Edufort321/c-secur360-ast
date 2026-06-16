@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
+import { resolveAccess, canShareholders, effectiveTenant, effectiveLevelFor } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Registre des ACTIONNAIRES (profil, non bancaire). Données sensibles → service_role +
@@ -11,9 +11,11 @@ export const runtime = 'nodejs';
 async function guard(req: NextRequest, reqTenant?: string | null) {
   const acc = await resolveAccess(req);
   if (!acc) return { err: NextResponse.json({ error: 'Non authentifié' }, { status: 401 }) };
-  if (!canShareholders(acc.level)) return { err: NextResponse.json({ error: 'Accès refusé (actionnaires)' }, { status: 403 }) };
   const tenant = effectiveTenant(acc, reqTenant);
   if (!tenant) return { err: NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 }) };
+  // Niveau effectif sur CE tenant (applique l'accès restreint pour les super-admins non invités).
+  const level = await effectiveLevelFor(acc, tenant);
+  if (!canShareholders(level)) return { err: NextResponse.json({ error: 'Accès refusé (actionnaires)' }, { status: 403 }) };
   return { acc, tenant };
 }
 

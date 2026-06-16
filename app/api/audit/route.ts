@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
+import { resolveAccess, canShareholders, effectiveTenant, effectiveLevelFor } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Lecture du JOURNAL D'AUDIT des données sensibles (finance/RH/actionnaires). Réservé
@@ -10,10 +10,10 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  if (!canShareholders(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const sp = new URL(req.url).searchParams;
   const tenant = effectiveTenant(acc, sp.get('tenant'));
   if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
+  if (!canShareholders(await effectiveLevelFor(acc, tenant))) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const limit = Math.min(500, Math.max(1, parseInt(sp.get('limit') || '200', 10) || 200));
   const entity = sp.get('entity') || '';
 

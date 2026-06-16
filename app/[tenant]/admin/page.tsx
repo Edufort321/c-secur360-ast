@@ -64,15 +64,13 @@ function useCurrentAccess(tenant: string) {
         // (fermée à l'anon pour empêcher la fuite de courriels/rôles).
         const res = await fetch('/api/auth/me', { credentials: 'include' });
         const me = res.ok ? (await res.json())?.user : null;
-        if (me?.email) {
-          setUserEmail(me.email);
-          if (me.role === 'super_admin') { setNiveauAcces('super_user'); setLoading(false); return; }
-          // Raffinement par planner_personnel (niveau d'accès du poste).
-          const { data: p } = await supabase.from('planner_personnel').select('niveauAcces').eq('tenant_id', tenant).ilike('email', me.email).maybeSingle();
-          if (p?.niveauAcces) setNiveauAcces(p.niveauAcces as AccessLevel);
-          else if (me.role === 'client_admin') setNiveauAcces('direction');
-          else if (me.role === 'user') setNiveauAcces('consultation');
-        }
+        if (me?.email) setUserEmail(me.email);
+        // Niveau EFFECTIF résolu SERVEUR pour CE tenant — applique l'« accès restreint » :
+        // un super-admin plateforme non invité (et non propriétaire) est ramené à 'consultation'.
+        const accRes = await fetch(`/api/me/access?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+        const acc = accRes.ok ? await accRes.json() : null;
+        if (acc?.level) setNiveauAcces(acc.level as AccessLevel);
+        else if (me?.role === 'user') setNiveauAcces('consultation');
       } catch { /* session indispo → garde le défaut */ }
       setLoading(false);
     })();

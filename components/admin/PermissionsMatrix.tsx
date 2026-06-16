@@ -26,12 +26,26 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Accès restreint (anti-super-admin plateforme) — tenants.restrict_super_admin.
+  const [restrict, setRestrict] = useState<boolean | null>(null);
+  const [restrictBusy, setRestrictBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => { const p = await getTenantPermissions(tenant); if (active) { setPerms(p); setLoading(false); } })();
+    fetch(`/api/admin/restrict-access?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => { if (active && j) setRestrict(!!j.restrict); }).catch(() => {});
     return () => { active = false; };
   }, [tenant]);
+
+  async function toggleRestrict(next: boolean) {
+    setRestrictBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/admin/restrict-access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, restrict: next }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error);
+      setRestrict(!!j.restrict); setNotice(tr('Enregistré ✓', 'Saved ✓'));
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
+    finally { setRestrictBusy(false); }
+  }
 
   async function onChange(cap: Capability, minTier: number) {
     if (!perms) return;
@@ -61,6 +75,21 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
             'The tenant manages access levels here. HR: minimum level per capability. MODULES: a “View” and an “Edit” threshold per module/sub-module — below View = BLOCKED, between View and Edit = READ-ONLY, above = EDIT. The “External (QR)” level allows non-logged-in people (e.g. scanning a JSA/permit).')}
       </div>
       {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{notice}</div>}
+
+      {/* ACCÈS RESTREINT — bloque les super-admins PLATEFORME non invités */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-sm font-bold text-amber-800 dark:text-amber-200"><ShieldCheck size={15} /> {tr('Accès restreint (super-admins plateforme)', 'Restricted access (platform super-admins)')}</div>
+            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300/90">{tr('Quand activé, un super-admin de la PLATEFORME n’accède à ce tenant que s’il y est invité (fiche employé avec un niveau d’accès). Le ou les propriétaires de la plateforme gardent toujours accès.', 'When enabled, a PLATFORM super-admin can access this tenant only if invited (staff record with an access level). The platform owner(s) always keep access.')}</p>
+          </div>
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input type="checkbox" disabled={!canEdit || restrictBusy || restrict === null} checked={!!restrict} onChange={e => toggleRestrict(e.target.checked)} className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-gray-300 transition checked:bg-amber-600 disabled:opacity-50 relative before:absolute before:left-0.5 before:top-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition checked:before:translate-x-4" />
+            <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">{restrict === null ? '…' : restrict ? tr('Activé', 'On') : tr('Désactivé', 'Off')}</span>
+            {restrictBusy && <Loader2 size={13} className="animate-spin text-amber-600" />}
+          </label>
+        </div>
+      </div>
 
       {/* MODULES — Voir / Éditer par module et sous-module */}
       <div>

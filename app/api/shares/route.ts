@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
+import { resolveAccess, canShareholders, effectiveTenant, effectiveLevelFor } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAccountMap, createEntryAdmin, entryExists } from '@/lib/accountingServer';
 import { logAudit, clientIp } from '@/lib/auditTrail';
@@ -13,9 +13,10 @@ export const runtime = 'nodejs';
 async function guard(req: NextRequest, reqTenant?: string | null) {
   const acc = await resolveAccess(req);
   if (!acc) return { err: NextResponse.json({ error: 'Non authentifié' }, { status: 401 }) };
-  if (!canShareholders(acc.level)) return { err: NextResponse.json({ error: 'Accès refusé (cap table)' }, { status: 403 }) };
   const tenant = effectiveTenant(acc, reqTenant);
   if (!tenant) return { err: NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 }) };
+  const level = await effectiveLevelFor(acc, tenant);
+  if (!canShareholders(level)) return { err: NextResponse.json({ error: 'Accès refusé (cap table)' }, { status: 403 }) };
   return { acc, tenant };
 }
 

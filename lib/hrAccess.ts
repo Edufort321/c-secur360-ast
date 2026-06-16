@@ -10,7 +10,7 @@ const HR_LEVELS = new Set(['admin_paie', 'rh', 'direction', 'super_user']);
 // Niveaux ayant accès à la gestion des ACCÈS (mots de passe d'accès, niveaux). administration+.
 const AUTH_LEVELS = new Set(['administration', 'rh', 'direction', 'super_user']);
 
-export type Access = { userId: string; email: string; tenant: string; level: string };
+export type Access = { userId: string; email: string; tenant: string; level: string; role: string };
 
 /**
  * Résout l'accès de la personne connectée. Retourne null si non authentifiée.
@@ -30,7 +30,35 @@ export async function resolveAccess(req: NextRequest): Promise<Access | null> {
       else if (u.role === 'client_admin') level = 'direction';
     } catch { /* défaut consultation */ }
   }
-  return { userId: u.id, email: u.email || '', tenant, level };
+  return { userId: u.id, email: u.email || '', tenant, level, role: u.role || '' };
+}
+
+/** Propriétaire(s) plateforme : accès TOUJOURS garanti, jamais verrouillé par un tenant. */
+export function isPlatformOwner(email?: string | null): boolean {
+  const list = (process.env.PLATFORM_OWNER_EMAILS || 'eric.dufort@cerdia.ai')
+    .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  return !!email && list.includes(email.toLowerCase());
+}
+
+/**
+ * Niveau EFFECTIF d'un super-admin PLATEFORME sur un tenant CIBLE, en tenant compte de l'« accès
+ * restreint » (tenants.restrict_super_admin). Modèle : le fondateur (PLATFORM_OWNER_EMAILS) garde
+ * toujours super_user ; les AUTRES super-admins n'ont accès à un tenant restreint que si ce tenant
+ * les a invités (fiche planner_personnel avec niveauAcces). Sinon → 'consultation' (aucun admin).
+ * Les utilisateurs NON super-admin ne sont pas affectés (effectiveTenant les force déjà à leur tenant).
+ */
+export async function effectiveLevelFor(acc: Access, targetTenant: string): Promise<string> {
+  if (acc.role !== 'super_admin') return acc.level;          // utilisateurs de tenant : inchangés
+  if (isPlatformOwner(acc.email)) return 'super_user';        // fondateur : jamais verrouillé
+  try {
+    const { data: t } = await supabaseAdmin.from('tenants')
+      .select('restrict_super_admin').eq('subdomain', targetTenant).maybeSingle();
+    if (!(t as any)?.restrict_super_admin) return 'super_user'; // tenant non restreint
+    // Restreint : accès uniquement si invité (fiche personnel avec niveau dans CE tenant).
+    const { data: p } = await supabaseAdmin.from('planner_personnel')
+      .select('niveauAcces').eq('tenant_id', targetTenant).ilike('email', acc.email || '').maybeSingle();
+    return (p as any)?.niveauAcces ? String((p as any).niveauAcces) : 'consultation';
+  } catch { return 'super_user'; } // en cas d'erreur DB, ne pas verrouiller (fail-open contrôlé)
 }
 
 /**

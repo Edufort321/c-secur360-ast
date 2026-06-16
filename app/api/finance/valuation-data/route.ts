@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
+import { resolveAccess, canShareholders, effectiveTenant, effectiveLevelFor } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { computeFinancialAnalytics } from '@/lib/financialAnalytics';
 import { aggregateBalanceSheet } from '@/lib/valuation';
@@ -12,9 +12,9 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const acc = await resolveAccess(req);
   if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  if (!canShareholders(acc.level)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
   if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
+  if (!canShareholders(await effectiveLevelFor(acc, tenant))) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
 
   // Grand livre (en-têtes + lignes + compte) pour l'analytique EBITDA.
   const { data: entries } = await supabaseAdmin
