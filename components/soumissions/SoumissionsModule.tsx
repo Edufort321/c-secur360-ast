@@ -329,6 +329,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const updItem = (i: number, patch: Partial<SoumissionItem>) => setItems(p => p.map((it, j) => j === i ? { ...it, ...patch } : it));
   const addItem = () => setItems(p => [...p, { name: `Item ${p.length + 1}`, total: 0, lignes: [] }]);
   const delItem = (i: number) => setItems(p => p.filter((_, j) => j !== i));
+  // Produits numériques (catalogue admin) — ajout direct en ligne « matériaux » de la soumission.
+  const [prodList, setProdList] = useState<{ id: string; name: string; sale_price?: number; product_class?: string | null }[]>([]);
+  useEffect(() => { supabase.from('items').select('id, name, sale_price, product_class').eq('tenant_id', tenant).eq('article_type', 'digital').order('name').then(({ data }) => setProdList((data as any[]) || []), () => {}); }, [tenant]);
+  const addProductLigne = (i: number, pid: string) => { const pr = prodList.find(x => x.id === pid); if (!pr) return; setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, { ...blankLigne('materiaux'), description: pr.name, quantity: 1, unit_cost: Number(pr.sale_price) || 0, maj: 0, item_id: pr.id }] } : it)); };
   const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, c === 'voyagement' ? { ...blankLigne(c), tech: 1, unit: 'km', unit_cost: Number(cat?.extras?.km) || 0 } : c === 'materiaux' ? { ...blankLigne(c), quantity: 1, maj: matMarge } : blankLigne(c)] } : it));
   // Ajoute une ligne pre-remplie depuis un barEme additionnel du catalogue (classe a la bonne categorie).
   const addCatalogueLigne = (i: number, c: Categorie, label: string, value: number) => setItems(p => p.map((it, j) => {
@@ -1261,6 +1265,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                             </span>
                           )}
                           {canEdit && <button onClick={() => addLigne(i, c)} className="text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>}
+                          {canEdit && c === 'materiaux' && prodList.length > 0 && (
+                            <select onChange={e => { if (e.target.value) addProductLigne(i, e.target.value); e.currentTarget.value = ''; }} className="rounded border border-gray-300 px-1.5 py-0.5 text-[11px] dark:border-gray-600 dark:bg-gray-700" title={tr('Ajouter un produit du catalogue', 'Add a catalogue product')}>
+                              <option value="">+ {tr('Produit', 'Product')}</option>
+                              {prodList.map(pr => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                            </select>
+                          )}
                         </span>
                       </div>
                       {/* Barèmes additionnels du catalogue classés dans CETTE section : clic = ligne pré-remplie */}
