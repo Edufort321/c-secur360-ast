@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { logAudit, clientIp } from '@/lib/auditTrail';
 
 // Coordonnées BANCAIRES de versement des dividendes — CONFIDENTIEL. Lecture/écriture
 // service_role + niveau direction/super_user uniquement. La révélation (GET) est explicite
@@ -22,6 +23,8 @@ export async function GET(req: NextRequest) {
   const g = await guard(req, sp.get('tenant')); if (g.err) return g.err;
   const id = sp.get('id'); if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
   const { data } = await supabaseAdmin.from('shareholder_banking').select('*').eq('shareholder_id', id).eq('tenant_id', g.tenant!).maybeSingle();
+  // AUDIT : la consultation de l'info bancaire est tracée (qui a révélé quoi, quand).
+  await logAudit({ tenant: g.tenant!, actorId: g.acc!.userId, actorEmail: g.acc!.email, action: 'reveal_banking', entityType: 'shareholder_banking', entityId: id, summary: 'Consultation des coordonnées bancaires', ip: clientIp(req) });
   return NextResponse.json({ banking: data || null });
 }
 
@@ -41,5 +44,6 @@ export async function POST(req: NextRequest) {
   };
   const { error } = await supabaseAdmin.from('shareholder_banking').upsert(row, { onConflict: 'shareholder_id' });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await logAudit({ tenant, actorId: g.acc!.userId, actorEmail: g.acc!.email, action: 'update_banking', entityType: 'shareholder_banking', entityId: id, summary: 'Modification des coordonnées bancaires', ip: clientIp(req) });
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAccountMap, createEntryAdmin, entryExists } from '@/lib/accountingServer';
+import { logAudit, clientIp } from '@/lib/auditTrail';
 
 // Cap table : catégories d'actions + mouvements (émission/transfert/rachat). La détention par
 // actionnaire = somme cumulée des mouvements. Un apport en ESPÈCES (amount > 0 sur une émission)
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
         }
       } catch { /* l'apport est enregistré ; l'écriture GL est best-effort (plan comptable requis) */ }
     }
+    await logAudit({ tenant, actorId: g.acc!.userId, actorEmail: g.acc!.email, action: 'share_txn', entityType: 'share_txn', entityId: txnId, summary: `${row.txn_type} ${row.shares} actions`, meta: { amount, shareholder_id: t.shareholder_id }, ip: clientIp(req) });
     return NextResponse.json({ ok: true, id: txnId });
   }
 

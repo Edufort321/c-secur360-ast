@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveAccess, canShareholders, effectiveTenant } from '@/lib/hrAccess';
+import { resolveAccess, canShareholders, effectiveTenant, type Access } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAccountMap, createEntryAdmin, entryExists } from '@/lib/accountingServer';
+import { logAudit, clientIp } from '@/lib/auditTrail';
 
 // Dividendes : déclaration (répartie au prorata des actions détenues) + versement, le tout
 // comptabilisé au GL. Déclaration : DR 3300 Dividendes déclarés / CR 2350 Dividendes à payer.
@@ -36,15 +37,18 @@ export async function POST(req: NextRequest) {
   const g = await guard(req, body.tenant); if (g.err) return g.err;
   const tenant = g.tenant!;
 
-  if (body.kind === 'declare') return declare(tenant, body.declaration || {});
-  if (body.kind === 'pay') return settle(tenant, body.declarationId);
-  if (body.kind === 'cancel') return cancel(tenant, body.declarationId);
+  const audit = { actorId: g.acc!.userId, actorEmail: g.acc!.email, ip: clientIp(req) };
+  if (body.kind === 'declare') return declare(tenant, body.declaration || {}, audit);
+  if (body.kind === 'pay') return settle(tenant, body.declarationId, audit);
+  if (body.kind === 'cancel') return cancel(tenant, body.declarationId, audit);
   return NextResponse.json({ error: 'kind inconnu' }, { status: 400 });
 }
 
+type AuditCtx = { actorId: string; actorEmail: string; ip: string };
+
 // Déclare un dividende : calcule la détention par actionnaire (option : par catégorie),
 // répartit le montant au prorata, crée les versements (pending) et poste l'écriture de déclaration.
-async function declare(tenant: string, d: any) {
+async function declare(tenant: string, d: any, audit: AuditCtx) {
   if (!d.declaration_date) return NextResponse.json({ error: 'Date de déclaration requise' }, { status: 400 });
   const total = Number(d.total_amount) || 0;
   const perShareIn = Number(d.per_share) || 0;
@@ -90,11 +94,12 @@ async function declare(tenant: string, d: any) {
       await supabaseAdmin.from('dividend_declarations').update({ gl_entry_id: entryId }).eq('id', declId);
     }
   } catch { /* écriture best-effort */ }
+  await logAudit({ tenant, actorId: audit.actorId, actorEmail: audit.actorEmail, action: 'declare_dividend', entityType: 'dividend', entityId: declId, summary: `Déclaration ${totalAmount.toFixed(2)} $ (${payRows.length} actionnaire(s))`, meta: { total: totalAmount, per_share: perShare }, ip: audit.ip });
   return NextResponse.json({ ok: true, id: declId, per_share: perShare, total: totalAmount, count: payRows.length });
 }
 
 // Verse le dividende : marque déclaration + versements payés et poste DR 2350 / CR 1000.
-async function settle(tenant: string, declId: string) {
+async function settle(tenant: string, declId: string, audit: AuditCtx) {
   if (!declId) return NextResponse.json({ error: 'declarationId requis' }, { status: 400 });
   const { data: decl } = await supabaseAdmin.from('dividend_declarations').select('*').eq('id', declId).eq('tenant_id', tenant).maybeSingle();
   if (!decl) return NextResponse.json({ error: 'Déclaration introuvable' }, { status: 404 });
@@ -114,11 +119,12 @@ async function settle(tenant: string, declId: string) {
       });
     }
   } catch { /* best-effort */ }
+  await logAudit({ tenant, actorId: audit.actorId, actorEmail: audit.actorEmail, action: 'pay_dividend', entityType: 'dividend', entityId: declId, summary: `Versement ${(Number((decl as any).total_amount) || 0).toFixed(2)} $`, ip: audit.ip });
   return NextResponse.json({ ok: true });
 }
 
 // Annule une déclaration NON versée + contre-passe l'écriture de déclaration.
-async function cancel(tenant: string, declId: string) {
+async function cancel(tenant: string, declId: string, audit: AuditCtx) {
   if (!declId) return NextResponse.json({ error: 'declarationId requis' }, { status: 400 });
   const { data: decl } = await supabaseAdmin.from('dividend_declarations').select('*').eq('id', declId).eq('tenant_id', tenant).maybeSingle();
   if (!decl) return NextResponse.json({ error: 'Déclaration introuvable' }, { status: 404 });
@@ -136,5 +142,6 @@ async function cancel(tenant: string, declId: string) {
       });
     }
   } catch { /* best-effort */ }
+  await logAudit({ tenant, actorId: audit.actorId, actorEmail: audit.actorEmail, action: 'cancel_dividend', entityType: 'dividend', entityId: declId, summary: 'Annulation de déclaration', ip: audit.ip });
   return NextResponse.json({ ok: true });
 }
