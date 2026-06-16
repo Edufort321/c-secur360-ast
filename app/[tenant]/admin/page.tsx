@@ -14,9 +14,10 @@ import { ShareholdersModule } from '@/components/admin/ShareholdersModule';
 import { AuditLog } from '@/components/admin/AuditLog';
 import { AlertsModule } from '@/components/admin/AlertsModule';
 import { RecurringModule } from '@/components/admin/RecurringModule';
+import { AssetsModule } from '@/components/admin/AssetsModule';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
-import { Package, PieChart, ShieldCheck, Bell, Repeat } from 'lucide-react';
+import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes } from 'lucide-react';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
@@ -245,8 +246,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'actionnaires' | 'recurrents' | 'alertes' | 'audit' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'etat-financier', 'actionnaires', 'alertes', 'audit', 'integrations'];
+  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'actionnaires', 'alertes', 'audit', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -298,6 +299,7 @@ export default function AdminPage() {
     { k: 'recurrents',  label: tr('Abonnements', 'Subscriptions'),            icon: Repeat, group: 'finance', need: p => p.viewSalary },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, group: 'finance', need: p => p.manageAll },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, group: 'finance', need: p => p.viewSalary },
+    { k: 'immobilisations', label: tr('Immobilisations', 'Fixed assets'),     icon: Boxes, group: 'finance', need: p => p.viewSalary },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, group: 'finance', need: p => p.viewSalary },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, group: 'finance', need: p => p.viewSalary },
     { k: 'actionnaires', label: tr('Actionnaires', 'Shareholders'),          icon: PieChart, group: 'finance', need: p => p.manageAll },
@@ -430,6 +432,7 @@ export default function AdminPage() {
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} initialProject={initialInvoiceProject} />}
         {tab === 'recurrents' && <RecurringModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'immobilisations' && <AssetsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
         {tab === 'bons-commande' && <BonsCommandeModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}

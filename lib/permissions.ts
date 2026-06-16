@@ -97,6 +97,7 @@ export const ADMIN_TABS: { key: string; fr: string; en: string; group: string; d
   { key: 'recurrents',  fr: 'Abonnements',          en: 'Subscriptions',     group: 'finance', defaultTier: 5 },
   { key: 'facturation', fr: 'Facturation',          en: 'Billing',           group: 'finance', defaultTier: 7 },
   { key: 'transactions', fr: 'Transactions',        en: 'Transactions',      group: 'finance', defaultTier: 5 },
+  { key: 'immobilisations', fr: 'Immobilisations',  en: 'Fixed assets',      group: 'finance', defaultTier: 5 },
   { key: 'comptabilite', fr: 'Comptabilité',        en: 'Accounting',        group: 'finance', defaultTier: 5 },
   { key: 'fiscal',      fr: 'Rapports fiscaux',     en: 'Tax reports',       group: 'finance', defaultTier: 5 },
   { key: 'etat-financier', fr: 'État financier',    en: 'Financial state',   group: 'finance', defaultTier: 5 },
