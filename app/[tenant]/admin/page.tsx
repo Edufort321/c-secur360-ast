@@ -2629,7 +2629,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
   const [sites, setSites]         = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy]           = useState(false);
   const [notice, setNotice]       = useState<string | null>(null);
-  const [showPwd, setShowPwd]     = useState(false);
+  const [showPwd, setShowPwd]     = useState(true); // visible par défaut : champ clairement éditable (l'admin doit lire/communiquer le mot de passe)
   const [copied, setCopied]       = useState(false);
   const [showPwdFor, setShowPwdFor] = useState<string | null>(null); // ligne dont le mot de passe est révélé
 
@@ -2681,7 +2681,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       password: pwd,
       site_id:  existing?.site_id || '',
     });
-    setShowPwd(false); // masqué par défaut
+    setShowPwd(true); // visible : le champ reste clairement éditable
   }
 
   function regenerate() {
@@ -2894,7 +2894,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
             <div>
               <label className="mb-1 flex items-center justify-between text-xs font-semibold text-gray-600 dark:text-gray-400">
                 {tr('Mot de passe', 'Password')}
-                <span className="text-[10px] text-gray-400 font-normal">{tr('5 lettres + 3 chiffres + 2 spéciaux', '5 letters + 3 digits + 2 specials')}</span>
+                <span className="text-[10px] text-gray-400 font-normal">{tr('Personnalisable — tapez le vôtre ou ↻ pour générer', 'Custom — type your own or ↻ to generate')}</span>
               </label>
               <div className="flex gap-1.5">
                 <div className="relative flex-1">
