@@ -378,10 +378,8 @@ export default function DgaPage() {
     return [...byKey.values()];
   }
 
-  async function handleImport(file: File) {
-    if (!file) return;
-    setImporting(true); setImportErr(null); setNotice(null); setImportProgress(null);
-    try {
+  // Extraction d'UN fichier -> items de prévisualisation (sans toucher à l'état UI). Réutilisé en lot.
+  async function extractItemsFromFile(file: File): Promise<any[]> {
       let transformers: any[];
       if (isSpreadsheet(file.name, file.type) && !isPdf(file.name, file.type)) {
         // Export Excel/CSV LIMS (InsideView / Morgan Schaffer) : mappage DIRECT, sans IA.
@@ -429,9 +427,34 @@ export default function DgaPage() {
         }).filter(Boolean) : [];
         return { rawEq, eq, measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create', conflicts, useNew: {} as Record<string, boolean> };
       });
-      setImportPreview({ items });
-    } catch (e: any) { setImportErr(e?.message || String(e)); }
+      return items;
+  }
+
+  async function handleImport(file: File) {
+    if (!file) return;
+    setImporting(true); setImportErr(null); setNotice(null); setImportProgress(null);
+    try { setImportPreview({ items: await extractItemsFromFile(file) }); }
+    catch (e: any) { setImportErr(e?.message || String(e)); }
     finally { setImporting(false); setImportProgress(null); }
+  }
+
+  // Import de PLUSIEURS fichiers d'un coup : on extrait chacun et on FUSIONNE tous les items dans une
+  // seule prévisualisation (« Tout importer »). Un fichier en erreur n'arrête pas les autres.
+  async function handleImportFiles(files: File[]) {
+    const list = (files || []).filter(Boolean);
+    if (!list.length) return;
+    if (list.length === 1) return handleImport(list[0]);
+    setImporting(true); setImportErr(null); setNotice(null); setImportProgress({ done: 0, total: list.length });
+    const allItems: any[] = []; const errs: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      try { allItems.push(...await extractItemsFromFile(list[i])); }
+      catch (e: any) { errs.push(`${list[i].name}: ${e?.message || e}`); }
+      setImportProgress({ done: i + 1, total: list.length });
+    }
+    setImporting(false); setImportProgress(null);
+    if (!allItems.length) { setImportErr(errs.join(' · ') || tr('Aucun transformateur détecté.', 'No transformer detected.')); return; }
+    if (errs.length) setNotice(tr(`⚠️ ${errs.length} fichier(s) en erreur : ${errs.slice(0, 3).join(' · ')}`, `⚠️ ${errs.length} file(s) failed: ${errs.slice(0, 3).join(' · ')}`));
+    setImportPreview({ items: allItems });
   }
   async function applyImport() {
     const items: any[] = importPreview?.items || [];
@@ -487,7 +510,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, handleImportFiles, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -546,7 +569,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated, assembleReport, assembling } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, handleImportFiles, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound, treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated, assembleReport, assembling } = p;
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Filtres principaux MUTUELLEMENT EXCLUSIFs : chaque sélection repart de la liste complète (sinon
   // les bascules « Suivi rapproché » / « BPC » restaient actives et la liste se vidait). Site + recherche
@@ -593,14 +616,14 @@ function ListView(p: any) {
 
       {/* Import PDF (drag) */}
       <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleImport(f); }}
+        onDrop={e => { e.preventDefault(); setDragOver(false); const fs = Array.from(e.dataTransfer.files || []); if (fs.length) handleImportFiles(fs); }}
         className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-5 text-center ${dragOver ? 'border-rose-400 bg-rose-50 dark:bg-rose-500/10' : 'border-gray-300 dark:border-gray-600'}`}>
         {importing ? <Loader2 className="animate-spin text-rose-500" /> : <Upload className="text-gray-400" />}
         {importing && importProgress && importProgress.total > 1
           ? <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{tr(`Extraction IA… lot ${importProgress.done}/${importProgress.total}`, `AI extraction… batch ${importProgress.done}/${importProgress.total}`)}</p>
           : <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo OU un export Excel/CSV (InsideView/LIMS) ici — PDF : extraction IA par lots ; Excel : mappage direct, fusion par date', 'Drop a lab PDF OR an Excel/CSV export (InsideView/LIMS) here — PDF: batched AI extraction; Excel: direct mapping, merge by date')}</p>}
-        <input ref={fileRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.currentTarget.value = ''; }} />
-        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF / Excel', 'Import PDF / Excel')}</button>
+        <input ref={fileRef} type="file" multiple accept="application/pdf,.pdf,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) handleImportFiles(fs); e.currentTarget.value = ''; }} />
+        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF / Excel (plusieurs)', 'Import PDF / Excel (multiple)')}</button>
       </div>
 
       {/* Recherche + filtres (filtres repliés dans un hamburger sous 640px) */}
