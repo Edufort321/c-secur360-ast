@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, Megaphone, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, Megaphone, Wrench, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports' | 'marketing';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'maintenance' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports' | 'marketing';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -76,6 +76,13 @@ export const MODULES: ModuleDef[] = [
     descFr: 'Fiches équipements (QR, photos, province) et inspections normalisées à fréquence personnalisable (ex. lift quotidien), formulaire via scan QR. Vendable aux compagnies de location.',
     descEn: 'Equipment sheets (QR, photos, province) and standardized inspections with customizable frequency (e.g. daily lift), QR-scan form. Sellable to rental companies.',
     icon: ClipboardCheck, basePath: 'inspections', color: 'text-teal-600', accent: 'bg-teal-600', status: 'available',
+  },
+  {
+    key: 'maintenance',
+    labelFr: "Maintenance d'équipement", labelEn: 'Equipment maintenance',
+    descFr: "Programme de maintenance (GMAO) : gabarits dupliquables par machine, QR à coller, séquences d'entretien + correctifs, chrono du temps, coûts annuels par équipement (MO + pièces), dashboard et cédulage planner.",
+    descEn: 'Maintenance program (CMMS): templates duplicable per machine, stick-on QR, maintenance sequences + corrective actions, time clock, annual cost per equipment (labor + parts), dashboard and planner scheduling.',
+    icon: Wrench, basePath: 'maintenance', color: 'text-orange-600', accent: 'bg-orange-600', status: 'available',
   },
   {
     key: 'timesheets',
