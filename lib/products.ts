@@ -37,3 +37,17 @@ export async function deleteProduct(tenant: string, id: string): Promise<void> {
   const { error } = await supabase.from('items').delete().eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
 }
+
+// Ventes par produit (factures transmises/payées) : unités + revenu, par item_id. Best-sellers.
+export async function getProductSales(tenant: string): Promise<Record<string, { units: number; revenue: number }>> {
+  const map: Record<string, { units: number; revenue: number }> = {};
+  try {
+    const { data } = await supabase.from('commerce_invoices').select('status, commerce_invoice_items(item_id, quantity, subtotal)').eq('tenant_id', tenant).in('status', ['sent', 'paid']);
+    for (const inv of (data || []) as any[]) for (const l of inv.commerce_invoice_items || []) {
+      if (!l.item_id) continue;
+      const m = (map[l.item_id] ||= { units: 0, revenue: 0 });
+      m.units += Number(l.quantity) || 0; m.revenue += Number(l.subtotal) || 0;
+    }
+  } catch { /* mig 194 non appliquée */ }
+  return map;
+}

@@ -5,7 +5,7 @@
 // les ventes se ventilent par CLASSE dans le bilan financier. Stocké dans `items` (article_type='digital').
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, Trash2, Save, Package, Search, Tag } from 'lucide-react';
-import { getProducts, saveProduct, deleteProduct, type DigitalProduct } from '@/lib/products';
+import { getProducts, saveProduct, deleteProduct, getProductSales, type DigitalProduct } from '@/lib/products';
 
 const empty = (): DigitalProduct => ({ name: '', code: '', description: '', product_class: '', sale_price: 0, cost_price: 0, unit: 'u.', photo_url: '', is_unlimited: true });
 const money = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -20,9 +20,11 @@ export function ProductsCatalog({ tenant, tr }: { tenant: string; tr: (f: string
   const [q, setQ] = useState('');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
+  const [sales, setSales] = useState<Record<string, { units: number; revenue: number }>>({});
   async function load() {
     setLoading(true);
     try { setRows(await getProducts(tenant)); } catch (e: any) { setNotice('Erreur (migration 194 appliquée ?) : ' + (e?.message || e)); }
+    getProductSales(tenant).then(setSales).catch(() => {});
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -59,9 +61,9 @@ export function ProductsCatalog({ tenant, tr }: { tenant: string; tr: (f: string
         {notice && <div className="px-4 pt-2 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr><th className="px-3 py-2">{tr('Produit', 'Product')}</th><th className="px-3 py-2">{tr('Classe', 'Class')}</th><th className="px-3 py-2 text-right">{tr('Prix', 'Price')}</th><th className="px-3 py-2"></th></tr></thead>
+            <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr><th className="px-3 py-2">{tr('Produit', 'Product')}</th><th className="px-3 py-2">{tr('Classe', 'Class')}</th><th className="px-3 py-2 text-right">{tr('Prix', 'Price')}</th><th className="px-3 py-2 text-right">{tr('Ventes', 'Sales')}</th><th className="px-3 py-2"></th></tr></thead>
             <tbody>
-              {filtered.length === 0 ? <tr><td colSpan={4} className="px-3 py-8 text-center text-gray-400">{tr('Aucun produit. Crée ta première fiche produit.', 'No product. Create your first product sheet.')}</td></tr> : filtered.map(p => (
+              {filtered.length === 0 ? <tr><td colSpan={5} className="px-3 py-8 text-center text-gray-400">{tr('Aucun produit. Crée ta première fiche produit.', 'No product. Create your first product sheet.')}</td></tr> : filtered.map(p => (
                 <tr key={p.id} className={`border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/40 ${editingId === p.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
@@ -71,6 +73,7 @@ export function ProductsCatalog({ tenant, tr }: { tenant: string; tr: (f: string
                   </td>
                   <td className="px-3 py-2">{p.product_class ? <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"><Tag size={11} /> {p.product_class}</span> : '—'}</td>
                   <td className="px-3 py-2 text-right font-semibold">{money(p.sale_price || 0)}</td>
+                  <td className="px-3 py-2 text-right text-xs">{(() => { const sv = sales[p.id || '']; return sv && sv.units > 0 ? <span className="font-semibold text-emerald-700 dark:text-emerald-300">{sv.units} × · {money(sv.revenue)}</span> : <span className="text-gray-400">—</span>; })()}</td>
                   <td className="px-3 py-2 text-right"><button onClick={() => edit(p)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button><button onClick={() => p.id && del(p.id)} className="ml-3 text-red-500 hover:text-red-700"><Trash2 size={14} className="inline" /></button></td>
                 </tr>
               ))}
