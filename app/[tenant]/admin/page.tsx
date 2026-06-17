@@ -6936,6 +6936,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [aiResult, setAiResult] = useState<{ ok?: boolean; summary?: string; issues?: { severity: string; field?: string; message: string; suggestion?: string }[] } | null>(null);
   // Import par LOT : plusieurs reçus -> IA -> crée toutes les transactions
   const [batch, setBatch] = useState<{ busy: boolean; done: number; total: number; created: number; failed: number } | null>(null);
+  // Contrôle d'écart d'un relevé importé (totaux extraits vs totaux déclarés du relevé).
+  const [stmtCheck, setStmtCheck] = useState<{ declaredCred: number; extCred: number; declaredDeb: number; extDeb: number; openBal: number; closeBal: number } | null>(null);
   // Filtres de la liste (#35 contrôle) : type, statut, recherche texte (n° / tiers).
   const [fType, setFType] = useState<'all' | 'revenue' | 'expense'>('all');
   const [fStatus, setFStatus] = useState<'all' | 'draft' | 'posted' | 'paid' | 'cancelled'>('all');
@@ -7122,7 +7124,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   // Import par LOT : on pousse PLUSIEURS reçus/lignes à l'IA et on crée une transaction par ligne — EN ÉVITANT
   // les doublons (même tiers + date + montant qu'une transaction déjà existante ou déjà importée dans ce lot).
   // Crée UNE transaction « à vérifier » à partir des champs extraits par l'IA (image/PDF/ligne Excel/CSV banque).
-  async function createTxnFromExtracted(x: any, receiptUrl: string | null, seen?: Set<string>, accountId?: string): Promise<'created' | 'duplicate' | 'empty'> {
+  async function createTxnFromExtracted(x: any, receiptUrl: string | null, seen?: Set<string>, accountId?: string): Promise<'created' | 'duplicate' | 'empty' | 'transfer'> {
+    // TRANSFERT entre comptes de l'entreprise : NE PAS créer de revenu/dépense (précision comptable).
+    if (x.is_transfer === true) return 'transfer';
     const gst = Number(x.gst) || 0, qst = Number(x.qst) || 0, pst = Number(x.pst) || 0;
     const sub = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - gst - qst - pst : 0) || 0;
     if (Math.abs(sub) < 0.005 && !(Number(x.total) > 0)) return 'empty';
@@ -7143,7 +7147,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   async function batchScanCreate(files: File[]) {
     if (!files.length) return;
     setBatch({ busy: true, done: 0, total: files.length, created: 0, failed: 0 });
-    let created = 0, failed = 0, dups = 0; let lastErr = '';
+    let created = 0, failed = 0, dups = 0, transfers = 0; let lastErr = '';
+    // Contrôle d'ÉCART relevé : totaux extraits (crédits/débits) vs résumé déclaré du relevé.
+    let extCred = 0, extDeb = 0; let stmt: any = null;
+    const amtOf = (x: any) => { const g = Number(x.gst) || 0, q = Number(x.qst) || 0, p = Number(x.pst) || 0; const s = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - g - q - p : 0) || 0; return Math.round((s + g + q + p) * 100) / 100; };
     // Set des transactions DÉJÀ présentes (tiers+date+montant) → évite de recréer un doublon (même avec pièce jointe).
     const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
     for (let i = 0; i < files.length; i++) {
@@ -7154,9 +7161,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         const j = await resp.json().catch(() => ({}));
         if (!resp.ok) { failed++; lastErr = j.error || `HTTP ${resp.status}`; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
         const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
-        const handle = (r: 'created' | 'duplicate' | 'empty') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else failed++; };
+        const handle = (r: 'created' | 'duplicate' | 'empty' | 'transfer') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else if (r === 'transfer') transfers++; else failed++; };
+        if (j.summary && j.summary.is_statement) stmt = j.summary; // résumé déclaré du relevé (pour l'écart)
         if (Array.isArray(j.extractedList)) {            // PDF relevé / Excel / CSV -> N transactions (une par ligne), dédoublonnées
-          for (const x of j.extractedList) { try { handle(await createTxnFromExtracted(x, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
+          for (const x of j.extractedList) { const a = amtOf(x); if ((x.type === 'revenue')) extCred += a; else extDeb += a; try { handle(await createTxnFromExtracted(x, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
         } else if (j.extracted) {                        // image/reçu -> 1 transaction
           try { handle(await createTxnFromExtracted(j.extracted, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
         } else { failed++; lastErr = tr('Réponse IA vide', 'Empty AI response'); }
@@ -7164,7 +7172,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       setBatch(b => b && { ...b, done: i + 1, created, failed });
     }
     setBatch(b => b && { ...b, busy: false });
-    setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} doublon(s) ignoré(s)` : ''} — ⏳ À VÉRIFIER${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created${dups ? `, ${dups} duplicate(s) skipped` : ''} — ⏳ TO REVIEW${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
+    // Contrôle d'écart : compare les totaux extraits aux totaux DÉCLARÉS du relevé.
+    if (stmt) setStmtCheck({ declaredCred: Number(stmt.total_credits) || 0, extCred: Math.round(extCred * 100) / 100, declaredDeb: Number(stmt.total_debits) || 0, extDeb: Math.round(extDeb * 100) / 100, openBal: Number(stmt.opening_balance) || 0, closeBal: Number(stmt.closing_balance) || 0 });
+    else setStmtCheck(null);
+    setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} doublon(s) ignoré(s)` : ''}${transfers ? `, ${transfers} transfert(s) interne(s) non comptabilisé(s)` : ''} — ⏳ À VÉRIFIER${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created${dups ? `, ${dups} duplicate(s) skipped` : ''}${transfers ? `, ${transfers} internal transfer(s) not booked` : ''} — ⏳ TO REVIEW${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
     // Ne PAS forcer le filtre sur « Brouillon » : ça masquait les autres transactions (revenus, comptabilisées).
     // Les nouvelles lignes sont déjà badgées « À vérifier » ; on garde le filtre courant.
     await load();
@@ -7341,9 +7352,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
           {/* Compte cible de l'import (relevé/lot) : les opérations sont classées sur CE compte ; sinon « à vérifier ». */}
           {treasury.filter(a => a.active !== false).length > 0 && (
-            <select value={importAccount} onChange={e => setImportAccount(e.target.value)} className={inputCls} title={tr('Compte des opérations importées', 'Account of imported transactions')}>
-              <option value="">{tr('Import → compte ? (à vérifier)', 'Import → account? (to review)')}</option>
-              {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>→ {a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+            <select value={importAccount} onChange={e => setImportAccount(e.target.value)} className={inputCls} title={tr('Compte des opérations importées (optionnel — sinon tout en « à vérifier », à classer/filtrer ensuite)', 'Account for imported transactions (optional — otherwise all “to review”, classify/filter later)')}>
+              <option value="">{tr('Sans compte → tout « à vérifier » (classer ensuite)', 'No account → all “to review” (classify later)')}</option>
+              {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{tr('Classer sur', 'Assign to')} → {a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
             </select>
           )}
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('Relevé PDF / plusieurs reçus -> l’IA extrait CHAQUE opération en détail et les classe sur le compte choisi', 'PDF statement / many receipts -> AI extracts EACH transaction in detail and assigns to the chosen account')}>
@@ -7627,6 +7638,25 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             </div>
           </div>
         )}
+        {/* CONTRÔLE D'ÉCART — totaux extraits vs totaux déclarés du relevé importé */}
+        {stmtCheck && (() => {
+          const dC = Math.round((stmtCheck.extCred - stmtCheck.declaredCred) * 100) / 100;
+          const dD = Math.round((stmtCheck.extDeb - stmtCheck.declaredDeb) * 100) / 100;
+          const ok = Math.abs(dC) < 0.01 && Math.abs(dD) < 0.01;
+          return (
+            <div className={`rounded-xl border px-4 py-2.5 text-sm ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200' : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold">{ok ? '✓' : '⚠'} {tr('Contrôle du relevé importé', 'Imported statement check')}</span>
+                <button onClick={() => setStmtCheck(null)} className="text-xs opacity-60 hover:opacity-100">✕</button>
+              </div>
+              <div className="mt-1 grid gap-0.5 text-xs sm:grid-cols-2">
+                <span>{tr('Crédits déclarés', 'Declared credits')} : <b>{mny(stmtCheck.declaredCred)}</b> · {tr('extraits', 'extracted')} : <b>{mny(stmtCheck.extCred)}</b>{Math.abs(dC) >= 0.01 ? ` · ${tr('écart', 'gap')} ${mny(dC)}` : ' ✓'}</span>
+                <span>{tr('Débits déclarés', 'Declared debits')} : <b>{mny(stmtCheck.declaredDeb)}</b> · {tr('extraits', 'extracted')} : <b>{mny(stmtCheck.extDeb)}</b>{Math.abs(dD) >= 0.01 ? ` · ${tr('écart', 'gap')} ${mny(dD)}` : ' ✓'}</span>
+              </div>
+              {!ok && <div className="mt-1 text-xs font-semibold">{tr('Des opérations sont manquantes ou en trop par rapport au relevé — vérifiez et ajoutez/retirez les lignes.', 'Some transactions are missing or extra vs the statement — review and add/remove lines.')}</div>}
+            </div>
+          );
+        })()}
         {/* MÉMO — règles comptables : pièces justificatives requises (déduction / preuve fiscale) */}
         <details className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <summary className="cursor-pointer font-semibold">📎 {tr('Règles — pièces justificatives requises', 'Rules — required supporting documents')}{missingDocCount > 0 ? ` · ${missingDocCount} ${tr('en attente', 'pending')}` : ` · ${tr('tout est en règle', 'all good')} ✓`}</summary>

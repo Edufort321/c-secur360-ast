@@ -13,18 +13,21 @@ export const runtime = 'nodejs';
 export const maxDuration = 90;
 
 const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
-const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","category_hint":"nature","description":"libellé court","confidence":"high|medium|low"}`;
+const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","is_transfer":true|false,"category_hint":"nature","description":"libellé court","confidence":"high|medium|low"}`;
 const SYS_ONE = `Tu es un assistant COMPTABLE. Extrais les infos d'UN reçu/facture pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide : ${SCHEMA}. Montants en nombres (point décimal), 0 si taxe absente, null si illisible. N'invente pas.`;
 const SYS_LIST = `Tu es un assistant COMPTABLE. On te donne des lignes (CSV) d'un relevé ou d'une liste de dépenses/revenus. Extrais CHAQUE opération. Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}. Montants en nombres, 0 si taxe absente. Ignore les en-têtes. N'invente pas.`;
-// PDF : peut être un reçu UNIQUE ou un RELEVÉ multi-lignes → extraction EXHAUSTIVE ligne par ligne.
-const SYS_DOC = `Tu es un assistant COMPTABLE MÉTICULEUX pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). On te donne un PDF : soit un REÇU/FACTURE unique, soit un RELEVÉ (bancaire / carte de crédit) qui contient PLUSIEURS opérations.
-RÈGLES STRICTES :
-- Si c'est un RELEVÉ : liste EN DÉTAIL CHAQUE opération, UNE PAR UNE (n'en omets AUCUNE). Pour chacune : date (AAAA-MM-JJ), description/tiers exact, montant POSITIF.
-- N'inscris JAMAIS comme opération une ligne de SOLDE, « solde précédent », « solde courant », sous-total, report, intérêts cumulés ou total de page. UNIQUEMENT les vraies opérations (débits/crédits).
-- Débit / retrait / paiement (argent SORTI) → "type":"expense". Dépôt / crédit / remboursement (argent ENTRÉ) → "type":"revenue".
-- Si c'est un seul reçu/facture : renvoie UN seul item avec les taxes détaillées.
-- Taxes inconnues sur un relevé → 0. N'invente RIEN.
-Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}.`;
+// PDF : peut être un reçu UNIQUE ou un RELEVÉ multi-lignes → extraction EXHAUSTIVE ligne par ligne + RÉSUMÉ déclaré.
+const STMT_SUMMARY = `"summary":{"is_statement":true|false,"opening_balance":nombre,"closing_balance":nombre,"total_credits":nombre,"total_debits":nombre,"count_credits":entier,"count_debits":entier}`;
+const SYS_DOC = `Tu es un assistant COMPTABLE MÉTICULEUX pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). On te donne un PDF : soit un REÇU/FACTURE unique, soit un RELEVÉ (bancaire / carte) avec PLUSIEURS opérations.
+RÈGLES STRICTES — n'omets AUCUNE opération :
+- Liste CHAQUE opération individuellement, MÊME s'il y en a PLUSIEURS le MÊME JOUR (chaque virement/dépôt/retrait/frais = une ligne distincte). Compte-les : le nombre de lignes extraites DOIT égaler le nombre d'opérations du relevé.
+- Utilise les colonnes « Chèques et débits » / « Dépôts et crédits » — JAMAIS la colonne « Solde » (le solde n'est PAS une opération).
+- N'inscris JAMAIS comme opération : solde d'ouverture/clôture, sous-total, report, total de page.
+- Débit / retrait / paiement / chèque / frais (argent SORTI) → "type":"expense". Dépôt / crédit / virement reçu (argent ENTRÉ) → "type":"revenue". Montant POSITIF.
+- TRANSFERT ENTRE COMPTES DE L'ENTREPRISE (ex. « télévirement au compte de dépôt », « virement au compte », « transfert vers compte », mouvement vers un autre de SES comptes) → garde "type" selon la direction MAIS mets "is_transfer":true (ce N'EST NI un revenu NI une dépense, c'est un déplacement d'argent interne). Tous les autres : "is_transfer":false.
+- Reçu/facture unique : UN seul item avec taxes détaillées.
+- En PLUS des items, renvoie le RÉSUMÉ DÉCLARÉ du relevé (les TOTAUX imprimés : solde d'ouverture, clôture, total des crédits/dépôts, total des débits/chèques, et leurs nombres). Ces chiffres servent à détecter un écart. is_statement=false si c'est un simple reçu.
+Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}],${STMT_SUMMARY}}. N'invente RIEN.`;
 
 async function callAnthropic(apiKey: string, system: string, content: any, maxTokens = 4096): Promise<any> {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -96,7 +99,8 @@ export async function POST(req: NextRequest) {
     // PDF (relevé) ET tableur → LISTE d'opérations ; image/reçu simple → 1 transaction.
     if (isSheet || isPdf) {
       const items = Array.isArray(obj.items) ? obj.items : (Array.isArray(obj) ? obj : (obj.vendor || obj.total != null ? [obj] : []));
-      return NextResponse.json({ extractedList: items });
+      // Résumé déclaré du relevé (totaux imprimés) → permet de détecter un écart d'extraction côté client.
+      return NextResponse.json({ extractedList: items, summary: obj.summary || null });
     }
     return NextResponse.json({ extracted: obj });
   } catch (e: any) {
