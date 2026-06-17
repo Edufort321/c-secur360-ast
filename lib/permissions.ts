@@ -79,6 +79,7 @@ export const ADMIN_TAB_GROUPS: { key: string; fr: string; en: string }[] = [
   { key: 'systeme', fr: 'Système', en: 'System' },
 ];
 export const ADMIN_TABS: { key: string; fr: string; en: string; group: string; defaultTier: number }[] = [
+  { key: 'demarrage',   fr: 'Démarrage',            en: 'Get started',       group: 'org',     defaultTier: 4 },
   { key: 'sitesdepts',  fr: 'Sites / Dépts',        en: 'Sites / Depts',     group: 'org',     defaultTier: 1 },
   { key: 'employes',    fr: 'Employés & Accès',     en: 'Employees & Access', group: 'org',    defaultTier: 3 },
   { key: 'permissions', fr: 'Permissions',          en: 'Permissions',       group: 'org',     defaultTier: 4 },

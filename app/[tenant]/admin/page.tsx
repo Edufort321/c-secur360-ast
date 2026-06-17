@@ -16,9 +16,10 @@ import { AlertsModule } from '@/components/admin/AlertsModule';
 import { RecurringModule } from '@/components/admin/RecurringModule';
 import { AssetsModule } from '@/components/admin/AssetsModule';
 import { BankConnect } from '@/components/admin/BankConnect';
+import { OnboardingWizard } from '@/components/admin/OnboardingWizard';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
-import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes } from 'lucide-react';
+import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2 } from 'lucide-react';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
@@ -247,8 +248,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'actionnaires', 'alertes', 'audit', 'integrations'];
+  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'actionnaires', 'alertes', 'audit', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -281,6 +282,7 @@ export default function AdminPage() {
   // Onglets regroupés par GROUPE LOGIQUE (nav à deux niveaux : groupe → onglets du groupe).
   type GroupKey = 'org' | 'ops' | 'ventes' | 'finance' | 'systeme';
   const allTabs: { k: TabKey; label: string; icon: any; group: GroupKey; need?: (p: typeof perms) => boolean }[] = [
+    { k: 'demarrage',   label: tr('Démarrage', 'Get started'),             icon: Wand2, group: 'org', need: p => p.manageAll },
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin, group: 'org' },
     { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat, group: 'org', need: p => p.viewEmployees },
     { k: 'permissions', label: tr('Permissions', 'Permissions'),             icon: Settings, group: 'org' },
@@ -421,6 +423,7 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {tab === 'demarrage' && <OnboardingWizard tenant={tenant} tr={tr} canEdit={!!perms.manageAll} goTab={(k) => setTab(k as TabKey)} />}
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
         {tab === 'employes'   && <Employes tenant={tenant} tr={tr} perms={perms} />}
         {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
