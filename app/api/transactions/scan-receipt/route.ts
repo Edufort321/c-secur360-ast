@@ -17,7 +17,7 @@ const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtot
 const SYS_ONE = `Tu es un assistant COMPTABLE. Extrais les infos d'UN reçu/facture pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide : ${SCHEMA}. Montants en nombres (point décimal), 0 si taxe absente, null si illisible. N'invente pas.`;
 const SYS_LIST = `Tu es un assistant COMPTABLE. On te donne des lignes (CSV) d'un relevé ou d'une liste de dépenses/revenus. Extrais CHAQUE opération. Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}. Montants en nombres, 0 si taxe absente. Ignore les en-têtes. N'invente pas.`;
 // PDF : peut être un reçu UNIQUE ou un RELEVÉ multi-lignes → extraction EXHAUSTIVE ligne par ligne + RÉSUMÉ déclaré.
-const STMT_SUMMARY = `"summary":{"is_statement":true|false,"opening_balance":nombre,"closing_balance":nombre,"total_credits":nombre,"total_debits":nombre,"count_credits":entier,"count_debits":entier}`;
+const STMT_SUMMARY = `"summary":{"is_statement":true|false,"account_number":"numéro/derniers chiffres du compte du relevé (ex. 8157)","opening_balance":nombre,"closing_balance":nombre,"total_credits":nombre,"total_debits":nombre,"count_credits":entier,"count_debits":entier}`;
 const SYS_DOC = `Tu es un assistant COMPTABLE MÉTICULEUX pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). On te donne un PDF : soit un REÇU/FACTURE unique, soit un RELEVÉ (bancaire / carte) avec PLUSIEURS opérations.
 RÈGLES STRICTES — n'omets AUCUNE opération :
 - Liste CHAQUE opération individuellement, MÊME s'il y en a PLUSIEURS le MÊME JOUR (chaque virement/dépôt/retrait/frais = une ligne distincte). Compte-les : le nombre de lignes extraites DOIT égaler le nombre d'opérations du relevé.

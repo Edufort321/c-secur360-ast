@@ -7121,6 +7121,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   }
   // Clé de DÉDOUBLONNAGE d'une transaction : tiers + date + montant total (au cent près).
   function txnDupKey(vendor: string, date: string, total: number) { return `${(vendor || '').toLowerCase().trim()}|${date || ''}|${(Math.round((Number(total) || 0) * 100) / 100).toFixed(2)}`; }
+  // Reconnaît le compte d'un relevé par ses 4 derniers CHIFFRES (tolère « -815-7 », « •8157 », « 8157 »).
+  const last4 = (s: any) => String(s ?? '').replace(/\D/g, '').slice(-4);
+  function matchAccountByNumber(num?: string): string {
+    const d = last4(num); if (d.length < 3) return '';
+    const a = treasury.find(t => t.active !== false && last4(t.last4) === d);
+    return a?.id || '';
+  }
   // Import par LOT : on pousse PLUSIEURS reçus/lignes à l'IA et on crée une transaction par ligne — EN ÉVITANT
   // les doublons (même tiers + date + montant qu'une transaction déjà existante ou déjà importée dans ce lot).
   // Crée UNE transaction « à vérifier » à partir des champs extraits par l'IA (image/PDF/ligne Excel/CSV banque).
@@ -7163,10 +7170,12 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
         const handle = (r: 'created' | 'duplicate' | 'empty' | 'transfer') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else if (r === 'transfer') transfers++; else failed++; };
         if (j.summary && j.summary.is_statement) stmt = j.summary; // résumé déclaré du relevé (pour l'écart)
+        // Compte effectif : choix manuel, sinon reconnaissance auto par les 4 derniers chiffres du relevé.
+        const eff = importAccount || matchAccountByNumber(j.summary?.account_number) || undefined;
         if (Array.isArray(j.extractedList)) {            // PDF relevé / Excel / CSV -> N transactions (une par ligne), dédoublonnées
-          for (const x of j.extractedList) { const a = amtOf(x); if ((x.type === 'revenue')) extCred += a; else extDeb += a; try { handle(await createTxnFromExtracted(x, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
+          for (const x of j.extractedList) { const a = amtOf(x); if ((x.type === 'revenue')) extCred += a; else extDeb += a; try { handle(await createTxnFromExtracted(x, url, seen, eff)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; } }
         } else if (j.extracted) {                        // image/reçu -> 1 transaction
-          try { handle(await createTxnFromExtracted(j.extracted, url, seen, importAccount || undefined)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
+          try { handle(await createTxnFromExtracted(j.extracted, url, seen, eff)); } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
         } else { failed++; lastErr = tr('Réponse IA vide', 'Empty AI response'); }
       } catch (e: any) { failed++; lastErr = e?.message || lastErr; }
       setBatch(b => b && { ...b, done: i + 1, created, failed });
