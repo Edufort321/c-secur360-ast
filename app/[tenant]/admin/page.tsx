@@ -18,6 +18,7 @@ import { AssetsModule } from '@/components/admin/AssetsModule';
 import { BankConnect } from '@/components/admin/BankConnect';
 import { OnboardingWizard } from '@/components/admin/OnboardingWizard';
 import { BudgetModule } from '@/components/admin/BudgetModule';
+import { ReconciliationPanel } from '@/components/admin/ReconciliationPanel';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
 import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2 } from 'lucide-react';
@@ -249,8 +250,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'actionnaires', 'alertes', 'audit', 'integrations'];
+  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'controle' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'controle', 'actionnaires', 'alertes', 'audit', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -305,6 +306,7 @@ export default function AdminPage() {
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, group: 'finance', need: p => p.viewSalary },
     { k: 'immobilisations', label: tr('Immobilisations', 'Fixed assets'),     icon: Boxes, group: 'finance', need: p => p.viewSalary },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, group: 'finance', need: p => p.viewSalary },
+    { k: 'controle',    label: tr('Contrôle d’intégrité', 'Integrity check'), icon: ClipboardList, group: 'finance', need: p => p.viewSalary },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, group: 'finance', need: p => p.viewSalary },
     { k: 'actionnaires', label: tr('Actionnaires', 'Shareholders'),          icon: PieChart, group: 'finance', need: p => p.manageAll },
     { k: 'alertes',     label: tr('Alertes', 'Alerts'),                      icon: Bell, group: 'systeme', need: p => p.manageAll },
@@ -446,6 +448,7 @@ export default function AdminPage() {
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'etat-financier' && <FinancialDashboard tenant={tenant} tr={tr} />}
         {tab === 'budget' && <BudgetModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'controle' && <ReconciliationPanel tenant={tenant} tr={tr} />}
         {tab === 'actionnaires' && <ShareholdersModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'alertes' && <AlertsModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'audit' && <AuditLog tenant={tenant} tr={tr} />}
