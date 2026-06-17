@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Trash2, Plus, Send, PackageCheck, Download, FileText, ScanLine } from 'lucide-react';
+import { Loader2, Trash2, Plus, Send, PackageCheck, Download, FileText, ScanLine, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { siteInitials, getActiveCatalogue, type CatalogueTaux } from '@/lib/soumissions';
 import { PROVINCES } from '@/lib/invoicing';
@@ -22,6 +22,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
   const [cat, setCat] = useState<CatalogueTaux | null>(null);
   const [sitePrefix, setSitePrefix] = useState('XX');
   const [view, setView] = useState<'list' | 'edit'>('list');
+  const [q, setQ] = useState(''); // recherche dynamique (numéro, fournisseur, projet, statut)
   const [form, setForm] = useState<BonCommande | null>(null);
   const [numDraft, setNumDraft] = useState<Record<string, string>>({});
   const [showScan, setShowScan] = useState(false);
@@ -242,13 +243,21 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
             <h2 className="text-lg font-bold">{tr('Bons de commande', 'Purchase orders')}</h2>
             {canEdit && <button onClick={nouveau} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={16} /> {tr('Nouveau', 'New')}</button>}
           </div>
+          {/* Recherche dynamique : numéro, fournisseur, n°/nom de projet, statut */}
+          {bons.length > 0 && (
+            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+              <Search size={15} className="text-gray-400" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Rechercher (numéro, fournisseur, projet)…', 'Search (number, supplier, project)…')} className="w-full bg-transparent text-sm outline-none" />
+              {q && <button onClick={() => setQ('')} className="text-xs font-semibold text-gray-400 hover:text-gray-600">✕</button>}
+            </div>
+          )}
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500 dark:bg-gray-900/40">
                 <tr><th className="px-3 py-2">{tr('Numéro', 'Number')}</th><th className="px-3 py-2">{tr('Fournisseur', 'Supplier')}</th><th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right">{tr('Total', 'Total')}</th><th className="px-3 py-2"></th></tr>
               </thead>
               <tbody>
-                {bons.map(b => (
+                {bons.filter(b => { const s = q.trim().toLowerCase(); return !s || [b.numero, b.supplier, projectLabelOf(b.project_id), b.status].some(v => String(v || '').toLowerCase().includes(s)); }).map(b => (
                   <tr key={b.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-800/40">
                     <td className="px-3 py-2 font-mono">{b.numero}</td>
                     <td className="px-3 py-2">{b.supplier || '—'}</td>

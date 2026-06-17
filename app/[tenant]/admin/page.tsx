@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload, Zap } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload, Zap, Search } from 'lucide-react';
 import { listRecurringTasks, saveRecurringTask, deleteRecurringTask, type RecurringTask } from '@/lib/recurringTasks';
 import { getCatalogueConditions, DEFAULT_EMPLOYEE_FACTOR, type CatalogueCondition, type GridCondition } from '@/lib/catalogueConditions';
 import { supabase } from '@/lib/supabase';
@@ -6571,6 +6571,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   const today = new Date().toISOString().slice(0, 10);
   const [view, setView] = useState<'list' | 'edit' | 'settings' | 'projets'>('list');
   const [invView, setInvView] = useState<'grid' | 'gallery'>('grid'); // liste factures : grille (défaut) / galerie
+  const [invQ, setInvQ] = useState(''); // recherche dynamique (n° facture, client)
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [settings, setSettings] = useState<CompanySettings>({});
   const [loading, setLoading] = useState(true);
@@ -6887,11 +6888,24 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
               </div>
             );
           })()}
-          {invoices.length === 0 ? (
+          {/* Recherche dynamique : n° de facture, client, statut */}
+          {invoices.length > 0 && (
+            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+              <Search size={15} className="text-gray-400" />
+              <input value={invQ} onChange={e => setInvQ(e.target.value)} placeholder={tr('Rechercher (n° facture, client)…', 'Search (invoice #, client)…')} className="w-full bg-transparent text-sm outline-none" />
+              {invQ && <button onClick={() => setInvQ('')} className="text-xs font-semibold text-gray-400 hover:text-gray-600">✕</button>}
+            </div>
+          )}
+          {(() => {
+            const q = invQ.trim().toLowerCase();
+            const shownInv = q ? invoices.filter(i => [i.invoice_number, (i as any).client_snapshot?.name, STATUS_LABEL[i.status]].some(v => String(v || '').toLowerCase().includes(q))) : invoices;
+            return invoices.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune facture.', 'No invoice yet.')}</div>
+          ) : shownInv.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucun résultat pour cette recherche.', 'No result for this search.')}</div>
           ) : (
             <div className={invView === 'gallery' ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3'}>
-              {invoices.map(inv => (
+              {shownInv.map(inv => (
                 <div key={inv.id} className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 ${invView === 'gallery' ? 'p-4' : 'p-3'}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -6924,7 +6938,8 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
                 </div>
               ))}
             </div>
-          )}
+          );
+          })()}
         </div>
       )}
 
