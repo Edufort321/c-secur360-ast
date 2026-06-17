@@ -15,10 +15,9 @@ export const maxDuration = 90;
 const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"vendor":"nom","date":"AAAA-MM-JJ","currency":"CAD|USD","subtotal":nombre,"gst":nombre,"qst":nombre,"pst":nombre,"total":nombre,"type":"expense|revenue","is_transfer":true|false,"category_hint":"nature","description":"libellé court","confidence":"high|medium|low"}`;
 const SYS_ONE = `Tu es un assistant COMPTABLE. Extrais les infos d'UN reçu/facture pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). Réponds UNIQUEMENT en JSON valide : ${SCHEMA}. Montants en nombres (point décimal), 0 si taxe absente, null si illisible. N'invente pas.`;
-const SYS_LIST = `Tu es un assistant COMPTABLE. On te donne des lignes (CSV) d'un relevé ou d'une liste de dépenses/revenus. Extrais CHAQUE opération. Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}]}. Montants en nombres, 0 si taxe absente. Ignore les en-têtes. N'invente pas.`;
-// PDF : peut être un reçu UNIQUE ou un RELEVÉ multi-lignes → extraction EXHAUSTIVE ligne par ligne + RÉSUMÉ déclaré.
+// PDF/CSV : peut être un reçu UNIQUE ou un RELEVÉ multi-lignes → extraction EXHAUSTIVE ligne par ligne + RÉSUMÉ déclaré.
 const STMT_SUMMARY = `"summary":{"is_statement":true|false,"account_number":"numéro/derniers chiffres du compte du relevé (ex. 8157)","opening_balance":nombre,"closing_balance":nombre,"total_credits":nombre,"total_debits":nombre,"count_credits":entier,"count_debits":entier}`;
-const SYS_DOC = `Tu es un assistant COMPTABLE MÉTICULEUX pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). On te donne un PDF : soit un REÇU/FACTURE unique, soit un RELEVÉ (bancaire / carte) avec PLUSIEURS opérations.
+const SYS_DOC = `Tu es un assistant COMPTABLE MÉTICULEUX pour une entreprise québécoise (TPS 5 %, TVQ 9,975 %). On te donne un relevé/reçu sous forme de PDF, d'image OU de lignes CSV : soit un REÇU/FACTURE unique, soit un RELEVÉ (bancaire / carte) avec PLUSIEURS opérations.
 RÈGLES STRICTES — n'omets AUCUNE opération :
 - Liste CHAQUE opération individuellement, MÊME s'il y en a PLUSIEURS le MÊME JOUR (chaque virement/dépôt/retrait/frais = une ligne distincte). Compte-les : le nombre de lignes extraites DOIT égaler le nombre d'opérations du relevé.
 - Utilise les colonnes « Chèques et débits » / « Dépôts et crédits » — JAMAIS la colonne « Solde » (le solde n'est PAS une opération).
@@ -87,7 +86,8 @@ export async function POST(req: NextRequest) {
       try { const wb = XLSX.read(Buffer.from(raw, 'base64'), { type: 'buffer' }); csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]] || {}); }
       catch { return NextResponse.json({ error: 'Fichier Excel/CSV illisible.' }, { status: 422 }); }
       if (!csv.trim()) return NextResponse.json({ error: 'Fichier vide.' }, { status: 422 });
-      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_LIST].join('\n'), `Lignes (CSV) à extraire :\n${csv.slice(0, 16000)}`, 8192);
+      // CSV bancaire = relevé : même prompt robuste que le PDF (débit=dépense/crédit=revenu, transferts, n° de compte, résumé).
+      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_DOC].join('\n'), `Lignes (CSV) d'un relevé à extraire (déduis le compte si présent dans l'en-tête/préambule) :\n${csv.slice(0, 16000)}`, 8192);
     } else {
       return NextResponse.json({ error: 'Format non supporté (image, PDF, Excel ou CSV).' }, { status: 400 });
     }

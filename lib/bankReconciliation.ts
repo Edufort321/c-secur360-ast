@@ -150,11 +150,14 @@ export function parseOfx(text: string): { lines: BankLine[]; accountNumber?: str
   return { lines, accountNumber };
 }
 
-/** Détecte automatiquement le format (OFX/QFX vs CSV) et parse. */
+/** Détecte automatiquement le format (OFX/QFX vs CSV) et parse. Tente aussi de reconnaître le n° de compte. */
 export function parseStatement(text: string): { lines: BankLine[]; accountNumber?: string } {
   const s = String(text ?? '');
   if (/<OFX>|OFXHEADER|<STMTTRN>/i.test(s)) return parseOfx(s);
-  return { lines: parseBankCsv(s) };
+  // CSV : n° de compte best-effort depuis l'en-tête/préambule (« Compte : 1234-567 », « Account No 8157 »…).
+  const head = s.split(/\r?\n/).slice(0, 15).join('\n');
+  const accountNumber = (head.match(/(?:compte|account|no\.?\s*compte|n[°o]\s*compte)\D{0,10}(\d[\d\s•.\-]{2,18}\d)/i) || [])[1];
+  return { lines: parseBankCsv(s), accountNumber };
 }
 
 export async function getBankLines(tenant: string): Promise<BankLine[]> {
