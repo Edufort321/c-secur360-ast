@@ -3024,6 +3024,20 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
   const [verifiedBy, setVerifiedBy] = useState<string>(''); const [verifiedAt, setVerifiedAt] = useState<string>(''); // vérifié par le gestionnaire
   const [hrBy, setHrBy] = useState<string>(''); const [hrAt, setHrAt] = useState<string>(''); // approbation RH (optionnelle)
   const [notice, setNotice] = useState<string | null>(null);
+  // Taux horaire éditable EN DIRECT (utile quand aucune grille salariale n'existe pour le poste).
+  const [directHourly, setDirectHourly] = useState('');
+  const [savingHourly, setSavingHourly] = useState(false);
+  async function saveHourlyDirect() {
+    setSavingHourly(true); setNotice(null);
+    try {
+      const h = Math.round((parseFloat(directHourly) || 0) * 10000) / 10000;
+      const { data: ep } = await supabase.from('employee_profiles').select('id').eq('tenant_id', tenant).eq('employee_id', employee.id).maybeSingle();
+      if (ep?.id) await supabase.from('employee_profiles').update({ hourly_rate: h }).eq('id', ep.id);
+      else await supabase.from('employee_profiles').insert({ tenant_id: tenant, employee_id: employee.id, employee_name: employee.name, employee_email: (employee as any).email || '', hourly_rate: h, ot_multiplier: 1.5, dt_multiplier: 2.0, ot_daily_hrs: 8, ot_weekly_hrs: 40, active: true });
+      setNotice(tr('Taux horaire enregistré ✓', 'Hourly rate saved ✓'));
+      onSaved();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSavingHourly(false); }
+  }
   // Clic simple = tout sélectionner (la frappe écrase) ; recliquer = éditer.
   const selectOnFocus = (e: React.FocusEvent) => {
     const t = e.target as HTMLElement;
@@ -3038,6 +3052,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         const { data: { user } } = await supabase.auth.getUser();
         setEvaluatedBy(user?.email || '');
       } catch { /* indispo */ }
+      try { const { data: ep } = await supabase.from('employee_profiles').select('hourly_rate').eq('tenant_id', tenant).eq('employee_id', employee.id).maybeSingle(); if (ep?.hourly_rate != null) setDirectHourly(String(ep.hourly_rate)); } catch { /* profil paie absent */ }
       const { data: hist, error: histErr } = await supabase.from('employee_evaluations').select('*').eq('personnel_id', employee.id).order('evaluation_date', { ascending: false });
       if (histErr) setNotice(tr('Historique indisponible — exécutez les migrations 076 et 083 dans Supabase.', 'History unavailable — run migrations 076 and 083 in Supabase.'));
       setHistory(hist || []);
@@ -3281,9 +3296,23 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         </div>
 
         {!grid ? (
-          <div className="p-8 text-center text-sm text-gray-500">
-            {tr('Aucune grille salariale configurée pour ce poste.', 'No salary grid configured for this position.')}
-            <p className="mt-2 text-xs text-gray-400">{tr('Configurez la grille dans Postes → Grille salariale.', 'Configure the grid in Positions → Salary grid.')}</p>
+          <div className="p-6 space-y-4">
+            {/* Pas de grille pour ce poste : on permet quand même d'éditer le TAUX HORAIRE de paie en direct. */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              {tr('Aucune grille salariale configurée pour ce poste.', 'No salary grid configured for this position.')}
+              <span className="block text-xs text-amber-700/80 dark:text-amber-300/80">{tr('Vous pouvez tout de même fixer le taux horaire de paie ci-dessous (ou configurez une grille dans Postes → Grille salariale).', 'You can still set the payroll hourly rate below (or configure a grid in Positions → Salary grid).')}</span>
+            </div>
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+              <h4 className="mb-2 text-xs font-bold uppercase text-gray-500">{tr('Taux horaire de paie', 'Payroll hourly rate')}</h4>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Taux $/h', 'Rate $/h')}
+                  <input type="number" step="0.01" disabled={!canEdit} value={directHourly} onChange={e => setDirectHourly(e.target.value)} onFocus={selectOnFocus} placeholder="25.00" className={`mt-1 block w-32 ${inp2}`} />
+                </label>
+                {canEdit && <button onClick={saveHourlyDirect} disabled={savingHourly} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{savingHourly ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer le taux', 'Save rate')}</button>}
+              </div>
+              <p className="mt-2 text-[11px] text-gray-400">{tr('Ce taux alimente la paie (feuilles de temps, registre, coûts de projet).', 'This rate feeds payroll (timesheets, register, project costs).')}</p>
+            </div>
+            {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">{notice}</div>}
           </div>
         ) : (
           <div className="p-4 space-y-4">
