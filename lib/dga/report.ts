@@ -5,6 +5,19 @@
 import type { Dossier, Measure } from './dossiers';
 import { diagnose, rogers, iec60599, keyGas } from './diagnose';
 
+// Style du module 'dga' (Modèles PDF) — accent + filet + taille de titre. Best-effort : sans tenant ou
+// sans réglage, on garde l'aspect historique (titre noir, filet gris discret).
+async function dgaStyle(tenant?: string): Promise<{ accent: [number, number, number]; ruleWidth: number; titleSize: number } | undefined> {
+  if (!tenant) return undefined;
+  try {
+    const { getPdfStyles, resolveKnobs, hexToRgb, DEFAULT_ACCENT } = await import('@/lib/pdfStyle');
+    const k = resolveKnobs(await getPdfStyles(tenant), 'dga');
+    // Pas de personnalisation explicite (accent = défaut socle) -> ne rien teinter (garder le look DGA d'origine).
+    if (k.accent.toLowerCase() === DEFAULT_ACCENT.toLowerCase()) return undefined;
+    return { accent: hexToRgb(k.accent), ruleWidth: Number(k.ruleWidth) || 0.6, titleSize: Number(k.titleSize) || 14 };
+  } catch { return undefined; }
+}
+
 const IEEE: Record<string, [number, number, number]> = {
   h2: [100, 700, 1800], ch4: [120, 400, 1000], c2h6: [65, 100, 150], c2h4: [50, 100, 200],
   c2h2: [35, 50, 80], co: [350, 570, 1400], co2: [2500, 4000, 10000],
@@ -57,7 +70,7 @@ function applyFooters(doc: any, W: number, Hp: number, M: number) {
 
 // Rend le contenu d'UN dossier dans le doc, à partir de la page COURANTE. Réutilisé par le rapport
 // simple ET le rapport multi-transformateurs (assemblage).
-function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, rtype: 'full' | 'dga' | 'summary', d: Dossier, measuresIn: Measure[], ai: any, logo: string | null) {
+function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, rtype: 'full' | 'dga' | 'summary', d: Dossier, measuresIn: Measure[], ai: any, logo: string | null, style?: { accent: [number, number, number]; ruleWidth: number; titleSize: number }) {
   const ms = (measuresIn || []).slice().sort((a, b) => String(a.sample_date).localeCompare(String(b.sample_date)));
   const last = ms[ms.length - 1];
   // Dernière mesure CONTENANT DES GAZ (pour « gaz vs limites » / condition ; un relevé BPC/huile seul
@@ -69,14 +82,16 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
     doc.text(`Equipement: ${d.ident || '—'}   No de serie: ${d.serie || '—'}   No d'equip.: ${d.equip_no || '—'}`, W - M, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal');
     doc.text(`Sous-station/Client: ${d.client || '—'}   Type: ${d.description || d.apparatus || '—'}`, W - M, 42, { align: 'right' });
-    doc.setDrawColor(210); doc.line(M, 50, W - M, 50);
+    // Filet sous l'en-tête : accent du module 'dga' (Modèles PDF) si réglé, sinon gris discret historique.
+    if (style?.accent) { doc.setDrawColor(...style.accent); doc.setLineWidth(style.ruleWidth || 0.6); } else { doc.setDrawColor(210); doc.setLineWidth(0.6); }
+    doc.line(M, 50, W - M, 50);
   };
   let y = 60;
   const ensure = (h: number) => { if (y + h > Hp - 50) { doc.addPage(); header(); y = 60; } };
 
   header();
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20);
-  doc.text(fr ? 'Rapport de diagnostic DGA' : 'DGA Diagnostic Report', M, y); y += 20;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(style?.titleSize || 14); doc.setTextColor(...(style?.accent || [20, 20, 20]));
+  doc.text(fr ? 'Rapport de diagnostic DGA' : 'DGA Diagnostic Report', M, y); doc.setTextColor(20); y += 20;
 
   // ── Évaluation AGD : Rogers / IEC 60599 / gaz clés ──
   doc.setFontSize(11); doc.text(fr ? "Evaluation de l'etat AGD" : 'DGA state evaluation', M, y); y += 6;
@@ -151,26 +166,27 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
 }
 
 // Rapport SIMPLE (un transformateur).
-export async function generateDgaReport(opts: { dossier: Dossier; measures: Measure[]; ai?: any; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary'; coverLetter?: import('@/lib/pdf/letterhead').CoverLetterData | null }) {
+export async function generateDgaReport(opts: { dossier: Dossier; measures: Measure[]; ai?: any; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary'; coverLetter?: import('@/lib/pdf/letterhead').CoverLetterData | null; tenant?: string }) {
   const { default: jsPDF } = await import('jspdf');
   const fr = (opts.lang || 'fr') === 'fr';
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
   const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+  const style = await dgaStyle(opts.tenant);
   // Lettre de présentation optionnelle (case à cocher), même socle que le rapport terrain.
   if (opts.coverLetter) {
     const { drawCoverLetterPage } = await import('@/lib/pdf/letterhead');
     drawCoverLetterPage(doc, { logo, ...opts.coverLetter });
     doc.addPage();
   }
-  renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', opts.dossier, opts.measures, opts.ai, logo);
+  renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', opts.dossier, opts.measures, opts.ai, logo, style);
   applyFooters(doc, W, Hp, M);
   doc.save(`rapport-dga-${(opts.dossier.ident || 'transfo').replace(/\s+/g, '_')}.pdf`);
 }
 
 // Rapport MULTI-TRANSFORMATEURS pour un même client : page de présentation + table des matières
 // commune, puis le rapport complet de chaque transformateur (même rendu que le rapport simple).
-export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; measures: Measure[]; ai?: any }[]; clientName?: string; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary'; coverLetter?: import('@/lib/pdf/letterhead').CoverLetterData | null }) {
+export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; measures: Measure[]; ai?: any }[]; clientName?: string; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary'; coverLetter?: import('@/lib/pdf/letterhead').CoverLetterData | null; tenant?: string }) {
   const { default: jsPDF } = await import('jspdf');
   const fr = (opts.lang || 'fr') === 'fr';
   const items = opts.items || [];
@@ -178,6 +194,7 @@ export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
   const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+  const style = await dgaStyle(opts.tenant);
   const client = opts.clientName || items[0]?.dossier?.client || items[0]?.dossier?.company || '';
   const today = new Date().toLocaleDateString(fr ? 'fr-CA' : 'en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -210,7 +227,7 @@ export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; 
   for (const it of items) {
     doc.addPage();
     toc.push({ title: it.dossier.ident || '—', serie: it.dossier.serie || '—', page: doc.getNumberOfPages() });
-    renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', it.dossier, it.measures, it.ai, logo);
+    renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', it.dossier, it.measures, it.ai, logo, style);
   }
 
   // ── Remplit la table des matières ──

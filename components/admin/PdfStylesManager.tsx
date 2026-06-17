@@ -53,7 +53,7 @@ export function PdfStylesManager({ tenant, tr, canEdit }: { tenant: string; tr: 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
-        {tr('Tous les exports PDF partagent le socle de marque DGA (logo, en-tête, séparateurs, pied numéroté). Réglez le STYLE PAR DÉFAUT (unifié) ci-dessous ; activez la personnalisation par export pour varier la couleur d’accent module par module.', 'All PDF exports share the DGA brand base. Set the DEFAULT (unified) style below; enable per-export customization to vary the accent color by module.')}
+        {tr('Réglez le STYLE PAR DÉFAUT (unifié) ci-dessous ; activez la personnalisation par export pour varier la couleur d’accent module par module.', 'Set the DEFAULT (unified) style below; enable per-export customization to vary the accent color by module.')}
       </div>
       {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{notice}</div>}
 

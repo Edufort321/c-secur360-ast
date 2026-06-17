@@ -18,7 +18,7 @@ async function loadLogo(url?: string | null): Promise<string | null> {
   catch { return null; }
 }
 
-export async function generateInspectionPdf(opts: { dossier: any; inspection: Inspection; logoUrl?: string | null; lang?: 'fr' | 'en' }) {
+export async function generateInspectionPdf(opts: { dossier: any; inspection: Inspection; logoUrl?: string | null; lang?: 'fr' | 'en'; tenant?: string }) {
   const { default: jsPDF } = await import('jspdf');
   const fr = (opts.lang || 'fr') === 'fr';
   const L = (a: string, b: string) => (fr ? a : b);
@@ -28,15 +28,25 @@ export async function generateInspectionPdf(opts: { dossier: any; inspection: In
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
   const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+  // Style du module 'inspection' (Modèles PDF) — accent (titre/filet/bandes de catégorie) + épaisseur.
+  // Sans tenant, on garde l'aspect historique (titre gris foncé, bandes bleu-sarcelle 39,125,161).
+  let ACCENT: [number, number, number] = [39, 125, 161]; let RW = 1; let TITLE: [number, number, number] = [20, 20, 20];
+  if (opts.tenant) {
+    try {
+      const { pdfStyleFor } = await import('@/lib/pdfStyle');
+      const st = await pdfStyleFor(opts.tenant, 'inspection');
+      if (st?.accent) { ACCENT = st.accent; TITLE = st.accent; RW = st.ruleWidth || 1; }
+    } catch { /* défaut */ }
+  }
   let y = 0;
 
   const header = () => {
     if (logo) { try { doc.addImage(logo, 'PNG', M, 22, 0, 24); } catch { /* ignore */ } }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(20);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...TITLE);
     doc.text(L("RAPPORT D'INSPECTION DE ROUTINE", 'ROUTINE INSPECTION REPORT'), W - M, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90);
     doc.text(`${d.ident || '—'}${d.serie ? '  ·  SN ' + d.serie : ''}${d.kv ? '  ·  ' + d.kv + ' kV' : ''}`, W - M, 44, { align: 'right' });
-    doc.setDrawColor(210); doc.line(M, 52, W - M, 52);
+    doc.setDrawColor(...ACCENT); doc.setLineWidth(RW); doc.line(M, 52, W - M, 52);
     y = 70;
   };
   const ensure = (h: number) => { if (y + h > Hp - 40) { doc.addPage(); header(); } };
@@ -55,8 +65,8 @@ export async function generateInspectionPdf(opts: { dossier: any; inspection: In
 
   INSPECTION_CHECKLIST.forEach(cat => {
     ensure(28);
-    // Bandeau catégorie
-    doc.setFillColor(39, 125, 161); doc.rect(M, y - 9, W - 2 * M, 16, 'F');
+    // Bandeau catégorie (accent du module)
+    doc.setFillColor(...ACCENT); doc.rect(M, y - 9, W - 2 * M, 16, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255);
     doc.text(il(cat, opts.lang), M + 6, y + 2); y += 16;
 

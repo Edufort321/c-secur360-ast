@@ -265,7 +265,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, ten
                 <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${ins.anomalyCount ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                   {ins.anomalyCount ? `${ins.anomalyCount} ${tr('anomalie(s)', 'anomaly(ies)')}` : tr('Conforme', 'Compliant')}
                 </span>
-                <button type="button" onClick={() => generateInspectionPdf({ dossier, inspection: ins, logoUrl, lang })} className="rounded border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">📄 PDF</button>
+                <button type="button" onClick={() => generateInspectionPdf({ dossier, inspection: ins, logoUrl, lang, tenant })} className="rounded border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">📄 PDF</button>
               </div>
               {/* Détail (lecture seule) */}
               {viewId === ins.id && (

@@ -294,7 +294,7 @@ export default function DgaPage() {
         salutation: tr('Veuillez agréer nos salutations distinguées.', 'Yours sincerely,'),
         signataireNom: tenantName,
       } : null;
-      await generateMultiDgaReport({ items, clientName: clientNom, logoUrl, lang: lang === 'en' ? 'en' : 'fr', coverLetter });
+      await generateMultiDgaReport({ items, clientName: clientNom, logoUrl, lang: lang === 'en' ? 'en' : 'fr', coverLetter, tenant });
       exitDelMode();
     } catch (e: any) { setImportErr(e?.message || String(e)); }
     finally { setAssembling(false); }
