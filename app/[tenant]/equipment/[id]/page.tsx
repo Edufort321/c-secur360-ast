@@ -6,8 +6,9 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, XCircle, AlertTriangle, AlertOctagon,
-  Clock, ClipboardCheck, Plus, ChevronRight, Loader2, Edit2, Phone, Mail, Wrench, Send,
+  Clock, ClipboardCheck, Plus, ChevronRight, Loader2, Edit2, Phone, Mail, Wrench, Send, FileDown, X,
 } from 'lucide-react';
+import { generateEquipmentSheetPdf, type EquipmentSheetSections } from '@/lib/equipmentSheetPdf';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS,
@@ -73,6 +74,17 @@ export default function EquipmentPublicPage() {
   const [alertForm,  setAlertForm]  = useState({ alert_type: 'bris', reporter_name: '', reporter_phone: '', description: '' });
   const [alertBusy,  setAlertBusy]  = useState(false);
   const [alertDone,  setAlertDone]  = useState(false);
+  // Export de la fiche (cases à cocher) — sections au choix.
+  const [showExport, setShowExport] = useState(false);
+  const [expBusy,    setExpBusy]    = useState(false);
+  const [expSec,     setExpSec]     = useState<EquipmentSheetSections>({ fiche: true, anomalies: true, photos: true, history: true, attachments: true });
+  async function doExport() {
+    if (!equipment) return;
+    setExpBusy(true);
+    try { await generateEquipmentSheetPdf({ equipment, inspections, tenant, lang: fr ? 'fr' : 'en', logoUrl, sections: expSec }); setShowExport(false); }
+    catch (e: any) { alert((fr ? 'Export impossible : ' : 'Export failed: ') + (e?.message || e)); }
+    finally { setExpBusy(false); }
+  }
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null)
@@ -85,7 +97,7 @@ export default function EquipmentPublicPage() {
     Promise.all([
       sb.from('equipment').select('*').eq('id', id).maybeSingle(),
       sb.from('equipment_inspections')
-        .select('id, inspection_number, inspection_date, overall_result, inspector_name, status, non_conformities, corrective_actions, item_notes, notes')
+        .select('id, inspection_number, inspection_date, overall_result, inspector_name, status, non_conformities, corrective_actions, item_notes, notes, equipment_photos, item_photos')
         .eq('equipment_id', id)
         .order('inspection_date', { ascending: false })
         .limit(20),
@@ -188,10 +200,15 @@ export default function EquipmentPublicPage() {
               {fr ? 'Fiche équipement' : 'Equipment sheet'}
             </span>
             {isTenant && (
-              <Link href={`/${tenant}/equipment/${id}/edit`}
-                className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800">
-                <Edit2 size={12} /> {fr ? 'Modifier' : 'Edit'}
-              </Link>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowExport(true)} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-800">
+                  <FileDown size={12} /> {fr ? 'Exporter la fiche' : 'Export sheet'}
+                </button>
+                <Link href={`/${tenant}/equipment/${id}/edit`}
+                  className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800">
+                  <Edit2 size={12} /> {fr ? 'Modifier' : 'Edit'}
+                </Link>
+              </div>
             )}
           </div>
           <div className="px-5 py-4 space-y-2">
@@ -372,6 +389,36 @@ export default function EquipmentPublicPage() {
           onClick={() => setLightbox(null)}
         >
           <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+
+      {/* Dialogue d'export de la fiche (cases à cocher) */}
+      {showExport && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowExport(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900">{fr ? 'Exporter la fiche' : 'Export sheet'}</h3>
+              <button onClick={() => setShowExport(false)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+            </div>
+            <p className="mb-3 text-xs text-gray-500">{fr ? 'Choisissez les sections à inclure dans le PDF.' : 'Choose the sections to include in the PDF.'}</p>
+            <div className="space-y-2">
+              {([
+                ['fiche',       fr ? 'Fiche de l\'équipement' : 'Equipment data'],
+                ['anomalies',   fr ? 'Rapport d\'anomalies' : 'Anomaly report'],
+                ['history',     fr ? 'Historique des inspections' : 'Inspection history'],
+                ['photos',      fr ? 'Photos' : 'Photos'],
+                ['attachments', fr ? 'Pièces jointes' : 'Attachments'],
+              ] as [keyof EquipmentSheetSections, string][]).map(([k, label]) => (
+                <label key={k} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <input type="checkbox" checked={!!expSec[k]} onChange={e => setExpSec(s => ({ ...s, [k]: e.target.checked }))} />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <button onClick={doExport} disabled={expBusy || !Object.values(expSec).some(Boolean)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+              {expBusy ? <><Loader2 size={16} className="animate-spin" /> {fr ? 'Génération…' : 'Generating…'}</> : <><FileDown size={16} /> {fr ? 'Télécharger le PDF' : 'Download PDF'}</>}
+            </button>
+          </div>
         </div>
       )}
     </div>
