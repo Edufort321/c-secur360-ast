@@ -39,6 +39,7 @@ import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as expo
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, setTransactionReviewed, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
+import { downloadCsv as downloadCsvCols, type CsvColumn } from '@/lib/csv';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
 import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
@@ -1094,6 +1095,26 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  // Export CSV du répertoire clients (filtre de recherche courant appliqué).
+  function exportClientsCsv() {
+    const s = cq.trim().toLowerCase();
+    const list = rows.filter(r => !s || [r.name, r.contact_name, r.email, r.phone, r.city].some(v => String(v || '').toLowerCase().includes(s)));
+    const cols: CsvColumn<CRow>[] = [
+      { key: 'name', label: tr('Nom', 'Name') },
+      { key: 'contact_name', label: tr('Contact', 'Contact') },
+      { key: 'contact_email', label: tr('Courriel contact', 'Contact email') },
+      { key: 'contact_phone', label: tr('Tél. contact', 'Contact phone') },
+      { key: 'email', label: tr('Courriel', 'Email') },
+      { key: 'phone', label: tr('Téléphone', 'Phone') },
+      { key: 'address', label: tr('Adresse', 'Address') },
+      { key: 'city', label: tr('Ville', 'City') },
+      { key: 'province', label: tr('Province', 'Province') },
+      { key: 'postal_code', label: tr('Code postal', 'Postal code') },
+      { key: 'notes', label: 'Notes' },
+    ];
+    downloadCsvCols(`clients-${new Date().toISOString().slice(0, 10)}.csv`, list, cols);
+  }
+
   // Lecture du fichier (CSV/XLSX) -> lignes brutes -> IA détecte les colonnes (par lots) -> prévisualisation.
   async function handleAiFile(file: File | null | undefined) {
     if (!file) return;
@@ -1175,6 +1196,10 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
               className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               <Download size={15} /> {tr('Modèle', 'Template')}
             </button>
+            {rows.length > 0 && <button onClick={exportClientsCsv} title={tr('Exporter la liste des clients en CSV', 'Export the client list to CSV')}
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <Download size={15} /> {tr('Exporter', 'Export')}
+            </button>}
             <button onClick={() => aiFileRef.current?.click()} disabled={aiImporting} title={tr('Importer une liste de clients (CSV/Excel) — colonnes détectées par IA', 'Import a client list (CSV/Excel) — columns detected by AI')}
               className="inline-flex items-center gap-1 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-50 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300">
               {aiImporting ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />} {tr('Import IA', 'AI import')}
