@@ -5,12 +5,13 @@ import {
   ResponsiveContainer, ComposedChart, Area, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  DollarSign, TrendingUp, TrendingDown, Percent, Users, Wallet, Activity, Sparkles, Loader2, CalendarClock, AlertTriangle,
+  DollarSign, TrendingUp, TrendingDown, Percent, Users, Wallet, Activity, Sparkles, Loader2, CalendarClock, AlertTriangle, Package, BookOpen,
 } from 'lucide-react';
 import { getLedger, getAccounts, getTrialBalance } from '@/lib/accounting';
 import {
   computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
 } from '@/lib/financialAnalytics';
+import { getInventoryValuation, getBookedStockValue, postInventoryToBalance, type InventoryValuation } from '@/lib/inventory';
 
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
 const mnyK = (n: number) => { const v = Number(n) || 0; return Math.abs(v) >= 10000 ? `${(v / 1000).toFixed(0)} k$` : `${Math.round(v)} $`; };
@@ -35,6 +36,27 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   const [aiBusy, setAiBusy] = useState(false);
   const [ai, setAi] = useState<AiAnalysis | null>(null);
   const [aiErr, setAiErr] = useState<string | null>(null);
+
+  // Stocks / inventaire (#42) : valeur calculée (live) + solde comptabilisé 1300 + optimisation.
+  const [stock, setStock] = useState<InventoryValuation | null>(null);
+  const [booked1300, setBooked1300] = useState<number | null>(null);
+  const [stockBusy, setStockBusy] = useState(false);
+  const [stockMsg, setStockMsg] = useState<string | null>(null);
+  async function loadStock() {
+    const [val, booked] = await Promise.all([getInventoryValuation(tenant), getBookedStockValue(tenant)]);
+    setStock(val); setBooked1300(booked);
+  }
+  useEffect(() => { loadStock().catch(() => { setStock(null); setBooked1300(null); }); /* eslint-disable-next-line */ }, [tenant]);
+  async function postStock() {
+    if (!stock) return;
+    setStockBusy(true); setStockMsg(null);
+    try {
+      const r = await postInventoryToBalance(tenant, stock.totalValue);
+      setStockMsg(r.posted ? `✓ ${tr('Comptabilisé au bilan (compte 1300). Écart', 'Posted to balance sheet (1300). Delta')} : ${mny(r.delta)}` : (r.reason || tr('Déjà à jour.', 'Up to date.')));
+      const booked = await getBookedStockValue(tenant); setBooked1300(booked);
+    } catch (e: any) { setStockMsg('Erreur : ' + (e?.message || e)); }
+    finally { setStockBusy(false); }
+  }
 
   useEffect(() => {
     let active = true;
@@ -145,6 +167,67 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
           );
         })}
       </div>
+
+      {/* Stocks / inventaire (actif courant) — valorisation au bilan + optimisation par type */}
+      {stock && stock.itemCount > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-200"><Package size={16} /> {tr('Stocks / inventaire — actif courant', 'Inventory — current asset')}</h3>
+            <button onClick={postStock} disabled={stockBusy} title={tr('Aligner le compte 1300 du grand livre sur la valeur calculée', 'Align ledger account 1300 with the computed value')}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+              {stockBusy ? <Loader2 size={13} className="animate-spin" /> : <BookOpen size={13} />} {tr('Comptabiliser au bilan (1300)', 'Post to balance sheet (1300)')}
+            </button>
+          </div>
+          {stockMsg && <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{stockMsg}</div>}
+          {/* Cartes valeur */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-gray-700 dark:bg-gray-700/30"><div className="text-[11px] font-semibold uppercase text-slate-400">{tr('Valeur (prix coûtant)', 'Value (at cost)')}</div><div className="text-xl font-extrabold text-emerald-600">{mny(stock.totalValue)}</div></div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-gray-700 dark:bg-gray-700/30"><div className="text-[11px] font-semibold uppercase text-slate-400">{tr('Au grand livre (1300)', 'Ledger (1300)')}</div><div className="text-xl font-extrabold text-slate-700 dark:text-slate-200">{booked1300 == null ? '—' : mny(booked1300)}</div>{booked1300 != null && Math.abs(booked1300 - stock.totalValue) >= 1 && <div className="mt-0.5 text-[10px] font-semibold text-amber-600">{tr('écart', 'delta')} {mny(stock.totalValue - booked1300)}</div>}</div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-gray-700 dark:bg-gray-700/30"><div className="text-[11px] font-semibold uppercase text-slate-400">{tr('Articles · unités', 'Items · units')}</div><div className="text-xl font-extrabold text-slate-700 dark:text-slate-200">{stock.itemCount} · {stock.unitsTotal.toLocaleString('fr-CA')}</div></div>
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-800 dark:bg-rose-900/20"><div className="text-[11px] font-semibold uppercase text-rose-400">{tr('À surveiller', 'To watch')}</div><div className="text-sm font-bold text-rose-700 dark:text-rose-300">{stock.lowstock.length} {tr('rupt.', 'low')} · {stock.overstock.length} {tr('sur.', 'over')} · {stock.dormant.length} {tr('dorm.', 'dorm.')}</div></div>
+          </div>
+          {/* Valeur par catégorie/type */}
+          {stock.byCategory.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-1 text-xs font-bold text-slate-500">{tr('Valeur par type / catégorie', 'Value by type / category')}</div>
+              <div className="space-y-1">
+                {stock.byCategory.slice(0, 8).map(c => {
+                  const pct = stock.totalValue > 0 ? (c.value / stock.totalValue) * 100 : 0;
+                  return (
+                    <div key={c.name} className="flex items-center gap-2 text-xs">
+                      <span className="w-32 truncate text-slate-600 dark:text-slate-300">{c.name}</span>
+                      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-gray-700"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(2, pct)}%` }} /></div>
+                      <span className="w-24 text-right font-semibold text-slate-700 dark:text-slate-200">{mny(c.value)}</span>
+                      <span className="w-10 text-right text-slate-400">{pct.toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* Optimisation : listes courtes */}
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {([
+              { title: tr('Rupture / réappro', 'Low / reorder'), rows: stock.lowstock, cls: 'text-rose-600', note: (r: any) => `${r.quantity}/${r.minQty}` },
+              { title: tr('Surstock', 'Overstock'), rows: stock.overstock, cls: 'text-amber-600', note: (r: any) => `${r.quantity}>${r.maxQty}` },
+              { title: tr('Dormant (0 en stock)', 'Dormant (0 in stock)'), rows: stock.dormant, cls: 'text-slate-500', note: () => '0' },
+            ] as const).map(col => (
+              <div key={col.title} className="rounded-xl border border-slate-200 p-2.5 dark:border-gray-700">
+                <div className={`mb-1 text-xs font-bold ${col.cls}`}>{col.title} <span className="font-normal text-slate-400">({col.rows.length})</span></div>
+                {col.rows.length === 0 ? <p className="text-[11px] text-slate-400">{tr('Aucun', 'None')}</p> : (
+                  <ul className="space-y-0.5 text-[11px]">
+                    {col.rows.slice(0, 6).map(r => (
+                      <li key={r.id} className="flex items-center justify-between gap-2"><span className="truncate text-slate-600 dark:text-slate-300">{r.name || r.code}</span><span className="shrink-0 font-mono text-slate-400">{col.note(r)}</span></li>
+                    ))}
+                    {col.rows.length > 6 && <li className="text-slate-400">+{col.rows.length - 6}…</li>}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">{tr('Valeur = Σ (quantité × prix coûtant) des articles. « Comptabiliser » aligne le compte 1300 (méthode périodique : variation des stocks, contrepartie 5350).', 'Value = Σ (quantity × cost) of items. “Post” aligns account 1300 (periodic method: inventory change, offset 5350).')}</p>
+        </div>
+      )}
 
       {/* Timeline croissance : CA / charges / marge */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
