@@ -7167,7 +7167,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ imageBase64: dataUrl, media_type: file.type, file_name: file.name }) });
         const j = await resp.json().catch(() => ({}));
         if (!resp.ok) { failed++; lastErr = j.error || `HTTP ${resp.status}`; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
-        const url = await uploadReceipt(tenant, file).catch(() => null); // pièce source (reçu / relevé)
+        // Un RELEVÉ n'est PAS une pièce justificative : on ne l'attache PAS aux transactions (le flag « pièce
+        // manquante » reste actif). On n'attache le fichier que pour un reçu/facture UNIQUE.
+        const isStatement = !!(j.summary && j.summary.is_statement) || (Array.isArray(j.extractedList) && j.extractedList.length > 1);
+        const url = isStatement ? null : await uploadReceipt(tenant, file).catch(() => null);
         const handle = (r: 'created' | 'duplicate' | 'empty' | 'transfer') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else if (r === 'transfer') transfers++; else failed++; };
         if (j.summary && j.summary.is_statement) stmt = j.summary; // résumé déclaré du relevé (pour l'écart)
         // Compte effectif : choix manuel, sinon reconnaissance auto par les 4 derniers chiffres du relevé.
@@ -7269,6 +7272,44 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       }
       await deleteTransaction(tenant, t.id!);
       await load();
+    } catch (e: any) { setNotice(e?.message); }
+  }
+
+  // COMPTABILISER EN LOT toutes les transactions FILTRÉES non comptabilisées (les fait remonter au GL).
+  async function postAllFiltered() {
+    const todo = filteredTxns.filter(t => !t.gl_entry_id && t.status !== 'cancelled');
+    if (!todo.length) { setNotice(tr('Aucune transaction à comptabiliser.', 'Nothing to post.')); return; }
+    if (!confirm(tr(`Comptabiliser ${todo.length} transaction(s) au grand livre ?`, `Post ${todo.length} transaction(s) to the ledger?`))) return;
+    setNotice(tr('Comptabilisation en cours…', 'Posting…'));
+    const m: Record<string, string> = {}; accounts.forEach(a => m[a.code] = a.id);
+    let ok = 0, err = 0, noAcc = false;
+    for (const t of todo) {
+      try {
+        const its = await getTransactionItems(tenant, t.id!);
+        const r = t.txn_type === 'revenue' ? await postTransactionRevenue(tenant, t, its, m) : await postTransactionPurchase(tenant, t, its, m);
+        if (r === 'created') { ok++; if ((t as any).needs_review) await setTransactionReviewed(tenant, t.id!).catch(() => {}); }
+        else if (r === 'no-accounts') noAcc = true;
+      } catch { err++; }
+    }
+    setNotice(noAcc ? tr('Initialisez d\'abord le plan comptable (onglet Comptabilité).', 'Initialize the chart of accounts first.') : tr(`${ok} comptabilisée(s)${err ? `, ${err} échec(s)` : ''}.`, `${ok} posted${err ? `, ${err} failed` : ''}.`));
+    await load();
+  }
+
+  // NETTOYAGE des écritures du grand livre SANS transaction associée (orphelines d'anciennes suppressions).
+  async function cleanupOrphanGl() {
+    if (!confirm(tr('Supprimer les écritures du grand livre dont la transaction n\'existe plus ?', 'Delete ledger entries whose transaction no longer exists?'))) return;
+    try {
+      const [{ data: entries }, { data: txs }] = await Promise.all([
+        supabase.from('gl_entries').select('id, source_id').eq('tenant_id', tenant).eq('source_type', 'transaction'),
+        supabase.from('commerce_transactions').select('id').eq('tenant_id', tenant),
+      ]);
+      const ids = new Set((txs || []).map((t: any) => t.id));
+      const orphans = (entries || []).filter((e: any) => e.source_id && !ids.has(e.source_id)).map((e: any) => e.id);
+      if (!orphans.length) { setNotice(tr('Aucune écriture orpheline.', 'No orphan entry.')); return; }
+      await supabase.from('gl_lines').delete().eq('tenant_id', tenant).in('entry_id', orphans);
+      await supabase.from('gl_entries').delete().eq('tenant_id', tenant).in('id', orphans);
+      setNotice(tr(`${orphans.length} écriture(s) orpheline(s) supprimée(s).`, `${orphans.length} orphan entr(ies) removed.`));
+      if (view === 'balances') openBalances();
     } catch (e: any) { setNotice(e?.message); }
   }
 
@@ -7511,7 +7552,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       ) : view === 'balances' ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-1 text-sm font-bold">💰 {tr('Soldes de tous les comptes', 'All account balances')}</h3>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-bold">💰 {tr('Soldes de tous les comptes', 'All account balances')}</h3>
+              {canEdit && <button onClick={cleanupOrphanGl} className="rounded-lg border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300" title={tr('Supprime les écritures du grand livre dont la transaction n\'existe plus', 'Remove ledger entries whose transaction no longer exists')}>🧹 {tr('Nettoyer orphelines', 'Clean orphans')}</button>}
+            </div>
             <p className="mb-3 text-xs text-gray-500">{tr('Solde (sens normal) de chaque compte du grand livre, d’après toutes les écritures comptabilisées.', 'Balance (normal side) of each ledger account, from all posted entries.')}</p>
             {accounts.length === 0 ? <div className="text-sm text-gray-400">{tr('Plan comptable non initialisé (onglet Comptabilité → migration 085).', 'Chart of accounts not initialized.')}</div> : (
               <div className="overflow-x-auto">
@@ -7702,6 +7746,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <button onClick={() => setFDoc(v => !v)} className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${fDoc ? 'border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20' : 'border-gray-200 text-gray-500 dark:border-gray-700'}`} title={tr('Dépenses sans pièce justificative', 'Expenses without a receipt')}>⚠ {tr('Pièces manquantes', 'Missing receipts')}{missingDocCount > 0 ? ` (${missingDocCount})` : ''}</button>
           {(fType !== 'all' || fStatus !== 'all' || fSearch || fAccount !== 'all' || fDoc) && <button onClick={() => { setFType('all'); setFStatus('all'); setFSearch(''); setFAccount('all'); setFDoc(false); }} className="text-xs font-semibold text-gray-500 hover:underline">{tr('Réinitialiser', 'Reset')}</button>}
           <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
+          {canEdit && filteredTxns.some(t => !t.gl_entry_id && t.status !== 'cancelled') && <button onClick={postAllFiltered} className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300" title={tr('Comptabiliser au grand livre toutes les transactions affichées non comptabilisées', 'Post all displayed unposted transactions to the ledger')}>📒 {tr('Comptabiliser tout', 'Post all')}</button>}
           <button onClick={exportCsv} disabled={filteredTxns.length === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{tr('Exporter CSV', 'Export CSV')}</button>
         </div>
         {/* Lignes à HAUTEUR FIXE (une ligne, sans retour) + scroll HORIZONTAL si étroit — plus de cartes qui grossissent. Survol = détails via title. */}
