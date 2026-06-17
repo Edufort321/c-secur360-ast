@@ -19,6 +19,7 @@ import { BankConnect } from '@/components/admin/BankConnect';
 import { OnboardingWizard } from '@/components/admin/OnboardingWizard';
 import { BudgetModule } from '@/components/admin/BudgetModule';
 import { ReconciliationPanel } from '@/components/admin/ReconciliationPanel';
+import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
 import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2 } from 'lucide-react';
@@ -474,119 +475,111 @@ function isoYearOf(dateStr: string): number {
 
 function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [sheets, setSheets] = useState<any[]>([]);
+  const [rows, setRows] = useState<PayrollRow[]>([]); // lignes de paie calculées (taux, brut, net, dépenses)
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
   const [empFilter, setEmpFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState<Set<string>>(new Set()); // semaines dépliées (clé = period_start)
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
+  const [tenantName, setTenantName] = useState<string>(tenant);
 
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('timesheets').select('*').eq('tenant_id', tenant).order('period_start', { ascending: false });
-    setSheets(data || []);
+    const list = data || [];
+    setSheets(list);
+    try { setRows(await buildPayrollRows(tenant, list)); } catch { setRows([]); }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
-  // Réactif : si un employé soumet / un superviseur valide, la table paie se met à jour en direct.
+  useEffect(() => {
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle().then(({ data }) => { if ((data as any)?.logo_url) setLogoUrl((data as any).logo_url); }, () => {});
+    supabase.from('company_settings').select('legal_name').eq('tenant_id', tenant).maybeSingle().then(({ data }) => { if ((data as any)?.legal_name) setTenantName((data as any).legal_name); }, () => {});
+  }, [tenant]);
   useRealtime(['timesheets'], tenant, () => load()); // eslint-disable-line
 
+  const rowMap = useMemo(() => Object.fromEntries(rows.map(r => [r.id, r])), [rows]);
   const employees = useMemo(() => [...new Set(sheets.map((s: any) => s.employee_name))].sort(), [sheets]);
   const years = useMemo(() => {
     const ys = [...new Set(sheets.map((s: any) => isoYearOf(s.period_start)))].sort((a: any, b: any) => b - a) as number[];
     return ys.length ? ys : [new Date().getFullYear()];
   }, [sheets]);
 
-  const filtered = useMemo(() => sheets.filter((s: any) => {
-    if (isoYearOf(s.period_start) !== yearFilter) return false;
-    if (empFilter && s.employee_name !== empFilter) return false;
-    if (statusFilter && s.status !== statusFilter) return false;
-    return true;
-  }), [sheets, yearFilter, empFilter, statusFilter]);
-
-  // Transitions paie : validée → vérifiée → payée. Mise à jour DB + horodatage de traçabilité.
-  async function setStatus(id: string, status: 'verified' | 'paid' | 'approved') {
-    const patch: any = { status };
-    if (status === 'verified') patch.verified_at = new Date().toISOString();
-    if (status === 'paid') { patch.paid_at = new Date().toISOString(); }
-    const { error } = await supabase.from('timesheets').update(patch).eq('id', id).eq('tenant_id', tenant);
-    if (error) { alert(tr('Erreur : ', 'Error: ') + error.message); return; }
-    load();
-  }
-  // « Traiter la paie » : marque PAYÉES toutes les feuilles validées/vérifiées de la sélection courante.
-  async function processPayroll() {
-    const ids = filtered.filter((s: any) => isPayrollProcessable(s.status)).map((s: any) => s.id);
-    if (!ids.length) { alert(tr('Aucune feuille validée/vérifiée à payer dans la sélection.', 'No approved/verified sheet to pay in selection.')); return; }
-    if (!confirm(tr(`Marquer ${ids.length} feuille(s) comme PAYÉES ? (paie traitée)`, `Mark ${ids.length} sheet(s) as PAID? (payroll processed)`))) return;
-    setBusy(true);
-    try {
-      const { error } = await supabase.from('timesheets').update({ status: 'paid', paid_at: new Date().toISOString() }).in('id', ids).eq('tenant_id', tenant);
-      if (error) throw error;
-      load();
-    } catch (e: any) { alert(tr('Erreur : ', 'Error: ') + (e?.message || 'DB')); }
-    finally { setBusy(false); }
-  }
-  const payableCount = useMemo(() => filtered.filter((s: any) => isPayrollProcessable(s.status)).length, [filtered]);
-
-  const totals = useMemo(() => filtered.reduce((acc: any, s: any) => ({
-    hrs: acc.hrs + Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium),
-    km: acc.km + Number(s.total_km_personal),
-    amt: acc.amt + Number(s.total_amount),
-    ded: acc.ded + Number(s.vehicle_deduction || 0),
-  }), { hrs: 0, km: 0, amt: 0, ded: 0 }), [filtered]);
-
-  function weekNum(dateStr: string) {
-    const d = new Date(dateStr + 'T00:00:00');
-    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-    const w1 = new Date(d.getFullYear(), 0, 4);
-    return 1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
-  }
-
-  function exportCSV() {
-    const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'verified' || s.status === 'paid' || s.status === 'exported');
-    if (!toExport.length) { alert(tr('Aucune feuille validée/payée dans la sélection.', 'No approved/paid sheet in selection.')); return; }
-    const rows = [
-      [tr('Employé', 'Employee'), 'Email', tr('Période #', 'Period #'), tr('Période début', 'Period start'), tr('Période fin', 'Period end'), tr('Hrs rég', 'Reg hrs'), tr('Hrs supp', 'OT hrs'), tr('Hrs maj', 'DT hrs'), tr('Km pers.', 'Personal km'), tr('Déduction véhicule', 'Vehicle deduction'), tr('Montant total', 'Total amount'), tr('Statut', 'Status')].join(','),
-      ...toExport.map((s: any) => [`"${s.employee_name}"`, s.employee_email, `P.${weekNum(s.period_start)}`, s.period_start, s.period_end,
-        s.total_regular, s.total_overtime, s.total_premium, s.total_km_personal, Number(s.vehicle_deduction || 0), s.total_amount, s.status].join(',')),
-    ].join('\n');
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob(['﻿' + rows], { type: 'text/csv;charset=utf-8;' })),
-      download: `paie_${yearFilter}_${tenant}${empFilter ? `_${empFilter.replace(/\s+/g, '_')}` : ''}.csv`,
+  // Regroupement : ANNÉE (filtre) → SEMAINE → équipe (triée par nom). Semaines récentes en premier.
+  const weeks = useMemo(() => {
+    const inYear = sheets.filter((s: any) => isoYearOf(s.period_start) === yearFilter && (!empFilter || s.employee_name === empFilter));
+    const by: Record<string, { key: string; week: number; start: string; end: string; sheets: any[] }> = {};
+    inYear.forEach((s: any) => {
+      const k = String(s.period_start);
+      (by[k] ||= { key: k, week: isoWeekNum(s.period_start), start: s.period_start, end: s.period_end, sheets: [] }).sheets.push(s);
     });
-    a.click();
+    return Object.values(by).map(w => ({ ...w, sheets: w.sheets.sort((a, b) => String(a.employee_name).localeCompare(String(b.employee_name))) })).sort((a, b) => b.start.localeCompare(a.start));
+  }, [sheets, yearFilter, empFilter]);
+
+  // Mise à jour de statut résiliente (colonnes d'ajustement absentes avant migration 214 -> on retire).
+  async function patchSheet(ids: string[], patch: any) {
+    let p = { ...patch }; let res: any = await supabase.from('timesheets').update(p).in('id', ids).eq('tenant_id', tenant); let g = 0;
+    while (res.error && g < 6) {
+      const m = (res.error.message || '').match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+      const col = m ? (m[1] || m[2] || m[3]) : null;
+      if (col && col in p) { delete p[col]; res = await supabase.from('timesheets').update(p).in('id', ids).eq('tenant_id', tenant); g++; } else break;
+    }
+    if (res.error) { alert(tr('Erreur : ', 'Error: ') + res.error.message); return false; }
+    return true;
+  }
+  async function setStatus(id: string, status: 'verified' | 'paid' | 'approved') {
+    const patch: any = { status, adjustment_flag: false };
+    if (status === 'verified') patch.verified_at = new Date().toISOString();
+    if (status === 'paid') patch.paid_at = new Date().toISOString();
+    if (await patchSheet([id], patch)) load();
+  }
+  // AJUSTEMENT : renvoie la feuille à l'employé avec une consigne -> drapeau ROUGE chez lui, déverrouillée.
+  async function requestAdjustment(id: string) {
+    const note = window.prompt(tr('Consigne d’ajustement à l’employé (ce qu’il doit corriger) :', 'Adjustment note to the employee (what to fix):'), '');
+    if (note === null) return;
+    if (await patchSheet([id], { status: 'rejected', adjustment_flag: true, adjustment_note: note, rejection_note: note, rejected_at: new Date().toISOString() })) load();
+  }
+  async function batchStatus(ids: string[], status: 'approved' | 'verified' | 'paid') {
+    if (!ids.length) return;
+    const patch: any = { status, adjustment_flag: false };
+    if (status === 'verified') patch.verified_at = new Date().toISOString();
+    if (status === 'paid') patch.paid_at = new Date().toISOString();
+    setBusy(true); if (await patchSheet(ids, patch)) load(); setBusy(false);
+  }
+
+  // Sélection
+  const toggleSel = (id: string) => setSel(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleWeek = (w: { sheets: any[] }) => setSel(p => { const n = new Set(p); const all = w.sheets.every(s => n.has(s.id)); w.sheets.forEach(s => all ? n.delete(s.id) : n.add(s.id)); return n; });
+  const toggleOpen = (k: string) => setOpen(p => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
+
+  // ── Exports (lot ou individuel) : CSV + PDF registre de paie pro ──
+  function rowsFor(ids: string[]): PayrollRow[] { return ids.map(id => rowMap[id]).filter(Boolean) as PayrollRow[]; }
+  function exportCsvFor(ids: string[], label: string) {
+    const rs = rowsFor(ids); if (!rs.length) { alert(tr('Aucune feuille à exporter.', 'Nothing to export.')); return; }
+    downloadCsv(`paie_${label}.csv`, buildPayrollCsv(rs));
+  }
+  async function exportPdfFor(ids: string[], periodLabel: string) {
+    const rs = rowsFor(ids); if (!rs.length) { alert(tr('Aucune feuille à exporter.', 'Nothing to export.')); return; }
+    const { exportPayrollRegisterPdf } = await import('@/lib/timesheetPayrollPdf');
+    await exportPayrollRegisterPdf({ tr, logoUrl, tenantName, periodLabel, rows: rs });
   }
 
   const mny = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
   const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' });
-  const en = false; // labels FR par défaut dans cet onglet (tr() gère déjà le reste)
+  const selArr = useMemo(() => [...sel], [sel]);
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: tr('Heures totales', 'Total hours'),       value: `${totals.hrs.toFixed(1)} h`, tone: 'text-slate-900 dark:text-white' },
-          { label: tr('Km remboursables', 'Reimbursable km'), value: `${totals.km.toFixed(0)} km`, tone: 'text-emerald-600' },
-          { label: tr('Déductions véhicule', 'Vehicle ded.'), value: totals.ded > 0 ? `-${mny(totals.ded)}` : '0,00 $', tone: 'text-red-600' },
-          { label: tr('Montant total', 'Total amount'),       value: mny(totals.amt),              tone: 'text-violet-600' },
-        ].map(s => (
-          <div key={s.label} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className={`text-2xl font-bold ${s.tone}`}>{s.value}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters + export */}
+      {/* Filtres : année + employé */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
           {years.map(y => (
             <button key={y} onClick={() => setYearFilter(y)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${yearFilter === y ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
-              {y}
-            </button>
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${yearFilter === y ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{y}</button>
           ))}
         </div>
         {employees.length > 0 && (
@@ -596,96 +589,97 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
             {employees.map(emp => <option key={emp as string} value={emp as string}>{emp as string}</option>)}
           </select>
         )}
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
-          <option value="">{tr('Tous les statuts', 'All statuses')}</option>
-          <option value="draft">{tr('En cours', 'In progress')}</option>
-          <option value="submitted">{tr('Soumise', 'Submitted')}</option>
-          <option value="approved">{tr('Validée', 'Approved')}</option>
-          <option value="verified">{tr('Vérifiée', 'Verified')}</option>
-          <option value="paid">{tr('Payée', 'Paid')}</option>
-          <option value="rejected">{tr('Refusée', 'Rejected')}</option>
-        </select>
-        <div className="ml-auto flex gap-2">
-          <button onClick={processPayroll} disabled={busy || payableCount === 0}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-            title={tr('Marquer payées les feuilles validées/vérifiées de la sélection', 'Mark approved/verified sheets as paid')}>
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Banknote size={15} />} {tr('Traiter la paie', 'Process payroll')}{payableCount > 0 ? ` (${payableCount})` : ''}
-          </button>
-          <button onClick={exportCSV}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700">
-            <DollarSign size={15} /> {tr('Export paie CSV', 'Export payroll CSV')}
-          </button>
-        </div>
+        <p className="text-xs text-gray-400">{tr('Classé par semaine. Cliquez une semaine pour voir l’équipe, vérifier/approuver/ajuster, et exporter (CSV/PDF) pour la banque.', 'Grouped by week. Click a week to see the team, verify/approve/adjust, and export (CSV/PDF) for the bank.')}</p>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <div className="overflow-x-auto">
-          <table className="mobile-cards w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                <th className="px-4 py-3">{tr('Employé', 'Employee')}</th>
-                <th className="px-4 py-3">{tr('Période', 'Period')}</th>
-                <th className="px-4 py-3">{tr('Heures', 'Hours')}</th>
-                <th className="px-4 py-3">{tr('Km pers.', 'Pers. km')}</th>
-                <th className="px-4 py-3 text-red-600">{tr('Déd. véhicule', 'Vehicle ded.')}</th>
-                <th className="px-4 py-3">{tr('Montant', 'Amount')}</th>
-                <th className="px-4 py-3">{tr('Statut', 'Status')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s: any) => {
-                const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
-                return (
-                  <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
-                    <td className="px-4 py-3" data-label={tr('Employé', 'Employee')}>
-                      <div className="flex items-center gap-2">
-                        <div className="grid h-7 w-7 place-items-center rounded-full bg-gray-200 text-xs font-bold dark:bg-gray-600">{(s.employee_name || '?')[0].toUpperCase()}</div>
-                        <div>
-                          <div className="font-medium">{s.employee_name}</div>
-                          <div className="text-xs text-gray-400">{s.employee_email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3" data-label={tr('Période', 'Period')}>
-                      <div className="text-right sm:text-left">
-                        <div className="text-xs font-semibold text-violet-500">P.{weekNum(s.period_start)}</div>
-                        <div className="text-gray-600 dark:text-gray-300">{fmt(s.period_start)} – {fmt(s.period_end)}</div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-medium" data-label={tr('Heures', 'Hours')}>{hrs.toFixed(1)} h</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300" data-label={tr('Km pers.', 'Pers. km')}>{Number(s.total_km_personal).toFixed(0)} km</td>
-                    <td className="px-4 py-3 font-semibold text-red-600" data-label={tr('Déd. véhicule', 'Vehicle ded.')}>
-                      {Number(s.vehicle_deduction || 0) > 0 ? `-${mny(Number(s.vehicle_deduction))}` : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-violet-700" data-label={tr('Montant', 'Amount')}>{mny(Number(s.total_amount))}</td>
-                    <td className="px-4 py-3" data-label={tr('Statut', 'Status')}>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tsCls(s.status)}`}>
-                          {tsLabel(s.status)}
-                        </span>
-                        {s.status === 'submitted' && (
-                          <button onClick={() => setStatus(s.id, 'approved')} className="rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50">{tr('Valider', 'Approve')}</button>
-                        )}
-                        {s.status === 'approved' && (
-                          <button onClick={() => setStatus(s.id, 'verified')} className="rounded-lg border border-teal-300 px-2 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50">{tr('Vérifier', 'Verify')}</button>
-                        )}
-                        {(s.status === 'approved' || s.status === 'verified') && (
-                          <button onClick={() => setStatus(s.id, 'paid')} className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">{tr('Payer', 'Pay')}</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">{tr('Aucune feuille de temps pour cette sélection.', 'No timesheet for this selection.')}</td></tr>
-              )}
-            </tbody>
-          </table>
+      {/* Barre de sélection (lot) */}
+      {selArr.length > 0 && (
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm shadow-sm dark:border-blue-500/30 dark:bg-blue-900/20">
+          <span className="font-semibold text-blue-700 dark:text-blue-300">{selArr.length} {tr('sélectionnée(s)', 'selected')}</span>
+          <button onClick={() => batchStatus(selArr, 'approved')} disabled={busy} className="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">{tr('Valider', 'Approve')}</button>
+          <button onClick={() => batchStatus(selArr, 'verified')} disabled={busy} className="rounded-lg border border-teal-300 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-100 disabled:opacity-50">{tr('Vérifier (verrouille)', 'Verify (locks)')}</button>
+          <button onClick={() => batchStatus(selArr, 'paid')} disabled={busy} className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{tr('Marquer payées', 'Mark paid')}</button>
+          <span className="mx-1 h-4 w-px bg-blue-200" />
+          <button onClick={() => exportCsvFor(selArr, 'selection')} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"><Download size={13} /> CSV</button>
+          <button onClick={() => exportPdfFor(selArr, tr('Sélection', 'Selection'))} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700"><FileText size={13} /> PDF</button>
+          <button onClick={() => setSel(new Set())} className="ml-auto text-xs font-semibold text-blue-600 hover:underline">{tr('Effacer', 'Clear')}</button>
         </div>
-      </div>
+      )}
+
+      {/* Semaines */}
+      {weeks.length === 0 && <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune feuille de temps pour cette année.', 'No timesheet this year.')}</div>}
+      {weeks.map(w => {
+        const isOpen = open.has(w.key);
+        const allSel = w.sheets.every(s => sel.has(s.id));
+        const wkRows = rowsFor(w.sheets.map(s => s.id));
+        const wkPay = wkRows.reduce((a, r) => a + r.totalToPay, 0);
+        const counts = w.sheets.reduce((a: any, s: any) => { a[s.status] = (a[s.status] || 0) + 1; return a; }, {});
+        const pend = `${tr('Sem.', 'Wk')} ${w.week} · ${fmt(w.start)}–${fmt(w.end)}`;
+        return (
+          <div key={w.key} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 px-3 py-2.5 dark:border-gray-700">
+              <input type="checkbox" checked={allSel} onChange={() => toggleWeek(w)} title={tr('Sélectionner toute la semaine', 'Select whole week')} />
+              <button onClick={() => toggleOpen(w.key)} className="inline-flex items-center gap-1.5 font-bold text-gray-800 dark:text-gray-100">
+                {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />} {pend}
+              </button>
+              <span className="text-xs text-gray-400">{w.sheets.length} {tr('feuille(s)', 'sheet(s)')} · {mny(wkPay)} {tr('à verser', 'to pay')}</span>
+              <div className="flex flex-wrap items-center gap-1">
+                {Object.entries(counts).map(([st, c]) => <span key={st} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tsCls(st)}`}>{tsLabel(st)} {c as number}</span>)}
+              </div>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button onClick={() => exportCsvFor(w.sheets.map(s => s.id), `S${w.week}_${yearFilter}`)} className="inline-flex items-center gap-1 rounded-lg border border-violet-300 px-2 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50"><Download size={12} /> CSV</button>
+                <button onClick={() => exportPdfFor(w.sheets.map(s => s.id), pend)} className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"><FileText size={12} /> PDF</button>
+              </div>
+            </div>
+            {isOpen && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-left text-[11px] font-semibold uppercase text-gray-400 dark:border-gray-700">
+                      <th className="px-3 py-2"></th>
+                      <th className="px-3 py-2">{tr('Employé', 'Employee')}</th>
+                      <th className="px-3 py-2 text-right">{tr('Heures', 'Hours')}</th>
+                      <th className="px-3 py-2 text-right">{tr('Rémunération', 'Gross')}</th>
+                      <th className="px-3 py-2 text-right">{tr('Net', 'Net')}</th>
+                      <th className="px-3 py-2 text-right">{tr('Dépenses', 'Expenses')}</th>
+                      <th className="px-3 py-2 text-right">{tr('À verser', 'To pay')}</th>
+                      <th className="px-3 py-2">{tr('Statut / actions', 'Status / actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {w.sheets.map((s: any) => {
+                      const r = rowMap[s.id];
+                      const hrs = (r?.hrsReg || 0) + (r?.hrsOt || 0) + (r?.hrsDt || 0);
+                      return (
+                        <tr key={s.id} className="border-t border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
+                          <td className="px-3 py-2"><input type="checkbox" checked={sel.has(s.id)} onChange={() => toggleSel(s.id)} /></td>
+                          <td className="px-3 py-2"><div className="font-medium">{s.employee_name}</div><div className="text-xs text-gray-400">{s.employee_email}</div></td>
+                          <td className="px-3 py-2 text-right">{hrs.toFixed(1)} h</td>
+                          <td className="px-3 py-2 text-right">{mny(r?.gross || 0)}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-violet-700">{mny(r?.net || 0)}</td>
+                          <td className="px-3 py-2 text-right text-emerald-600">{mny(r?.reimbursable || 0)}</td>
+                          <td className="px-3 py-2 text-right font-bold">{mny(r?.totalToPay || 0)}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${tsCls(s.status)}`}>{tsLabel(s.status)}</span>
+                              {s.status === 'submitted' && <button onClick={() => setStatus(s.id, 'approved')} className="rounded-lg border border-emerald-300 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50">{tr('Valider', 'Approve')}</button>}
+                              {s.status === 'approved' && <button onClick={() => setStatus(s.id, 'verified')} className="rounded-lg border border-teal-300 px-2 py-0.5 text-[11px] font-semibold text-teal-700 hover:bg-teal-50">{tr('Vérifier', 'Verify')}</button>}
+                              {(s.status === 'approved' || s.status === 'verified') && <button onClick={() => setStatus(s.id, 'paid')} className="rounded-lg bg-blue-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-blue-700">{tr('Payer', 'Pay')}</button>}
+                              {s.status !== 'paid' && s.status !== 'draft' && <button onClick={() => requestAdjustment(s.id)} className="rounded-lg border border-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50">{tr('Ajustement', 'Adjust')}</button>}
+                              <button onClick={() => exportPdfFor([s.id], `${s.employee_name} · ${pend}`)} title="PDF" className="text-gray-400 hover:text-rose-600"><FileText size={14} /></button>
+                            </div>
+                            {(s.adjustment_note || s.rejection_note) && s.status === 'rejected' && <div className="mt-1 text-[11px] text-amber-600">⚠ {s.adjustment_note || s.rejection_note}</div>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

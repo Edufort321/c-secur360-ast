@@ -27,7 +27,7 @@ type Entry = {
 type Project  = { id: string; project_number: string; title: string | null; client_name: string | null };
 type Rate     = { code: string; rate_regular: number; rate_overtime: number; rate_premium: number };
 type Vehicle  = { id: string; name: string; make: string; model: string; type: string };
-type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string; total_commissions?: number; commission_details?: any[] };
+type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string; total_commissions?: number; commission_details?: any[]; adjustment_note?: string | null; rejection_note?: string | null; adjustment_flag?: boolean };
 type Allowance = { id: string; name: string; amount: number; is_taxable: boolean };
 type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number };
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
@@ -740,6 +740,18 @@ export default function TimesheetDetailPage() {
             </Link>
           )}
         </div>
+
+        {/* Ajustement demandé par l'administrateur paie — drapeau ROUGE + consigne (feuille déverrouillée) */}
+        {sheet?.status === 'rejected' && (sheet?.adjustment_note || sheet?.rejection_note) && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-red-500" />
+            <div>
+              <div className="font-bold">⚠ Ajustement requis</div>
+              <div className="text-xs">{sheet.adjustment_note || sheet.rejection_note}</div>
+              <div className="mt-1 text-[11px] text-red-600/80">Corrigez puis soumettez à nouveau.</div>
+            </div>
+          </div>
+        )}
 
         {/* En-tête feuille */}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
