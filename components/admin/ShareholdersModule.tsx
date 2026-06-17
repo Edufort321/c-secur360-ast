@@ -11,6 +11,8 @@ import {
   type DividendDeclaration, type DividendPayment,
 } from '@/lib/shareholders';
 import { computeValuation, simulateRound, altmanZScore, type BalanceSheet } from '@/lib/valuation';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
+import { Download } from 'lucide-react';
 
 type Tr = (f: string, e: string) => string;
 const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
@@ -198,13 +200,44 @@ function CapTable({ tenant, tr, canEdit, inputCls, setNotice }: SubProps) {
   }
   async function removeTxn(id?: string) { if (!id) return; try { await deleteShareTxn(tenant, id); await load(); } catch (e: any) { setNotice(e?.message); } }
 
+  const today2 = new Date().toISOString().slice(0, 10);
+  const txnTypeLabel = (t?: string) => ({ issuance: tr('Émission', 'Issuance'), transfer_in: tr('Entrée', 'Transfer in'), transfer_out: tr('Sortie', 'Transfer out'), buyback: tr('Rachat', 'Buyback') } as any)[t || 'issuance'] || t || '';
+  function exportOwnershipCsv() {
+    const rows = Object.entries(holdMap).filter(([, n]) => n !== 0).sort((a, b) => b[1] - a[1])
+      .map(([id, n]) => ({ name: nameOf(id), shares: n, pct: totalShares ? (n / totalShares) * 100 : 0 }));
+    const cols: CsvColumn[] = [
+      { key: 'name', label: tr('Actionnaire', 'Shareholder') },
+      { key: 'shares', label: tr('Actions', 'Shares'), type: 'number' },
+      { key: 'pct', label: tr('% du capital', '% of capital'), map: v => (Number(v) || 0).toFixed(2) },
+    ];
+    downloadCsv(`captable-${today2}.csv`, rows, cols);
+  }
+  function exportTxnsCsv() {
+    const rows = txns.slice().map(t => ({
+      date: t.txn_date || '', name: nameOf(t.shareholder_id), type: txnTypeLabel(t.txn_type),
+      shares: Number(t.shares) || 0, amount: Number(t.amount) || 0, gl: t.gl_entry_id ? tr('Oui', 'Yes') : '',
+    }));
+    const cols: CsvColumn[] = [
+      { key: 'date', label: tr('Date', 'Date'), type: 'date' },
+      { key: 'name', label: tr('Actionnaire', 'Shareholder') },
+      { key: 'type', label: tr('Type', 'Type') },
+      { key: 'shares', label: tr('Actions', 'Shares'), type: 'number' },
+      { key: 'amount', label: tr('Apport ($)', 'Contribution ($)'), type: 'money' },
+      { key: 'gl', label: tr('Écriture GL', 'GL entry') },
+    ];
+    downloadCsv(`mouvements-actions-${today2}.csv`, rows, cols);
+  }
+
   if (loading) return <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="space-y-4">
       {/* Répartition (ownership) */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div className="mb-2 text-sm font-bold text-gray-900 dark:text-white">{tr('Répartition du capital', 'Ownership breakdown')} — {num(totalShares)} {tr('actions émises', 'shares issued')}</div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="text-sm font-bold text-gray-900 dark:text-white">{tr('Répartition du capital', 'Ownership breakdown')} — {num(totalShares)} {tr('actions émises', 'shares issued')}</div>
+          {totalShares > 0 && <button onClick={exportOwnershipCsv} title={tr('Exporter la cap table en CSV', 'Export cap table to CSV')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={12} /> {tr('CSV', 'CSV')}</button>}
+        </div>
         {totalShares === 0 ? <div className="text-sm text-gray-400">{tr('Aucune action émise.', 'No shares issued.')}</div> : (
           <div className="space-y-1.5">
             {Object.entries(holdMap).filter(([, n]) => n !== 0).sort((a, b) => b[1] - a[1]).map(([id, n]) => {
@@ -240,7 +273,10 @@ function CapTable({ tenant, tr, canEdit, inputCls, setNotice }: SubProps) {
 
       {/* Mouvements */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div className="mb-2 text-sm font-bold text-gray-900 dark:text-white">{tr('Mouvements d\'actions', 'Share transactions')}</div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="text-sm font-bold text-gray-900 dark:text-white">{tr('Mouvements d\'actions', 'Share transactions')}</div>
+          {txns.length > 0 && <button onClick={exportTxnsCsv} title={tr('Exporter les mouvements en CSV', 'Export transactions to CSV')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={12} /> {tr('CSV', 'CSV')}</button>}
+        </div>
         {canEdit && (
           <div className="mb-3 grid gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-700/40 sm:grid-cols-7">
             <select value={txn.shareholder_id} onChange={e => setTxn({ ...txn, shareholder_id: e.target.value })} className={`sm:col-span-2 ${inputCls}`}><option value="">{tr('Actionnaire…', 'Shareholder…')}</option>{holders.map(h => <option key={h.id} value={h.id}>{h.full_name}</option>)}</select>
