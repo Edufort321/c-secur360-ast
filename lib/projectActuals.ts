@@ -20,6 +20,10 @@ export type ProjectActuals = {
   expenseEntries: ProjectActualExpense[];
   count: number;
   source: 'timesheets';
+  // Matériel consommé depuis l'inventaire (calculé par la route /api/projects/wip).
+  materielInventaire?: number;                         // COÛT (prix coûtant) — entre dans le coût réel
+  materielBillable?: number;                           // VALEUR VENDANT — facturable au projet
+  materielMissingPrice?: { name: string; qty: number }[]; // articles consommés SANS prix vendant à jour
 };
 
 const EMPTY: ProjectActuals = { total: 0, labor: 0, km: 0, materiel: 0, allowances: 0, expensesBillable: 0, expensesTotal: 0, hours: { reg: 0, supp: 0, maj: 0 }, entries: [], expenseEntries: [], count: 0, source: 'timesheets' };

@@ -38,23 +38,33 @@ export async function GET(req: NextRequest) {
   const base = await computeProjectActuals(tenant, projectId);
 
   // + Matériel CONSOMMÉ depuis l'inventaire (mouvements 'exit' pointés sur ce projet).
-  let materielInventaire = 0;
+  //   - materielInventaire = COÛT (prix coûtant) -> entre dans le coût réel.
+  //   - materielBillable = VALEUR VENDANT (sale_price) -> facturable au projet.
+  //   - materielMissingPrice = articles consommés SANS prix vendant à jour (à signaler en ROUGE).
+  let materielInventaire = 0, materielBillable = 0;
+  const missing: Record<string, { name: string; qty: number }> = {};
   const pn = (proj as any).project_number;
   if (pn) {
     try {
       const { data: inv } = await supabaseAdmin.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
       const snap: any = (inv as any)?.data || {};
       const items: any[] = Array.isArray(snap.items) ? snap.items : [];
-      const costOf = (itemId: any) => { const it = items.find(x => String(x.id) === String(itemId)); return Number(it?.costPrice ?? it?.cost_price ?? 0) || 0; };
+      const itemOf = (itemId: any) => items.find(x => String(x.id) === String(itemId));
       for (const m of (Array.isArray(snap.movements) ? snap.movements : [])) {
         if (m && m.type === 'exit' && (String(m.projectCode) === String(pn) || String(m.reason || '').includes(pn))) {
-          materielInventaire += (Number(m.quantity) || 0) * costOf(m.itemId);
+          const qty = Number(m.quantity) || 0;
+          const it = itemOf(m.itemId);
+          const cost = Number(it?.costPrice ?? it?.cost_price ?? 0) || 0;
+          const sale = Number(it?.salePrice ?? it?.sale_price ?? 0) || 0;
+          materielInventaire += qty * cost;
+          materielBillable += qty * sale;
+          if (sale <= 0) { const k = String(m.itemId); const nm = it?.name || m.itemName || k; missing[k] = { name: nm, qty: (missing[k]?.qty || 0) + qty }; }
         }
       }
     } catch { /* inventaire absent -> ignore */ }
   }
-
-  const actuals = { ...base, materielInventaire, total: base.total + materielInventaire };
+  const materielMissingPrice = Object.values(missing);
+  const actuals = { ...base, materielInventaire, materielBillable: Math.round(materielBillable * 100) / 100, materielMissingPrice, total: base.total + materielInventaire };
 
   // Persiste le coût réel dans projects.actuals -> l'écart/marge deviennent vrais partout.
   try {

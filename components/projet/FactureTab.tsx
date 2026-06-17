@@ -31,6 +31,7 @@ interface FactureData {
   extras: Extra[];
   surcharge_km_billable: boolean;  // inclure la surcharge carburant km dans la facture
   expenses_billable: boolean;      // inclure les dépenses refacturables des feuilles de temps
+  materiel_billable: boolean;      // inclure le matériel consommé (inventaire) au PRIX VENDANT
   tps: boolean;
   tvq: boolean;
   notes: string;
@@ -46,6 +47,7 @@ const defaultFacture = (projectType?: string): FactureData => ({
   extras: [],
   surcharge_km_billable: true,
   expenses_billable: true,
+  materiel_billable: true,
   tps: true,
   tvq: true,
   notes: '',
@@ -107,8 +109,13 @@ export function FactureTab({
   const expensesBillableAmount = (facture.mode === 'temps' && hasLive && facture.expenses_billable)
     ? Number(liveActuals!.expensesBillable || 0) : 0;
 
+  // Matériel consommé depuis l'inventaire, facturé au PRIX VENDANT (imputable au projet).
+  const materielBillableAmount = (hasLive && facture.materiel_billable) ? Number((liveActuals as any).materielBillable || 0) : 0;
+  // Articles consommés SANS prix vendant à jour -> à afficher EN ROUGE (manque à facturer).
+  const materielMissing: { name: string; qty: number }[] = (hasLive ? ((liveActuals as any).materielMissingPrice || []) : []);
+
   const extrasTotal = facture.extras.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const subtotal = base + extrasTotal + surchargeKmAmount + expensesBillableAmount;
+  const subtotal = base + extrasTotal + surchargeKmAmount + expensesBillableAmount + materielBillableAmount;
   const tpsMnt = facture.tps ? subtotal * TPS : 0;
   const tvqMnt = facture.tvq ? subtotal * TVQ : 0;
   const total = subtotal + tpsMnt + tvqMnt;
@@ -145,6 +152,7 @@ export function FactureTab({
         mkItem(facture.mode === 'soumission' ? 'Soumission approuvée' : 'Feuille de temps (coût réel)', base),
         ...(surchargeKmAmount > 0 ? [mkItem(`Surcharge carburant km (${kmSurchargePct}%)`, surchargeKmAmount)] : []),
         ...(expensesBillableAmount > 0 ? [mkItem(tr('Dépenses refacturables', 'Billable expenses'), expensesBillableAmount)] : []),
+        ...(materielBillableAmount > 0 ? [mkItem(tr('Matériel (inventaire)', 'Material (inventory)'), materielBillableAmount)] : []),
         ...facture.extras.filter(e => Number(e.amount) !== 0).map(e => mkItem(e.desc || 'Extra', Number(e.amount) || 0)),
       ].filter(it => it.unit_price !== 0);
 
@@ -195,6 +203,7 @@ export function FactureTab({
         ...facture.extras,
         ...(surchargeKmAmount > 0 ? [{ id: 'km_surcharge', desc: `Surcharge carburant km (${kmSurchargePct}%)`, amount: surchargeKmAmount }] : []),
         ...(expensesBillableAmount > 0 ? [{ id: 'ts_expenses', desc: tr('Dépenses refacturables', 'Billable expenses'), amount: expensesBillableAmount }] : []),
+        ...(materielBillableAmount > 0 ? [{ id: 'materiel_inv', desc: tr('Matériel (inventaire)', 'Material (inventory)'), amount: materielBillableAmount }] : []),
       ];
       const pdfProject = {
         ...project,
@@ -283,6 +292,12 @@ export function FactureTab({
                 {tr('Dépenses refacturables', 'Billable expenses')} ({money(Number(liveActuals!.expensesBillable || 0))})
               </label>
             )}
+            {hasLive && Number((liveActuals as any).materielBillable || 0) > 0 && (
+              <label className="flex items-center gap-2 text-sm font-medium text-cyan-700 dark:text-cyan-300">
+                <input type="checkbox" checked={facture.materiel_billable} onChange={e => set('materiel_billable', e.target.checked)} disabled={facture.approved} />
+                {tr('Matériel inventaire (prix vendant)', 'Inventory material (selling price)')} ({money(Number((liveActuals as any).materielBillable || 0))})
+              </label>
+            )}
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
               <input type="checkbox" checked={facture.tps} onChange={e => set('tps', e.target.checked)} disabled={facture.approved} />
               TPS (5%)
@@ -350,6 +365,29 @@ export function FactureTab({
                 </div>
               </div>
               <span className="font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{money(expensesBillableAmount)}</span>
+            </div>
+          )}
+
+          {/* Matériel consommé (inventaire) au PRIX VENDANT — imputable au projet */}
+          {materielBillableAmount > 0 && (
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <div className="font-semibold text-cyan-700 dark:text-cyan-300">{tr('Matériel (inventaire)', 'Material (inventory)')}</div>
+                <div className="text-xs text-cyan-600 dark:text-cyan-400">{tr('Consommé sur le projet, facturé au prix vendant', 'Consumed on the project, billed at selling price')}</div>
+              </div>
+              <span className="font-bold tabular-nums text-cyan-700 dark:text-cyan-300">{money(materielBillableAmount)}</span>
+            </div>
+          )}
+
+          {/* DRAPEAU ROUGE : matériel consommé sans prix vendant à jour -> manque à facturer */}
+          {materielMissing.length > 0 && (
+            <div className="my-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+              <div className="font-bold">⚠ {tr('Prix vendant manquant ou non à jour', 'Selling price missing or out of date')}</div>
+              <div>{tr('Ce matériel consommé n’est PAS facturé (mettez le prix vendant à jour dans l’inventaire) :', 'This consumed material is NOT billed (update the selling price in inventory):')}</div>
+              <ul className="mt-0.5 list-disc pl-4">
+                {materielMissing.slice(0, 8).map((m, i) => <li key={i}>{m.name} × {m.qty}</li>)}
+                {materielMissing.length > 8 && <li>+{materielMissing.length - 8}…</li>}
+              </ul>
             </div>
           )}
 
