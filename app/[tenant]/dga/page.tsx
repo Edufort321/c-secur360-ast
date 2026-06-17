@@ -59,6 +59,7 @@ export default function DgaPage() {
   const [siteFilter, setSiteFilter] = useState(''); // classer les transfos par site (admin)
   const [delMode, setDelMode] = useState(false);
   const [assembling, setAssembling] = useState(false);
+  const [withCover, setWithCover] = useState(false); // inclure une lettre de présentation au rapport DGA
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -280,7 +281,20 @@ export default function DgaPage() {
       `Selection has ${clients.length} different clients. Assemble a single report anyway?`))) return;
     setAssembling(true);
     try {
-      await generateMultiDgaReport({ items, clientName: clients[0] || tenantName, logoUrl, lang: lang === 'en' ? 'en' : 'fr' });
+      const clientNom = clients[0] || tenantName;
+      // Lettre de présentation optionnelle (même socle que le rapport terrain).
+      const coverLetter = withCover ? {
+        companyName: tenantName,
+        destinataire: [clientNom].filter(Boolean),
+        objet: tr('Diagnostic des gaz dissous (DGA)', 'Dissolved gas analysis (DGA)'),
+        votreClient: clientNom,
+        body: tr(
+          `Madame, Monsieur,\n\nVeuillez trouver ci-joint notre rapport de diagnostic des gaz dissous (DGA) portant sur ${items.length} transformateur(s). Ce rapport présente l'interprétation des résultats, l'état de chaque appareil et nos recommandations.\n\nNous demeurons disponibles pour toute question.`,
+          `Dear Sir or Madam,\n\nPlease find enclosed our dissolved gas analysis (DGA) report covering ${items.length} transformer(s). It presents the interpretation of results, the condition of each unit and our recommendations.\n\nWe remain available for any questions.`),
+        salutation: tr('Veuillez agréer nos salutations distinguées.', 'Yours sincerely,'),
+        signataireNom: tenantName,
+      } : null;
+      await generateMultiDgaReport({ items, clientName: clientNom, logoUrl, lang: lang === 'en' ? 'en' : 'fr', coverLetter });
       exitDelMode();
     } catch (e: any) { setImportErr(e?.message || String(e)); }
     finally { setAssembling(false); }
@@ -509,6 +523,12 @@ export default function DgaPage() {
         </div>
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
+        {view === 'list' && delMode && (
+          <label className="mb-3 inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+            <input type="checkbox" checked={withCover} onChange={e => setWithCover(e.target.checked)} />
+            ✉️ {tr('Inclure une lettre de présentation au rapport', 'Include a cover letter in the report')}
+          </label>
+        )}
         {view === 'list' && (
           <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, handleImportFiles, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
         )}

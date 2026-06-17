@@ -151,12 +151,18 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
 }
 
 // Rapport SIMPLE (un transformateur).
-export async function generateDgaReport(opts: { dossier: Dossier; measures: Measure[]; ai?: any; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary' }) {
+export async function generateDgaReport(opts: { dossier: Dossier; measures: Measure[]; ai?: any; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary'; coverLetter?: import('@/lib/pdf/letterhead').CoverLetterData | null }) {
   const { default: jsPDF } = await import('jspdf');
   const fr = (opts.lang || 'fr') === 'fr';
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
   const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
+  // Lettre de présentation optionnelle (case à cocher), même socle que le rapport terrain.
+  if (opts.coverLetter) {
+    const { drawCoverLetterPage } = await import('@/lib/pdf/letterhead');
+    drawCoverLetterPage(doc, { logo, ...opts.coverLetter });
+    doc.addPage();
+  }
   renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', opts.dossier, opts.measures, opts.ai, logo);
   applyFooters(doc, W, Hp, M);
   doc.save(`rapport-dga-${(opts.dossier.ident || 'transfo').replace(/\s+/g, '_')}.pdf`);
@@ -164,7 +170,7 @@ export async function generateDgaReport(opts: { dossier: Dossier; measures: Meas
 
 // Rapport MULTI-TRANSFORMATEURS pour un même client : page de présentation + table des matières
 // commune, puis le rapport complet de chaque transformateur (même rendu que le rapport simple).
-export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; measures: Measure[]; ai?: any }[]; clientName?: string; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary' }) {
+export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; measures: Measure[]; ai?: any }[]; clientName?: string; logoUrl?: string | null; lang?: 'fr' | 'en'; reportType?: 'full' | 'dga' | 'summary'; coverLetter?: import('@/lib/pdf/letterhead').CoverLetterData | null }) {
   const { default: jsPDF } = await import('jspdf');
   const fr = (opts.lang || 'fr') === 'fr';
   const items = opts.items || [];
@@ -174,6 +180,13 @@ export async function generateMultiDgaReport(opts: { items: { dossier: Dossier; 
   const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
   const client = opts.clientName || items[0]?.dossier?.client || items[0]?.dossier?.company || '';
   const today = new Date().toLocaleDateString(fr ? 'fr-CA' : 'en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // ── Lettre de présentation optionnelle (case à cocher), avant la page de garde ──
+  if (opts.coverLetter) {
+    const { drawCoverLetterPage } = await import('@/lib/pdf/letterhead');
+    drawCoverLetterPage(doc, { logo, ...opts.coverLetter });
+    doc.addPage();
+  }
 
   // ── Page 1 : présentation ──
   if (logo) { try { doc.addImage(logo, 'PNG', M, 40, 0, 34); } catch { /* */ } }
