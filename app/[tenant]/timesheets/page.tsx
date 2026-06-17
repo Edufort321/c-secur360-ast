@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useRealtime } from '@/lib/useRealtime';
 import { PortalHeader } from '@/components/PortalHeader';
+import { BackButton } from '@/components/BackButton';
 
 type Sheet = {
   id: string; employee_id?: string; employee_name: string; employee_email: string;
@@ -226,6 +227,7 @@ export default function TimesheetsPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 py-8 lg:px-6">
+        <BackButton fallback={`/${tenant}/modules`} className="mb-4" />
         {/* En-tête */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
