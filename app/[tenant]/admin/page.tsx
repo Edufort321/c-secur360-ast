@@ -17,6 +17,7 @@ import { RecurringModule } from '@/components/admin/RecurringModule';
 import { AssetsModule } from '@/components/admin/AssetsModule';
 import { BankConnect } from '@/components/admin/BankConnect';
 import { OnboardingWizard } from '@/components/admin/OnboardingWizard';
+import { BudgetModule } from '@/components/admin/BudgetModule';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
 import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2 } from 'lucide-react';
@@ -248,8 +249,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'actionnaires', 'alertes', 'audit', 'integrations'];
+  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'actionnaires', 'alertes', 'audit', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -298,6 +299,7 @@ export default function AdminPage() {
     { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText, group: 'ventes' },
     { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList, group: 'ventes' },
     { k: 'etat-financier', label: tr('État financier', 'Financial state'),     icon: TrendingUp, group: 'finance', need: p => p.viewSalary },
+    { k: 'budget',      label: tr('Budget vs réel', 'Budget vs actual'),       icon: Layers, group: 'finance', need: p => p.viewSalary },
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, group: 'finance', need: p => p.viewSalary },
     { k: 'recurrents',  label: tr('Abonnements', 'Subscriptions'),            icon: Repeat, group: 'finance', need: p => p.viewSalary },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, group: 'finance', need: p => p.manageAll },
@@ -444,6 +446,7 @@ export default function AdminPage() {
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'etat-financier' && <FinancialDashboard tenant={tenant} tr={tr} />}
+        {tab === 'budget' && <BudgetModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'actionnaires' && <ShareholdersModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'alertes' && <AlertsModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'audit' && <AuditLog tenant={tenant} tr={tr} />}
@@ -7358,6 +7361,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     catch { setNotice(tr('Exécutez la migration 123, puis rechargez.', 'Run migration 123, then reload.')); }
     setBankBusy(false);
   }
+  // Lit un fichier en texte avec repli d'encodage : les CSV bancaires (RBC…) sont souvent en
+  // Windows-1252 → les accents deviennent « � » si on lit en UTF-8. On bascule alors sur windows-1252.
+  async function readBankFile(f: File): Promise<string> {
+    const buf = await f.arrayBuffer();
+    const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+    if (utf8.includes('�')) { try { return new TextDecoder('windows-1252').decode(buf); } catch { return utf8; } }
+    return utf8;
+  }
   async function doImportBank() {
     // Auto-détection OFX/QFX (Quicken/QuickBooks) vs CSV.
     const { lines: parsed, accountNumber } = parseStatement(importText);
@@ -7710,7 +7721,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
                 {tr('Choisir un fichier (CSV/OFX/QFX)', 'Pick a file (CSV/OFX/QFX)')}
-                <input type="file" accept=".csv,.ofx,.qfx,text/csv,text/plain,application/x-ofx" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await f.text()); }} />
+                <input type="file" accept=".csv,.ofx,.qfx,text/csv,text/plain,application/x-ofx" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await readBankFile(f)); }} />
               </label>
               <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
               {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
