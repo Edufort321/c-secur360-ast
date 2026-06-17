@@ -30,6 +30,7 @@ import { SampleEntry, type SamplePayload } from '@/components/dga/SampleEntry';
 import { InboundSetup } from '@/components/dga/InboundSetup';
 import { parseLimsBuffer, isPdf, isSpreadsheet } from '@/lib/dga/insideview';
 import { generateMultiDgaReport } from '@/lib/dga/report';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 
 const num = (v: any) => (v == null || v === '' ? 0 : Number(v) || 0);
 const norm = (s?: string) => (s || '').trim().toLowerCase();
@@ -300,6 +301,42 @@ export default function DgaPage() {
     finally { setAssembling(false); }
   }
 
+  // ── Export CSV de la liste (filtrée) des équipements — bien présenté pour Excel-FR ──
+  function exportListCsv() {
+    const rows = (filtered as Dossier[]).map((d) => {
+      const lg = (d.id ? lastGasMeasure(measuresByDossier[d.id]) : undefined) || (d.id ? lastByDossier[d.id] : undefined);
+      const next = effectiveNextDate(d.extra, lg);
+      const dueCode = dueStatusByDate(next).code;
+      const cond = lg ? worstCondition(lg) : '';
+      return {
+        ident: d.ident || '', serie: d.serie || '', equip_no: d.equip_no || '',
+        client: d.client || (d as any).company || '', type: d.description || (d as any).apparatus || '',
+        kv: (d as any).kv || '', site: siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) || '',
+        cond: cond ? (COND_LABELS as any)[cond]?.[lang === 'en' ? 'en' : 'fr'] || cond : '',
+        pcb: pcbStatus(latestPcb(measuresByDossier[d.id || ''] || []))?.label || '',
+        last: lg?.sample_date || '', next: next || '',
+        due: dueCode === 'overdue' ? tr('En retard', 'Overdue') : dueCode === 'soon' ? tr('Bientôt', 'Soon') : dueCode === 'ok' ? tr('À jour', 'OK') : '',
+        treated: d.treated === false ? tr('À traiter', 'To treat') : tr('Traité', 'Treated'),
+      };
+    });
+    const cols: CsvColumn[] = [
+      { key: 'ident', label: tr('Équipement', 'Equipment') },
+      { key: 'serie', label: tr('No de série', 'Serial no.') },
+      { key: 'equip_no', label: tr("No d'équipement", 'Equipment no.') },
+      { key: 'client', label: tr('Client / sous-station', 'Client / substation') },
+      { key: 'type', label: tr('Type', 'Type') },
+      { key: 'kv', label: 'kV' },
+      { key: 'site', label: tr('Site', 'Site') },
+      { key: 'cond', label: tr('Condition', 'Condition') },
+      { key: 'pcb', label: tr('BPC', 'PCB') },
+      { key: 'last', label: tr('Dernier relevé', 'Last sample'), type: 'date' },
+      { key: 'next', label: tr('Prochaine échéance', 'Next due'), type: 'date' },
+      { key: 'due', label: tr('Statut échéance', 'Due status') },
+      { key: 'treated', label: tr('Suivi', 'Follow-up') },
+    ];
+    downloadCsv(`equipements-dga-${todayIso()}.csv`, rows, cols);
+  }
+
   // ── Import PDF (drag/bouton) → aperçu de fusion ──
   function mapEquip(eq: any): Dossier {
     // Détection OLTC : flag IA (eq.isOltc) OU heuristique mots-clés sur type/description/identification.
@@ -528,6 +565,14 @@ export default function DgaPage() {
             <input type="checkbox" checked={withCover} onChange={e => setWithCover(e.target.checked)} />
             ✉️ {tr('Inclure une lettre de présentation au rapport', 'Include a cover letter in the report')}
           </label>
+        )}
+        {view === 'list' && filtered.length > 0 && (
+          <div className="mb-3 flex justify-end">
+            <button onClick={exportListCsv} title={tr('Exporter la liste filtrée en CSV (Excel)', 'Export the filtered list to CSV (Excel)')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+              ⬇️ {tr('Exporter CSV', 'Export CSV')} ({filtered.length})
+            </button>
+          </div>
         )}
         {view === 'list' && (
           <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, handleImportFiles, newT, setNewT, startNewT, saveNewT, busy, openFiche, openInbound: () => setShowInbound(true), treatFilter, setTreatFilter, condFilter, setCondFilter, pcbFilter, setPcbFilter, todoCount, onToggleTreated: toggleTreated, assembleReport, assembling }} />
