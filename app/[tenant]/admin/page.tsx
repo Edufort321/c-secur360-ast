@@ -15,6 +15,7 @@ import { AuditLog } from '@/components/admin/AuditLog';
 import { AlertsModule } from '@/components/admin/AlertsModule';
 import { RecurringModule } from '@/components/admin/RecurringModule';
 import { AssetsModule } from '@/components/admin/AssetsModule';
+import { BankConnect } from '@/components/admin/BankConnect';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
 import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes } from 'lucide-react';
@@ -7553,6 +7554,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         </div>
       ) : view === 'bank' ? (
         <div className="space-y-4">
+          {/* Connexion bancaire temps réel (Flinks) — auto-sync ; sinon import CSV ci-dessous */}
+          <BankConnect tenant={tenant} tr={tr} accounts={treasury.filter(a => a.active !== false).map(a => ({ id: a.id!, name: a.name, last4: a.last4 || undefined }))} onSynced={() => getBankLines(tenant).then(setBankLines).catch(() => {})} />
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">{tr('Importer un relevé bancaire (CSV)', 'Import a bank statement (CSV)')}</div>
             <p className="mb-2 text-xs text-gray-400">{tr('Colonnes détectées automatiquement : date, description, montant (ou débit/crédit). Collez le CSV ou choisissez un fichier.', 'Columns auto-detected: date, description, amount (or debit/credit). Paste the CSV or pick a file.')}</p>
