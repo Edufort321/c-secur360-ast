@@ -42,7 +42,7 @@ export function drawLogo(doc: any, logo: string | null | undefined, x: number, y
 
 // En-tête de page façon DGA : logo (gauche, ratio préservé) + lignes de métadonnées alignées à
 // DROITE (1re en gras) + filet. Retourne le y du contenu (60). Appeler en haut de CHAQUE page.
-export function drawHeader(doc: any, opts: { logo?: string | null; rightLines?: string[]; accent?: [number, number, number] }): number {
+export function drawHeader(doc: any, opts: { logo?: string | null; rightLines?: string[]; accent?: [number, number, number]; ruleWidth?: number; showRule?: boolean }): number {
   const { M, W, colors } = PDF;
   drawLogo(doc, opts.logo, M, 22, 24);
   const lines = (opts.rightLines || []).filter(Boolean);
@@ -50,17 +50,20 @@ export function drawHeader(doc: any, opts: { logo?: string | null; rightLines?: 
   let ry = 30;
   lines.forEach((ln, i) => { doc.setFont('helvetica', i === 0 ? 'bold' : 'normal'); doc.text(String(ln), W - M, ry, { align: 'right' }); ry += 12; });
   doc.setFont('helvetica', 'normal');
-  // Filet d'en-tête : teinté à la COULEUR D'ACCENT du module si fournie (sinon gris sobre DGA).
-  doc.setDrawColor(...(opts.accent || colors.line)); doc.setLineWidth(opts.accent ? 1 : 0.6); doc.line(M, 50, W - M, 50);
+  // Filet d'en-tête : teinté à l'accent du module + épaisseur réglable (« mise en page »). Masquable.
+  if (opts.showRule !== false) {
+    doc.setDrawColor(...(opts.accent || colors.line)); doc.setLineWidth(opts.ruleWidth ?? (opts.accent ? 1 : 0.6)); doc.line(M, 50, W - M, 50);
+  }
   return 60;
 }
 
 // Titre de document (corps), façon DGA : titre gras 14 (encre) + sous-titre 11 (gris). Retourne le y suivant.
-export function drawTitle(doc: any, y: number, title: string, subtitle?: string, accent?: [number, number, number]): number {
+export function drawTitle(doc: any, y: number, title: string, subtitle?: string, accent?: [number, number, number], titleSize?: number, subtitleSize?: number): number {
   const { M, colors } = PDF;
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...(accent || colors.ink));
-  doc.text(title, M, y); y += subtitle ? 18 : 22;
-  if (subtitle) { doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(...colors.gray); doc.text(subtitle, M, y); y += 18; }
+  const ts = titleSize ?? 14, ss = subtitleSize ?? 11;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(ts); doc.setTextColor(...(accent || colors.ink));
+  doc.text(title, M, y); y += subtitle ? Math.max(16, ts + 4) : Math.max(20, ts + 8);
+  if (subtitle) { doc.setFont('helvetica', 'normal'); doc.setFontSize(ss); doc.setTextColor(...colors.gray); doc.text(subtitle, M, y); y += Math.max(16, ss + 7); }
   return y;
 }
 

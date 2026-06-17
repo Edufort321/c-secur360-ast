@@ -23,6 +23,7 @@ export interface TsExpense {
 
 export async function exportTimesheetPdf(opts: {
   tr: Tr; logoUrl?: string; accent?: [number, number, number];
+  style?: { accent: [number, number, number]; ruleWidth: number; titleSize: number; subtitleSize: number; showRule: boolean };
   sheet: { employee_name?: string; period_start?: string; period_end?: string; status?: string };
   entries: TsEntry[]; expenses?: TsExpense[];
 }) {
@@ -43,9 +44,10 @@ export async function exportTimesheetPdf(opts: {
   const rightLines = [`${tr('Période', 'Period')} : ${period}`, `${tr('Statut', 'Status')} : ${STATUS_LBL[sheet.status || ''] || sheet.status || '—'}`];
 
   // En-tête de page FIDÈLE DGA (logo ratio + méta + filet) — redessiné à chaque page par autoTable.
-  const pageHeader = () => drawHeader(doc, { logo, rightLines, accent: opts.accent });
+  const st = opts.style; const accent = st?.accent || opts.accent;
+  const pageHeader = () => drawHeader(doc, { logo, rightLines, accent, ruleWidth: st?.ruleWidth, showRule: st?.showRule });
   let y = pageHeader();
-  y = drawTitle(doc, y, tr('Feuille de temps', 'Timesheet'), sheet.employee_name || '—', opts.accent);
+  y = drawTitle(doc, y, tr('Feuille de temps', 'Timesheet'), sheet.employee_name || '—', accent, st?.titleSize, st?.subtitleSize);
 
   const label = (e: TsEntry) => e.category === 'project'
     ? [e.project_number, e.project_title].filter(Boolean).join(' — ') || tr('Projet', 'Project')

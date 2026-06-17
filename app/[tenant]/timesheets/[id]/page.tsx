@@ -660,9 +660,9 @@ export default function TimesheetDetailPage() {
       let logoUrl: string | undefined;
       try { const { data } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(); logoUrl = (data as any)?.logo_url || undefined; } catch { /* défaut */ }
       const { exportTimesheetPdf } = await import('@/lib/timesheetPdf');
-      const accent = await import('@/lib/pdfStyle').then(m => m.pdfAccentFor(tenant, 'feuille_temps')).catch(() => undefined);
+      const style = await import('@/lib/pdfStyle').then(m => m.pdfStyleFor(tenant, 'feuille_temps')).catch(() => undefined);
       await exportTimesheetPdf({
-        tr: (fr) => fr, logoUrl, accent,
+        tr: (fr) => fr, logoUrl, style,
         sheet: { employee_name: sheet.employee_name, period_start: sheet.period_start, period_end: sheet.period_end, status: sheet.status },
         entries: entries.map(e => ({ date: e.date, category: e.category, project_number: e.project_number, project_title: e.project_title, recurring_task_name: e.recurring_task_name, description: e.description, hrs_regular: e.hrs_regular, hrs_overtime: e.hrs_overtime, hrs_premium: e.hrs_premium, km: e.km, allowances: e.allowances })),
         expenses: expenses.map(x => ({ date: x.date, category: x.category, supplier: x.supplier, description: x.description, total: x.total, reimbursable: x.reimbursable, receipt_url: x.receipt_url })),

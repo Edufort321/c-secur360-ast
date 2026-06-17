@@ -565,9 +565,9 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   }
   async function exportPdfFor(ids: string[], periodLabel: string) {
     const rs = rowsFor(ids); if (!rs.length) { alert(tr('Aucune feuille à exporter.', 'Nothing to export.')); return; }
-    const [{ exportPayrollRegisterPdf }, { pdfAccentFor }] = await Promise.all([import('@/lib/timesheetPayrollPdf'), import('@/lib/pdfStyle')]);
-    const accent = await pdfAccentFor(tenant, 'paie').catch(() => undefined);
-    await exportPayrollRegisterPdf({ tr, logoUrl, tenantName, periodLabel, rows: rs, accent });
+    const [{ exportPayrollRegisterPdf }, { pdfStyleFor }] = await Promise.all([import('@/lib/timesheetPayrollPdf'), import('@/lib/pdfStyle')]);
+    const style = await pdfStyleFor(tenant, 'paie').catch(() => undefined);
+    await exportPayrollRegisterPdf({ tr, logoUrl, tenantName, periodLabel, rows: rs, style });
   }
 
   const mny = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;

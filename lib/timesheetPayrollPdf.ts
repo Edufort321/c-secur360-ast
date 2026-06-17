@@ -12,9 +12,12 @@ const money = (n: number) => `${(Math.round((n || 0) * 100) / 100).toLocaleStrin
 const h1 = (n: number) => (Number(n) || 0).toLocaleString('fr-CA', { maximumFractionDigits: 2 });
 
 export async function exportPayrollRegisterPdf(opts: {
-  tr: Tr; logoUrl?: string; tenantName?: string; periodLabel?: string; rows: PayrollRow[]; accent?: [number, number, number];
+  tr: Tr; logoUrl?: string; tenantName?: string; periodLabel?: string; rows: PayrollRow[];
+  accent?: [number, number, number]; style?: { accent: [number, number, number]; ruleWidth: number; titleSize: number; subtitleSize: number; showRule: boolean };
 }) {
   const { tr, rows } = opts;
+  const st = opts.style;
+  const accent = st?.accent || opts.accent;
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape' });
   const W = doc.internal.pageSize.getWidth(); const M = PDF.M;
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
@@ -24,9 +27,9 @@ export async function exportPayrollRegisterPdf(opts: {
     `${tr('Période', 'Period')} : ${opts.periodLabel || '—'}`,
     `${tr('Généré le', 'Generated')} : ${new Date().toLocaleDateString('fr-CA')}`,
   ];
-  const pageHeader = () => drawHeader(doc, { logo, rightLines, accent: opts.accent });
+  const pageHeader = () => drawHeader(doc, { logo, rightLines, accent, ruleWidth: st?.ruleWidth, showRule: st?.showRule });
   let y = pageHeader();
-  y = drawTitle(doc, y, tr('Registre de paie', 'Payroll register'), `${rows.length} ${tr('employé(s)', 'employee(s)')} · ${opts.periodLabel || ''}`, opts.accent);
+  y = drawTitle(doc, y, tr('Registre de paie', 'Payroll register'), `${rows.length} ${tr('employé(s)', 'employee(s)')} · ${opts.periodLabel || ''}`, accent, st?.titleSize, st?.subtitleSize);
 
   const sum = (k: keyof PayrollRow) => rows.reduce((a, r) => a + Number(r[k] || 0), 0);
   const head = [[
