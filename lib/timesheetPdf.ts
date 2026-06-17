@@ -22,7 +22,7 @@ export interface TsExpense {
 }
 
 export async function exportTimesheetPdf(opts: {
-  tr: Tr; logoUrl?: string;
+  tr: Tr; logoUrl?: string; accent?: [number, number, number];
   sheet: { employee_name?: string; period_start?: string; period_end?: string; status?: string };
   entries: TsEntry[]; expenses?: TsExpense[];
 }) {
@@ -43,9 +43,9 @@ export async function exportTimesheetPdf(opts: {
   const rightLines = [`${tr('Période', 'Period')} : ${period}`, `${tr('Statut', 'Status')} : ${STATUS_LBL[sheet.status || ''] || sheet.status || '—'}`];
 
   // En-tête de page FIDÈLE DGA (logo ratio + méta + filet) — redessiné à chaque page par autoTable.
-  const pageHeader = () => drawHeader(doc, { logo, rightLines });
+  const pageHeader = () => drawHeader(doc, { logo, rightLines, accent: opts.accent });
   let y = pageHeader();
-  y = drawTitle(doc, y, tr('Feuille de temps', 'Timesheet'), sheet.employee_name || '—');
+  y = drawTitle(doc, y, tr('Feuille de temps', 'Timesheet'), sheet.employee_name || '—', opts.accent);
 
   const label = (e: TsEntry) => e.category === 'project'
     ? [e.project_number, e.project_title].filter(Boolean).join(' — ') || tr('Projet', 'Project')
