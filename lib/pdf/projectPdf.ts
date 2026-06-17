@@ -666,11 +666,30 @@ export async function exportProjectPdf(options: {
 // ══════════════════════════════════════════════════════════════════════════════
 // ── RAPPORT COMPLET (toutes sections) ────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
+// ── Section « table » générique (permis, rapports, soumissions, matériel, pièces jointes) ──
+function linkSection(doc: Doc, label: string, colW: number[], header: string[], rows: string[][], startY: number): number {
+  let y = startY;
+  ({ y } = checkPage(doc, y, 22));
+  y = sectionTitle(doc, `${label} (${rows.length})`, y);
+  y = tableRow(doc, header.map((t, i) => ({ text: t, w: colW[i], align: (i === header.length - 1 && /Montant|Total|Qté|Heures/i.test(t)) ? 'right' as const : 'left' as const })), y, COL.primary, COL.white, true);
+  rows.forEach((r, i) => {
+    ({ y } = checkPage(doc, y));
+    y = tableRow(doc, r.map((t, j) => ({ text: String(t ?? '—'), w: colW[j], align: (j === r.length - 1 && /^[\d\s.,$-]+$|h$/.test(String(t))) ? 'right' as const : 'left' as const })), y, i % 2 === 0 ? COL.white : COL.light);
+  });
+  return y + 4;
+}
+
 export async function exportFullReportPdf(options: {
   project: any;
   tenant: string;
   tenantLogoUrl?: string | null;
   linkedAst?: any[];
+  linkedPermits?: any[];
+  linkedReports?: any[];
+  linkedSoumissions?: any[];
+  timeRollup?: { reg: number; ot: number; prem: number; total: number; km: number; byPerson: { name: string; hrs: number }[] } | null;
+  materialMoves?: { itemName?: string; quantity?: number; department?: string | null; date?: string }[];
+  attachments?: { file_name?: string; attachment_type?: string; created_at?: string }[];
 }): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const doc: Doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -762,6 +781,24 @@ export async function exportFullReportPdf(options: {
   drawHeader(doc, logo, 'Détails du projet', subtitle);
   buildProjet(doc, p, options.linkedAst || []);
 
+  // ── Éléments liés (permis, rapports, soumissions) + synthèse du temps ───────
+  const lp = options.linkedPermits || [], lr = options.linkedReports || [], ls = options.linkedSoumissions || [];
+  const trr = options.timeRollup;
+  if (lp.length || lr.length || ls.length || (trr && trr.total > 0)) {
+    doc.addPage();
+    drawHeader(doc, logo, 'Éléments liés', subtitle);
+    let y2 = 28;
+    if (lp.length) y2 = linkSection(doc, 'Permis liés', [55, 45, CW - 100], ['N° permis', 'Type', 'Statut'], lp.map((x: any) => [x.permit_number || '—', x.type || '—', x.status || '—']), y2);
+    if (lr.length) y2 = linkSection(doc, 'Rapports terrain liés', [CW - 95, 50, 45], ['Titre / N°', 'Statut', 'Date'], lr.map((x: any) => [x.title || x.num || x.id || '—', x.status || '—', String(x.created_at || x.date || '').slice(0, 10)]), y2);
+    if (ls.length) y2 = linkSection(doc, 'Soumissions liées', [55, 45, CW - 100], ['N° soumission', 'Statut', 'Total'], ls.map((x: any) => [x.numero || x.id || '—', x.status || '—', x.total != null ? $(Number(x.total)) : '—']), y2);
+    if (trr && trr.total > 0) {
+      ({ y: y2 } = checkPage(doc, y2, 22));
+      y2 = sectionTitle(doc, 'Temps réel sur le projet', y2);
+      y2 = kvRow(doc, 'Total heures', `${trr.total.toLocaleString('fr-CA')} h  (rég. ${trr.reg} · supp. ${trr.ot} · maj. ${trr.prem})${trr.km ? ` · ${trr.km} km` : ''}`, ML, y2, CW);
+      if (trr.byPerson?.length) y2 = linkSection(doc, 'Heures par personne', [CW - 50, 50], ['Personne', 'Heures'], trr.byPerson.map(pp => [pp.name, `${pp.hrs.toLocaleString('fr-CA')} h`]), y2);
+    }
+  }
+
   // ── Page 3+ — Soumission ──────────────────────────────────────────────────
   doc.addPage();
   drawHeader(doc, logo, 'Soumission', subtitle);
@@ -781,6 +818,16 @@ export async function exportFullReportPdf(options: {
   if (p?.facture?.approved === true) {
     doc.addPage();
     buildFacture(doc, p, logo);
+  }
+
+  // ── Matériel consommé (inventaire) + Pièces jointes ───────────────────────
+  const mm = options.materialMoves || [], att = options.attachments || [];
+  if (mm.length || att.length) {
+    doc.addPage();
+    drawHeader(doc, logo, 'Matériel & pièces jointes', subtitle);
+    let y3 = 28;
+    if (mm.length) y3 = linkSection(doc, 'Matériel consommé (inventaire)', [CW - 90, 30, 60], ['Article', 'Qté', 'Date'], mm.map(m => [m.itemName || '—', String(m.quantity ?? '—'), String(m.date || '').slice(0, 10)]), y3);
+    if (att.length) y3 = linkSection(doc, 'Pièces jointes', [CW - 95, 50, 45], ['Fichier', 'Type', 'Date'], att.map(a => [a.file_name || '—', a.attachment_type || '—', String(a.created_at || '').slice(0, 10)]), y3);
   }
 
   // ── Numérotation des pages ────────────────────────────────────────────────

@@ -77,8 +77,21 @@ export default function ProjectDetailPage() {
     if (!p) return;
     setExportingFull(true);
     try {
+      // Rassemble TOUT ce qui est visible sur la page (liés + temps + matériel + pièces jointes).
+      let materialMoves: any[] = [];
+      try {
+        const { data: inv } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
+        const snap: any = (inv as any)?.data || {};
+        const pn = (p as any)?.project_number;
+        materialMoves = (Array.isArray(snap.movements) ? snap.movements : []).filter((m: any) => m?.type === 'exit' && pn && (String(m.projectCode) === String(pn) || String(m.reason || '').includes(pn)));
+      } catch { /* inventaire absent */ }
+      let attachments: any[] = [];
+      try { const { getProjectAttachments } = await import('@/lib/projectAttachments'); attachments = await getProjectAttachments(tenant, id); } catch { /* ignore */ }
       const { exportFullReportPdf } = await import('@/lib/pdf/projectPdf');
-      await exportFullReportPdf({ project: p, tenant, tenantLogoUrl, linkedAst });
+      await exportFullReportPdf({
+        project: p, tenant, tenantLogoUrl, linkedAst, linkedPermits, linkedReports, linkedSoumissions,
+        timeRollup, materialMoves, attachments,
+      });
     } finally { setExportingFull(false); }
   }
 
