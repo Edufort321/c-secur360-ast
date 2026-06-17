@@ -6783,6 +6783,26 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
   const STATUS_LABEL: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Traité', 'Processed'), paid: tr('Payée', 'Paid'), cancelled: tr('Annulée', 'Cancelled') };
   const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', paid: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-red-100 text-red-600' };
+  function exportInvoicesCsv() {
+    const rows = invoices.map(i => ({
+      number: i.invoice_number || '', client: (i as any).client_snapshot?.name || '',
+      issue: i.issue_date || '', due: i.due_date || '', status: STATUS_LABEL[i.status] || i.status,
+      subtotal: Number(i.subtotal) || 0,
+      taxes: (Number(i.gst_amount) || 0) + (Number(i.qst_amount) || 0) + (Number(i.pst_amount) || 0),
+      total: Number(i.total) || 0,
+    }));
+    const cols: CsvColumn[] = [
+      { key: 'number', label: tr('N° facture', 'Invoice #') },
+      { key: 'client', label: tr('Client', 'Client') },
+      { key: 'issue', label: tr('Date', 'Date'), type: 'date' },
+      { key: 'due', label: tr('Échéance', 'Due'), type: 'date' },
+      { key: 'status', label: tr('Statut', 'Status') },
+      { key: 'subtotal', label: tr('Sous-total', 'Subtotal'), type: 'money' },
+      { key: 'taxes', label: tr('Taxes', 'Taxes'), type: 'money' },
+      { key: 'total', label: tr('Total', 'Total'), type: 'money' },
+    ];
+    downloadCsvCols(`factures-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  }
 
   return (
     <div className="space-y-4">
@@ -6792,7 +6812,10 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
           <button onClick={() => setView('projets')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === 'projets' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Projets (marges)', 'Projects (margins)')}</button>
           <button onClick={() => setView('settings')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Paramètres', 'Settings')}</button>
         </div>
-        {view === 'list' && canEdit && <button onClick={newInvoice} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle facture', 'New invoice')}</button>}
+        <div className="flex items-center gap-2">
+          {view === 'list' && invoices.length > 0 && <button onClick={exportInvoicesCsv} title={tr('Exporter la liste en CSV', 'Export the list to CSV')} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={15} /> {tr('Exporter CSV', 'Export CSV')}</button>}
+          {view === 'list' && canEdit && <button onClick={newInvoice} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle facture', 'New invoice')}</button>}
+        </div>
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 

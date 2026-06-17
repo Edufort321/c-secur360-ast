@@ -15,6 +15,7 @@ import {
   type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats, type SoumissionSettings, type ConditionItem, type SoumissionTemplate, type SoumissionAttachment,
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 import { useAutoDraft, readDraft, clearDraft, hasDraft } from '@/lib/useDraft';
 import { frLongDate } from '@/lib/pdf/letterhead';
 import { createPortal } from 'react-dom';
@@ -476,6 +477,25 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module soumissions non initialisé', 'Quotes module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 090 dans Supabase, puis rechargez.', 'Run migration 090 in Supabase, then reload.')}</p></div>);
 
   const STATUS: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Envoyée', 'Sent'), accepted: tr('Acceptée', 'Accepted'), archived: tr('Archivée', 'Archived') };
+  function exportListCsv() {
+    const rows = soumissions.map(s => ({
+      numero: s.numero || '', revision: s.revision || 1,
+      client: s.client_snapshot?.name || '', status: STATUS[s.status] || s.status,
+      total: Number(s.total) || 0, hours: Number(s.total_hours) || 0,
+      created: s.created_at || '', sent: s.sent_at || '',
+    }));
+    const cols: CsvColumn[] = [
+      { key: 'numero', label: tr('Numéro', 'Number') },
+      { key: 'revision', label: tr('Révision', 'Revision'), type: 'number' },
+      { key: 'client', label: tr('Client', 'Client') },
+      { key: 'status', label: tr('Statut', 'Status') },
+      { key: 'total', label: tr('Total', 'Total'), type: 'money' },
+      { key: 'hours', label: tr('Heures', 'Hours'), type: 'number' },
+      { key: 'created', label: tr('Créée', 'Created'), type: 'date' },
+      { key: 'sent', label: tr('Transmise', 'Sent'), type: 'date' },
+    ];
+    downloadCsv(`soumissions-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  }
   const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', accepted: 'bg-emerald-100 text-emerald-700', archived: 'bg-amber-100 text-amber-700' };
   const rawTotal = computeSoumissionTotal(items, cat);
   // Prix final : soit une CIBLE éditable (final_override), soit la majoration %. La marge ($) = final − sous-total ;
@@ -1446,9 +1466,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {/* Bascule Grille / Galerie */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-500">{soumissions.length} {tr('soumission(s)', 'quote(s)')}</span>
-            <div className="flex items-center rounded-lg border border-gray-200 p-0.5 text-xs dark:border-gray-600">
-              <button onClick={() => setListView('grid')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Grille', 'Grid')}</button>
-              <button onClick={() => setListView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
+            <div className="flex items-center gap-2">
+              {soumissions.length > 0 && <button onClick={exportListCsv} title={tr('Exporter la liste en CSV', 'Export the list to CSV')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">⬇️ {tr('CSV', 'CSV')}</button>}
+              <div className="flex items-center rounded-lg border border-gray-200 p-0.5 text-xs dark:border-gray-600">
+                <button onClick={() => setListView('grid')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Grille', 'Grid')}</button>
+                <button onClick={() => setListView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
+              </div>
             </div>
           </div>
 

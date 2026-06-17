@@ -7,6 +7,7 @@ import { siteInitials, getActiveCatalogue, type CatalogueTaux } from '@/lib/soum
 import { PROVINCES } from '@/lib/invoicing';
 import { exportBonCommandePdf } from '@/lib/pdf/bonCommandePdf';
 import { readDraft, clearDraft, useAutoDraft } from '@/lib/useDraft';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 import {
   getBonsCommande, saveBonCommande, deleteBonCommande, genBonNumero, computeBonTotal,
   scanItemsACommander, setJobsApproStatut, receiveToInventory, bonStatusLabel,
@@ -231,6 +232,29 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
     return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cls[s]}`}>{bonStatusLabel(s)}</span>;
   };
 
+  function exportCsv() {
+    const rows = bons.map(b => {
+      const t = computeBonTotal(b.items || [], b.province || 'QC');
+      return {
+        numero: b.numero || '', supplier: b.supplier || '', contact: b.supplier_contact || '',
+        project: projectLabelOf(b.project_id) || '', status: bonStatusLabel(b.status),
+        expected: b.expected_date || '', subtotal: t.subtotal, taxes: t.taxes, total: t.total,
+      };
+    });
+    const cols: CsvColumn[] = [
+      { key: 'numero', label: tr('Numéro', 'Number') },
+      { key: 'supplier', label: tr('Fournisseur', 'Supplier') },
+      { key: 'contact', label: tr('Contact', 'Contact') },
+      { key: 'project', label: tr('Projet', 'Project') },
+      { key: 'status', label: tr('Statut', 'Status') },
+      { key: 'expected', label: tr('Date prévue', 'Expected'), type: 'date' },
+      { key: 'subtotal', label: tr('Sous-total', 'Subtotal'), type: 'money' },
+      { key: 'taxes', label: tr('Taxes', 'Taxes'), type: 'money' },
+      { key: 'total', label: tr('Total', 'Total'), type: 'money' },
+    ];
+    downloadCsv(`bons-commande-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  }
+
   if (loading) return <div className="flex items-center gap-2 p-6 text-gray-500"><Loader2 className="animate-spin" size={18} /> {tr('Chargement…', 'Loading…')}</div>;
 
   return (
@@ -241,7 +265,10 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">{tr('Bons de commande', 'Purchase orders')}</h2>
-            {canEdit && <button onClick={nouveau} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={16} /> {tr('Nouveau', 'New')}</button>}
+            <div className="flex items-center gap-2">
+              {bons.length > 0 && <button onClick={exportCsv} title={tr('Exporter la liste en CSV', 'Export the list to CSV')} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={15} /> {tr('Exporter CSV', 'Export CSV')}</button>}
+              {canEdit && <button onClick={nouveau} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={16} /> {tr('Nouveau', 'New')}</button>}
+            </div>
           </div>
           {/* Recherche dynamique : numéro, fournisseur, n°/nom de projet, statut */}
           {bons.length > 0 && (
