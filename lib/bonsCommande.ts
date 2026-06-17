@@ -19,6 +19,22 @@ export type BonCommandeLigne = {
   source_index?: number;    // index dans preparation[] du mandat
 };
 export type BonCommandeStatus = 'brouillon' | 'envoye' | 'partiel' | 'recu' | 'annule';
+
+// DESTINATION (classe d'achat) — pilote le routage à la réception (migration 217).
+export type BonDestination = 'stock' | 'projet' | 'consommable' | 'capex' | 'revente';
+export const BON_DESTINATIONS: { key: BonDestination; fr: string; en: string; hint: string }[] = [
+  { key: 'stock',       fr: 'Stock / inventaire',      en: 'Inventory stock',   hint: 'Reçu → ajouté à l\'inventaire (actif 1300).' },
+  { key: 'projet',      fr: 'Projet / chantier',       en: 'Project / job site', hint: 'Reçu → coût de projet (matériaux 5260), consommé directement.' },
+  { key: 'consommable', fr: 'Consommable / charge',    en: 'Consumable / expense', hint: 'Reçu → charge directe (catégorie fiscale), pas de stock.' },
+  { key: 'capex',       fr: 'Immobilisation (CAPEX)',  en: 'Fixed asset (CAPEX)', hint: 'Reçu → crée une immobilisation (actif 1500).' },
+  { key: 'revente',     fr: 'Achat pour revente',      en: 'Purchase for resale', hint: 'Reçu → stock destiné à la vente (inventaire, marqué « revente »).' },
+];
+export const bonDestinationLabel = (d?: BonDestination | string, fr = true): string => {
+  const m = BON_DESTINATIONS.find(x => x.key === d); return m ? (fr ? m.fr : m.en) : (fr ? 'Stock / inventaire' : 'Inventory stock');
+};
+/** Une destination « stock » (stock ou revente) alimente l'inventaire physique ; les autres passent une écriture GL. */
+export const destFeedsInventory = (d?: BonDestination | string): boolean => d == null || d === 'stock' || d === 'revente';
+
 export type BonCommande = {
   id?: string;
   numero: string;
@@ -30,6 +46,9 @@ export type BonCommande = {
   notes?: string | null;
   province?: string;
   expected_date?: string | null;
+  destination?: BonDestination;     // classe d'achat (défaut 'stock')
+  fiscal_category?: string | null;  // clé FISCAL_CATEGORIES si destination = consommable
+  gl_entry_id?: string | null;      // écriture GL passée à la réception (anti double-comptage)
   subtotal?: number;
   taxes?: number;
   total?: number;
@@ -66,7 +85,7 @@ export async function genBonNumero(tenant: string, sitePrefix: string): Promise<
 }
 
 // ── Repli local pour colonnes optionnelles (migration 106 non encore propagée au cache de schéma) ──
-const BC_OPTIONAL_COLS = ['supplier', 'supplier_contact', 'project_id', 'items', 'notes', 'province', 'expected_date', 'subtotal', 'taxes', 'total'];
+const BC_OPTIONAL_COLS = ['supplier', 'supplier_contact', 'project_id', 'items', 'notes', 'province', 'expected_date', 'destination', 'fiscal_category', 'gl_entry_id', 'subtotal', 'taxes', 'total'];
 const BC_FALLBACK_KEY = (tenant: string, id: string) => `bc_fallback_${tenant}_${id}`;
 function readBcFallback(tenant: string, id?: string): Partial<BonCommande> | null {
   if (!id || typeof window === 'undefined') return null;
@@ -218,6 +237,88 @@ export function computeReceptionStatus(items: BonCommandeLigne[], current: BonCo
   if (anyRecu) return 'partiel';
   // Plus rien de reçu : on retombe sur « envoyé » si on était en réception, sinon on garde l'état (brouillon/envoyé).
   return current === 'recu' || current === 'partiel' ? 'envoye' : current;
+}
+
+// ── Création rapide depuis un autre module (inventaire, projet…) ─────────────
+/** Crée un bon de commande (brouillon) avec le PROCHAIN numéro séquentiel et des lignes pré-remplies.
+ *  Utilisé par les liens « Créer un bon de commande » des modules. Retourne l'id + le numéro généré. */
+export async function createBonFromLines(tenant: string, opts: {
+  sitePrefix?: string; supplier?: string; supplier_contact?: string; project_id?: string | null;
+  destination?: BonDestination; fiscal_category?: string | null; province?: string;
+  expected_date?: string | null; notes?: string | null; items: BonCommandeLigne[];
+}): Promise<{ id: string; numero: string }> {
+  const numero = await genBonNumero(tenant, opts.sitePrefix || 'XX');
+  const bon: BonCommande = {
+    numero, supplier: opts.supplier || '', supplier_contact: opts.supplier_contact || '',
+    project_id: opts.project_id ?? null, status: 'brouillon', items: opts.items || [],
+    notes: opts.notes ?? null, province: opts.province || 'QC', expected_date: opts.expected_date ?? null,
+    destination: opts.destination || 'stock', fiscal_category: opts.fiscal_category ?? null,
+  };
+  const { id } = await saveBonCommande(tenant, bon);
+  return { id, numero };
+}
+
+// ── Automatisation comptable à la réception (selon la destination) ───────────
+/** Passe l'écriture GL d'un bon ENTIÈREMENT reçu selon sa destination (projet/consommable/capex).
+ *  Stock/revente = géré par l'inventaire (pas d'écriture ici). Idempotent via gl_entry_id (anti double-post).
+ *  CTI/RTI (TPS/TVQ) récupérables → comptes 1200/1210 ; PST non récupérable → ajoutée au coût. Best-effort. */
+export async function postBonReceptionGL(tenant: string, bon: BonCommande): Promise<{ posted: boolean; entryId?: string; assetId?: string; skipped?: string; error?: string }> {
+  const dest = bon.destination || 'stock';
+  if (destFeedsInventory(dest)) return { posted: false, skipped: 'inventory' };  // stock/revente → inventaire
+  if (bon.gl_entry_id) return { posted: false, skipped: 'already' };
+  try {
+    const { computeInvoiceTotals } = await import('@/lib/invoicing');
+    const invItems = (bon.items || []).map(l => ({ description: l.designation || '', quantity: Number(l.quantite) || 0, unit_price: Number(l.cout_unitaire) || 0, subtotal: 0, taxable: l.taxable !== false }));
+    const t = computeInvoiceTotals(invItems as any, bon.province || 'QC');
+    const subtotal = r2(t.subtotal), gst = r2(t.gst_amount), qst = r2(t.qst_amount), pst = r2(t.pst_amount), total = r2(t.total);
+    if (total <= 0) return { posted: false, skipped: 'zero' };
+
+    const { getAccounts, createEntry } = await import('@/lib/accounting');
+    const { ensureFiscalAccounts, FISCAL_CATEGORIES } = await import('@/lib/fiscalCategories');
+    await ensureFiscalAccounts(tenant);
+    const accs = await getAccounts(tenant);
+    const byCode: Record<string, string> = {}; accs.forEach((a: any) => { byCode[a.code] = a.id; });
+    const ap = byCode['2000'];
+    if (!ap) return { posted: false, error: 'Compte 2000 (Fournisseurs) absent — initialisez la comptabilité (migration 085).' };
+
+    // Compte de destination (débit).
+    let destCode = '5260'; // matériaux par défaut (projet)
+    if (dest === 'consommable') { const fc = FISCAL_CATEGORIES.find(c => c.key === bon.fiscal_category); destCode = fc?.glCode || '5260'; }
+    else if (dest === 'capex') destCode = '1500'; // immobilisations (équipement)
+    const destAcc = byCode[destCode] || byCode['5260'];
+    if (!destAcc) return { posted: false, error: `Compte ${destCode} absent du plan comptable.` };
+
+    // CTI/RTI récupérables si les comptes existent ; sinon (et PST toujours) on ajoute la taxe au coût.
+    const gstAcc = gst > 0 ? byCode['1200'] : undefined;
+    const qstAcc = qst > 0 ? byCode['1210'] : undefined;
+    let destDebit = r2(subtotal + pst);
+    let gstLine = 0, qstLine = 0;
+    if (gstAcc) gstLine = gst; else destDebit = r2(destDebit + gst);
+    if (qstAcc) qstLine = qst; else destDebit = r2(destDebit + qst);
+
+    const lines: any[] = [{ account_id: destAcc, debit: destDebit, credit: 0, description: `${bonDestinationLabel(dest)} — ${bon.numero}` }];
+    if (gstLine) lines.push({ account_id: gstAcc, debit: gstLine, credit: 0, description: 'CTI (TPS/TVH à récupérer)' });
+    if (qstLine) lines.push({ account_id: qstAcc, debit: qstLine, credit: 0, description: 'RTI (TVQ à récupérer)' });
+    lines.push({ account_id: ap, debit: 0, credit: total, description: bon.supplier || 'Fournisseur' });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const entryId = await createEntry(tenant, {
+      entry_date: bon.expected_date || today, description: `Réception ${bon.numero} — ${bonDestinationLabel(dest)}${bon.supplier ? ' · ' + bon.supplier : ''}`,
+      reference: bon.numero, journal_code: 'ACH', source_type: 'bon_commande', source_id: bon.id, lines,
+    });
+
+    let assetId: string | undefined;
+    if (dest === 'capex') {
+      const { saveAsset } = await import('@/lib/assets');
+      assetId = await saveAsset(tenant, {
+        name: `${bon.supplier || 'Achat'} — ${bon.numero}`, category: 'Équipement', cost: destDebit,
+        supplier: bon.supplier || null, acquisition_date: bon.expected_date || today, gl_entry_id: entryId,
+      });
+    }
+    return { posted: true, entryId, assetId };
+  } catch (e: any) {
+    return { posted: false, error: e?.message || 'Écriture GL impossible.' };
+  }
 }
 
 export function bonStatusLabel(s: BonCommandeStatus, fr = true): string {
