@@ -10,6 +10,8 @@ export type BankLine = {
   amount: number; // + credit (entree) / - debit (sortie)
   matched_transaction_id?: string | null;
   reconciled?: boolean;
+  external_id?: string | null;        // identifiant d'opération (OFX FITID) -> dédoublonnage
+  treasury_account_id?: string | null;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -126,6 +128,35 @@ export function parseBankCsv(text: string): BankLine[] {
   return out;
 }
 
+/** Parse un fichier OFX / QFX (Quicken/QuickBooks/Money) — SGML tolérant (balises souvent non fermées).
+ *  Chaque opération a un FITID unique → dédoublonnage parfait. Renvoie aussi le n° de compte (ACCTID). */
+export function parseOfx(text: string): { lines: BankLine[]; accountNumber?: string } {
+  const s = String(text ?? '');
+  const accountNumber = (s.match(/<ACCTID>\s*([^\s<]+)/i) || [])[1];
+  // Blocs d'opérations <STMTTRN>…</STMTTRN> (ou jusqu'à la prochaine balise en SGML non fermé).
+  const blocks = s.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi) || s.match(/<STMTTRN>[\s\S]*?(?=<STMTTRN>|<\/BANKTRANLIST>|<\/STMTRS>)/gi) || [];
+  const field = (blk: string, tag: string) => { const m = blk.match(new RegExp(`<${tag}>\\s*([^<\\r\\n]+)`, 'i')); return m ? m[1].trim() : ''; };
+  const lines: BankLine[] = [];
+  for (const blk of blocks) {
+    const amount = r2(parseFloat(field(blk, 'TRNAMT').replace(/[^\d.\-]/g, '')) || 0);  // signé : - = débit, + = crédit
+    const dt = field(blk, 'DTPOSTED').replace(/[^\d]/g, '').slice(0, 8);                 // AAAAMMJJ
+    const stmt_date = dt.length >= 8 ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}` : '';
+    const name = field(blk, 'NAME'); const memo = field(blk, 'MEMO');
+    const description = [name, memo].filter(Boolean).join(' — ').slice(0, 300) || '—';
+    const external_id = field(blk, 'FITID') || null;
+    if (!stmt_date && !amount) continue;
+    lines.push({ stmt_date, description, amount, external_id, reconciled: false, matched_transaction_id: null });
+  }
+  return { lines, accountNumber };
+}
+
+/** Détecte automatiquement le format (OFX/QFX vs CSV) et parse. */
+export function parseStatement(text: string): { lines: BankLine[]; accountNumber?: string } {
+  const s = String(text ?? '');
+  if (/<OFX>|OFXHEADER|<STMTTRN>/i.test(s)) return parseOfx(s);
+  return { lines: parseBankCsv(s) };
+}
+
 export async function getBankLines(tenant: string): Promise<BankLine[]> {
   const { data, error } = await supabase.from('bank_statement_lines')
     .select('*').eq('tenant_id', tenant).order('stmt_date', { ascending: false });
@@ -133,15 +164,27 @@ export async function getBankLines(tenant: string): Promise<BankLine[]> {
   return (data || []) as BankLine[];
 }
 
-export async function insertBankLines(tenant: string, lines: BankLine[]): Promise<void> {
-  if (!lines.length) return;
-  const rows = lines.map(l => ({
+export async function insertBankLines(tenant: string, lines: BankLine[]): Promise<number> {
+  if (!lines.length) return 0;
+  // Dédoublonnage par external_id (OFX FITID) : on n'insère pas une opération déjà importée.
+  const ids = lines.map(l => l.external_id).filter(Boolean) as string[];
+  let have = new Set<string>();
+  if (ids.length) {
+    try { const { data } = await supabase.from('bank_statement_lines').select('external_id').eq('tenant_id', tenant).in('external_id', ids); have = new Set((data || []).map((x: any) => x.external_id)); }
+    catch { /* colonne external_id absente (migration 208) -> pas de dédoublonnage */ }
+  }
+  const fresh = lines.filter(l => !(l.external_id && have.has(l.external_id)));
+  if (!fresh.length) return 0;
+  const base = fresh.map(l => ({
     tenant_id: tenant, stmt_date: l.stmt_date || null, description: l.description || '',
-    amount: r2(l.amount), matched_transaction_id: l.matched_transaction_id ?? null,
-    reconciled: !!l.reconciled,
+    amount: r2(l.amount), matched_transaction_id: l.matched_transaction_id ?? null, reconciled: !!l.reconciled,
   }));
-  const { error } = await supabase.from('bank_statement_lines').insert(rows);
+  // Tente avec external_id/treasury_account_id ; repli sans ces colonnes si migration 208 absente.
+  const withExt = fresh.map((l, i) => ({ ...base[i], external_id: l.external_id ?? null, treasury_account_id: l.treasury_account_id ?? null }));
+  let { error } = await supabase.from('bank_statement_lines').insert(withExt);
+  if (error && /external_id|treasury_account_id|column/i.test(String(error.message || ''))) ({ error } = await supabase.from('bank_statement_lines').insert(base));
   if (error) throw error;
+  return fresh.length;
 }
 
 export async function updateBankLine(tenant: string, id: string, patch: Partial<BankLine>): Promise<void> {

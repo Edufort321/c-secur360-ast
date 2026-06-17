@@ -35,7 +35,7 @@ import { getTransactions, getTransactionItems, saveTransaction, setTransactionSt
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
-import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
+import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { readDraft, writeDraft, clearDraft, useAutoDraft } from '@/lib/useDraft';
 import { getTenantPermissions, canViewAdminTab, type PermMap } from '@/lib/permissions';
@@ -7354,13 +7354,17 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setBankBusy(false);
   }
   async function doImportBank() {
-    const parsed = parseBankCsv(importText);
-    if (!parsed.length) { setNotice(tr('Aucune ligne détectée dans le CSV.', 'No line detected in the CSV.')); return; }
+    // Auto-détection OFX/QFX (Quicken/QuickBooks) vs CSV.
+    const { lines: parsed, accountNumber } = parseStatement(importText);
+    if (!parsed.length) { setNotice(tr('Aucune opération détectée (CSV / OFX / QFX).', 'No transaction detected (CSV / OFX / QFX).')); return; }
     setBankBusy(true); setNotice(null);
+    // Rapproche le compte par les 4 derniers chiffres (OFX ACCTID).
+    const acctId = matchAccountByNumber(accountNumber);
+    if (acctId) parsed.forEach(l => { l.treasury_account_id = acctId; });
     try {
-      await insertBankLines(tenant, parsed); setImportText('');
+      const inserted = await insertBankLines(tenant, parsed); setImportText('');
       setBankLines(await getBankLines(tenant));
-      setNotice(`${parsed.length} ${tr('lignes importées.', 'lines imported.')}`);
+      setNotice(`${inserted}/${parsed.length} ${tr('opération(s) importée(s)', 'transaction(s) imported')}${inserted < parsed.length ? tr(' (doublons ignorés)', ' (duplicates skipped)') : ''}${acctId ? tr(' → compte reconnu', ' → account recognized') : ''}.`);
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
   }
@@ -7695,18 +7699,18 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           {/* Connexion bancaire temps réel (Flinks) — auto-sync ; sinon import CSV ci-dessous */}
           <BankConnect tenant={tenant} tr={tr} accounts={treasury.filter(a => a.active !== false).map(a => ({ id: a.id!, name: a.name, last4: a.last4 || undefined }))} onSynced={() => getBankLines(tenant).then(setBankLines).catch(() => {})} />
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">{tr('Importer un relevé bancaire (CSV)', 'Import a bank statement (CSV)')}</div>
-            <p className="mb-2 text-xs text-gray-400">{tr('Colonnes détectées automatiquement : date, description, montant (ou débit/crédit). Collez le CSV ou choisissez un fichier.', 'Columns auto-detected: date, description, amount (or debit/credit). Paste the CSV or pick a file.')}</p>
-            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4} placeholder={tr('Collez ici les lignes CSV…', 'Paste CSV lines here…')} className={`w-full font-mono text-xs ${inputCls}`} />
+            <div className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">{tr('Importer un relevé bancaire (CSV / OFX / QFX)', 'Import a bank statement (CSV / OFX / QFX)')}</div>
+            <p className="mb-2 text-xs text-gray-400">{tr('Format auto-détecté. OFX/QFX (Quicken/QuickBooks) = import EXACT sans doublon (ID d’opération). CSV = colonnes détectées automatiquement. Collez le contenu ou choisissez un fichier.', 'Format auto-detected. OFX/QFX (Quicken/QuickBooks) = EXACT import, no duplicates (transaction ID). CSV = auto-detected columns. Paste content or pick a file.')}</p>
+            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4} placeholder={tr('Collez ici le CSV ou le contenu OFX/QFX…', 'Paste CSV or OFX/QFX content here…')} className={`w-full font-mono text-xs ${inputCls}`} />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
-                {tr('Choisir un fichier CSV', 'Pick a CSV file')}
-                <input type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await f.text()); }} />
+                {tr('Choisir un fichier (CSV/OFX/QFX)', 'Pick a file (CSV/OFX/QFX)')}
+                <input type="file" accept=".csv,.ofx,.qfx,text/csv,text/plain,application/x-ofx" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await f.text()); }} />
               </label>
               <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
               {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
               {bankLines.some(b => !b.reconciled && !b.matched_transaction_id) && <button onClick={doBankAI} disabled={bankBusy} className="rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA crée des transactions « à vérifier » à partir des lignes non rapprochées', 'AI creates “to review” transactions from unmatched lines')}>📷 {tr('Transactions du relevé (IA)', 'Statement → transactions (AI)')}</button>}
-              {importText.trim() && <span className="text-xs text-gray-400">{parseBankCsv(importText).length} {tr('lignes détectées', 'lines detected')}</span>}
+              {importText.trim() && <span className="text-xs text-gray-400">{parseStatement(importText).lines.length} {tr('opération(s) détectée(s)', 'transaction(s) detected')}{/<OFX>|OFXHEADER|<STMTTRN>/i.test(importText) ? ' · OFX/QFX' : ' · CSV'}</span>}
             </div>
           </div>
           {bankLines.length > 0 && (
