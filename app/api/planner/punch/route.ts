@@ -77,19 +77,25 @@ export async function POST(req: NextRequest) {
       // Un seul enregistrement par jour (contrainte timesheet_entries) -> on CUMULE les heures du jour.
       const { data: ex } = await supabaseAdmin.from('timesheet_entries').select('id, hrs_regular, project_id, project_number')
         .eq('timesheet_id', sheet.id).eq('tenant_id', tenant).eq('date', today).maybeSingle();
+      // project_number est NOT NULL en base (defaut '') -> on coalesce a '' (un NULL ferait echouer
+      // l'insertion en SILENCE = le temps ne remontait pas sur la feuille). project_id est nullable.
+      let wErr: any = null;
       if (ex) {
-        await supabaseAdmin.from('timesheet_entries').update({
+        const r = await supabaseAdmin.from('timesheet_entries').update({
           hrs_regular: round15(Number(ex.hrs_regular || 0) + hours),
           project_id: ex.project_id || punch.project_id || null,
-          project_number: ex.project_number || punch.project_number || null,
+          project_number: ex.project_number || punch.project_number || '',
         }).eq('id', ex.id);
+        wErr = r.error;
       } else {
-        await supabaseAdmin.from('timesheet_entries').insert({
+        const r = await supabaseAdmin.from('timesheet_entries').insert({
           timesheet_id: sheet.id, tenant_id: tenant, date: today, category: 'project',
-          project_id: punch.project_id || null, project_number: punch.project_number || null,
+          project_id: punch.project_id || null, project_number: punch.project_number || '',
           hrs_regular: hours, hrs_overtime: 0, hrs_premium: 0,
         });
+        wErr = r.error;
       }
+      if (wErr) return NextResponse.json({ error: `Heures non enregistrées sur la feuille de temps : ${wErr.message}` }, { status: 500 });
     }
     return NextResponse.json({ ok: true, hours, timesheetId: sheet?.id });
   }

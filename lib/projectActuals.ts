@@ -29,11 +29,17 @@ const sumAllowances = (a: any): number =>
 
 export async function computeProjectActuals(tenant: string, projectId: string): Promise<ProjectActuals> {
   if (!projectId) return EMPTY;
-  // 1. Lignes de temps pointées sur ce projet
+  // Le poinçon (ou une feuille) peut renseigner SOIT project_id (UUID), SOIT seulement project_number
+  // (si la tâche planifiée n'a pas de project_id). On agrège donc sur project_id OU project_number.
+  let projectNumber = '';
+  try { const { data: p } = await supabase.from('projects').select('project_number').eq('id', projectId).maybeSingle(); projectNumber = (p?.project_number || '').trim(); } catch { /* ignore */ }
+  // 1. Lignes de temps pointées sur ce projet (par id ou par numéro)
+  const orFilter = projectNumber ? `project_id.eq.${projectId},project_number.eq.${projectNumber}` : `project_id.eq.${projectId}`;
   const { data: ents } = await supabase
     .from('timesheet_entries')
     .select('timesheet_id, date, project_number, hrs_regular, hrs_overtime, hrs_premium, km, materiel, allowances')
-    .eq('project_id', projectId);
+    .eq('tenant_id', tenant)
+    .or(orFilter);
   const entries = ents || [];
 
   // 1b. Dépenses pointées sur ce projet (timesheet_expenses.project_id) — refacturables → facture.
