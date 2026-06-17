@@ -25,6 +25,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   const { sites, siteId, setSiteId } = useSite();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [brandColor, setBrandColor] = useState<string | null>(null); // couleur du header (réglage tenant)
   const [firstLogin, setFirstLogin] = useState(false); // 1re connexion : inviter à changer le mot de passe
   const entitlements = useEntitlements(tenant || '');
 
@@ -43,6 +44,9 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
     if (!tenant) return;
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+    // Couleur de marque du header (réglée par le tenant dans Admin > Modèles PDF).
+    supabase.from('company_settings').select('pdf_styles').eq('tenant_id', tenant).maybeSingle()
+      .then(({ data }) => { const c = (data as any)?.pdf_styles?.brand_color; if (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c)) setBrandColor(c); }, () => {});
   }, [tenant]);
 
   // 1re connexion : on invite (sans bloquer) à remplacer le mot de passe fourni par l'admin.
@@ -66,7 +70,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-gray-900 text-white shadow">
+    <header className="sticky top-0 z-40 text-white shadow" style={{ backgroundColor: brandColor || '#111827' }}>
       <div className="flex w-full items-center justify-between px-4 py-2 lg:px-6">
         <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-3">
           <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-16 w-auto" />

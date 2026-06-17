@@ -18,7 +18,10 @@ export const PDF_MODULES: { key: PdfModuleKey; fr: string; en: string }[] = [
 
 // Accent par défaut = gris ardoise sobre (identique à la palette DGA/letterhead).
 export const DEFAULT_ACCENT = '#3c3c3c';
-export type PdfStyles = { modules?: Partial<Record<PdfModuleKey, { accent?: string }>> };
+export type PdfStyles = {
+  modules?: Partial<Record<PdfModuleKey, { accent?: string }>>;
+  brand_color?: string; // couleur du HEADER principal du site (pour s'accorder au logo du tenant)
+};
 
 /** Convertit un #RRGGBB en triplet [r,g,b] (défaut gris DGA si invalide). */
 export function hexToRgb(hex?: string | null): [number, number, number] {

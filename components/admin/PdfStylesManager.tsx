@@ -37,6 +37,24 @@ export function PdfStylesManager({ tenant, tr, canEdit }: { tenant: string; tr: 
       </div>
       {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{notice}</div>}
 
+      {/* Couleur du HEADER principal du site (pour s'accorder au logo du tenant) */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Couleur du header du site', 'Site header color')}</div>
+            <div className="text-xs text-gray-500">{tr('La barre du haut de l’application (pour s’accorder à votre logo). Vide = gris par défaut.', 'The app top bar (to match your logo). Empty = default dark.')}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="color" value={/^#[0-9a-f]{6}$/i.test(styles.brand_color || '') ? styles.brand_color! : '#111827'} disabled={!canEdit} onChange={e => setStyles(s => ({ ...s, brand_color: e.target.value }))} className="h-8 w-12 cursor-pointer rounded border border-gray-300 dark:border-gray-600" />
+            {styles.brand_color && canEdit && <button onClick={() => setStyles(s => { const { brand_color, ...rest } = s; return rest; })} className="text-xs font-semibold text-gray-400 hover:text-gray-600">{tr('Réinit.', 'Reset')}</button>}
+          </div>
+        </div>
+        {/* Aperçu de la barre */}
+        <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-white" style={{ backgroundColor: /^#[0-9a-f]{6}$/i.test(styles.brand_color || '') ? styles.brand_color : '#111827' }}>
+          <span className="text-[11px] font-bold">LOGO</span><span className="text-[10px] opacity-70">{tr('Aperçu du header', 'Header preview')}</span>
+        </div>
+      </div>
+
       {/* Unifier tout */}
       {canEdit && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
