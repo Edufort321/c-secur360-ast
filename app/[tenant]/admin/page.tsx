@@ -1022,6 +1022,12 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   const [viewMode, setViewMode] = useState<'grid' | 'gallery'>('grid'); // grille (défaut) ou galerie
   const [counts, setCounts] = useState<Record<string, { sites: number; contacts: number }>>({});
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  // ── Import IA (liste de clients, colonnes libres — même pattern que l'inventaire) ──
+  const aiFileRef = React.useRef<HTMLInputElement>(null);
+  const [aiImporting, setAiImporting] = useState(false);
+  const [aiRefusal, setAiRefusal] = useState<string[] | null>(null);   // critères minimum manquants
+  const [aiPreview, setAiPreview] = useState<CRow[] | null>(null);     // clients détectés (avant insertion)
+  const [aiInserting, setAiInserting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -1075,6 +1081,79 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
     deselect(); load();
   }
 
+  // Modèle de colonnes téléchargeable (CSV) — pour que l'import « fonctionne bien ».
+  function downloadTemplate() {
+    const headers = ['NOM', 'CONTACT', 'COURRIEL', 'TÉLÉPHONE', 'ADRESSE', 'VILLE', 'PROVINCE', 'CODE POSTAL', 'NOTES'];
+    const example = ['Hydro-Exemple inc.', 'Marie Tremblay', 'marie@exemple.ca', '514-555-0199', '123 rue Principale', 'Sherbrooke', 'QC', 'J1H 1A1', 'Client commercial'];
+    const csv = '﻿' + [headers.join(','), example.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'modele_import_clients.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Lecture du fichier (CSV/XLSX) -> lignes brutes -> IA détecte les colonnes (par lots) -> prévisualisation.
+  async function handleAiFile(file: File | null | undefined) {
+    if (!file) return;
+    setAiRefusal(null); setAiPreview(null); setNotice(null); setAiImporting(true);
+    try {
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      let raw: any[] = [];
+      for (const name of wb.SheetNames) { const r = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' }); if (r.length > raw.length) raw = r; }
+      if (!raw.length) { setNotice(tr('Fichier vide ou illisible.', 'Empty or unreadable file.')); return; }
+
+      const CHUNK = 50; const chunks: any[][] = [];
+      for (let i = 0; i < raw.length; i += CHUNK) chunks.push(raw.slice(i, i + CHUNK));
+      const out: any[] = [];
+      for (let idx = 0; idx < chunks.length; idx++) {
+        const resp = await fetch('/api/clients/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ rows: chunks[idx], tenant }) });
+        const j = await resp.json();
+        if (!resp.ok || j.error) { setNotice((j.error || tr('Analyse IA échouée.', 'AI analysis failed.')) + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : '')); return; }
+        if (j.conforme === false) { setAiRefusal(Array.isArray(j.missing) ? j.missing : ['NOM']); return; }
+        out.push(...(Array.isArray(j.clients) ? j.clients : []));
+      }
+      if (!out.length) { setNotice(tr('Aucun client détecté.', 'No client detected.')); return; }
+      // Dédoublonnage contre l'existant (par nom, insensible casse/accents) + au sein du fichier.
+      const norm = (s: string) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const have = new Set(rows.map(r => norm(r.name)));
+      const seen = new Set<string>();
+      const preview: CRow[] = out
+        .map((c: any) => ({ ...empty(), name: String(c.name || '').trim(), contact_name: String(c.contact_name || ''), contact_email: String(c.contact_email || ''), contact_phone: String(c.contact_phone || ''), phone: String(c.phone || ''), email: String(c.email || ''), address: String(c.address || ''), city: String(c.city || ''), province: String(c.province || 'QC').toUpperCase().slice(0, 2) || 'QC', postal_code: String(c.postal_code || ''), notes: String(c.notes || '') }))
+        .filter(c => { const k = norm(c.name); if (!k || have.has(k) || seen.has(k)) return false; seen.add(k); return true; });
+      if (!preview.length) { setNotice(tr('Tous les clients du fichier existent déjà.', 'All clients in the file already exist.')); return; }
+      setAiPreview(preview);
+    } catch (e: any) {
+      setNotice('Erreur : ' + (e?.message || tr('lecture du fichier impossible.', 'cannot read file.')));
+    } finally {
+      setAiImporting(false);
+      if (aiFileRef.current) aiFileRef.current.value = '';
+    }
+  }
+
+  // Insertion des clients prévisualisés (en lot, résilient aux colonnes absentes).
+  async function confirmAiImport() {
+    if (!aiPreview?.length) return;
+    setAiInserting(true); setNotice(null);
+    try {
+      let payload: any[] = aiPreview.map(c => { const { id, ...rest } = c as any; return { tenant_id: tenant, ...rest }; });
+      let res: any = await supabase.from('clients').insert(payload);
+      let guard = 0;
+      while (res.error && guard < 15) {
+        const msg = res.error.message || '';
+        const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+        const col = m ? (m[1] || m[2] || m[3]) : null;
+        if (col && col !== 'name' && col !== 'tenant_id') { payload = payload.map(p => { const q = { ...p }; delete q[col]; return q; }); res = await supabase.from('clients').insert(payload); guard++; }
+        else break;
+      }
+      if (res.error) { setNotice('Erreur : ' + res.error.message); setAiInserting(false); return; }
+      setNotice(`✓ ${aiPreview.length} ${tr('client(s) importé(s).', 'client(s) imported.')}`);
+      setAiPreview(null); await load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'import')); }
+    finally { setAiInserting(false); }
+  }
+
   const provinces = ['QC','ON','BC','AB','SK','MB','NB','NS','PE','NL','NT','YT','NU'];
 
   return (
@@ -1090,12 +1169,27 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
               <button onClick={() => setViewMode('grid')} className={`rounded-md px-2 py-1 font-semibold ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Grille', 'Grid')}</button>
               <button onClick={() => setViewMode('gallery')} className={`rounded-md px-2 py-1 font-semibold ${viewMode === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
             </div>
+            <button onClick={downloadTemplate} title={tr('Télécharger le modèle de colonnes (CSV)', 'Download the column template (CSV)')}
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Download size={15} /> {tr('Modèle', 'Template')}
+            </button>
+            <button onClick={() => aiFileRef.current?.click()} disabled={aiImporting} title={tr('Importer une liste de clients (CSV/Excel) — colonnes détectées par IA', 'Import a client list (CSV/Excel) — columns detected by AI')}
+              className="inline-flex items-center gap-1 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-50 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300">
+              {aiImporting ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />} {tr('Import IA', 'AI import')}
+            </button>
+            <input ref={aiFileRef} type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={e => handleAiFile(e.target.files?.[0])} />
             <button onClick={() => { deselect(); setForm(empty()); setSelected(-1); }}
               className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">
               <Plus size={15} /> {tr('Nouveau', 'New')}
             </button>
           </div>
         </div>
+        {/* Refus IA : critères minimum manquants */}
+        {aiRefusal && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            {tr('Import refusé — colonne(s) minimum introuvable(s) :', 'Import refused — missing minimum column(s):')} <strong>{aiRefusal.join(', ')}</strong>. {tr('Téléchargez le « Modèle » et réessayez.', 'Download the “Template” and try again.')}
+          </div>
+        )}
         {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : rows.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-gray-400">{tr('Aucun client. Crée-en un.', 'No client. Create one.')}</div>
         ) : (
@@ -1176,6 +1270,43 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
           {form.id
             ? <ClientCascade tenant={tenant} clientId={form.id} tr={tr} inp={inp} />
             : <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{tr('Enregistre le client pour ajouter ses sites et contacts.', 'Save the client to add its sites and contacts.')}</p>}
+        </div>
+      )}
+
+      {/* Prévisualisation de l'import IA : on confirme avant d'insérer */}
+      {aiPreview && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => !aiInserting && setAiPreview(null)}>
+          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+              <h3 className="font-bold">{tr('Import IA — aperçu', 'AI import — preview')} <span className="text-sm font-normal text-gray-400">({aiPreview.length} {tr('nouveau(x) client(s)', 'new client(s)')})</span></h3>
+              <button onClick={() => setAiPreview(null)} disabled={aiInserting} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-700"><Trash2 size={18} /></button>
+            </div>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-700/50"><tr>
+                  <th className="px-3 py-2">{tr('Nom', 'Name')}</th><th className="px-3 py-2">{tr('Contact', 'Contact')}</th><th className="px-3 py-2">{tr('Courriel', 'Email')}</th><th className="px-3 py-2">{tr('Tél.', 'Phone')}</th><th className="px-3 py-2">{tr('Ville', 'City')}</th><th className="px-3 py-2">{tr('Prov.', 'Prov.')}</th>
+                </tr></thead>
+                <tbody>
+                  {aiPreview.map((c, i) => (
+                    <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="px-3 py-1.5 font-medium">{c.name}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{c.contact_name || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{c.email || c.contact_email || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{c.phone || c.contact_phone || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{c.city || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{c.province || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-700">
+              <button onClick={() => setAiPreview(null)} disabled={aiInserting} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={confirmAiImport} disabled={aiInserting} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                {aiInserting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {tr('Importer', 'Import')} {aiPreview.length}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
