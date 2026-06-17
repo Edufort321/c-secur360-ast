@@ -48,6 +48,12 @@ export default function ProjectDetailPage() {
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
   const [tsActuals, setTsActuals] = useState<ProjectActuals | null>(null); // coût réel agrégé des feuilles de temps
+  // Règle frais de subsistance par défaut selon la portée (interne/externe) — paramètre tenant.
+  const [subsRule, setSubsRule] = useState<{ interne: boolean; externe: boolean }>({ interne: false, externe: true });
+  useEffect(() => {
+    supabase.from('company_settings').select('subsistence_interne, subsistence_externe').eq('tenant_id', tenant).maybeSingle()
+      .then(({ data }) => { if (data) setSubsRule({ interne: (data as any).subsistence_interne ?? false, externe: (data as any).subsistence_externe ?? true }); }, () => {});
+  }, [tenant]);
 
   useEffect(() => {
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
@@ -216,13 +222,24 @@ export default function ProjectDetailPage() {
       location: p.location, dossier: p.dossier, submission_number: p.submission_number,
       po_number: p.po_number, po_amount: p.po_amount ? Number(p.po_amount) : null,
       status: p.status, project_type: p.project_type, pricing_mode: p.pricing_mode,
+      project_scope: p.project_scope || 'externe',
+      subsistence_applicable: p.subsistence_applicable ?? (p.project_scope === 'interne' ? subsRule.interne : subsRule.externe),
       global_price: p.global_price ? Number(p.global_price) : null,
       date_submission: p.date_submission || null, date_work_start: p.date_work_start || null,
       primary_seller_id: p.primary_seller_id || null,
     };
     try {
-      const { error } = await supabase.from('projects').update(payload).eq('id', id).eq('tenant_id', tenant);
-      if (error) throw error;
+      // Insert résilient : retire toute colonne absente (ex. project_scope/subsistence_applicable si
+      // la migration 213 n'est pas encore appliquée) pour ne jamais bloquer l'enregistrement.
+      let res: any = await supabase.from('projects').update(payload).eq('id', id).eq('tenant_id', tenant);
+      let guard = 0;
+      while (res.error && guard < 6) {
+        const m = (res.error.message || '').match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+        const col = m ? (m[1] || m[2] || m[3]) : null;
+        if (col && col in payload) { delete (payload as any)[col]; res = await supabase.from('projects').update(payload).eq('id', id).eq('tenant_id', tenant); guard++; }
+        else break;
+      }
+      if (res.error) throw res.error;
       // Commission de vente : calcul SERVEUR (grilles/feuilles de temps fermées à l'anon).
       if (p.status === 'vente' && p.primary_seller_id) {
         const r = await fetch('/api/hr/commission', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ project: { ...p, id } }) }).then(x => x.json()).catch(() => ({ ok: false, msg: 'erreur' }));
@@ -380,6 +397,19 @@ export default function ProjectDetailPage() {
                       <option value="budgetaire">{tr('Budgétaire', 'Budget')}</option>
                       <option value="forfaitaire">{tr('Forfaitaire', 'Fixed price')}</option>
                     </select>
+                  </Field>
+                  <Field label={tr('Portée', 'Scope')}>
+                    {/* Interne/externe : pré-remplit « frais de subsistance applicables » selon la règle du tenant. */}
+                    <select className="inp" value={p.project_scope || 'externe'} onChange={e => { const v = e.target.value; setP((prev: any) => ({ ...prev, project_scope: v, subsistence_applicable: v === 'interne' ? subsRule.interne : subsRule.externe })); }}>
+                      <option value="externe">{tr('Externe (client)', 'External (client)')}</option>
+                      <option value="interne">{tr('Interne', 'Internal')}</option>
+                    </select>
+                  </Field>
+                  <Field label={tr('Frais de subsistance', 'Per diem')}>
+                    <label className="mt-1 inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                      <input type="checkbox" checked={(p.subsistence_applicable ?? (p.project_scope === 'interne' ? subsRule.interne : subsRule.externe)) !== false} onChange={e => set('subsistence_applicable', e.target.checked)} />
+                      {tr('Applicables sur ce projet', 'Applicable on this project')}
+                    </label>
                   </Field>
                   <Field label={tr('Mode de prix', 'Pricing mode')}>
                     <select className="inp" value={p.pricing_mode || 'ventile'} onChange={e => set('pricing_mode', e.target.value)}>

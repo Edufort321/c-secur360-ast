@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { CAPABILITIES, MODULE_ROWS, viewCap, editCap, ADMIN_TABS, ADMIN_TAB_GROUPS, adminTabCap, getTenantPermissions, saveTenantPermission, type Capability, type PermMap } from '@/lib/permissions';
+import { supabase } from '@/lib/supabase';
 
 // Niveaux (Guide des niveaux d'accès) — tier 1..8 (+ tier 0 « Externe » pour les modules QR).
 const LEVELS = [
@@ -29,13 +30,28 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
   // Accès restreint (anti-super-admin plateforme) — tenants.restrict_super_admin.
   const [restrict, setRestrict] = useState<boolean | null>(null);
   const [restrictBusy, setRestrictBusy] = useState(false);
+  // Règle frais de subsistance par défaut selon la portée du projet (interne/externe) — company_settings.
+  const [subs, setSubs] = useState<{ interne: boolean; externe: boolean }>({ interne: false, externe: true });
+  const [subsBusy, setSubsBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => { const p = await getTenantPermissions(tenant); if (active) { setPerms(p); setLoading(false); } })();
     fetch(`/api/admin/restrict-access?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => { if (active && j) setRestrict(!!j.restrict); }).catch(() => {});
+    supabase.from('company_settings').select('subsistence_interne, subsistence_externe').eq('tenant_id', tenant).maybeSingle()
+      .then(({ data }) => { if (active && data) setSubs({ interne: (data as any).subsistence_interne ?? false, externe: (data as any).subsistence_externe ?? true }); }, () => {});
     return () => { active = false; };
   }, [tenant]);
+
+  async function saveSubs(next: { interne: boolean; externe: boolean }) {
+    setSubs(next); setSubsBusy(true); setNotice(null);
+    try {
+      const { error } = await supabase.from('company_settings').upsert({ tenant_id: tenant, subsistence_interne: next.interne, subsistence_externe: next.externe, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' });
+      if (error) throw error;
+      setNotice(tr('Règle de subsistance enregistrée ✓', 'Per diem rule saved ✓'));
+    } catch (e: any) { setNotice('Erreur (migration 213 ?) : ' + (e?.message || 'DB')); }
+    finally { setSubsBusy(false); }
+  }
 
   async function toggleRestrict(next: boolean) {
     setRestrictBusy(true); setNotice(null);
@@ -75,6 +91,23 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
             'The tenant manages access levels here. HR: minimum level per capability. MODULES: a “View” and an “Edit” threshold per module/sub-module — below View = BLOCKED, between View and Edit = READ-ONLY, above = EDIT. The “External (QR)” level allows non-logged-in people (e.g. scanning a JSA/permit).')}
       </div>
       {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{notice}</div>}
+
+      {/* RÈGLE FRAIS DE SUBSISTANCE — défaut applicable selon la portée du projet (interne/externe) */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <h3 className="mb-1 text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Règle — frais de subsistance', 'Rule — per diem')}</h3>
+        <p className="mb-3 text-xs text-gray-500">{tr('Défaut « frais de subsistance applicables » lors de la création/édition d’un projet, selon sa portée. Reste éditable par projet.', 'Default “per diem applicable” when creating/editing a project, based on its scope. Still editable per project.')}</p>
+        <div className="flex flex-wrap gap-4">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <input type="checkbox" disabled={!canEdit || subsBusy} checked={subs.externe} onChange={e => saveSubs({ ...subs, externe: e.target.checked })} />
+            {tr('Projet EXTERNE (client) → applicable', 'EXTERNAL project (client) → applicable')}
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <input type="checkbox" disabled={!canEdit || subsBusy} checked={subs.interne} onChange={e => saveSubs({ ...subs, interne: e.target.checked })} />
+            {tr('Projet INTERNE → applicable', 'INTERNAL project → applicable')}
+          </label>
+          {subsBusy && <Loader2 size={15} className="animate-spin text-gray-400" />}
+        </div>
+      </div>
 
       {/* ACCÈS RESTREINT — bloque les super-admins PLATEFORME non invités */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">

@@ -42,6 +42,8 @@ export type CompanySettings = {
   bank_details?: string; invoice_prefix?: string; default_terms?: string; logo_url?: string;
   // Relances automatiques (dunning) : activer + paliers de retard (jours).
   dunning_enabled?: boolean; dunning_days?: number[];
+  // Règle frais de subsistance par défaut selon la portée du projet (interne/externe).
+  subsistence_interne?: boolean; subsistence_externe?: boolean;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -68,8 +70,8 @@ export async function saveCompanySettings(tenant: string, s: CompanySettings) {
   const row: any = { ...s, tenant_id: tenant, updated_at: new Date().toISOString() };
   let { error } = await supabase.from('company_settings').upsert(row, { onConflict: 'tenant_id' });
   // Résilience : si une colonne récente n'existe pas encore (migration non appliquée), on la retire et on réessaie.
-  if (error && /(dunning_enabled|dunning_days|stripe_account_id|stripe_charges_enabled|column).*(does not exist|schema cache)/i.test(error.message || '')) {
-    delete row.dunning_enabled; delete row.dunning_days;
+  if (error && /(dunning_enabled|dunning_days|stripe_account_id|stripe_charges_enabled|subsistence_interne|subsistence_externe|column).*(does not exist|schema cache)/i.test(error.message || '')) {
+    delete row.dunning_enabled; delete row.dunning_days; delete row.subsistence_interne; delete row.subsistence_externe;
     ({ error } = await supabase.from('company_settings').upsert(row, { onConflict: 'tenant_id' }));
   }
   if (error) throw error;
