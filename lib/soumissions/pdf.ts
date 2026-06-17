@@ -31,6 +31,7 @@ export type SoumissionPdfOpts = {
   conditions?: { titre: string; contenu: string }[]; // conditions & modalités cochées (page jointe)
   attachments?: { url: string; filename?: string }[]; // PDF supplémentaires à annexer (fusion pdf-lib)
   headerColor?: string | null;       // couleur de la bande d'en-tête (hex), paramétrable par tenant
+  tenant?: string;                   // pour résoudre le style du module « soumission » (Modèles PDF)
   filename?: string;
 };
 
@@ -49,6 +50,11 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
   const doc = new jsPDF({ unit: 'pt', format: 'letter' }); // 612 x 792
   const M = 42, W = 612, R = W - M; // marge DGA
   const BAND = hexRgb(opts.headerColor); // couleur de la bande d'en-tête (paramétrable)
+  // Style du module « soumission » (Modèles PDF) — accent + épaisseur du filet. L'accent prime pour
+  // le titre/filet ; la bande supérieure reste la couleur d'en-tête du tenant (headerColor) si définie.
+  const st = opts.tenant ? await import('@/lib/pdfStyle').then(m => m.pdfStyleFor(opts.tenant!, 'soumission')).catch(() => undefined) : undefined;
+  const ACCENT: [number, number, number] = st?.accent || BAND;
+  const RW = st?.ruleWidth ?? 1.2;
   let y = M;
 
   const ensure = (need: number) => { if (y + need > 792 - 50) { doc.addPage(); drawHeader(); } };
@@ -63,7 +69,7 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
     doc.text(opts.companyName || 'C-Secur360', R, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setTextColor(90);
     doc.text(`Soumission ${s.numero || ''}${s.revision && s.revision > 1 ? ` · rév. ${s.revision}` : ''}`, R, 42, { align: 'right' });
-    doc.setDrawColor(BAND[0], BAND[1], BAND[2]); doc.setLineWidth(1.2); doc.line(M, 50, R, 50);
+    doc.setDrawColor(ACCENT[0], ACCENT[1], ACCENT[2]); doc.setLineWidth(RW); doc.line(M, 50, R, 50);
     y = 60;
   }
 
@@ -75,8 +81,8 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
 
   drawHeader();
   // Titre du document (corps), façon DGA.
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20);
-  doc.text('SOUMISSION', M, y); y += 18;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(st?.titleSize ?? 14); doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+  doc.text('SOUMISSION', M, y); doc.setTextColor(20); y += 18;
   // Bloc client
   doc.setTextColor(20, 20, 20); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
   doc.text(String(s.client_snapshot?.name || '—'), M, y + 4);

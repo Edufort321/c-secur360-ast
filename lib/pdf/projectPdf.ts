@@ -23,6 +23,20 @@ const COL = {
 };
 
 type Doc = any; // jsPDF instance
+
+// Accent du module « projet » (Modèles PDF) — couleur + épaisseur du filet sous l'en-tête.
+// Variables de module réglées au début de chaque export ; défaut = bleu primaire historique.
+let HEAD_ACCENT: [number, number, number] = COL.primary;
+let HEAD_RW = 0.5;
+async function resolveProjectStyle(tenant: string) {
+  try {
+    const { pdfStyleFor } = await import('@/lib/pdfStyle');
+    const st = await pdfStyleFor(tenant, 'projet');
+    HEAD_ACCENT = st?.accent || COL.primary;
+    HEAD_RW = st?.ruleWidth ?? 0.5;
+  } catch { HEAD_ACCENT = COL.primary; HEAD_RW = 0.5; }
+}
+
 const $ = (n: number) =>
   `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
@@ -68,9 +82,9 @@ function drawHeader(doc: Doc, logo: string | null, title: string, subtitle: stri
   doc.setTextColor(148, 163, 184); // slate-400
   doc.text(subtitle, PAGE_W - MR, 17, { align: 'right' });
 
-  // Ligne fine sous le header
-  doc.setDrawColor(...COL.primary);
-  doc.setLineWidth(0.5);
+  // Ligne fine sous le header (accent du module, réglable dans Modèles PDF)
+  doc.setDrawColor(...HEAD_ACCENT);
+  doc.setLineWidth(HEAD_RW);
   doc.line(0, 22, PAGE_W, 22);
 }
 
@@ -630,6 +644,7 @@ export async function exportProjectPdf(options: {
 
   const logoUrl = options.tenantLogoUrl || '/logo.png';
   const logo = await loadLogo(logoUrl);
+  await resolveProjectStyle(options.tenant);
 
   const p = options.project;
   const tabLabels: Record<string, string> = {
@@ -696,6 +711,7 @@ export async function exportFullReportPdf(options: {
 
   const p = options.project;
   const logo = await loadLogo(options.tenantLogoUrl || '/logo.png');
+  await resolveProjectStyle(options.tenant);
   const subtitle = `Projet #${p?.project_number || '—'} · ${p?.client_name || options.tenant} · ${new Date().toLocaleDateString('fr-CA')}`;
 
   // ── Page 1 — Couverture / Sommaire exécutif ────────────────────────────────
@@ -854,6 +870,7 @@ export async function exportProjectListPdf(options: {
 
   const logo = await loadLogo(options.tenantLogoUrl || '/logo.png');
   const { projects, tenant } = options;
+  await resolveProjectStyle(tenant);
 
   const stats = {
     total: projects.length,

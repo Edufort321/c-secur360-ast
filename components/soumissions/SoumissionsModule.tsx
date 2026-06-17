@@ -415,7 +415,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
       } : null;
       await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
         cat, logoUrl, companyName, includeSummary: expSummary, coverLetter, breakdownMode, includeTaux: inclTaux,
-        headerColor: coverCfg?.cover_letter?.header_color || null,
+        tenant, headerColor: coverCfg?.cover_letter?.header_color || null,
         conditions: (coverCfg?.conditions || []).filter(c => condSel.includes(c.id)).map(c => ({ titre: c.titre, contenu: c.contenu })),
         attachments: attachLib.filter(a => a.id && attachSel.includes(a.id) && a.file_url).map(a => ({ url: a.file_url!, filename: a.filename })),
         itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,

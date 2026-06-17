@@ -27,6 +27,9 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
   const W = doc.internal.pageSize.getWidth();
   const M = 40;
   let y = 40;
+  // Style du module « facture » (Modèles PDF) — accent + épaisseur, défaut accent DGA #277da1.
+  const st = await import('@/lib/pdfStyle').then(m => m.pdfStyleFor(tenant, 'facture')).catch(() => null);
+  const ACCENT: [number, number, number] = st?.accent || [39, 125, 161];
 
   // Logo (tenant ou défaut)
   const logo = await toDataUrl(company?.logo_url || '/c-secur360-logo.png');
@@ -45,7 +48,7 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
   y = Math.max(y + 56, ry) + 16;
 
   // Titre + métadonnées
-  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); doc.setTextColor(39, 125, 161); // accent DGA (#277da1)
+  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); doc.setTextColor(...ACCENT); // accent du module
   doc.text('FACTURE', M, y);
   doc.setTextColor(20);
   doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
@@ -67,7 +70,7 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
     head: [['Description', 'Qté', 'Prix unitaire', 'Montant']],
     body: items.map(it => [it.description, String(it.quantity), mny(it.unit_price), mny((Number(it.quantity) || 0) * (Number(it.unit_price) || 0))]),
     styles: { fontSize: 9, cellPadding: 5 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+    headStyles: { fillColor: ACCENT, textColor: 255 },
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
     margin: { left: M, right: M },
   });
