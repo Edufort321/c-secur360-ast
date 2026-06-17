@@ -26,13 +26,14 @@ async function loadLogo(url: string): Promise<string | null> {
     return await new Promise<string>(resolve => { const r = new FileReader(); r.onloadend = () => resolve(r.result as string); r.readAsDataURL(blob); });
   } catch { return null; }
 }
-function drawHeader(doc: Doc, logo: string | null, title: string, subtitle: string) {
+function drawHeader(doc: Doc, logo: string | null, title: string, subtitle: string, accent?: [number, number, number]) {
   doc.setFillColor(...COL.dark); doc.rect(0, 0, PAGE_W, 22, 'F');
   if (logo) { try { doc.addImage(logo, 'PNG', ML, 4, 0, 14); } catch { /* ignore */ } }
   else { doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...COL.white); doc.text('C-Secur360', ML, 14); }
   doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...COL.white); doc.text(title, PAGE_W - MR, 11, { align: 'right' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text(subtitle, PAGE_W - MR, 17, { align: 'right' });
-  doc.setDrawColor(...COL.primary); doc.setLineWidth(0.5); doc.line(0, 22, PAGE_W, 22);
+  // Filet d'accent du module (Modèles PDF) — défaut bleu.
+  doc.setDrawColor(...(accent || COL.primary)); doc.setLineWidth(1); doc.line(0, 22, PAGE_W, 22);
 }
 function drawFooter(doc: Doc, n: number, total: number) {
   doc.setDrawColor(...COL.light); doc.setLineWidth(0.3); doc.line(ML, PAGE_H - 10, PAGE_W - MR, PAGE_H - 10);
@@ -78,8 +79,9 @@ export async function exportBonCommandePdf(opts: {
   const logo = await loadLogo(opts.tenantLogoUrl || '/logo.png');
   const totals = computeBonTotal(b.items || [], b.province || 'QC');
   const anyRecu = (b.items || []).some(l => (Number(l.recu) || 0) > 0);
+  const accent = await import('@/lib/pdfStyle').then(m => m.pdfAccentFor(opts.tenant, 'bon_commande')).catch(() => undefined);
 
-  drawHeader(doc, logo, tr('Bon de commande', 'Purchase order'), `${b.numero} · ${opts.tenant} · ${new Date().toLocaleDateString('fr-CA')}`);
+  drawHeader(doc, logo, tr('Bon de commande', 'Purchase order'), `${b.numero} · ${opts.tenant} · ${new Date().toLocaleDateString('fr-CA')}`, accent);
 
   // ── Bloc fournisseur / projet / statut ─────────────────────────────────────
   let y = 28;
