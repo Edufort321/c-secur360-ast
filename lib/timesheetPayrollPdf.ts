@@ -12,7 +12,7 @@ const money = (n: number) => `${(Math.round((n || 0) * 100) / 100).toLocaleStrin
 const h1 = (n: number) => (Number(n) || 0).toLocaleString('fr-CA', { maximumFractionDigits: 2 });
 
 export async function exportPayrollRegisterPdf(opts: {
-  tr: Tr; logoUrl?: string; tenantName?: string; periodLabel?: string; rows: PayrollRow[];
+  tr: Tr; logoUrl?: string; tenantName?: string; periodLabel?: string; rows: PayrollRow[]; accent?: [number, number, number];
 }) {
   const { tr, rows } = opts;
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape' });
@@ -24,9 +24,9 @@ export async function exportPayrollRegisterPdf(opts: {
     `${tr('Période', 'Period')} : ${opts.periodLabel || '—'}`,
     `${tr('Généré le', 'Generated')} : ${new Date().toLocaleDateString('fr-CA')}`,
   ];
-  const pageHeader = () => drawHeader(doc, { logo, rightLines });
+  const pageHeader = () => drawHeader(doc, { logo, rightLines, accent: opts.accent });
   let y = pageHeader();
-  y = drawTitle(doc, y, tr('Registre de paie', 'Payroll register'), `${rows.length} ${tr('employé(s)', 'employee(s)')} · ${opts.periodLabel || ''}`);
+  y = drawTitle(doc, y, tr('Registre de paie', 'Payroll register'), `${rows.length} ${tr('employé(s)', 'employee(s)')} · ${opts.periodLabel || ''}`, opts.accent);
 
   const sum = (k: keyof PayrollRow) => rows.reduce((a, r) => a + Number(r[k] || 0), 0);
   const head = [[

@@ -19,6 +19,7 @@ import { BankConnect } from '@/components/admin/BankConnect';
 import { OnboardingWizard } from '@/components/admin/OnboardingWizard';
 import { BudgetModule } from '@/components/admin/BudgetModule';
 import { ReconciliationPanel } from '@/components/admin/ReconciliationPanel';
+import { PdfStylesManager } from '@/components/admin/PdfStylesManager';
 import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
@@ -251,8 +252,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'controle' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'controle', 'actionnaires', 'alertes', 'audit', 'integrations'];
+  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'controle' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'pdf-styles' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'controle', 'actionnaires', 'alertes', 'audit', 'pdf-styles', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -313,6 +314,7 @@ export default function AdminPage() {
     { k: 'alertes',     label: tr('Alertes', 'Alerts'),                      icon: Bell, group: 'systeme', need: p => p.manageAll },
     { k: 'audit',       label: tr('Journal d\'audit', 'Audit log'),          icon: ShieldCheck, group: 'systeme', need: p => p.manageAll },
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, group: 'systeme', need: p => p.manageAll },
+    { k: 'pdf-styles',  label: tr('Modèles PDF', 'PDF templates'),           icon: FileText, group: 'systeme', need: p => p.manageAll },
     { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink, group: 'systeme', need: p => p.manageAll },
   ];
   const GROUPS: { k: GroupKey; label: string; icon: any }[] = [
@@ -450,6 +452,7 @@ export default function AdminPage() {
         {tab === 'etat-financier' && <FinancialDashboard tenant={tenant} tr={tr} />}
         {tab === 'budget' && <BudgetModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'controle' && <ReconciliationPanel tenant={tenant} tr={tr} canExport={!!perms.manageAll} />}
+        {tab === 'pdf-styles' && <PdfStylesManager tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'actionnaires' && <ShareholdersModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'alertes' && <AlertsModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'audit' && <AuditLog tenant={tenant} tr={tr} />}
@@ -562,8 +565,9 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   }
   async function exportPdfFor(ids: string[], periodLabel: string) {
     const rs = rowsFor(ids); if (!rs.length) { alert(tr('Aucune feuille à exporter.', 'Nothing to export.')); return; }
-    const { exportPayrollRegisterPdf } = await import('@/lib/timesheetPayrollPdf');
-    await exportPayrollRegisterPdf({ tr, logoUrl, tenantName, periodLabel, rows: rs });
+    const [{ exportPayrollRegisterPdf }, { pdfAccentFor }] = await Promise.all([import('@/lib/timesheetPayrollPdf'), import('@/lib/pdfStyle')]);
+    const accent = await pdfAccentFor(tenant, 'paie').catch(() => undefined);
+    await exportPayrollRegisterPdf({ tr, logoUrl, tenantName, periodLabel, rows: rs, accent });
   }
 
   const mny = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
