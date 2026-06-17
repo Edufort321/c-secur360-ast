@@ -54,14 +54,20 @@ export function BankConnect({ tenant, tr, accounts, onSynced }: { tenant: string
     try { await fetch('/api/bank', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, action: 'disconnect', connectionId: id }) }); await load(); } catch (e: any) { setNotice(e?.message); }
   }
 
-  if (loading) return <div className="flex items-center gap-2 p-3 text-sm text-gray-400"><Loader2 className="animate-spin" size={15} /> {tr('Chargement…', 'Loading…')}</div>;
+  if (loading) return null;
+
+  // Non configuré : note DISCRÈTE (l'import CSV/OFX fonctionne sans Flinks — ne pas alarmer).
+  if (!configured) return (
+    <details className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-800/50">
+      <summary className="cursor-pointer font-semibold"><Landmark size={12} className="mb-0.5 mr-1 inline" /> {tr('Connexion bancaire automatique (optionnel)', 'Automatic bank connection (optional)')}</summary>
+      <p className="mt-1">{tr('Synchro temps réel via Flinks — non configurée. L’import CSV / OFX / QFX ci-dessous fonctionne déjà. Pour activer l’automatique : compte Flinks + clés FLINKS_* (docs/BANK_AGGREGATOR.md).', 'Real-time sync via Flinks — not configured. CSV / OFX / QFX import below already works. To enable auto: Flinks account + FLINKS_* keys (docs/BANK_AGGREGATOR.md).')}</p>
+    </details>
+  );
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white"><Landmark size={16} className="text-indigo-600" /> {tr('Connexion bancaire (temps réel)', 'Bank connection (real-time)')}</div>
-      {!configured ? (
-        <p className="mt-1 text-xs text-gray-500">{tr('Synchro automatique non configurée (agrégateur Flinks). Pour l’activer : créer un compte Flinks et poser les clés FLINKS_* (voir docs/BANK_AGGREGATOR.md). En attendant, utilisez l’import CSV.', 'Auto-sync not configured (Flinks aggregator). To enable: create a Flinks account and set FLINKS_* keys (see docs/BANK_AGGREGATOR.md). Meanwhile, use CSV import.')}</p>
-      ) : (
+      {(
         <>
           <p className="mt-1 text-xs text-gray-500">{tr('Connectez votre banque : les opérations se synchronisent automatiquement dans le rapprochement.', 'Connect your bank: transactions auto-sync into reconciliation.')}</p>
           {notice && <div className="mt-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}

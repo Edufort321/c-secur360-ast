@@ -80,48 +80,55 @@ export function parseBankCsv(text: string): BankLine[] {
   const delim = [';', '\t', ','].sort((a, b) => score(b) - score(a))[0];
   const rows = lines.map(l => splitCsvLine(l, delim));
 
-  // 1) Cherche une LIGNE D'EN-TÊTE dans les 15 premières (date + un indice de montant).
+  // 1) Cherche une LIGNE D'EN-TÊTE dans les 15 premières (date + un indice de montant, incl. devise CAD/USD).
   let headerIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const lc = rows[i].map(h => h.toLowerCase());
-    if (lc.some(h => /date/.test(h)) && lc.some(h => /montant|amount|débit|debit|crédit|credit|retrait|dépôt|depot|withdraw|deposit|solde|balance/.test(h))) { headerIdx = i; break; }
+    if (lc.some(h => /date/.test(h)) && lc.some(h => /montant|amount|\bcad\b|\busd\b|débit|debit|crédit|credit|retrait|dépôt|depot|withdraw|deposit|solde|balance/.test(h))) { headerIdx = i; break; }
   }
-  let iDate = 0, iDesc = 1, iAmt = -1, iDr = -1, iCr = -1, start = 0;
+  let iDate = 0, iDr = -1, iCr = -1, start = 0;
+  let descCols: number[] = [], amtCols: number[] = [];
   if (headerIdx >= 0) {
     const head = rows[headerIdx].map(h => h.toLowerCase());
-    const find = (re: RegExp) => head.findIndex(h => re.test(h));
-    iDate = find(/date/); iDesc = find(/desc|libell|détail|detail|narration|opération|operation|transaction|tiers|payee/);
-    iAmt = find(/montant|amount|^total/);
-    iDr = find(/débit|debit|retrait|withdraw|sortie/); iCr = find(/crédit|credit|dépôt|depot|deposit|entrée/);
-    if (iDate < 0) iDate = 0;
-    if (iDesc < 0) iDesc = rows[headerIdx].findIndex((_, k) => k !== iDate && k !== iAmt && k !== iDr && k !== iCr);
-    if (iDesc < 0) iDesc = 1;
+    const findAll = (re: RegExp) => head.map((h, k) => ({ h, k })).filter(x => re.test(x.h)).map(x => x.k);
+    iDate = head.findIndex(h => /date/.test(h)); if (iDate < 0) iDate = 0;
+    descCols = findAll(/desc|libell|détail|detail|narration|opération|operation|tiers|payee|memo|note/);   // combine Description 1 + 2…
+    iDr = head.findIndex(h => /débit|debit|retrait|withdraw|sortie/.test(h));
+    iCr = head.findIndex(h => /crédit|credit|dépôt|depot|deposit|entrée/.test(h));
+    amtCols = findAll(/\bcad\b|\busd\b|montant|amount|^total/);   // RBC : colonne « CAD »
+    // Exclut des descriptions les colonnes date/montant/débit/crédit (ex. « Date de l'opération » matche « opération »).
+    descCols = descCols.filter(k => k !== iDate && k !== iDr && k !== iCr && !amtCols.includes(k));
     start = headerIdx + 1;
   } else {
-    // 2) Pas d'en-tête : on démarre à la 1re ligne contenant une DATE, et on infère les colonnes.
-    start = rows.findIndex(r => r.some(isDateLike));
-    if (start < 0) start = 0;
+    // 2) Pas d'en-tête : 1re ligne avec une DATE, puis inférence.
+    start = rows.findIndex(r => r.some(isDateLike)); if (start < 0) start = 0;
     const s = rows[start] || [];
     iDate = s.findIndex(isDateLike); if (iDate < 0) iDate = 0;
-    const amtCols = s.map((c, k) => ({ k, ok: isAmountLike(c) })).filter(x => x.ok && x.k !== iDate).map(x => x.k);
-    iAmt = amtCols.length ? amtCols[0] : -1; // 1re colonne « montant » après la date
-    iDesc = s.findIndex((c, k) => k !== iDate && !isAmountLike(c) && (c || '').trim().length > 0);
-    if (iDesc < 0) iDesc = s.findIndex((_, k) => k !== iDate && k !== iAmt);
-    if (iDesc < 0) iDesc = 1;
+    amtCols = s.map((c, k) => ({ k, ok: isAmountLike(c) })).filter(x => x.ok && x.k !== iDate).map(x => x.k);
+    const dCol = s.findIndex((c, k) => k !== iDate && !isAmountLike(c) && (c || '').trim().length > 0);
+    descCols = dCol >= 0 ? [dCol] : [1];
   }
+  if (!descCols.length) { const d = (rows[Math.min(start, rows.length - 1)] || []).findIndex((_, k) => k !== iDate && k !== iDr && k !== iCr && !amtCols.includes(k)); descCols = d >= 0 ? [d] : [1]; }
+
+  // Ordre des dates J/M vs M/J : on scanne le fichier (un composant > 12 tranche). Défaut M/J (relevés nord-américains).
+  let dayFirst = false;
+  for (let i = start; i < rows.length; i++) { const m = (rows[i][iDate] || '').match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.]\d{2,4}/); if (m) { if (+m[1] > 12) { dayFirst = true; break; } if (+m[2] > 12) { dayFirst = false; break; } } }
+  const nd = (v: string) => { const t = String(v || '').trim(); if (/^\d{4}-\d{1,2}-\d{1,2}/.test(t)) { const [y, mo, da] = t.split(/[-/]/); return `${y}-${mo.padStart(2, '0')}-${da.padStart(2, '0')}`; } const m = t.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/); if (!m) return t; let [, p, q, y] = m as any; if (y.length === 2) y = '20' + y; const mo = dayFirst ? q : p, da = dayFirst ? p : q; return `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`; };
+  const amtOf = (c: string[]) => {
+    if (iCr >= 0 || iDr >= 0) return r2((iCr >= 0 ? Math.abs(parseAmount(c[iCr])) : 0) - (iDr >= 0 ? Math.abs(parseAmount(c[iDr])) : 0));
+    for (const k of amtCols) { const v = c[k]; if (v && v.trim()) return r2(parseAmount(v)); }   // 1re colonne devise non vide (CAD avant USD)
+    return 0;
+  };
+  const descOf = (c: string[]) => descCols.map(k => c[k]).filter(x => x && x.trim()).join(' — ').slice(0, 300);
 
   const out: BankLine[] = [];
   for (let i = start; i < rows.length; i++) {
     const c = rows[i];
     if (!c.length || c.every(x => !x.trim())) continue;
-    const stmt_date = normDate(c[iDate] || '');
-    // Ignore les lignes de SOLDE / report (pas une vraie opération).
-    if (/solde|balance|report|total/i.test(c[iDesc >= 0 ? iDesc : 1] || '')) continue;
-    let amount: number;
-    if (iCr >= 0 || iDr >= 0) amount = r2((iCr >= 0 ? Math.abs(parseAmount(c[iCr])) : 0) - (iDr >= 0 ? Math.abs(parseAmount(c[iDr])) : 0));
-    else amount = r2(parseAmount(c[iAmt >= 0 ? iAmt : 2] || ''));
-    const description = (c[iDesc >= 0 ? iDesc : 1] || '').slice(0, 300);
-    if (!stmt_date && !description && !amount) continue;
+    const stmt_date = nd(c[iDate] || '');
+    const description = descOf(c) || '—';
+    if (/^(solde|balance|report|opening|closing|solde d)/i.test(description)) continue; // ligne de solde (pas une opération)
+    const amount = amtOf(c);
     if (!/^\d{4}-\d{2}-\d{2}/.test(stmt_date) && !amount) continue; // ni date valide ni montant -> bruit
     out.push({ stmt_date, description, amount, reconciled: false, matched_transaction_id: null });
   }
@@ -154,9 +161,10 @@ export function parseOfx(text: string): { lines: BankLine[]; accountNumber?: str
 export function parseStatement(text: string): { lines: BankLine[]; accountNumber?: string } {
   const s = String(text ?? '');
   if (/<OFX>|OFXHEADER|<STMTTRN>/i.test(s)) return parseOfx(s);
-  // CSV : n° de compte best-effort depuis l'en-tête/préambule (« Compte : 1234-567 », « Account No 8157 »…).
-  const head = s.split(/\r?\n/).slice(0, 15).join('\n');
-  const accountNumber = (head.match(/(?:compte|account|no\.?\s*compte|n[°o]\s*compte)\D{0,10}(\d[\d\s•.\-]{2,18}\d)/i) || [])[1];
+  // CSV : n° de compte best-effort — après « compte/account », OU un n° de type RBC « 05585-1038157 ».
+  const head = s.split(/\r?\n/).slice(0, 20).join('\n');
+  const accountNumber = (head.match(/(?:compte|account|no\.?\s*compte|n[°o]\s*compte)\D{0,10}(\d[\d\s•.\-]{2,18}\d)/i)
+    || head.match(/\b(\d{3,6}-\d{5,10})\b/) || [])[1];
   return { lines: parseBankCsv(s), accountNumber };
 }
 
