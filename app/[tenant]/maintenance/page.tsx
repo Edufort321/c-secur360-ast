@@ -11,6 +11,8 @@ import {
   getMaintActions, saveMaintAction, setMaintActionStatus, rollupByEquipment, FREQ_DAYS,
   type MaintTemplate, type MaintSheet, type MaintLog, type MaintAction, type MaintEquipment, type MaintLine, type MaintResult,
 } from '@/lib/maintenance';
+import { supabase } from '@/lib/supabase';
+import { Phone, Save } from 'lucide-react';
 
 const newId = () => (globalThis.crypto?.randomUUID?.() || `m${Date.now()}${Math.round(Math.random() * 1e6)}`);
 const FREQS = ['quotidien', 'hebdomadaire', 'mensuel', 'semestriel', 'annuel', 'par_quart'];
@@ -34,6 +36,10 @@ export default function MaintenancePage() {
 
   // Taux horaire de MO pour valoriser le temps de maintenance (chrono → coût). Éditable.
   const [laborRate, setLaborRate] = useState(85);
+  // Alertes publiques reçues par scan QR + numéro de support du tenant.
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [support, setSupport] = useState<{ phone: string; email: string }>({ phone: '', email: '' });
+  const [supportBusy, setSupportBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -42,9 +48,31 @@ export default function MaintenancePage() {
         getEquipmentList(tenant), getMaintTemplates(tenant), getMaintSheets(tenant), getMaintLogs(tenant), getMaintActions(tenant),
       ]);
       setEquipment(eq); setTemplates(tpl); setSheets(sh); setLogs(lg); setActions(ac);
+      try {
+        const { data: al } = await supabase.from('maintenance_alerts').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(100);
+        setAlerts(al || []);
+      } catch { /* table absente (migration 215) */ }
+      try {
+        const { data: cs } = await supabase.from('company_settings').select('support_phone, support_email').eq('tenant_id', tenant).maybeSingle();
+        if (cs) setSupport({ phone: (cs as any).support_phone || '', email: (cs as any).support_email || '' });
+      } catch { /* ignore */ }
     } catch (e: any) { setNotice(e?.message || 'Erreur de chargement.'); }
     finally { setLoading(false); }
   }
+  async function resolveAlert(alertId: string) {
+    await supabase.from('maintenance_alerts').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', alertId).eq('tenant_id', tenant);
+    load();
+  }
+  async function saveSupport() {
+    setSupportBusy(true); setNotice(null);
+    try {
+      const { error } = await supabase.from('company_settings').upsert({ tenant_id: tenant, support_phone: support.phone || null, support_email: support.email || null, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' });
+      if (error) throw error;
+      setNotice('Numéro de support enregistré ✓');
+    } catch (e: any) { setNotice('Erreur (migration 215 ?) : ' + (e?.message || 'DB')); }
+    finally { setSupportBusy(false); }
+  }
+  const newAlerts = useMemo(() => alerts.filter(a => a.status === 'new'), [alerts]);
   useEffect(() => { if (tenant) load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const rollups = useMemo(() => rollupByEquipment(equipment, sheets, logs, actions), [equipment, sheets, logs, actions]);
@@ -160,6 +188,40 @@ export default function MaintenancePage() {
                   <div className={`text-xl font-extrabold ${k.color}`}>{k.value}</div>
                 </div>
               ); })}
+            </div>
+
+            {/* Alertes publiques reçues par scan QR */}
+            <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm dark:border-orange-800 dark:bg-orange-900/20">
+              <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-orange-800 dark:text-orange-200"><AlertTriangle size={15} /> Alertes publiques (scan QR) {newAlerts.length > 0 && <span className="rounded-full bg-orange-600 px-2 py-0.5 text-[11px] text-white">{newAlerts.length}</span>}</h3>
+              {alerts.length === 0 ? (
+                <p className="text-xs text-orange-700/80 dark:text-orange-300/80">Aucune alerte reçue. Activez « Alertes publiques par scan » sur une fiche d'équipement et collez son QR.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {alerts.slice(0, 12).map(a => (
+                    <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${a.status === 'resolved' ? 'border-slate-200 bg-white/60 opacity-60 dark:border-gray-700 dark:bg-gray-800/40' : 'border-orange-200 bg-white dark:border-orange-700 dark:bg-gray-800'}`}>
+                      <div className="min-w-0 flex-1">
+                        <span className="mr-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">{a.alert_type}</span>
+                        <span className="font-medium">{a.equipment_name || '—'}</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-300">{a.description}</span>
+                        <div className="text-[11px] text-gray-400">{new Date(a.created_at).toLocaleString('fr-CA')}{a.reporter_name ? ` · ${a.reporter_name}` : ''}{a.reporter_phone ? ` · ${a.reporter_phone}` : ''}</div>
+                      </div>
+                      {a.status !== 'resolved'
+                        ? <button onClick={() => resolveAlert(a.id)} className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700">Résolu</button>
+                        : <span className="shrink-0 text-xs font-semibold text-emerald-600">✓ Résolu</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Numéro de support affiché sur la page publique scannée */}
+              <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-orange-200 pt-3 dark:border-orange-800">
+                <label className="text-xs font-semibold text-orange-800 dark:text-orange-200"><span className="mb-1 flex items-center gap-1"><Phone size={12} /> N° de support (affiché au scan)</span>
+                  <input value={support.phone} onChange={e => setSupport(s => ({ ...s, phone: e.target.value }))} placeholder="514-555-0123" className="rounded-lg border border-orange-300 bg-white px-2 py-1.5 text-sm dark:border-orange-700 dark:bg-gray-800" />
+                </label>
+                <label className="text-xs font-semibold text-orange-800 dark:text-orange-200"><span className="mb-1 block">Courriel de support</span>
+                  <input value={support.email} onChange={e => setSupport(s => ({ ...s, email: e.target.value }))} placeholder="support@…" className="rounded-lg border border-orange-300 bg-white px-2 py-1.5 text-sm dark:border-orange-700 dark:bg-gray-800" />
+                </label>
+                <button onClick={saveSupport} disabled={supportBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{supportBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer</button>
+              </div>
             </div>
 
             {/* Correctifs à faire */}

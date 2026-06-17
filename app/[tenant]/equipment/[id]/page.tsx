@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, XCircle, AlertTriangle, AlertOctagon,
-  Clock, ClipboardCheck, Plus, ChevronRight, Loader2, Edit2,
+  Clock, ClipboardCheck, Plus, ChevronRight, Loader2, Edit2, Phone, Mail, Wrench, Send,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -67,6 +67,12 @@ export default function EquipmentPublicPage() {
   const [loading,    setLoading]    = useState(true);
   const [lightbox,   setLightbox]   = useState<string | null>(null);
   const [isTenant,   setIsTenant]   = useState(false);
+  // Maintenance périodique (échéance la plus proche) + contact support + alerte publique.
+  const [maintDue,   setMaintDue]   = useState<string | null>(null);
+  const [support,    setSupport]    = useState<{ phone?: string; email?: string }>({});
+  const [alertForm,  setAlertForm]  = useState({ alert_type: 'bris', reporter_name: '', reporter_phone: '', description: '' });
+  const [alertBusy,  setAlertBusy]  = useState(false);
+  const [alertDone,  setAlertDone]  = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null)
@@ -84,13 +90,30 @@ export default function EquipmentPublicPage() {
         .order('inspection_date', { ascending: false })
         .limit(20),
       sb.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(),
-    ]).then(([eqRes, insRes, logoRes]) => {
+      sb.from('company_settings').select('support_phone, support_email').eq('tenant_id', tenant).maybeSingle(),
+      sb.from('maintenance_sheets').select('next_due_at').eq('tenant_id', tenant).eq('equipment_id', id).order('next_due_at', { ascending: true }),
+    ]).then(([eqRes, insRes, logoRes, csRes, msRes]: any[]) => {
       setEquipment(eqRes.data as EquipmentRow ?? null);
       setInspections((insRes.data ?? []) as InspRow[]);
       if (logoRes.data?.logo_url) setLogoUrl(logoRes.data.logo_url);
+      if (csRes?.data) setSupport({ phone: csRes.data.support_phone || '', email: csRes.data.support_email || '' });
+      const due = (msRes?.data || []).map((m: any) => m.next_due_at).filter(Boolean).sort()[0] || null;
+      setMaintDue(due);
       setLoading(false);
-    });
+    }, () => setLoading(false));
   }, [id, tenant]);
+
+  async function submitAlert() {
+    if (alertBusy || alertForm.description.trim().length < 3) return;
+    setAlertBusy(true);
+    try {
+      const r = await fetch('/api/maintenance/alert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, equipment_id: id, ...alertForm }) });
+      const j = await r.json();
+      if (!r.ok) { alert(j.error || 'Erreur'); return; }
+      setAlertDone(true);
+    } catch { alert(fr ? 'Erreur réseau.' : 'Network error.'); }
+    finally { setAlertBusy(false); }
+  }
 
   if (loading) {
     return (
@@ -192,6 +215,58 @@ export default function EquipmentPublicPage() {
             )}
           </div>
         </div>
+
+        {/* Maintenance périodique — feu de circulation (vert OK / jaune bientôt / rouge en retard) */}
+        {(() => {
+          if (!maintDue) return null;
+          const days = Math.round((new Date(maintDue + 'T00:00:00').getTime() - Date.now()) / 86400_000);
+          const cfg = days < 0 ? { cls: 'bg-red-600', dot: '🔴', label: fr ? `En retard depuis le ${maintDue}` : `Overdue since ${maintDue}` }
+            : days <= 30 ? { cls: 'bg-yellow-500', dot: '🟡', label: fr ? `Bientôt due — ${maintDue} (${days} j)` : `Due soon — ${maintDue} (${days}d)` }
+            : { cls: 'bg-green-600', dot: '🟢', label: fr ? `À jour — prochaine le ${maintDue}` : `Up to date — next ${maintDue}` };
+          return (
+            <div className={`${cfg.cls} text-white rounded-xl px-4 py-3 flex items-center gap-2 text-sm font-semibold shadow-sm`}>
+              <Wrench size={16} /> {cfg.dot} {fr ? 'Maintenance périodique' : 'Periodic maintenance'} : {cfg.label}
+            </div>
+          );
+        })()}
+
+        {/* Signaler un bris / maintenance + contact support (page publique, sans login) */}
+        {((equipment as any).public_alerts_enabled || support.phone || support.email) && (
+          <div className="bg-white rounded-xl border border-orange-200 overflow-hidden">
+            <div className="px-5 py-3 bg-orange-50 border-b border-orange-100 text-sm font-semibold text-orange-800 flex items-center gap-2">
+              <AlertTriangle size={15} /> {fr ? 'Signaler un bris ou une maintenance' : 'Report a breakdown or maintenance'}
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {/* Contact support direct */}
+              {(support.phone || support.email) && (
+                <div className="flex flex-wrap gap-2">
+                  {support.phone && <a href={`tel:${support.phone}`} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800"><Phone size={14} /> {fr ? 'Appeler le support' : 'Call support'} · {support.phone}</a>}
+                  {support.email && <a href={`mailto:${support.email}`} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"><Mail size={14} /> {support.email}</a>}
+                </div>
+              )}
+              {/* Formulaire d'alerte (si activé sur l'équipement) */}
+              {(equipment as any).public_alerts_enabled && (alertDone ? (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center gap-2"><CheckCircle size={16} /> {fr ? 'Alerte envoyée — merci ! L\'équipe a été notifiée.' : 'Alert sent — thank you! The team has been notified.'}</div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={alertForm.alert_type} onChange={e => setAlertForm(f => ({ ...f, alert_type: e.target.value }))} className="col-span-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                      <option value="bris">{fr ? 'Bris / dommage' : 'Breakdown / damage'}</option>
+                      <option value="maintenance">{fr ? 'Maintenance requise' : 'Maintenance needed'}</option>
+                      <option value="autre">{fr ? 'Autre' : 'Other'}</option>
+                    </select>
+                    <input value={alertForm.reporter_name} onChange={e => setAlertForm(f => ({ ...f, reporter_name: e.target.value }))} placeholder={fr ? 'Votre nom (optionnel)' : 'Your name (optional)'} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                    <input value={alertForm.reporter_phone} onChange={e => setAlertForm(f => ({ ...f, reporter_phone: e.target.value }))} placeholder={fr ? 'Téléphone (optionnel)' : 'Phone (optional)'} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                  </div>
+                  <textarea value={alertForm.description} onChange={e => setAlertForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder={fr ? 'Décrivez le problème…' : 'Describe the issue…'} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm resize-none" />
+                  <button onClick={submitAlert} disabled={alertBusy || alertForm.description.trim().length < 3} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">
+                    {alertBusy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} {fr ? 'Envoyer l\'alerte' : 'Send alert'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Last inspection NCs */}
         {ncs.length > 0 && (

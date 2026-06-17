@@ -49,6 +49,7 @@ interface FormState {
   inspectionShifts: string[];
   province: ProvinceCode;
   notes: string;
+  publicAlertsEnabled: boolean; // QR scannable par un externe -> signalement bris/maintenance
 }
 
 const EMPTY: FormState = {
@@ -63,6 +64,7 @@ const EMPTY: FormState = {
   inspectionShifts:    [],
   province:            'QC',
   notes:               '',
+  publicAlertsEnabled: false,
 };
 
 interface Props {
@@ -121,6 +123,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved, o
           inspectionShifts:    r.inspection_shifts ?? [],
           province:            r.province ?? 'QC',
           notes:               r.notes ?? '',
+          publicAlertsEnabled: (r as any).public_alerts_enabled ?? false,
         });
       });
     supabase.from('equipment_inspections').select('id', { count: 'exact', head: true }).eq('equipment_id', equipmentId)
@@ -146,17 +149,22 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved, o
         inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
         province:             form.province,
         notes:                form.notes || null,
+        public_alerts_enabled: form.publicAlertsEnabled,
         updated_at:           new Date().toISOString(),
       };
 
       let savedId: string | null = equipmentId ?? null;
+      // Résilient : si « public_alerts_enabled » n'existe pas encore (migration 215 non appliquée), on le retire.
+      const isMissingCol = (e: any) => /public_alerts_enabled/.test(e?.message || '') && /(does not exist|schema cache|column)/i.test(e?.message || '');
 
       if (!equipmentId) {
-        const { data, error } = await supabase.from('equipment').insert(payload).select('id').single();
+        let { data, error } = await supabase.from('equipment').insert(payload).select('id').single();
+        if (error && isMissingCol(error)) { delete (payload as any).public_alerts_enabled; ({ data, error } = await supabase.from('equipment').insert(payload).select('id').single()); }
         if (error) throw error;
         savedId = data?.id ?? null;
       } else {
-        const { error } = await supabase.from('equipment').update(payload).eq('id', equipmentId);
+        let { error } = await supabase.from('equipment').update(payload).eq('id', equipmentId);
+        if (error && isMissingCol(error)) { delete (payload as any).public_alerts_enabled; ({ error } = await supabase.from('equipment').update(payload).eq('id', equipmentId)); }
         if (error) throw error;
         savedId = equipmentId;
       }
@@ -448,7 +456,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved, o
                   : 'Print and attach this code to the equipment. It gives access to the public sheet and allows starting an inspection directly.'}
               </p>
 
-              <div className="p-4 bg-white border-2 border-gray-200 rounded-2xl shadow-sm">
+              <div className="p-4 bg-white border-2 border-gray-200 rounded-2xl shadow-sm text-center">
                 <QRCodeSVG
                   id="equipment-qr-svg"
                   value={`${typeof window !== 'undefined' ? window.location.origin : ''}/${tenant}/equipment/${currentId}`}
@@ -456,7 +464,21 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved, o
                   level="M"
                   includeMargin={false}
                 />
+                {/* Légende imprimée sous le QR */}
+                <div className="mt-2 max-w-[200px] text-[10px] font-semibold leading-tight text-gray-700">
+                  {fr ? 'Scannez pour le numéro de support ou pour céduler une maintenance' : 'Scan for support number or to schedule maintenance'}
+                </div>
               </div>
+
+              {/* Toggle : autoriser les alertes publiques par scan (off pour les lieux publics) */}
+              <label className="flex w-full max-w-xs cursor-pointer items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange-600" checked={form.publicAlertsEnabled}
+                  onChange={e => setForm(f => ({ ...f, publicAlertsEnabled: e.target.checked }))} />
+                <span className="text-xs text-orange-800">
+                  <span className="font-bold">{fr ? 'Alertes publiques par scan' : 'Public scan alerts'}</span><br />
+                  {fr ? 'Permet à quiconque de signaler un bris/maintenance via le QR. Désactivez dans un lieu public pour éviter les alertes inutiles.' : 'Lets anyone report a breakdown/maintenance via the QR. Turn off in public places to avoid noise.'}
+                </span>
+              </label>
 
               <div className="flex gap-2 w-full max-w-xs">
                 <button
