@@ -89,14 +89,14 @@ export default function TimesheetsPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
-  const [employeeFilter, setEmployeeFilter] = useState('');
-  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [employeeFilter] = useState(''); // page personnelle : pas de filtre par employé
+  // PAGE PERSONNELLE : l'utilisateur ne voit QUE sa propre feuille. La gestion d'équipe (approbations,
+  // toutes les feuilles) est dans l'Admin → onglet « Feuilles de temps ». Donc plus de vue « Équipe » ici.
+  const isSupervisor = false;
   const [currentUserId, setCurrentUserId] = useState('');
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [currentUserName, setCurrentUserName] = useState('');
-  // Superviseur : bascule entre sa propre grille de semaines (« mine ») et la table d'équipe (« team »).
-  // Défaut « mine » pour que la grille des semaines ne disparaisse pas au chargement.
-  const [svView, setSvView] = useState<'mine' | 'team'>('mine');
+  const svView: 'mine' | 'team' = 'mine';
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(({ user }) => {
@@ -104,7 +104,6 @@ export default function TimesheetsPage() {
       setCurrentUserId(user.id);
       setCurrentUserEmail(user.email || '');
       setCurrentUserName(user.name || user.email || 'Employé');
-      setIsSupervisor(user.role === 'client_admin' || user.role === 'super_admin');
     }).catch(() => {});
   }, []);
 
@@ -245,34 +244,6 @@ export default function TimesheetsPage() {
           </div>
         </div>
 
-        {/* Approbations en attente (vue Équipe) */}
-        {isSupervisor && svView === 'team' && pendingApproval.length > 0 && (
-          <div className="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50">
-            <div className="border-b border-amber-200 px-4 py-3">
-              <h2 className="flex items-center gap-2 font-bold text-amber-800">
-                <AlertCircle size={16} /> {pendingApproval.length} feuille{pendingApproval.length > 1 ? 's' : ''} en attente d&apos;approbation
-              </h2>
-            </div>
-            <div className="divide-y divide-amber-100">
-              {pendingApproval.map(s => (
-                <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                  <User size={14} className="text-amber-600" />
-                  <div className="flex-1">
-                    <span className="text-sm font-semibold text-amber-900">{s.employee_name}</span>
-                    <span className="ml-2 text-xs text-amber-700">{fmt(s.period_start)} – {fmt(s.period_end)}</span>
-                  </div>
-                  <span className="text-sm font-medium text-amber-800">{money(Number(s.total_amount))}</span>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => approve(s.id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Approuver</button>
-                    <button onClick={() => reject(s.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Refuser</button>
-                    <Link href={`/${tenant}/timesheets/${s.id}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Voir</Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Stats annuelles */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
@@ -299,86 +270,13 @@ export default function TimesheetsPage() {
               </button>
             ))}
           </div>
-          {isSupervisor && employees.length > 1 && (
-            <select value={employeeFilter} onChange={e => setEmployeeFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
-              <option value="">Tous les employés</option>
-              {employees.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-          )}
         </div>
-
-        {/* Bascule superviseur : Mes feuilles (grille) / Équipe (table) */}
-        {isSupervisor && (
-          <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-            <button onClick={() => setSvView('mine')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${svView === 'mine' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>👤 Mes feuilles</button>
-            <button onClick={() => setSvView('team')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${svView === 'team' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>👥 Équipe{pendingApproval.length > 0 ? ` (${pendingApproval.length})` : ''}</button>
-          </div>
-        )}
 
         {/* Liste */}
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16"><Loader2 className="animate-spin text-slate-400" /></div>
-        ) : (isSupervisor && svView === 'team') ? (
-          /* Supervisor (vue Équipe) : table plate de toutes les feuilles filtrées */
-          filtered.length === 0 ? (
-            <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Clock size={26} /></div>
-              <p className="font-medium text-slate-700">Aucune feuille de temps</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
-                    <th className="px-4 py-3">Employé</th><th className="px-4 py-3">Période</th>
-                    <th className="px-4 py-3">Heures</th><th className="px-4 py-3">Km pers.</th>
-                    <th className="px-4 py-3">Montant</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(s => {
-                    const st = STATUS[s.status] || STATUS.draft;
-                    const Icon = st.icon;
-                    const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
-                    return (
-                      <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="grid h-7 w-7 place-items-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
-                              {(s.employee_name || '?')[0].toUpperCase()}
-                            </div>
-                            <span className="font-medium">{s.employee_name || s.employee_email}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">
-                          <div className="text-xs font-semibold text-violet-500 mb-0.5">P.{isoWeek(s.period_start)}</div>
-                          <div className="flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" />{fmt(s.period_start)} – {fmt(s.period_end)}</div>
-                        </td>
-                        <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
-                        <td className="px-4 py-3 text-slate-600">{Number(s.total_km_personal).toFixed(0)} km</td>
-                        <td className="px-4 py-3 font-semibold text-violet-700">{money(Number(s.total_amount))}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
-                            <Icon size={11} /> {st.label}
-                          </span>
-                          {s.rejection_note && <div className="mt-0.5 text-xs text-red-500">{s.rejection_note}</div>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Link href={`/${tenant}/timesheets/${s.id}`}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-                            Ouvrir <ChevronRight size={12} />
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )
         ) : (
-          /* Employé : grille complète des 52 périodes de l'année */
+          /* Employé : grille complète des 52 périodes de l'année (vue personnelle uniquement) */
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full min-w-[640px] text-sm sm:min-w-0">
               <thead>
