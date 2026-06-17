@@ -36,6 +36,7 @@ interface FactureData {
   notes: string;
   approved: boolean;
   approved_at: string | null;
+  commerce_invoice_id?: string | null; // lien vers la facture centrale (Facturation) créée à l'approbation
 }
 
 const defaultFacture = (projectType?: string): FactureData => ({
@@ -123,18 +124,45 @@ export function FactureTab({
     set('extras', facture.extras.filter((_, j) => j !== i));
 
   // ── Approbation ──────────────────────────────────────────────────────────
+  // À l'approbation : (1) n° séquentiel unique généré côté serveur (suit la séquence de la Facturation
+  // centrale, plus de N° aléatoire), (2) la facture REMONTE vers « Facturation » au statut « Traité »
+  // et le revenu est constaté au grand livre (pont syncProjectInvoice). L'encaissement se fait ensuite
+  // dans Facturation (bouton « Payée ») — y compris en associant un paiement bancaire.
   async function approve() {
-    const invoiceNum = facture.invoice_number.trim() ||
-      genInvoiceNumber(tenant, project?.project_number || '');
-    const updated: FactureData = {
-      ...facture,
-      invoice_number: invoiceNum,
-      approved: true,
-      approved_at: new Date().toISOString(),
-    };
-    setFacture(updated);
-    await persistFacture(updated);
-    setNotice(`✓ Facture approuvée — N° ${invoiceNum}`);
+    setSaving(true); setNotice(null);
+    try {
+      const { nextInvoiceNumber, syncProjectInvoice, getCompanySettings } = await import('@/lib/invoicing');
+      let invoiceNum = facture.invoice_number.trim();
+      if (!invoiceNum) {
+        try { const s = await getCompanySettings(tenant); invoiceNum = await nextInvoiceNumber(tenant, s?.invoice_prefix || 'F'); }
+        catch { invoiceNum = genInvoiceNumber(tenant, project?.project_number || ''); }
+      }
+      // Lignes de la facture centrale (mêmes montants que l'écran) : base + surcharge + dépenses + extras.
+      const taxed = facture.tps || facture.tvq;
+      const cat = taxed ? 'standard' as const : 'exempt' as const;
+      const mkItem = (description: string, amount: number) => ({ description, quantity: 1, unit_price: amount, subtotal: amount, taxable: taxed, tax_category: cat });
+      const items = [
+        mkItem(facture.mode === 'soumission' ? 'Soumission approuvée' : 'Feuille de temps (coût réel)', base),
+        ...(surchargeKmAmount > 0 ? [mkItem(`Surcharge carburant km (${kmSurchargePct}%)`, surchargeKmAmount)] : []),
+        ...(expensesBillableAmount > 0 ? [mkItem(tr('Dépenses refacturables', 'Billable expenses'), expensesBillableAmount)] : []),
+        ...facture.extras.filter(e => Number(e.amount) !== 0).map(e => mkItem(e.desc || 'Extra', Number(e.amount) || 0)),
+      ].filter(it => it.unit_price !== 0);
+
+      let commerceId = facture.commerce_invoice_id || null;
+      if (subtotal > 0) {
+        commerceId = await syncProjectInvoice(tenant, {
+          id: commerceId, invoice_number: invoiceNum, issue_date: facture.invoice_date,
+          province: project?.province || 'QC', client_name: project?.client_name || null,
+          notes: facture.notes || null, items, project_id: projectId, project_number: project?.project_number || null,
+        });
+      }
+      const updated: FactureData = { ...facture, invoice_number: invoiceNum, approved: true, approved_at: new Date().toISOString(), commerce_invoice_id: commerceId };
+      setFacture(updated);
+      await persistFacture(updated);
+      setNotice(`✓ ${tr('Facture', 'Invoice')} N° ${invoiceNum} — ${tr('visible dans Facturation (statut « Traité ») et remontée en comptabilité.', 'now in Invoicing (status “Processed”) and posted to accounting.')}`);
+    } catch (e: any) {
+      setNotice('Erreur : ' + (e?.message || tr('échec de l\'approbation.', 'approval failed.')));
+    } finally { setSaving(false); }
   }
 
   // ── Sauvegarde ────────────────────────────────────────────────────────────
@@ -188,7 +216,10 @@ export function FactureTab({
           <BadgeCheck size={20} className="text-emerald-600" />
           <div>
             <div className="font-semibold text-emerald-700 dark:text-emerald-300">
-              Facture approuvée — N° {facture.invoice_number}
+              {tr('Facture traitée', 'Invoice processed')} — N° {facture.invoice_number}
+            </div>
+            <div className="text-xs text-emerald-600 dark:text-emerald-400">
+              {tr('Visible dans Facturation (statut « Traité »). Encaissez-la depuis Facturation pour passer à « Payée ».', 'Visible in Invoicing (status “Processed”). Mark it paid from Invoicing.')}
             </div>
             {facture.approved_at && (
               <div className="text-xs text-emerald-600 dark:text-emerald-400">

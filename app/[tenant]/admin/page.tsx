@@ -249,8 +249,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'actionnaires', 'alertes', 'audit', 'integrations'];
+  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'actionnaires', 'alertes', 'audit', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -300,9 +300,8 @@ export default function AdminPage() {
     { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList, group: 'ventes' },
     { k: 'etat-financier', label: tr('État financier', 'Financial state'),     icon: TrendingUp, group: 'finance', need: p => p.viewSalary },
     { k: 'budget',      label: tr('Budget vs réel', 'Budget vs actual'),       icon: Layers, group: 'finance', need: p => p.viewSalary },
-    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, group: 'finance', need: p => p.viewSalary },
+    { k: 'factures',    label: tr('Facturation', 'Invoicing'),               icon: Receipt, group: 'finance', need: p => p.viewSalary },
     { k: 'recurrents',  label: tr('Abonnements', 'Subscriptions'),            icon: Repeat, group: 'finance', need: p => p.viewSalary },
-    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, group: 'finance', need: p => p.manageAll },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, group: 'finance', need: p => p.viewSalary },
     { k: 'immobilisations', label: tr('Immobilisations', 'Fixed assets'),     icon: Boxes, group: 'finance', need: p => p.viewSalary },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, group: 'finance', need: p => p.viewSalary },
@@ -453,7 +452,6 @@ export default function AdminPage() {
         {tab === 'integrations' && <ErpSharing tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user' || niveauAcces === 'direction'} />}
         {tab === 'rh'         && <RHHub tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
-        {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
     </div>
   );
@@ -692,11 +690,6 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
 function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [subTab, setSubTab] = useState<'resume' | 'factures'>('resume');
-  const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<any>({});
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -711,58 +704,16 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
   const sum = (st: string) => rows.filter(r => r.status === st).reduce((s, r) => s + Number(r.po_amount || 0), 0);
   const margeTotale = rows.filter(r => r.status === 'facture').reduce((s, r) => s + (Number(r.po_amount || 0) - reelOf(r)), 0);
 
-  const INV: Record<string, { label: string; cls: string }> = {
-    draft:     { label: tr('Brouillon', 'Draft'),   cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
-    sent:      { label: tr('Envoyée', 'Sent'),      cls: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
-    paid:      { label: tr('Payée', 'Paid'),        cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' },
-    cancelled: { label: tr('Annulée', 'Cancelled'), cls: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' },
-  };
-
-  function startEdit(row: any) {
-    setEditing(row.id);
-    const idx = rows.findIndex(r => r.id === row.id);
-    setForm(row.facture || {
-      invoice_number: `F-${new Date().getFullYear()}-${String(idx + 1).padStart(3, '0')}`,
-      invoice_date: new Date().toISOString().slice(0, 10),
-      due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-      status: 'draft', notes: '',
-    });
-  }
-
-  async function saveInvoice(projectId: string) {
-    setSaving(true); setNotice(null);
-    try {
-      await supabase.from('projects').update({ facture: form }).eq('id', projectId);
-      setRows(p => p.map(r => r.id === projectId ? { ...r, facture: form } : r));
-      setEditing(null); setNotice(tr('Facture enregistrée ✓', 'Invoice saved ✓'));
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
-    finally { setSaving(false); }
-  }
-
-  const fmtDate = (d?: string) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-  const inp = 'w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800';
-
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="space-y-4">
-      {/* Sub-tabs */}
-      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-        {[
-          { k: 'resume',   label: tr('Résumé', 'Summary') },
-          { k: 'factures', label: tr('Factures émises', 'Issued invoices') },
-        ].map(x => (
-          <button key={x.k} onClick={() => setSubTab(x.k as any)}
-            className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
-            {x.label}
-          </button>
-        ))}
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+        {tr('Vue lecture seule : marge facturé − réel par projet. Les factures se créent dans « Factures » (ou depuis un projet) et y apparaissent ensuite.', 'Read-only: invoiced − actual margin per project. Invoices are created in “Invoices” (or from a project) and then appear here.')}
       </div>
 
-      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">{notice}</div>}
-
-      {/* ── Résumé ── */}
-      {subTab === 'resume' && (
+      {/* ── Résumé (marges projets) ── */}
+      {(
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
@@ -809,105 +760,6 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
         </div>
       )}
 
-      {/* ── Factures émises ── */}
-      {subTab === 'factures' && (
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-            <div className="font-bold">{tr('Factures émises', 'Issued invoices')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{tr('Une facture par projet — stockée directement sur le projet.', 'One invoice per project — stored directly on the project.')}</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="mobile-cards w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                  <th className="px-4 py-3">{tr('Projet', 'Project')}</th>
-                  <th className="px-4 py-3">{tr('Client', 'Client')}</th>
-                  <th className="px-4 py-3">{tr('N° facture', 'Invoice #')}</th>
-                  <th className="px-4 py-3">{tr('Date', 'Date')}</th>
-                  <th className="px-4 py-3">{tr('Échéance', 'Due')}</th>
-                  <th className="px-4 py-3 text-right">{tr('Montant', 'Amount')}</th>
-                  <th className="px-4 py-3">{tr('Statut', 'Status')}</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(r => {
-                  const inv = r.facture;
-                  const st = inv ? (INV[inv.status] || INV.draft) : null;
-                  return (
-                    <React.Fragment key={r.id}>
-                      <tr className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
-                        <td className="px-4 py-3" data-label={tr('Projet', 'Project')}><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300" data-label={tr('Client', 'Client')}>{r.client_name || '—'}</td>
-                        <td className="px-4 py-3 font-mono" data-label={tr('N° facture', 'Invoice #')}>{inv?.invoice_number || <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs" data-label={tr('Date', 'Date')}>{fmtDate(inv?.invoice_date)}</td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs" data-label={tr('Échéance', 'Due')}>{fmtDate(inv?.due_date)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-700" data-label={tr('Montant', 'Amount')}>{Number(r.po_amount) > 0 ? money(Number(r.po_amount)) : '—'}</td>
-                        <td className="px-4 py-3" data-label={tr('Statut', 'Status')}>
-                          {st ? <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>{st.label}</span>
-                              : <span className="text-xs text-gray-400 dark:text-gray-500">{tr('Non facturé', 'Not invoiced')}</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <button onClick={() => editing === r.id ? setEditing(null) : startEdit(r)}
-                            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                            {editing === r.id ? '✕' : (inv ? tr('Modifier', 'Edit') : tr('+ Créer', '+ Create'))}
-                          </button>
-                        </td>
-                      </tr>
-                      {editing === r.id && (
-                        <tr className="border-t border-blue-100 bg-blue-50/60 dark:border-blue-500/20 dark:bg-blue-500/5">
-                          <td colSpan={8} className="px-4 py-4">
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                              <div>
-                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('N° facture', 'Invoice #')}</label>
-                                <input className={inp} value={form.invoice_number || ''} onChange={e => setForm((f: any) => ({ ...f, invoice_number: e.target.value }))} placeholder="F-2026-001" />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Date facture', 'Invoice date')}</label>
-                                <input type="date" className={inp} value={form.invoice_date || ''} onChange={e => setForm((f: any) => ({ ...f, invoice_date: e.target.value }))} />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Échéance', 'Due date')}</label>
-                                <input type="date" className={inp} value={form.due_date || ''} onChange={e => setForm((f: any) => ({ ...f, due_date: e.target.value }))} />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Statut', 'Status')}</label>
-                                <select className={inp} value={form.status || 'draft'} onChange={e => setForm((f: any) => ({ ...f, status: e.target.value }))}>
-                                  <option value="draft">{tr('Brouillon', 'Draft')}</option>
-                                  <option value="sent">{tr('Envoyée', 'Sent')}</option>
-                                  <option value="paid">{tr('Payée', 'Paid')}</option>
-                                  <option value="cancelled">{tr('Annulée', 'Cancelled')}</option>
-                                </select>
-                              </div>
-                              {form.status === 'paid' && (
-                                <div>
-                                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Date paiement', 'Payment date')}</label>
-                                  <input type="date" className={inp} value={form.paid_date || ''} onChange={e => setForm((f: any) => ({ ...f, paid_date: e.target.value }))} />
-                                </div>
-                              )}
-                              <div className="flex items-end">
-                                <button onClick={() => saveInvoice(r.id)} disabled={saving}
-                                  className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-                                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="mt-2">
-                              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Notes</label>
-                              <input className={inp} value={form.notes || ''} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder={tr('Notes internes...', 'Internal notes...')} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-                {rows.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">{tr('Aucun projet.', 'No project.')}</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -6560,7 +6412,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
 // ============================================================
 function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean; initialProject?: string | null }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [view, setView] = useState<'list' | 'edit' | 'settings'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'settings' | 'projets'>('list');
   const [invView, setInvView] = useState<'grid' | 'gallery'>('grid'); // liste factures : grille (défaut) / galerie
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [settings, setSettings] = useState<CompanySettings>({});
@@ -6722,14 +6574,15 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module facturation non initialisé', 'Invoicing module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 086 dans Supabase, puis rechargez.', 'Run migration 086 in Supabase, then reload.')}</p></div>);
 
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
-  const STATUS_LABEL: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Envoyée', 'Sent'), paid: tr('Payée', 'Paid'), cancelled: tr('Annulée', 'Cancelled') };
+  const STATUS_LABEL: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Traité', 'Processed'), paid: tr('Payée', 'Paid'), cancelled: tr('Annulée', 'Cancelled') };
   const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', paid: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-red-100 text-red-600' };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          <button onClick={() => setView('list')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view !== 'settings' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Factures', 'Invoices')}</button>
+          <button onClick={() => setView('list')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === 'list' || view === 'edit' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Factures', 'Invoices')}</button>
+          <button onClick={() => setView('projets')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === 'projets' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Projets (marges)', 'Projects (margins)')}</button>
           <button onClick={() => setView('settings')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Paramètres', 'Settings')}</button>
         </div>
         {view === 'list' && canEdit && <button onClick={newInvoice} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle facture', 'New invoice')}</button>}
@@ -6757,6 +6610,8 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
           </div>
           {canEdit && <button onClick={async () => { try { await saveCompanySettings(tenant, settings); setNotice(tr('Paramètres enregistrés.', 'Settings saved.')); } catch (e: any) { setNotice(e?.message); } }} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">{tr('Enregistrer', 'Save')}</button>}
         </div>
+      ) : view === 'projets' ? (
+        <FacturationProjets tenant={tenant} tr={tr} />
       ) : view === 'edit' ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-3 sm:grid-cols-4">

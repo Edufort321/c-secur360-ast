@@ -156,3 +156,32 @@ export async function deleteInvoice(tenant: string, id: string) {
   const { error } = await supabase.from('commerce_invoices').delete().eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
 }
+
+/**
+ * PONT Projet → Facturation centrale. Crée (ou met à jour, idempotent par id) une facture commerce
+ * depuis l'onglet Facture d'un PROJET, pour qu'elle apparaisse dans la « Facturation » au statut
+ * « Traité » (= 'sent', revenu constaté au grand livre via setInvoiceStatus). L'encaissement (statut
+ * « Payée ») se fait ensuite depuis la liste Facturation (bouton Payée). Lien projet best-effort
+ * (colonnes de la migration 212 — ignoré si absentes).
+ */
+export async function syncProjectInvoice(tenant: string, opts: {
+  id?: string | null; invoice_number: string; issue_date: string; province?: string;
+  client_name?: string | null; client_id?: string | null; notes?: string | null; payment_terms?: string | null;
+  items: InvoiceItem[]; project_id?: string | null; project_number?: string | null;
+}): Promise<string> {
+  const header: Invoice = {
+    id: opts.id || undefined, invoice_number: opts.invoice_number,
+    client_id: opts.client_id ?? null, client_snapshot: opts.client_name ? { name: opts.client_name } : null,
+    status: 'sent', issue_date: opts.issue_date, province: opts.province || 'QC',
+    subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0,
+    notes: opts.notes ?? null, payment_terms: opts.payment_terms ?? null,
+  };
+  const id = await saveInvoice(tenant, header, opts.items);
+  // Lien projet (best-effort : colonnes ajoutées par la migration 212).
+  if (opts.project_id || opts.project_number) {
+    try { await supabase.from('commerce_invoices').update({ project_id: opts.project_id ?? null, project_number: opts.project_number ?? null, source: 'project' }).eq('id', id).eq('tenant_id', tenant); } catch { /* colonnes absentes */ }
+  }
+  // Statut « Traité » + constatation auto du revenu au grand livre (idempotent, best-effort).
+  await setInvoiceStatus(tenant, id, 'sent');
+  return id;
+}
