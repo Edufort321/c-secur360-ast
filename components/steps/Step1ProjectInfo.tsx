@@ -765,6 +765,22 @@ const Step1ProjectInfo = memo(({
     setProjectSuggestions([]);
   }, []);
 
+  // Au focus sur un champ VIDE : charge les projets RÉCENTS pour qu'on puisse parcourir/voir les
+  // numéros existants sans les connaître par cœur (recherche dynamique dès qu'on tape ensuite).
+  const handleProjectFocus = useCallback(async (e: React.FocusEvent<HTMLInputElement>) => {
+    const cur = (e.currentTarget.value || '').trim();
+    if (cur) { setShowProjectSugg(s => s || projectSuggestions.length > 0); return; }
+    if (!_sbProjects) return;
+    const { data } = await _sbProjects
+      .from('projects')
+      .select('id, project_number, title, client_name, location')
+      .eq('tenant_id', tenant)
+      .order('created_at', { ascending: false })
+      .limit(8);
+    setProjectSuggestions(data || []);
+    setShowProjectSugg((data || []).length > 0);
+  }, [projectSuggestions.length, tenant]);
+
   const [localData, setLocalData] = useState<ProjectInfo>(() => ({
     // Initialisation avec données existantes ou valeurs par défaut
     // Le numéro AST vient directement de formData, pas besoin de le stocker dans localData
@@ -1965,15 +1981,20 @@ const Step1ProjectInfo = memo(({
                     type="text"
                     value={localData.projectNumber}
                     onChange={(e) => handleProjectNumberChange(e.target.value)}
-                    onFocus={() => projectSuggestions.length > 0 && setShowProjectSugg(true)}
+                    onFocus={handleProjectFocus}
                     onBlur={() => setTimeout(() => setShowProjectSugg(false), 200)}
                     style={inputStyle}
-                    placeholder={t.placeholders.projectNumber}
+                    placeholder={language === 'fr' ? 'Cliquer pour voir les projets · ou taper…' : 'Click to browse projects · or type…'}
                     required
                     autoComplete="off"
                   />
                   {showProjectSugg && projectSuggestions.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1e293b', border: '1px solid rgba(100,116,139,0.4)', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1e293b', border: '1px solid rgba(100,116,139,0.4)', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px', maxHeight: '280px', overflowY: 'auto' }}>
+                      {!localData.projectNumber.trim() && (
+                        <div style={{ padding: '6px 12px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b', borderBottom: '1px solid rgba(100,116,139,0.2)' }}>
+                          {language === 'fr' ? 'Projets récents' : 'Recent projects'}
+                        </div>
+                      )}
                       {projectSuggestions.map(proj => (
                         <button key={proj.id} type="button"
                           onMouseDown={() => handleSelectProject(proj)}

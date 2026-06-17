@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { ProjectTimesheetSummary } from '@/components/projet/ProjectTimesheetSummary';
 import { ConsumeMaterialPanel } from '@/components/projet/ConsumeMaterialPanel';
+import { ProjectAttachments } from '@/components/projet/ProjectAttachments';
 import { CoutsTab } from '@/components/projet/CoutsTab';
 import { ProjectPerfStrip } from '@/components/projects/ProjectsAnalytics';
 import { FactureTab } from '@/components/projet/FactureTab';
@@ -506,6 +507,9 @@ export default function ProjectDetailPage() {
                     <p className="mt-1 text-[11px] text-gray-400">{tr('Heures saisies sur ce projet (feuilles de temps / poinçons). Base pour la facturation au temps.', 'Hours logged on this project (timesheets / punches). Basis for time-based billing.')}</p>
                   </div>
                 )}
+
+                {/* Pièces jointes reçues du client (bon de commande, contrat, devis signé…) */}
+                <ProjectAttachments tenant={tenant} projectId={id} tr={tr} />
 
                 {/* Matériel consommé (lien Inventaire — si le tenant a le module Inventaire) */}
                 {hasMod('inventory') && p.project_number && <ConsumeMaterialPanel tenant={tenant} projectNumber={p.project_number} />}
