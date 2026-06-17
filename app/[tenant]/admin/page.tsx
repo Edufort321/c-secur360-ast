@@ -6957,7 +6957,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   // Comptes proposés selon le type : revenus (produits) vs dépenses (charges/actif).
   const expenseAccounts = accounts.filter(a => a.type === 'expense' || a.type === 'asset');
   const revenueAccounts = accounts.filter(a => a.type === 'revenue');
-  const lineAccounts = isRevenue ? revenueAccounts : expenseAccounts;
+  // Pour une dépense : charges (OPEX) + immobilisations (CAPEX, comptes d'actif).
+  const lineAccounts = isRevenue ? revenueAccounts : [...expenseAccounts, ...accounts.filter(a => a.type === 'asset')];
+  const lineKinds: ('expense' | 'capex' | 'revenue')[] = isRevenue ? ['revenue'] : ['expense', 'capex'];
   const defaultAcct = isRevenue ? '4000' : '5300';
 
   // Tableau de bord (#35) : agrégats lecture seule, séparés revenus / dépenses.
@@ -7498,6 +7500,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   <option value="standard">{tr('Entreprise (banque/fournisseur)', 'Company (bank/vendor)')}</option>
                   <option value="reimbursement">{tr('Une personne — à rembourser', 'A person — to reimburse')}</option>
                   <option value="investment">{tr('Une personne — investissement (apport)', 'A person — investment (capital)')}</option>
+                  <option value="shares_payment">{tr('En actions / parts d\'entreprise (capital-actions)', 'In company shares (share capital)')}</option>
                 </select>
               </label>
             )}
@@ -7518,6 +7521,12 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 </select>
               </label>
             )}
+            {hdr.settlement_kind === 'shares_payment' && (
+              <p className="sm:col-span-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">
+                {tr('Réglé en émettant des actions/parts : aucun décaissement. L\'écriture porte la dépense (ou l\'immobilisation) au DÉBIT et CRÉDITE le Capital-actions (3100) — la valeur réglée augmente vos capitaux propres. Pensez à inscrire le nombre d\'actions/parts émises et leur détenteur dans le module Actionnaires (cap table) pour garder le registre à jour.',
+                    'Settled by issuing shares: no cash out. The entry debits the expense (or asset) and credits Share capital (3100) — the settled value increases equity. Record the number of shares/units issued and the holder in the Shareholders module (cap table) to keep the register up to date.')}
+              </p>
+            )}
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<input value={hdr.notes || ''} onChange={e => setHdr(h => ({ ...h, notes: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
           </div>
           <div className="mt-4 space-y-2">
@@ -7527,9 +7536,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 {/* Classe fiscale GUIDÉE : choisit le compte GL + la catégorie de taxe. */}
                 <select value={fiscalByCode(it.account_code)?.key || ''} onChange={e => { const c = FISCAL_CATEGORIES.find(x => x.key === e.target.value); if (c) setItems(p => p.map((x, j) => j === i ? { ...x, account_code: c.glCode, tax_category: c.tax, taxable: c.tax === 'standard' } : x)); }} className={`col-span-4 ${inputCls}`} title={tr('Catégorie (classe fiscale)', 'Category (fiscal class)')}>
                   <option value="">{it.account_code ? `${it.account_code}${lineAccounts.find(a => a.code === it.account_code)?.name ? ' · ' + lineAccounts.find(a => a.code === it.account_code)!.name : ''}` : tr('— Catégorie —', '— Category —')}</option>
-                  {Array.from(new Set(FISCAL_CATEGORIES.filter(c => c.kind === (isRevenue ? 'revenue' : 'expense')).map(c => c.group))).map(g => (
+                  {Array.from(new Set(FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind)).map(c => c.group))).map(g => (
                     <optgroup key={g} label={g}>
-                      {FISCAL_CATEGORIES.filter(c => c.kind === (isRevenue ? 'revenue' : 'expense') && c.group === g).map(c => <option key={c.key} value={c.key}>{tr(c.fr, c.en)}</option>)}
+                      {FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind) && c.group === g).map(c => <option key={c.key} value={c.key}>{tr(c.fr, c.en)}</option>)}
                     </optgroup>
                   ))}
                 </select>

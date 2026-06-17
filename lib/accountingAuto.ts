@@ -133,6 +133,7 @@ export async function postTransactionPurchase(
   // Compte de CRÉDIT selon le règlement :
   //  - 'reimbursement' (dépense payée par un employé/personne) -> 2300 « à rembourser à l'employé »
   //  - 'investment' (apport : la personne paie comme un investissement dans l'entreprise) -> 3100 Capital
+  //  - 'shares_payment' (l'entreprise RÈGLE en émettant des actions/parts — aucun décaissement) -> 3100 Capital-actions
   //  - sinon : à crédit -> Fournisseurs (2000) ; comptant -> trésorerie assignée (banque/carte) sinon 1000.
   const kind = txn.settlement_kind || 'standard';
   const treasury = txn.payment_method === 'on_account' ? null : await treasuryGlAccountId(txn);
@@ -140,6 +141,7 @@ export async function postTransactionPurchase(
   let payLabel = txn.payment_method === 'on_account' ? 'Fournisseurs a payer' : 'Banque';
   if (kind === 'reimbursement' && m['2300']) { payAcc = m['2300']; payLabel = 'A rembourser a l employe'; }
   else if (kind === 'investment' && m['3100']) { payAcc = m['3100']; payLabel = 'Apport au capital'; }
+  else if (kind === 'shares_payment' && m['3100']) { payAcc = m['3100']; payLabel = 'Reglement en actions/parts (capital-actions)'; }
   if (!payAcc || !m['5300']) return 'no-accounts';
 
   const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [];

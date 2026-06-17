@@ -21,7 +21,8 @@ export type Transaction = {
   //  'standard' (banque/fournisseur) | 'reimbursement' (à rembourser à la personne -> 2300) | 'investment' (apport -> 3100)
   paid_by_person_id?: string | null;
   //  'investor_advance' = ENTRÉE d'argent qui est une avance d'investisseur (dette à rembourser → CR 2400, pas un revenu)
-  settlement_kind?: 'standard' | 'reimbursement' | 'investment' | 'investor_advance';
+  //  'shares_payment' = l'entreprise RÈGLE une dépense/immobilisation en émettant des actions/parts (aucun décaissement → CR 3100 Capital-actions)
+  settlement_kind?: 'standard' | 'reimbursement' | 'investment' | 'investor_advance' | 'shares_payment';
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
