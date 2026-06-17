@@ -158,8 +158,8 @@ export default function ModulesPage() {
         const { data: invState } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
         if (Array.isArray(invState?.data?.items)) ic = invState!.data.items.length;
         else { const { count: itemsCount } = await supabase.from('items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant); ic = itemsCount ?? 0; }
-        // « Utilisateurs » = effectif réel (roster planner_personnel), pas seulement les comptes d'accès (table users).
-        const { count: uc } = await supabase.from('planner_personnel').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant);
+        // « Utilisateurs » = effectif réel (roster planner_personnel). Déjà chargé plus haut (rosterCount) -> on réutilise (perf : 1 requête en moins).
+        const uc = rosterCount;
 
         const { data: todos } = await supabase.from('todo_tasks').select('status').eq('tenant_id', tenant);
         const td = { total: 0, todo: 0, in_progress: 0, done: 0 };
@@ -169,9 +169,12 @@ export default function ModulesPage() {
 
         const weekStart = (() => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); return d.toISOString().slice(0, 10); })();
         const yearStart = `${new Date().getFullYear()}-01-01`;
-        const { data: lbWeek } = await supabase.from('vehicle_logbook').select('km_total').eq('tenant_id', tenant).eq('week_start', weekStart);
-        const { data: lbYear } = await supabase.from('vehicle_logbook').select('km_total').eq('tenant_id', tenant).gte('week_start', yearStart);
-        const { count: vCount } = await supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant).eq('active', true);
+        // Perf : les 3 requêtes véhicules/logbook sont indépendantes -> en parallèle (1 vague au lieu de 3).
+        const [{ data: lbWeek }, { data: lbYear }, { count: vCount }] = await Promise.all([
+          supabase.from('vehicle_logbook').select('km_total').eq('tenant_id', tenant).eq('week_start', weekStart),
+          supabase.from('vehicle_logbook').select('km_total').eq('tenant_id', tenant).gte('week_start', yearStart),
+          supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant).eq('active', true),
+        ]);
         const lb = {
           vehicles: vCount || 0,
           kmWeek: (lbWeek || []).reduce((s: number, r: any) => s + Number(r.km_total || 0), 0),
@@ -181,8 +184,10 @@ export default function ModulesPage() {
         // DGA — mêmes compteurs qu'à l'ouverture du module + niveau critique (cond > 3) + inspections dues.
         const dga = { all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0, todo: 0 };
         try {
-          const { data: dgaD } = await supabase.from('dga_dossiers').select('id, extra, treated').eq('tenant_id', tenant);
-          const { data: dgaM } = await supabase.from('dga_measures').select('dossier_id, sample_date, h2, ch4, c2h2, c2h4, c2h6, co, tdcg, condition').eq('tenant_id', tenant).order('sample_date', { ascending: true });
+          const [{ data: dgaD }, { data: dgaM }] = await Promise.all([
+            supabase.from('dga_dossiers').select('id, extra, treated').eq('tenant_id', tenant),
+            supabase.from('dga_measures').select('dossier_id, sample_date, h2, ch4, c2h2, c2h4, c2h6, co, tdcg, condition').eq('tenant_id', tenant).order('sample_date', { ascending: true }),
+          ]);
           const lastBy: Record<string, any> = {};
           (dgaM || []).forEach((m: any) => { if (m.dossier_id) lastBy[m.dossier_id] = m; });
           const today = new Date().toISOString().slice(0, 10);
