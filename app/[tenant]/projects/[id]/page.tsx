@@ -10,6 +10,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { ProjectTimesheetSummary } from '@/components/projet/ProjectTimesheetSummary';
 import { ConsumeMaterialPanel } from '@/components/projet/ConsumeMaterialPanel';
 import { ProjectAttachments } from '@/components/projet/ProjectAttachments';
+import { POImportButton } from '@/components/projet/POImportButton';
 import { CoutsTab } from '@/components/projet/CoutsTab';
 import { ProjectPerfStrip } from '@/components/projects/ProjectsAnalytics';
 import { FactureTab } from '@/components/projet/FactureTab';
@@ -227,6 +228,7 @@ export default function ProjectDetailPage() {
       global_price: p.global_price ? Number(p.global_price) : null,
       date_submission: p.date_submission || null, date_work_start: p.date_work_start || null,
       primary_seller_id: p.primary_seller_id || null,
+      end_client_id: p.end_client_id || null,
     };
     try {
       // Insert résilient : retire toute colonne absente (ex. project_scope/subsistence_applicable si
@@ -537,6 +539,12 @@ export default function ProjectDetailPage() {
                     <p className="mt-1 text-[11px] text-gray-400">{tr('Heures saisies sur ce projet (feuilles de temps / poinçons). Base pour la facturation au temps.', 'Hours logged on this project (timesheets / punches). Basis for time-based billing.')}</p>
                   </div>
                 )}
+
+                {/* Import IA du bon de commande : pré-remplit le projet + complète le client + joint le BC. */}
+                <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
+                  <POImportButton tenant={tenant} projectId={id} project={p} tr={tr}
+                    onApply={(fields) => setP((prev: any) => { const next = { ...prev }; Object.entries(fields).forEach(([k, val]) => { if (val !== undefined && val !== null && val !== '') next[k] = val; }); return next; })} />
+                </div>
 
                 {/* Pièces jointes reçues du client (bon de commande, contrat, devis signé…) */}
                 <ProjectAttachments tenant={tenant} projectId={id} tr={tr} />
