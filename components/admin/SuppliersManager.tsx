@@ -2,8 +2,8 @@
 
 // Répertoire FOURNISSEURS (achats) — pendant du répertoire clients. Table `suppliers` (migration 193).
 // Alimente les bons de commande (sélection du fournisseur) et la comptabilité fournisseurs.
-import React, { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Save, Truck, Search } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader2, Plus, Trash2, Save, Truck, Search, Download, Zap, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 type SRow = { id?: string; name: string; contact_name: string; email: string; phone: string; address: string; city: string; province: string; postal_code: string; account_no: string; payment_terms: string; notes: string; active: boolean };
@@ -19,6 +19,12 @@ export function SuppliersManager({ tenant, tr }: { tenant: string; tr: (f: strin
   const [form, setForm] = useState<SRow>(empty());
   const [q, setQ] = useState('');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  // ── Import IA (liste de fournisseurs, colonnes libres — même pattern que les clients) ──
+  const aiFileRef = useRef<HTMLInputElement>(null);
+  const [aiImporting, setAiImporting] = useState(false);
+  const [aiRefusal, setAiRefusal] = useState<string[] | null>(null);
+  const [aiPreview, setAiPreview] = useState<SRow[] | null>(null);
+  const [aiInserting, setAiInserting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -49,6 +55,76 @@ export function SuppliersManager({ tenant, tr }: { tenant: string; tr: (f: strin
   }
   async function del(id: string) { if (!window.confirm(tr('Supprimer ce fournisseur ?', 'Delete this supplier?'))) return; await supabase.from('suppliers').delete().eq('id', id); deselect(); load(); }
 
+  // Modèle de colonnes téléchargeable (CSV).
+  function downloadTemplate() {
+    const headers = ['NOM', 'CONTACT', 'COURRIEL', 'TÉLÉPHONE', 'ADRESSE', 'VILLE', 'PROVINCE', 'CODE POSTAL', 'N° DE COMPTE', 'CONDITIONS DE PAIEMENT', 'NOTES'];
+    const example = ['Fournitures Exemple inc.', 'Jean Côté', 'ventes@exemple.ca', '418-555-0142', '45 boul. Industriel', 'Québec', 'QC', 'G1K 2B3', 'CL-1042', 'net 30', 'Fournisseur préféré'];
+    const csv = '﻿' + [headers.join(','), example.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'modele_import_fournisseurs.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Lecture du fichier (CSV/XLSX) -> lignes brutes -> IA détecte les colonnes (par lots) -> prévisualisation.
+  async function handleAiFile(file: File | null | undefined) {
+    if (!file) return;
+    setAiRefusal(null); setAiPreview(null); setNotice(null); setAiImporting(true);
+    try {
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      let raw: any[] = [];
+      for (const name of wb.SheetNames) { const r = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' }); if (r.length > raw.length) raw = r; }
+      if (!raw.length) { setNotice(tr('Fichier vide ou illisible.', 'Empty or unreadable file.')); return; }
+
+      const CHUNK = 50; const chunks: any[][] = [];
+      for (let i = 0; i < raw.length; i += CHUNK) chunks.push(raw.slice(i, i + CHUNK));
+      const out: any[] = [];
+      for (let idx = 0; idx < chunks.length; idx++) {
+        const resp = await fetch('/api/suppliers/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ rows: chunks[idx], tenant }) });
+        const j = await resp.json();
+        if (!resp.ok || j.error) { setNotice((j.error || tr('Analyse IA échouée.', 'AI analysis failed.')) + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : '')); return; }
+        if (j.conforme === false) { setAiRefusal(Array.isArray(j.missing) ? j.missing : ['NOM']); return; }
+        out.push(...(Array.isArray(j.suppliers) ? j.suppliers : []));
+      }
+      if (!out.length) { setNotice(tr('Aucun fournisseur détecté.', 'No supplier detected.')); return; }
+      const norm = (s: string) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const have = new Set(rows.map(r => norm(r.name)));
+      const seen = new Set<string>();
+      const preview: SRow[] = out
+        .map((s: any) => ({ ...empty(), name: String(s.name || '').trim(), contact_name: String(s.contact_name || ''), email: String(s.email || ''), phone: String(s.phone || ''), address: String(s.address || ''), city: String(s.city || ''), province: String(s.province || 'QC').toUpperCase().slice(0, 2) || 'QC', postal_code: String(s.postal_code || ''), account_no: String(s.account_no || ''), payment_terms: String(s.payment_terms || ''), notes: String(s.notes || '') }))
+        .filter(s => { const k = norm(s.name); if (!k || have.has(k) || seen.has(k)) return false; seen.add(k); return true; });
+      if (!preview.length) { setNotice(tr('Tous les fournisseurs du fichier existent déjà.', 'All suppliers in the file already exist.')); return; }
+      setAiPreview(preview);
+    } catch (e: any) {
+      setNotice('Erreur : ' + (e?.message || tr('lecture du fichier impossible.', 'cannot read file.')));
+    } finally {
+      setAiImporting(false);
+      if (aiFileRef.current) aiFileRef.current.value = '';
+    }
+  }
+
+  async function confirmAiImport() {
+    if (!aiPreview?.length) return;
+    setAiInserting(true); setNotice(null);
+    try {
+      let payload: any[] = aiPreview.map(s => { const { id, ...rest } = s as any; return { tenant_id: tenant, ...rest }; });
+      let res: any = await supabase.from('suppliers').insert(payload);
+      let guard = 0;
+      while (res.error && guard < 15) {
+        const m = (res.error.message || '').match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+        const col = m ? (m[1] || m[2] || m[3]) : null;
+        if (col && col !== 'name' && col !== 'tenant_id') { payload = payload.map(p => { const qq = { ...p }; delete qq[col]; return qq; }); res = await supabase.from('suppliers').insert(payload); guard++; }
+        else break;
+      }
+      if (res.error) { setNotice('Erreur : ' + res.error.message); setAiInserting(false); return; }
+      setNotice(`✓ ${aiPreview.length} ${tr('fournisseur(s) importé(s).', 'supplier(s) imported.')}`);
+      setAiPreview(null); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'import')); }
+    finally { setAiInserting(false); }
+  }
+
   const filtered = rows.map((r, i) => ({ r, i })).filter(({ r }) => !q.trim() || [r.name, r.contact_name, r.city, r.email].some(v => (v || '').toLowerCase().includes(q.trim().toLowerCase())));
 
   if (loading) return <div className="flex items-center gap-2 p-6 text-gray-500"><Loader2 className="animate-spin" size={18} /> {tr('Chargement…', 'Loading…')}</div>;
@@ -59,8 +135,20 @@ export function SuppliersManager({ tenant, tr }: { tenant: string; tr: (f: strin
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
           <div><h2 className="flex items-center gap-1.5 font-bold"><Truck size={16} /> {tr('Répertoire fournisseurs', 'Supplier directory')} <span className="text-xs font-normal text-gray-400">({rows.length})</span></h2>
             <p className="text-xs text-gray-500">{tr('Sélectionnable dans les bons de commande et la comptabilité fournisseurs.', 'Selectable in purchase orders and accounts payable.')}</p></div>
-          <button onClick={deselect} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouveau', 'New')}</button>
+          <div className="flex items-center gap-2">
+            <button onClick={downloadTemplate} title={tr('Télécharger le modèle de colonnes (CSV)', 'Download the column template (CSV)')}
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"><Download size={15} /> {tr('Modèle', 'Template')}</button>
+            <button onClick={() => aiFileRef.current?.click()} disabled={aiImporting} title={tr('Importer une liste (CSV/Excel) — colonnes détectées par IA', 'Import a list (CSV/Excel) — columns detected by AI')}
+              className="inline-flex items-center gap-1 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-50 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300">{aiImporting ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />} {tr('Import IA', 'AI import')}</button>
+            <input ref={aiFileRef} type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={e => handleAiFile(e.target.files?.[0])} />
+            <button onClick={deselect} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouveau', 'New')}</button>
+          </div>
         </div>
+        {aiRefusal && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            {tr('Import refusé — colonne(s) minimum introuvable(s) :', 'Import refused — missing minimum column(s):')} <strong>{aiRefusal.join(', ')}</strong>. {tr('Téléchargez le « Modèle » et réessayez.', 'Download the “Template” and try again.')}
+          </div>
+        )}
         <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700">
           <Search size={15} className="text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Rechercher (nom, contact, ville)…', 'Search (name, contact, city)…')} className="w-full bg-transparent text-sm outline-none" />
@@ -104,6 +192,43 @@ export function SuppliersManager({ tenant, tr }: { tenant: string; tr: (f: strin
           {selected !== null && <button onClick={deselect} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>}
         </div>
       </div>
+
+      {/* Prévisualisation de l'import IA : on confirme avant d'insérer */}
+      {aiPreview && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => !aiInserting && setAiPreview(null)}>
+          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+              <h3 className="font-bold">{tr('Import IA — aperçu', 'AI import — preview')} <span className="text-sm font-normal text-gray-400">({aiPreview.length} {tr('nouveau(x) fournisseur(s)', 'new supplier(s)')})</span></h3>
+              <button onClick={() => setAiPreview(null)} disabled={aiInserting} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-700"><Trash2 size={18} /></button>
+            </div>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-700/50"><tr>
+                  <th className="px-3 py-2">{tr('Nom', 'Name')}</th><th className="px-3 py-2">{tr('Contact', 'Contact')}</th><th className="px-3 py-2">{tr('Courriel', 'Email')}</th><th className="px-3 py-2">{tr('Tél.', 'Phone')}</th><th className="px-3 py-2">{tr('Ville', 'City')}</th><th className="px-3 py-2">{tr('Cond.', 'Terms')}</th>
+                </tr></thead>
+                <tbody>
+                  {aiPreview.map((s, i) => (
+                    <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="px-3 py-1.5 font-medium">{s.name}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{s.contact_name || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{s.email || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{s.phone || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{s.city || '—'}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-300">{s.payment_terms || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-700">
+              <button onClick={() => setAiPreview(null)} disabled={aiInserting} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={confirmAiImport} disabled={aiInserting} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                {aiInserting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {tr('Importer', 'Import')} {aiPreview.length}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
