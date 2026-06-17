@@ -20,7 +20,8 @@ export type Transaction = {
   // Dépense engagée par une PERSONNE (migration 207) + nature du règlement :
   //  'standard' (banque/fournisseur) | 'reimbursement' (à rembourser à la personne -> 2300) | 'investment' (apport -> 3100)
   paid_by_person_id?: string | null;
-  settlement_kind?: 'standard' | 'reimbursement' | 'investment';
+  //  'investor_advance' = ENTRÉE d'argent qui est une avance d'investisseur (dette à rembourser → CR 2400, pas un revenu)
+  settlement_kind?: 'standard' | 'reimbursement' | 'investment' | 'investor_advance';
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;

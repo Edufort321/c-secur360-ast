@@ -7275,6 +7275,19 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     } catch (e: any) { setNotice(e?.message); }
   }
 
+  // DÉCOMPTABILISER : retire l'écriture du GL et repasse en brouillon, pour CORRIGER (ex. reclasser un
+  // « revenu » en avance d'investisseur), puis recomptabiliser.
+  async function unpostTxn(t: Transaction) {
+    if (!t.gl_entry_id) return;
+    if (!confirm(tr('Décomptabiliser cette transaction (retirer son écriture du grand livre) pour pouvoir la corriger ?', 'Un-post this transaction (remove its ledger entry) to correct it?'))) return;
+    try {
+      await supabase.from('gl_lines').delete().eq('tenant_id', tenant).eq('entry_id', t.gl_entry_id);
+      await supabase.from('gl_entries').delete().eq('tenant_id', tenant).eq('id', t.gl_entry_id);
+      await supabase.from('commerce_transactions').update({ gl_entry_id: null, status: 'draft' }).eq('id', t.id!).eq('tenant_id', tenant);
+      setNotice(tr('Décomptabilisée — modifiez la nature puis « Comptabiliser ».', 'Un-posted — edit the nature then “Post”.')); await load();
+    } catch (e: any) { setNotice(e?.message); }
+  }
+
   // COMPTABILISER EN LOT toutes les transactions FILTRÉES non comptabilisées (les fait remonter au GL).
   async function postAllFiltered() {
     const todo = filteredTxns.filter(t => !t.gl_entry_id && t.status !== 'cancelled');
@@ -7454,8 +7467,17 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 </select>
               </label>
             )}
-            {!isRevenue && hdr.settlement_kind && hdr.settlement_kind !== 'standard' && (
-              <label className="text-xs font-semibold text-gray-500">{tr('Personne', 'Person')}
+            {/* ENTRÉE d'argent : revenu (vente) OU avance d'investisseur (dette à rembourser → CR 2400) */}
+            {isRevenue && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Nature de l\'entrée', 'Inflow nature')}
+                <select value={hdr.settlement_kind === 'investor_advance' ? 'investor_advance' : 'standard'} onChange={e => setHdr(h => ({ ...h, settlement_kind: e.target.value as any, paid_by_person_id: e.target.value === 'standard' ? null : h.paid_by_person_id }))} className={`mt-1 w-full ${inputCls}`}>
+                  <option value="standard">{tr('Revenu (vente / service)', 'Revenue (sale / service)')}</option>
+                  <option value="investor_advance">{tr('Avance d\'investisseur (dette à rembourser)', 'Investor advance (debt to repay)')}</option>
+                </select>
+              </label>
+            )}
+            {hdr.settlement_kind && hdr.settlement_kind !== 'standard' && (
+              <label className="text-xs font-semibold text-gray-500">{tr(isRevenue ? 'Investisseur' : 'Personne', isRevenue ? 'Investor' : 'Person')}
                 <select value={hdr.paid_by_person_id || ''} onChange={e => setHdr(h => ({ ...h, paid_by_person_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
                   <option value="">{tr('— Choisir dans le personnel —', '— Pick from staff —')}</option>
                   {persons.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -7778,6 +7800,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                       {(t as any).needs_review && <button onClick={() => verifyTxn(t)} className="font-semibold text-amber-700 hover:underline">{tr('✓ Vérifier', '✓ Verify')}</button>}
                       {!t.gl_entry_id && !(t as any).needs_review && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {t.gl_entry_id && t.status !== 'paid' && <button onClick={() => markPaid(t)} className="text-emerald-600 hover:underline">{tr('Payé', 'Paid')}</button>}
+                      {t.gl_entry_id && <button onClick={() => unpostTxn(t)} className="text-gray-500 hover:underline" title={tr('Retirer du grand livre pour corriger', 'Remove from ledger to correct')}>{tr('Décomptab.', 'Un-post')}</button>}
                       <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>{/* supprime aussi l'écriture GL si comptabilisée */}
                     </div>}
                   </td>

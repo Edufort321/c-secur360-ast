@@ -247,6 +247,17 @@ export async function postTransactionRevenue(
   if (!recvAcc || !m['4000']) return 'no-accounts';
   const total = Number(txn.total) || 0;
   if (total <= 0) return 'skipped';
+  // AVANCE D'INVESTISSEUR : ce N'EST PAS un revenu → DR Banque / CR 2400 (dette à rembourser), sans taxes.
+  if (txn.settlement_kind === 'investor_advance' && m['2400']) {
+    const entryId = await createEntry(tenant, {
+      entry_date: txn.txn_date || new Date().toISOString().slice(0, 10),
+      description: `Avance investisseur — ${txn.vendor_name || txn.transaction_number || ''}`,
+      reference: txn.transaction_number || undefined, journal_code: 'OD', source_type: 'transaction', source_id: txn.id,
+      lines: [{ account_id: recvAcc, debit: total, credit: 0, description: 'Banque' }, { account_id: m['2400'], debit: 0, credit: total, description: 'Avance/dû à l investisseur (a rembourser)' }],
+    });
+    await supabase.from('commerce_transactions').update({ gl_entry_id: entryId, status: txn.status === 'draft' ? 'posted' : txn.status }).eq('id', txn.id);
+    return 'created';
+  }
   const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
     { account_id: recvAcc, debit: total, credit: 0, description: txn.payment_method === 'on_account' ? 'Clients' : 'Banque' },
     { account_id: m['4000'], debit: 0, credit: Number(txn.subtotal) || 0, description: 'Ventes et services' },
