@@ -1018,6 +1018,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   const [form, setForm] = useState<CRow>(empty());
   const [viewMode, setViewMode] = useState<'grid' | 'gallery'>('grid'); // grille (défaut) ou galerie
   const [counts, setCounts] = useState<Record<string, { sites: number; contacts: number }>>({});
+  const [cq, setCq] = useState(''); // recherche dynamique (nom, contact, courriel, ville)
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   // ── Import IA (liste de clients, colonnes libres — même pattern que l'inventaire) ──
   const aiFileRef = React.useRef<HTMLInputElement>(null);
@@ -1187,11 +1188,18 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
             {tr('Import refusé — colonne(s) minimum introuvable(s) :', 'Import refused — missing minimum column(s):')} <strong>{aiRefusal.join(', ')}</strong>. {tr('Téléchargez le « Modèle » et réessayez.', 'Download the “Template” and try again.')}
           </div>
         )}
+        {rows.length > 0 && (
+          <div className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+            <Search size={15} className="text-gray-400" />
+            <input value={cq} onChange={e => setCq(e.target.value)} placeholder={tr('Rechercher (nom, contact, courriel, ville)…', 'Search (name, contact, email, city)…')} className="w-full bg-transparent text-sm outline-none" />
+            {cq && <button onClick={() => setCq('')} className="text-xs font-semibold text-gray-400 hover:text-gray-600">✕</button>}
+          </div>
+        )}
         {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : rows.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-gray-400">{tr('Aucun client. Crée-en un.', 'No client. Create one.')}</div>
         ) : (
           <div className={`p-3 ${viewMode === 'gallery' ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-2 gap-2 sm:grid-cols-3'}`}>
-            {rows.map((r, i) => {
+            {rows.map((r, i) => ({ r, i })).filter(({ r }) => { const s = cq.trim().toLowerCase(); return !s || [r.name, r.contact_name, r.email, r.phone, r.city].some(v => String(v || '').toLowerCase().includes(s)); }).map(({ r, i }) => {
               const ct = counts[String(r.id)] || { sites: 0, contacts: 0 };
               const sel = selected === i;
               if (viewMode === 'gallery') {
