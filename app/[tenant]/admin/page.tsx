@@ -6906,7 +6906,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
 // ============================================================
 function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [view, setView] = useState<'list' | 'edit' | 'bank' | 'accounts' | 'balances'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'bank' | 'accounts' | 'balances' | 'advances'>('list');
   const [bal, setBal] = useState<Record<string, { debit: number; credit: number }>>({}); // soldes (balance de vérification)
   const [txns, setTxns] = useState<Transaction[]>([]);
   // Comptes de trésorerie (banque / carte de crédit) — migration 185
@@ -7155,8 +7155,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     if (!files.length) return;
     setBatch({ busy: true, done: 0, total: files.length, created: 0, failed: 0 });
     let created = 0, failed = 0, dups = 0, transfers = 0; let lastErr = '';
-    // Contrôle d'ÉCART relevé : totaux extraits (crédits/débits) vs résumé déclaré du relevé.
-    let extCred = 0, extDeb = 0; let stmt: any = null;
+    // Contrôle d'ÉCART relevé : totaux extraits (crédits/débits) vs résumé DÉCLARÉ (cumulés si plusieurs relevés).
+    let extCred = 0, extDeb = 0, declCred = 0, declDeb = 0, anyStmt = false;
     const amtOf = (x: any) => { const g = Number(x.gst) || 0, q = Number(x.qst) || 0, p = Number(x.pst) || 0; const s = Number(x.subtotal) || (Number(x.total) ? Number(x.total) - g - q - p : 0) || 0; return Math.round((s + g + q + p) * 100) / 100; };
     // Set des transactions DÉJÀ présentes (tiers+date+montant) → évite de recréer un doublon (même avec pièce jointe).
     const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
@@ -7172,7 +7172,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         const isStatement = !!(j.summary && j.summary.is_statement) || (Array.isArray(j.extractedList) && j.extractedList.length > 1);
         const url = isStatement ? null : await uploadReceipt(tenant, file).catch(() => null);
         const handle = (r: 'created' | 'duplicate' | 'empty' | 'transfer') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else if (r === 'transfer') transfers++; else failed++; };
-        if (j.summary && j.summary.is_statement) stmt = j.summary; // résumé déclaré du relevé (pour l'écart)
+        if (j.summary && j.summary.is_statement) { anyStmt = true; declCred += Number(j.summary.total_credits) || 0; declDeb += Number(j.summary.total_debits) || 0; } // résumé déclaré (cumulé)
         // Compte effectif : choix manuel, sinon reconnaissance auto par les 4 derniers chiffres du relevé.
         const eff = importAccount || matchAccountByNumber(j.summary?.account_number) || undefined;
         if (Array.isArray(j.extractedList)) {            // PDF relevé / Excel / CSV -> N transactions (une par ligne), dédoublonnées
@@ -7184,8 +7184,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       setBatch(b => b && { ...b, done: i + 1, created, failed });
     }
     setBatch(b => b && { ...b, busy: false });
-    // Contrôle d'écart : compare les totaux extraits aux totaux DÉCLARÉS du relevé.
-    if (stmt) setStmtCheck({ declaredCred: Number(stmt.total_credits) || 0, extCred: Math.round(extCred * 100) / 100, declaredDeb: Number(stmt.total_debits) || 0, extDeb: Math.round(extDeb * 100) / 100, openBal: Number(stmt.opening_balance) || 0, closeBal: Number(stmt.closing_balance) || 0 });
+    // Contrôle d'écart : compare les totaux extraits aux totaux DÉCLARÉS du/des relevé(s).
+    if (anyStmt) setStmtCheck({ declaredCred: Math.round(declCred * 100) / 100, extCred: Math.round(extCred * 100) / 100, declaredDeb: Math.round(declDeb * 100) / 100, extDeb: Math.round(extDeb * 100) / 100, openBal: 0, closeBal: 0 });
     else setStmtCheck(null);
     setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} doublon(s) ignoré(s)` : ''}${transfers ? `, ${transfers} transfert(s) interne(s) non comptabilisé(s)` : ''} — ⏳ À VÉRIFIER${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created${dups ? `, ${dups} duplicate(s) skipped` : ''}${transfers ? `, ${transfers} internal transfer(s) not booked` : ''} — ⏳ TO REVIEW${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
     // Ne PAS forcer le filtre sur « Brouillon » : ça masquait les autres transactions (revenus, comptabilisées).
@@ -7308,6 +7308,19 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     await load();
   }
 
+  // Vue AVANCES INVESTISSEURS : charge le solde du grand livre pour afficher le dû (compte 2400).
+  async function openAdvances() {
+    setView('advances'); setNotice(null);
+    try { const [acc, tb] = await Promise.all([getAccounts(tenant), getTrialBalance(tenant)]); setAccounts(acc); setBal(tb); } catch { /* noop */ }
+  }
+  // Pré-remplit une dépense de REMBOURSEMENT d'avance (DR 2400 / CR banque) pour un investisseur.
+  async function repayAdvance(name: string, amount: number) {
+    const num = await nextTransactionNumber(tenant, 'A');
+    setHdr({ transaction_number: num, vendor_name: name, txn_type: 'expense', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', settlement_kind: 'standard', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+    setItems([{ description: tr(`Remboursement avance — ${name}`, `Advance repayment — ${name}`), account_code: '2400', amount: Math.round((Number(amount) || 0) * 100) / 100, taxable: false, tax_category: 'exempt' }]);
+    setAttachments([]); setAiResult(null); setView('edit');
+  }
+
   // NETTOYAGE des écritures du grand livre SANS transaction associée (orphelines d'anciennes suppressions).
   async function cleanupOrphanGl() {
     if (!confirm(tr('Supprimer les écritures du grand livre dont la transaction n\'existe plus ?', 'Delete ledger entries whose transaction no longer exists?'))) return;
@@ -7426,9 +7439,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           </label>
           <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🏦 {tr('Mes comptes', 'My accounts')}</button>
           <button onClick={openBalances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">💰 {tr('Soldes des comptes', 'Account balances')}</button>
+          <button onClick={openAdvances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🤝 {tr('Avances investisseurs', 'Investor advances')}</button>
           <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
         </div>}
-        {(view === 'bank' || view === 'accounts' || view === 'balances') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
+        {(view === 'bank' || view === 'accounts' || view === 'balances' || view === 'advances') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
       {batch?.busy && <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">📷 {tr('Lecture IA des reçus', 'AI reading receipts')} : {batch.done}/{batch.total} · {batch.created} {tr('créée(s)', 'created')}{batch.failed ? `, ${batch.failed} ${tr('échec(s)', 'failed')}` : ''}</div>}
@@ -7569,6 +7583,44 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : view === 'advances' ? (
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-2 text-sm font-bold">🤝 {tr('Avances investisseurs (dettes à rembourser)', 'Investor advances (debts to repay)')}</h3>
+            {(() => {
+              // Solde net dû = compte 2400 (passif : crédit − débit).
+              const acc2400 = accounts.find(a => a.code === '2400');
+              const b = acc2400 ? bal[acc2400.id] : null;
+              const dueNet = b ? (Number(b.credit) || 0) - (Number(b.debit) || 0) : 0;
+              const advances = txns.filter(t => t.settlement_kind === 'investor_advance');
+              const byInv: Record<string, number> = {};
+              advances.forEach(t => { const k = t.paid_by_person_id || '—'; byInv[k] = (byInv[k] || 0) + (Number(t.total) || 0); });
+              const nameOf = (id: string) => persons.find(p => p.id === id)?.name || tr('Non attribué', 'Unassigned');
+              const totalAdv = advances.reduce((s, t) => s + (Number(t.total) || 0), 0);
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-800 dark:bg-rose-900/20"><div className="text-[11px] font-semibold uppercase text-rose-500">{tr('Dû net (compte 2400)', 'Net owed (acct 2400)')}</div><div className="text-lg font-extrabold text-rose-700 dark:text-rose-300">{mny(dueNet)}</div></div>
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-[11px] font-semibold uppercase text-gray-400">{tr('Avances saisies', 'Advances entered')}</div><div className="text-lg font-extrabold text-gray-800 dark:text-gray-100">{mny(totalAdv)}</div></div>
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-[11px] font-semibold uppercase text-gray-400">{tr('Investisseurs', 'Investors')}</div><div className="text-lg font-extrabold text-gray-800 dark:text-gray-100">{Object.keys(byInv).length}</div></div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-gray-400">{tr('« Dû net » = avances reçues − remboursements (solde du compte de passif 2400). Comptabilisez les transactions pour le mettre à jour.', '“Net owed” = advances received − repayments (liability account 2400 balance). Post transactions to update it.')}</p>
+                  {advances.length === 0 ? <div className="mt-3 text-sm text-gray-400">{tr('Aucune avance d\'investisseur. Sur une transaction Revenu, choisissez « Avance d\'investisseur ».', 'No investor advance. On a Revenue transaction, choose “Investor advance”.')}</div> : (
+                    <div className="mt-3 space-y-1.5">
+                      {Object.entries(byInv).sort((a, b) => b[1] - a[1]).map(([id, amt]) => (
+                        <div key={id} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm dark:border-gray-700">
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">{nameOf(id)}</span>
+                          <span className="text-gray-500">{tr('avancé', 'advanced')} : <b>{mny(amt)}</b></span>
+                          {canEdit && <button onClick={() => repayAdvance(nameOf(id), amt)} className="ml-auto rounded-lg border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300">{tr('Rembourser', 'Repay')}</button>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       ) : view === 'balances' ? (
@@ -7767,6 +7819,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           {/* Pièces justificatives manquantes (déduction / preuve fiscale) */}
           <button onClick={() => setFDoc(v => !v)} className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${fDoc ? 'border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20' : 'border-gray-200 text-gray-500 dark:border-gray-700'}`} title={tr('Dépenses sans pièce justificative', 'Expenses without a receipt')}>⚠ {tr('Pièces manquantes', 'Missing receipts')}{missingDocCount > 0 ? ` (${missingDocCount})` : ''}</button>
           {(fType !== 'all' || fStatus !== 'all' || fSearch || fAccount !== 'all' || fDoc) && <button onClick={() => { setFType('all'); setFStatus('all'); setFSearch(''); setFAccount('all'); setFDoc(false); }} className="text-xs font-semibold text-gray-500 hover:underline">{tr('Réinitialiser', 'Reset')}</button>}
+          {/* Solde des MOUVEMENTS du compte filtré (revenus − dépenses) — contrôle par compte */}
+          {fAccount !== 'all' && fAccount !== 'none' && (() => { const net = filteredTxns.reduce((s, t) => s + ((t.txn_type === 'revenue') ? (Number(t.total) || 0) : -(Number(t.total) || 0)), 0); return <span className={`rounded-lg px-2 py-1 text-xs font-bold ${net < 0 ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300' : 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'}`} title={tr('Solde des mouvements affichés sur ce compte (revenus − dépenses)', 'Balance of displayed movements on this account (revenue − expenses)')}>{tr('Solde compte', 'Account bal.')} : {mny(net)}</span>; })()}
           <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
           {canEdit && filteredTxns.some(t => !t.gl_entry_id && t.status !== 'cancelled') && <button onClick={postAllFiltered} className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300" title={tr('Comptabiliser au grand livre toutes les transactions affichées non comptabilisées', 'Post all displayed unposted transactions to the ledger')}>📒 {tr('Comptabiliser tout', 'Post all')}</button>}
           <button onClick={exportCsv} disabled={filteredTxns.length === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{tr('Exporter CSV', 'Export CSV')}</button>
