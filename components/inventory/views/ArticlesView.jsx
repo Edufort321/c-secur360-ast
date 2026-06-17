@@ -29,6 +29,8 @@ import SearchInput from '../components/SearchInput';
 import { getScanUrl } from '../config/app';
 import { useLanguage } from '../contexts/LanguageContext';
 import { downloadCsv } from '@/lib/csv';
+import { createBonFromLines } from '@/lib/bonsCommande';
+import { ShoppingCart } from 'lucide-react';
 
 // ============== UI COMPONENTS ==============
 
@@ -252,6 +254,43 @@ const ArticlesView = React.memo(({
     downloadCsv(`inventaire-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
   };
 
+  // Création de BON DE COMMANDE depuis l'inventaire (numéro séquentiel partagé avec Admin › Bons de commande).
+  // Accès réservé : niveau « administration » éditable (tier ≥ 4) — résolu côté serveur via /api/me/access.
+  const poTenant = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || '') : '');
+  const [poTier, setPoTier] = useState(0);
+  const [poBusy, setPoBusy] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!poTenant) return;
+    fetch(`/api/me/access?tenant=${encodeURIComponent(poTenant)}`).then(r => (r.ok ? r.json() : null)).then(j => { if (active && j) setPoTier(Number(j.tier) || 0); }).catch(() => {});
+    return () => { active = false; };
+  }, [poTenant]);
+  const createPurchaseOrder = async () => {
+    const fr = language === 'fr';
+    // Articles ciblés : la sélection, sinon tous ceux en rupture (quantité ≤ seuil min).
+    const base = selectedItems.length ? filteredItems.filter(it => selectedItems.includes(it.id)) : filteredItems.filter(it => (Number(it.quantity) || 0) <= (Number(it.minQuantity) || 0));
+    if (!base.length) { alert(fr ? 'Sélectionnez des articles (ou aucun article n’est en rupture).' : 'Select items (or no item is low-stock).'); return; }
+    if (!window.confirm(fr ? `Créer un bon de commande pour ${base.length} article(s) ? (un bon par fournisseur)` : `Create a purchase order for ${base.length} item(s)? (one PO per supplier)`)) return;
+    setPoBusy(true);
+    try {
+      const groups = {};
+      base.forEach(it => { const key = (it.supplier || '').trim(); (groups[key] = groups[key] || []).push(it); });
+      const created = [];
+      for (const [supplier, its] of Object.entries(groups)) {
+        const items = its.map(it => {
+          const target = Number(it.maxQuantity) || Number(it.minQuantity) || 1;
+          const qty = Math.max(target - (Number(it.quantity) || 0), 1);
+          return { code: it.code || '', designation: it.name || '', quantite: qty, unite: it.unit || '', cout_unitaire: Number(it.costPrice ?? it.cost) || 0, taxable: true };
+        });
+        const { numero } = await createBonFromLines(poTenant, { supplier: supplier || '', supplier_contact: its[0]?.supplierEmail || '', destination: 'stock', items });
+        created.push(numero);
+      }
+      alert((fr ? 'Bon(s) de commande créé(s) : ' : 'Purchase order(s) created: ') + created.join(', ') + (fr ? '. Disponible(s) dans Admin › Ventes & achats › Bons de commande.' : '. Available in Admin › Sales & Purchasing › Purchase orders.'));
+    } catch (e) {
+      alert((fr ? 'Erreur : ' : 'Error: ') + (e?.message || e));
+    } finally { setPoBusy(false); }
+  };
+
   // État pour le dropdown d'impression
   const [showPrintDropdown, setShowPrintDropdown] = useState(false);
   const printDropdownRef = useRef(null);
@@ -403,6 +442,17 @@ const ArticlesView = React.memo(({
             <Download size={16} />
             <span className="hidden sm:inline">{language === 'fr' ? 'Exporter CSV' : 'Export CSV'}</span>
           </button>
+          {poTier >= 4 && (
+            <button
+              onClick={createPurchaseOrder}
+              disabled={poBusy}
+              title={language === 'fr' ? 'Créer un bon de commande (sélection, sinon articles en rupture) — numéro séquentiel partagé avec l’admin' : 'Create a purchase order (selection, else low-stock items)'}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg disabled:opacity-50 transition-all whitespace-nowrap"
+            >
+              <ShoppingCart size={16} />
+              <span className="hidden sm:inline">{poBusy ? (language === 'fr' ? 'Création…' : 'Creating…') : (language === 'fr' ? 'Bon de commande' : 'Purchase order')}</span>
+            </button>
+          )}
           {importFromCatalogue && (
             <Button variant="secondary" icon={Layers} onClick={importFromCatalogue} className="whitespace-nowrap" title="Importer les articles du catalogue matériel standardisé">
               <span className="hidden sm:inline">Importer du catalogue</span>
