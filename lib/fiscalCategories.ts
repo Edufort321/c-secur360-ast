@@ -32,9 +32,19 @@ export const FISCAL_CATEGORIES: FiscalCategory[] = [
   { key: 'frais_bancaires', group: 'Administration',        fr: 'Frais bancaires',            en: 'Bank fees',            glCode: '5320', glName: 'Frais bancaires',         kind: 'expense', tax: 'exempt' },
   { key: 'assurances',    group: 'Administration',          fr: 'Assurances',                 en: 'Insurance',            glCode: '5280', glName: 'Assurances',              kind: 'expense', tax: 'exempt' },
   { key: 'divers',        group: 'Administration',          fr: 'Charges diverses',           en: 'Misc. expenses',       glCode: '5300', glName: 'Charges diverses',        kind: 'expense', tax: 'standard' },
-  // — Revenus —
+  // — Revenus (produits) —
   { key: 'ventes',        group: 'Revenus',                 fr: 'Ventes & services',          en: 'Sales & services',     glCode: '4000', glName: 'Ventes et services',      kind: 'revenue', tax: 'standard' },
+  { key: 'honoraires_rev', group: 'Revenus',                fr: 'Honoraires / consultation',  en: 'Fees / consulting',    glCode: '4020', glName: 'Honoraires et consultation', kind: 'revenue', tax: 'standard' },
+  { key: 'commissions_rev', group: 'Revenus',               fr: 'Commissions reçues',         en: 'Commissions earned',   glCode: '4070', glName: 'Commissions reçues',      kind: 'revenue', tax: 'standard' },
   { key: 'location_rev',  group: 'Revenus',                 fr: 'Location / équipement',      en: 'Rental income',        glCode: '4010', glName: 'Revenus de location',     kind: 'revenue', tax: 'standard' },
+  { key: 'abonnements_rev', group: 'Revenus',               fr: 'Abonnements / récurrent',    en: 'Subscriptions',        glCode: '4015', glName: 'Revenus d’abonnement',    kind: 'revenue', tax: 'standard' },
+  // — Revenus NON taxables / hors exploitation —
+  { key: 'interets_rev',  group: 'Revenus financiers',      fr: 'Intérêts / placements',      en: 'Interest / investment', glCode: '4030', glName: 'Intérêts et revenus de placement', kind: 'revenue', tax: 'exempt' },
+  { key: 'dividendes_rev', group: 'Revenus financiers',     fr: 'Dividendes reçus',           en: 'Dividends received',   glCode: '4035', glName: 'Dividendes reçus',        kind: 'revenue', tax: 'exempt' },
+  { key: 'subventions_rev', group: 'Revenus financiers',    fr: 'Subventions / aides',        en: 'Grants / subsidies',   glCode: '4040', glName: 'Subventions et aides',    kind: 'revenue', tax: 'exempt' },
+  { key: 'gain_actif_rev', group: 'Revenus financiers',     fr: 'Gain sur vente d’actif',     en: 'Gain on asset sale',   glCode: '4060', glName: 'Gain sur disposition d’actif', kind: 'revenue', tax: 'exempt' },
+  { key: 'remboursement_rev', group: 'Revenus financiers',  fr: 'Remboursement / crédit reçu', en: 'Refund / credit',     glCode: '4050', glName: 'Remboursements reçus',    kind: 'revenue', tax: 'exempt' },
+  { key: 'autres_rev',    group: 'Revenus financiers',      fr: 'Autres produits',            en: 'Other income',         glCode: '4100', glName: 'Produits — Autres',       kind: 'revenue', tax: 'exempt' },
 ];
 
 export const fiscalByCode = (code: string) => FISCAL_CATEGORIES.find(c => c.glCode === code);
