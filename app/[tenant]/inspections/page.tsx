@@ -18,6 +18,7 @@ import {
 } from '@/components/InspectionForm/checklists';
 import type { EquipmentRow } from '@/components/EquipmentForm';
 import type { ExportOptions } from '@/lib/utils/exportInspectionsPDF';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -123,6 +124,41 @@ export default function InspectionsPage() {
     } finally {
       setExporting(false);
     }
+  }
+
+  // Export CSV de la liste des équipements à inspecter (filtre courant), bien présenté pour Excel-FR.
+  function handleExportCsv() {
+    const toExport = exportFilter === 'all' ? cards : cards.filter(c => c.equipment.equipment_type === exportFilter);
+    const resultLabel: Record<string, string> = { conforme: 'Conforme', conditionnel: 'Conditionnel', non_conforme: 'Non conforme', retrait: 'Retrait immédiat', incomplete: 'En cours' };
+    const urgencyLabel: Record<string, string> = { overdue: 'En retard', soon: 'Bientôt dû', ok: 'À jour', unknown: 'Inconnu' };
+    const rows = toExport.map(c => ({
+      type: INSPECTION_TYPE_OPTIONS.find(o => o.value === c.equipment.equipment_type)?.label ?? c.equipment.equipment_type,
+      name: c.equipment.equipment_name || '',
+      serial: c.equipment.equipment_serial || '',
+      location: c.equipment.equipment_location || '',
+      province: c.equipment.province || '',
+      frequency: FREQUENCY_OPTIONS.find(f => f.value === c.equipment.inspection_frequency)?.label ?? c.equipment.inspection_frequency ?? '',
+      lastDate: c.latest?.inspection_date || '',
+      inspector: c.latest?.inspector_name || '',
+      result: c.latest?.overall_result ? (resultLabel[c.latest.overall_result] || c.latest.overall_result) : '',
+      urgency: urgencyLabel[c.urgency] || c.urgency,
+      count: c.inspectionCount,
+    }));
+    const cols: CsvColumn[] = [
+      { key: 'type', label: 'Type' },
+      { key: 'name', label: 'Équipement' },
+      { key: 'serial', label: 'No de série' },
+      { key: 'location', label: 'Emplacement' },
+      { key: 'province', label: 'Province' },
+      { key: 'frequency', label: 'Fréquence' },
+      { key: 'lastDate', label: 'Dernière inspection', type: 'date' },
+      { key: 'inspector', label: 'Inspecteur' },
+      { key: 'result', label: 'Dernier résultat' },
+      { key: 'urgency', label: 'Échéance' },
+      { key: 'count', label: 'Nb inspections', type: 'number' },
+    ];
+    downloadCsv(`inspections-${tenant}-${exportFilter === 'all' ? 'tous' : exportFilter}-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+    setShowExport(false);
   }
 
   useEffect(() => {
@@ -502,6 +538,12 @@ export default function InspectionsPage() {
               {exporting
                 ? <><Loader2 size={16} className="animate-spin" /> Génération en cours…</>
                 : <><FileDown size={16} /> Télécharger le PDF</>}
+            </button>
+            <button
+              onClick={handleExportCsv}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-semibold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              <FileDown size={16} /> Télécharger le CSV (Excel)
             </button>
           </div>
         </div>

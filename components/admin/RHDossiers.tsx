@@ -3,8 +3,9 @@
 // #73 — Hub RH « Dossier 360 » : agrège l'info existante (employé/éval/paie/sites) EN LECTURE
 // et ajoute ce qui manque (documents, certifications avec expiration, onboarding). Pas de doublon.
 import React, { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle, ShieldCheck, BookOpen, ChevronDown, Info, UploadCloud, Sparkles, X } from 'lucide-react';
+import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle, ShieldCheck, BookOpen, ChevronDown, Info, UploadCloud, Sparkles, X, Download } from 'lucide-react';
 import { uploadReceipt } from '@/lib/transactions';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 
 type Pers = { id: string; name: string; email?: string; role?: string; succursale?: string; niveauAcces?: string; hire_date?: string; current_salary?: number; last_evaluation_date?: string; next_evaluation_date?: string };
 type Doc = { id?: string; type: string; name: string; url: string; expiry_date?: string | null };
@@ -109,6 +110,21 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
     setSel(p); setDocs([]); setCerts([]); setOnb([]);
     const j = await hrGet(`personnelId=${p.id}`);
     setDocs((j.documents || []) as Doc[]); setCerts((j.certifications || []) as Cert[]); setOnb((j.onboarding || []) as Onb[]);
+  }
+
+  // Export CSV du roster (sans les salaires — minimisation Loi 25 ; le salaire reste dans la fiche / l'export paie).
+  function exportCsv() {
+    const cols: CsvColumn<Pers>[] = [
+      { key: 'name', label: tr('Nom', 'Name') },
+      { key: 'email', label: tr('Courriel', 'Email') },
+      { key: 'role', label: tr('Poste', 'Role') },
+      { key: 'succursale', label: tr('Succursale / site', 'Branch / site') },
+      { key: 'niveauAcces', label: tr('Niveau d\'accès', 'Access level') },
+      { key: 'hire_date', label: tr('Date d\'embauche', 'Hire date'), type: 'date' },
+      { key: 'last_evaluation_date', label: tr('Dernière évaluation', 'Last evaluation'), type: 'date' },
+      { key: 'next_evaluation_date', label: tr('Prochaine évaluation', 'Next evaluation'), type: 'date' },
+    ];
+    downloadCsv(`personnel-${new Date().toISOString().slice(0, 10)}.csv`, pers, cols);
   }
 
   // ── Certifications ──
@@ -236,7 +252,10 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
     <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
       {/* Liste employés */}
       <div className="rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
-        <div className="px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">{tr('Employés', 'Employees')} ({pers.length})</div>
+        <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-gray-400">{tr('Employés', 'Employees')} ({pers.length})</span>
+          {pers.length > 0 && <button onClick={exportCsv} title={tr('Exporter la liste du personnel en CSV (sans les salaires)', 'Export staff roster to CSV (no salaries)')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={11} /> {tr('CSV', 'CSV')}</button>}
+        </div>
         <div className="max-h-[70vh] space-y-1 overflow-y-auto">
           {pers.map(p => (
             <button key={p.id} onClick={() => openFiche(p)} className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${sel?.id === p.id ? 'bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
