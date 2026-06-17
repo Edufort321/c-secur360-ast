@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Loader2, Check, RefreshCw } from 'lucide-react';
+import { Package, Loader2, Check, RefreshCw, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -31,6 +31,7 @@ export function ConsumeMaterialPanel({ tenant, projectNumber }: { tenant: string
   const [itemId, setItemId] = useState('');
   const [deptCode, setDeptCode] = useState('');
   const [qty, setQty] = useState(1);
+  const [itemSearch, setItemSearch] = useState(''); // recherche dynamique dans l'inventaire
 
   const itemMap = Object.fromEntries(items.map(i => [i.id, i]));
   const selItem = itemMap[itemId];
@@ -107,10 +108,22 @@ export function ConsumeMaterialPanel({ tenant, projectNumber }: { tenant: string
         <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
           <div className="grid gap-2 sm:grid-cols-4">
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Article', 'Item')}
-              <select value={itemId} onChange={e => { setItemId(e.target.value); setDeptCode(''); }} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800">
-                <option value="">{tr('— Choisir —', '— Select —')}</option>
-                {items.map(i => <option key={i.id} value={i.id}>{i.code ? `${i.code} · ` : ''}{i.name} ({i.quantity})</option>)}
-              </select>
+              {/* Recherche dynamique : filtre la liste d'articles (code/nom) — utile pour un gros inventaire. */}
+              <div className="mt-1 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2 py-1.5 dark:border-gray-600 dark:bg-gray-800">
+                <Search size={13} className="text-gray-400" />
+                <input value={itemSearch} onChange={e => setItemSearch(e.target.value)} placeholder={tr('Rechercher un article (code, nom)…', 'Search an item (code, name)…')} className="w-full bg-transparent text-sm outline-none" />
+                {itemSearch && <button type="button" onClick={() => setItemSearch('')} className="text-xs text-gray-400 hover:text-gray-600">✕</button>}
+              </div>
+              {(() => {
+                const s = itemSearch.trim().toLowerCase();
+                const shown = s ? items.filter(i => [i.code, i.name].some(v => String(v || '').toLowerCase().includes(s))) : items;
+                return (
+                  <select value={itemId} onChange={e => { setItemId(e.target.value); setDeptCode(''); }} size={s ? Math.min(6, Math.max(2, shown.length)) : undefined} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800">
+                    <option value="">{shown.length === 0 ? tr('— Aucun résultat —', '— No result —') : tr('— Choisir —', '— Select —')}</option>
+                    {shown.map(i => <option key={i.id} value={i.id}>{i.code ? `${i.code} · ` : ''}{i.name} ({i.quantity})</option>)}
+                  </select>
+                );
+              })()}
             </label>
             <label className="text-xs font-semibold text-gray-500">{tr('Emplacement', 'Location')}
               <select value={deptCode} onChange={e => setDeptCode(e.target.value)} disabled={!selItem} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800">
