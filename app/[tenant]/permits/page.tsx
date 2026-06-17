@@ -6,10 +6,11 @@ import { useParams } from 'next/navigation';
 import {
   FileCheck, Plus, Search, MapPin, Calendar, User,
   Clock, CheckCircle, XCircle, Loader2, BarChart3,
-  Wind, Flame, Lock, Zap, ArrowUp, Shovel, FlaskConical, Gauge,
+  Wind, Flame, Lock, Zap, ArrowUp, Shovel, FlaskConical, Gauge, Download,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,34 @@ export default function PermitsPage() {
     [...new Set(permits.map(p => p.permitType))], [permits]
   );
 
+  // Export CSV de la liste filtrée des permis (socle lib/csv : Excel-FR, colonnes typées).
+  function exportPermitsCsv() {
+    const statusLabel: Record<string, string> = { draft: 'Brouillon', active: 'Actif', completed: 'Complété', cancelled: 'Annulé' };
+    const rows = filtered.map(p => ({
+      number: p.permit_number,
+      type: PERMIT_META[p.permitType]?.labelFr || p.permitType,
+      status: statusLabel[p.data?.status || 'draft'] || (p.data?.status || ''),
+      location: getPermitLocation(p),
+      contractor: getPermitContractor(p),
+      date: getPermitDate(p),
+      province: p.data?.province || '',
+      completion: p.data?.validation?.percentage != null ? p.data.validation.percentage : '',
+      updated: p.updated_at || '',
+    }));
+    const cols: CsvColumn[] = [
+      { key: 'number', label: 'Numéro' },
+      { key: 'type', label: 'Type' },
+      { key: 'status', label: 'Statut' },
+      { key: 'location', label: 'Lieu des travaux' },
+      { key: 'contractor', label: 'Entrepreneur' },
+      { key: 'date', label: 'Date', type: 'date' },
+      { key: 'province', label: 'Province' },
+      { key: 'completion', label: 'Complétion (%)', type: 'number' },
+      { key: 'updated', label: 'Mis à jour', type: 'date' },
+    ];
+    downloadCsv(`permis-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <PortalHeader tenant={tenant} />
@@ -197,12 +226,23 @@ export default function PermitsPage() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/${tenant}/permits/nouveau`}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
-          >
-            <Plus size={18} /> Nouveau permis
-          </Link>
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <button
+                onClick={exportPermitsCsv}
+                title="Exporter la liste filtrée en CSV (Excel)"
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
+              >
+                <Download size={18} /> Exporter CSV
+              </button>
+            )}
+            <Link
+              href={`/${tenant}/permits/nouveau`}
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+            >
+              <Plus size={18} /> Nouveau permis
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
