@@ -712,7 +712,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
                       <input value={rrow.label} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('custom_rates', i, { label: e.target.value })} placeholder={tr('Libellé', 'Label')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
                       <select value={rrow.categorie || 'mo_chantier'} onChange={e => updList('custom_rates', i, { categorie: e.target.value })} className={`w-40 ${inputCls}`}>
-                        {CATS.map(c => <option key={c} value={c}>{CATEGORIE_LABELS[c]}</option>)}
+                        {CATS.map(c => <option key={c} value={c}>{catLabel(cf, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c])}</option>)}
                       </select>
                       {numInput(`cr_${i}`, rrow.value, v => updList('custom_rates', i, { value: v }), `w-24 text-right ${inputCls}`)}
                       <button type="button" onClick={() => delList('custom_rates', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
