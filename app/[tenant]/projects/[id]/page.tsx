@@ -12,7 +12,7 @@ import { ConsumeMaterialPanel } from '@/components/projet/ConsumeMaterialPanel';
 import { ProjectAttachments } from '@/components/projet/ProjectAttachments';
 import { POImportButton } from '@/components/projet/POImportButton';
 import { CoutsTab } from '@/components/projet/CoutsTab';
-import { ProjectPerfStrip } from '@/components/projects/ProjectsAnalytics';
+import { ProjectPerfStrip, ProjectsAnalytics } from '@/components/projects/ProjectsAnalytics';
 import { FactureTab } from '@/components/projet/FactureTab';
 import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,6 +30,7 @@ export default function ProjectDetailPage() {
 
   const [tab, setTab] = useState<Tab>('projet');
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [showCharts, setShowCharts] = useState(true); // graphiques du projet (comme au tableau de bord), masquables
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -368,6 +369,15 @@ export default function ProjectDetailPage() {
 
             {/* Bandeau performance (visible à l'ouverture, sur tous les onglets) — coût réel live si dispo */}
             <ProjectPerfStrip project={p as any} liveActualsTotal={(tsActuals && tsActuals.count > 0) ? tsActuals.total : undefined} />
+
+            {/* Graphiques du projet (mêmes que le tableau de bord) — masquables */}
+            <div className="mt-3">
+              <button onClick={() => setShowCharts(s => !s)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300">
+                {showCharts ? '▼' : '▶'} {tr('Graphiques du projet', 'Project charts')}
+                <span className="text-xs font-normal text-slate-400">({showCharts ? tr('masquer', 'hide') : tr('afficher', 'show')})</span>
+              </button>
+              {showCharts && <div className="mt-2"><ProjectsAnalytics projects={[p] as any} tenant={tenant} /></div>}
+            </div>
 
             {/* Onglet Projet */}
             {tab === 'projet' && (
