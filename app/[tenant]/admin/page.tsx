@@ -6428,6 +6428,12 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   const [stripeStatus, setStripeStatus] = useState<{ connected: boolean; chargesEnabled: boolean } | null>(null);
   const [stripeBusy, setStripeBusy] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
+  // Encaissement manuel : facture à encaisser + comptes bancaires (trésorerie) pour choisir où l'argent est reçu.
+  const [payFor, setPayFor] = useState<Invoice | null>(null);
+  const [payDate, setPayDate] = useState<string>(today);
+  const [payBankGl, setPayBankGl] = useState<string>(''); // gl_account_id du compte de trésorerie choisi
+  const [treasuries, setTreasuries] = useState<{ id: string; name: string; gl_account_id: string | null }[]>([]);
+  useEffect(() => { supabase.from('treasury_accounts').select('id, name, gl_account_id').eq('tenant_id', tenant).then(({ data }) => setTreasuries((data as any[]) || []), () => {}); }, [tenant]);
   useEffect(() => { fetch(`/api/stripe/connect/onboard?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => j && setStripeStatus(j)).catch(() => {}); }, [tenant]);
   async function connectStripe() {
     setStripeBusy(true); setNotice(null);
@@ -6532,22 +6538,28 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   async function changeStatus(inv: Invoice, status: Invoice['status']) {
     try { await setInvoiceStatus(tenant, inv.id!, status); await load(); } catch (e: any) { setNotice(e?.message); }
   }
-  async function markPaid(inv: Invoice) {
+  // Encaissement d'une facture : associe le paiement reçu à la facture. On peut choisir le COMPTE
+  // BANCAIRE qui a reçu l'argent (trésorerie assignée, sinon 1000) et la DATE. Écriture unique
+  // DR Banque / CR Clients (idempotente par source_id) -> aucun double-comptage. Statut -> « Payée ».
+  async function markPaid(inv: Invoice, opts?: { bankGlId?: string | null; date?: string }) {
     setNotice(null);
     try {
       const accs = await getAccounts(tenant); const m: Record<string, string> = {}; accs.forEach(a => m[a.code] = a.id);
       if (!inv.gl_entry_id && m['1100'] && m['4000']) await postSale(inv); // comptabilise la vente si pas déjà fait
-      if (m['1000'] && m['1100']) {
+      const bankId = opts?.bankGlId || m['1000'];
+      const payDate = opts?.date || new Date().toISOString().slice(0, 10);
+      if (bankId && m['1100']) {
         const { data: ex } = await supabase.from('gl_entries').select('id').eq('tenant_id', tenant).eq('source_type', 'invoice_payment').eq('source_id', inv.id).limit(1);
         if (!ex || !ex.length) {
           await createEntry(tenant, {
-            entry_date: new Date().toISOString().slice(0, 10), description: `Encaissement — facture ${inv.invoice_number}`,
+            entry_date: payDate, description: `Encaissement — facture ${inv.invoice_number}`,
             reference: inv.invoice_number, journal_code: 'BNK', source_type: 'invoice_payment', source_id: inv.id,
-            lines: [{ account_id: m['1000'], debit: Number(inv.total) || 0, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: Number(inv.total) || 0, description: 'Clients' }],
+            lines: [{ account_id: bankId, debit: Number(inv.total) || 0, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: Number(inv.total) || 0, description: 'Clients' }],
           });
         }
       }
-      await setInvoiceStatus(tenant, inv.id!, 'paid');
+      await setInvoiceStatus(tenant, inv.id!, 'paid', payDate);
+      setPayFor(null);
       setNotice(tr('Facture payée — encaissement comptabilisé.', 'Invoice paid — payment posted.')); await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
@@ -6749,13 +6761,37 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
                       }} className="text-emerald-600 hover:underline">✍️ {tr('Transmettre', 'Send')}</button>}
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {inv.status !== 'paid' && stripeStatus?.chargesEnabled && <button onClick={() => payInvoice(inv)} disabled={payingId === inv.id} className="font-semibold text-indigo-600 hover:underline disabled:opacity-40">{payingId === inv.id ? <Loader2 size={12} className="inline animate-spin" /> : `💳 ${tr('Payer', 'Pay')}`}</button>}
-                      {inv.status !== 'paid' && <button onClick={() => markPaid(inv)} className="ml-auto text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
+                      {inv.status !== 'paid' && <button onClick={() => { setPayFor(inv); setPayDate(today); setPayBankGl(''); }} className="ml-auto text-emerald-600 hover:underline">{tr('Encaisser (Payée)', 'Receive (Paid)')}</button>}
                     </div>
                   )}
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Panneau d'encaissement : associer le paiement reçu à la facture (compte bancaire + date) */}
+      {payFor && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setPayFor(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-bold">{tr('Encaisser la facture', 'Receive payment')} {payFor.invoice_number}</h3>
+            <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{tr('Montant', 'Amount')} : <span className="font-semibold text-gray-800 dark:text-gray-100">{(Number(payFor.total) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $</span></p>
+            <label className="mb-2 block text-xs font-semibold text-gray-500">{tr('Compte bancaire (reçu sur)', 'Bank account (received in)')}
+              <select value={payBankGl} onChange={e => setPayBankGl(e.target.value)} className={`mt-1 w-full ${inputCls}`}>
+                <option value="">{tr('Banque par défaut (1000)', 'Default bank (1000)')}</option>
+                {treasuries.filter(t => t.gl_account_id).map(t => <option key={t.id} value={t.gl_account_id!}>{t.name}</option>)}
+              </select>
+            </label>
+            <label className="mb-3 block text-xs font-semibold text-gray-500">{tr('Date du paiement', 'Payment date')}
+              <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className={`mt-1 w-full ${inputCls}`} />
+            </label>
+            <p className="mb-3 text-[11px] text-gray-400">{tr('Écriture : DR Banque / CR Clients (solde le compte client). Statut → Payée. Aucun double-comptage.', 'Entry: DR Bank / CR Clients (settles AR). Status → Paid. No double-counting.')}</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setPayFor(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={() => markPaid(payFor, { bankGlId: payBankGl || null, date: payDate })} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Confirmer l\'encaissement', 'Confirm payment')}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
