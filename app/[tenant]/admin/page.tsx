@@ -6961,6 +6961,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const lineAccounts = isRevenue ? revenueAccounts : [...expenseAccounts, ...accounts.filter(a => a.type === 'asset')];
   const lineKinds: ('expense' | 'capex' | 'revenue')[] = isRevenue ? ['revenue'] : ['expense', 'capex'];
   const defaultAcct = isRevenue ? '4000' : '5300';
+  // Règlement « bilan » (sans classe fiscale par ligne) : la contrepartie est un compte de BILAN, pas un produit/charge.
+  //  - avance d'investisseur (entrée) -> CR 2400 (dette) ; - paiement en actions (dépense) -> CR 3100 (capital-actions).
+  // La ligne sert alors UNIQUEMENT au montant : on neutralise le sélecteur de catégorie et on force « Exonéré » (hors taxe).
+  const balanceSheetSettlement = hdr.settlement_kind === 'investor_advance' || hdr.settlement_kind === 'shares_payment';
+  const settlementLabel = hdr.settlement_kind === 'investor_advance'
+    ? tr('Avance d\'investisseur — compte 2400 (dette, aucune classe fiscale)', 'Investor advance — account 2400 (debt, no fiscal class)')
+    : tr('Réglé en actions/parts — compte 3100 (capital-actions)', 'Settled in shares — account 3100 (share capital)');
 
   // Tableau de bord (#35) : agrégats lecture seule, séparés revenus / dépenses.
   // revenue/expense = totaux par type ; gst/qst = taxes payées récupérables (CTI/RTI) sur les dépenses ;
@@ -7496,7 +7503,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             {/* Dépense engagée par une PERSONNE → remboursement (CR 2300) ou investissement/apport (CR 3100) */}
             {!isRevenue && (
               <label className="text-xs font-semibold text-gray-500">{tr('Réglé par', 'Settled by')}
-                <select value={hdr.settlement_kind || 'standard'} onChange={e => setHdr(h => ({ ...h, settlement_kind: e.target.value as any, paid_by_person_id: e.target.value === 'standard' ? null : h.paid_by_person_id }))} className={`mt-1 w-full ${inputCls}`}>
+                <select value={hdr.settlement_kind || 'standard'} onChange={e => { const v = e.target.value; setHdr(h => ({ ...h, settlement_kind: v as any, paid_by_person_id: v === 'standard' ? null : h.paid_by_person_id })); if (v === 'shares_payment') setItems(p => p.map(x => ({ ...x, tax_category: 'exempt', taxable: false }))); }} className={`mt-1 w-full ${inputCls}`}>
                   <option value="standard">{tr('Entreprise (banque/fournisseur)', 'Company (bank/vendor)')}</option>
                   <option value="reimbursement">{tr('Une personne — à rembourser', 'A person — to reimburse')}</option>
                   <option value="investment">{tr('Une personne — investissement (apport)', 'A person — investment (capital)')}</option>
@@ -7507,7 +7514,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             {/* ENTRÉE d'argent : revenu (vente) OU avance d'investisseur (dette à rembourser → CR 2400) */}
             {isRevenue && (
               <label className="text-xs font-semibold text-gray-500">{tr('Nature de l\'entrée', 'Inflow nature')}
-                <select value={hdr.settlement_kind === 'investor_advance' ? 'investor_advance' : 'standard'} onChange={e => setHdr(h => ({ ...h, settlement_kind: e.target.value as any, paid_by_person_id: e.target.value === 'standard' ? null : h.paid_by_person_id }))} className={`mt-1 w-full ${inputCls}`}>
+                <select value={hdr.settlement_kind === 'investor_advance' ? 'investor_advance' : 'standard'} onChange={e => { const v = e.target.value; setHdr(h => ({ ...h, settlement_kind: v as any, paid_by_person_id: v === 'standard' ? null : h.paid_by_person_id })); if (v === 'investor_advance') setItems(p => p.map(x => ({ ...x, tax_category: 'exempt', taxable: false }))); }} className={`mt-1 w-full ${inputCls}`}>
                   <option value="standard">{tr('Revenu (vente / service)', 'Revenue (sale / service)')}</option>
                   <option value="investor_advance">{tr('Avance d\'investisseur (dette à rembourser)', 'Investor advance (debt to repay)')}</option>
                 </select>
@@ -7533,21 +7540,30 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-12 items-center gap-2">
                 <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-4 ${inputCls}`} />
-                {/* Classe fiscale GUIDÉE : choisit le compte GL + la catégorie de taxe. */}
-                <select value={fiscalByCode(it.account_code)?.key || ''} onChange={e => { const c = FISCAL_CATEGORIES.find(x => x.key === e.target.value); if (c) setItems(p => p.map((x, j) => j === i ? { ...x, account_code: c.glCode, tax_category: c.tax, taxable: c.tax === 'standard' } : x)); }} className={`col-span-4 ${inputCls}`} title={tr('Catégorie (classe fiscale)', 'Category (fiscal class)')}>
-                  <option value="">{it.account_code ? `${it.account_code}${lineAccounts.find(a => a.code === it.account_code)?.name ? ' · ' + lineAccounts.find(a => a.code === it.account_code)!.name : ''}` : tr('— Catégorie —', '— Category —')}</option>
-                  {Array.from(new Set(FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind)).map(c => c.group))).map(g => (
-                    <optgroup key={g} label={g}>
-                      {FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind) && c.group === g).map(c => <option key={c.key} value={c.key}>{tr(c.fr, c.en)}</option>)}
-                    </optgroup>
-                  ))}
-                </select>
+                {/* Classe fiscale GUIDÉE : choisit le compte GL + la catégorie de taxe. Pour un règlement BILAN
+                    (avance d'investisseur / paiement en actions), pas de classe fiscale : étiquette fixe + hors taxe. */}
+                {balanceSheetSettlement ? (
+                  <div className={`col-span-4 ${inputCls} flex items-center text-xs text-gray-500 dark:text-gray-400`} title={settlementLabel}>{settlementLabel}</div>
+                ) : (
+                  <select value={fiscalByCode(it.account_code)?.key || ''} onChange={e => { const c = FISCAL_CATEGORIES.find(x => x.key === e.target.value); if (c) setItems(p => p.map((x, j) => j === i ? { ...x, account_code: c.glCode, tax_category: c.tax, taxable: c.tax === 'standard' } : x)); }} className={`col-span-4 ${inputCls}`} title={tr('Catégorie (classe fiscale)', 'Category (fiscal class)')}>
+                    <option value="">{it.account_code ? `${it.account_code}${lineAccounts.find(a => a.code === it.account_code)?.name ? ' · ' + lineAccounts.find(a => a.code === it.account_code)!.name : ''}` : tr('— Catégorie —', '— Category —')}</option>
+                    {Array.from(new Set(FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind)).map(c => c.group))).map(g => (
+                      <optgroup key={g} label={g}>
+                        {FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind) && c.group === g).map(c => <option key={c.key} value={c.key}>{tr(c.fr, c.en)}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                )}
                 <input type="number" placeholder={tr('Montant', 'Amount')} value={it.amount} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
-                <select value={it.tax_category || (it.taxable === false ? 'exempt' : 'standard')} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, tax_category: e.target.value as any, taxable: e.target.value === 'standard' } : x))} className="col-span-1 rounded border border-gray-300 px-1 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700" title={tr('Catégorie de taxe', 'Tax category')}>
-                  <option value="standard">{tr('Taxable', 'Taxable')}</option>
-                  <option value="zero_rated">{tr('Détaxé', 'Zero-r.')}</option>
-                  <option value="exempt">{tr('Exonéré', 'Exempt')}</option>
-                </select>
+                {balanceSheetSettlement ? (
+                  <div className="col-span-1 px-1 py-1.5 text-center text-xs text-gray-400" title={tr('Hors taxe (mouvement de bilan)', 'No tax (balance-sheet movement)')}>{tr('Exonéré', 'Exempt')}</div>
+                ) : (
+                  <select value={it.tax_category || (it.taxable === false ? 'exempt' : 'standard')} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, tax_category: e.target.value as any, taxable: e.target.value === 'standard' } : x))} className="col-span-1 rounded border border-gray-300 px-1 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700" title={tr('Catégorie de taxe', 'Tax category')}>
+                    <option value="standard">{tr('Taxable', 'Taxable')}</option>
+                    <option value="zero_rated">{tr('Détaxé', 'Zero-r.')}</option>
+                    <option value="exempt">{tr('Exonéré', 'Exempt')}</option>
+                  </select>
+                )}
                 <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
               </div>
             ))}
