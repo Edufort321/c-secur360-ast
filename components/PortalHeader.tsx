@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut, KeyRound } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut, KeyRound, ArrowLeft } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -23,6 +24,12 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   const { theme, toggle } = useTheme();
   const { lang, setLang, t } = useLanguage();
   const { sites, siteId, setSiteId } = useSite();
+  const router = useRouter();
+  const pathname = usePathname();
+  // Flèche retour UNIFORME : présente sur toute page module (sauf l'accueil « modules »). Recule dans
+  // l'historique, avec repli sur l'accueil du tenant si pas d'historique.
+  const onModulesHome = !!tenant && pathname === `/${tenant}/modules`;
+  const goBack = () => { if (typeof window !== 'undefined' && window.history.length > 1) router.back(); else if (tenant) router.push(`/${tenant}/modules`); };
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [brandColor, setBrandColor] = useState<string | null>(null); // couleur du header (réglage tenant)
@@ -72,13 +79,25 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   return (
     <header className="sticky top-0 z-40 text-white shadow" style={{ backgroundColor: brandColor || '#111827' }}>
       <div className="flex w-full items-center justify-between px-4 py-2 lg:px-6">
-        <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {tenant && !onModulesHome && (
+            <button
+              onClick={goBack}
+              title={lang === 'fr' ? 'Retour' : 'Back'}
+              aria-label={lang === 'fr' ? 'Retour' : 'Back'}
+              className="rounded-lg p-2 text-gray-300 transition hover:bg-white/10 hover:text-white"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-3">
           <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-16 w-auto" />
           <div className="leading-tight hidden sm:block">
             <div className="font-bold text-white">C-Secur360</div>
             <div className="text-xs text-gray-400">{subtitle || (tenant ? `${t('platform')} · ${tenant}` : (lang === 'fr' ? 'Panneau multi-clients' : 'Multi-client panel'))}</div>
           </div>
-        </Link>
+          </Link>
+        </div>
 
         <div className="flex items-center gap-2">
           {tenant && sites.length > 0 && (
