@@ -11,9 +11,11 @@ import { downloadCsv, type CsvColumn } from '@/lib/csv';
 import {
   getBonsCommande, saveBonCommande, deleteBonCommande, genBonNumero, computeBonTotal,
   scanItemsACommander, setJobsApproStatut, receiveToInventory, bonStatusLabel,
-  computeReceptionStatus, lineReception,
-  type BonCommande, type BonCommandeLigne, type BonCommandeStatus, type ItemACommander,
+  computeReceptionStatus, lineReception, postBonReceptionGL, destFeedsInventory,
+  BON_DESTINATIONS, bonDestinationLabel,
+  type BonCommande, type BonCommandeLigne, type BonCommandeStatus, type ItemACommander, type BonDestination,
 } from '@/lib/bonsCommande';
+import { FISCAL_CATEGORIES } from '@/lib/fiscalCategories';
 
 export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
       setForm(draft); setView('edit'); setNotice(tr('Brouillon restauré.', 'Draft restored.')); return;
     }
     clearDraft(`bc.${tenant}.new`);
-    setForm({ numero, supplier: '', supplier_contact: '', project_id: null, status: 'brouillon', items: [blankLigne()], province: 'QC', expected_date: null, notes: '' });
+    setForm({ numero, supplier: '', supplier_contact: '', project_id: null, status: 'brouillon', items: [blankLigne()], province: 'QC', expected_date: null, notes: '', destination: 'stock', fiscal_category: null });
     setView('edit'); setNotice(null);
   }
   function editer(b: BonCommande) {
@@ -135,19 +137,36 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
       setNotice(tr('Aucune quantité reçue à comptabiliser. Saisissez les quantités reçues (ou importez le bordereau) puis réessayez.', 'No received quantity to record. Enter received quantities (or import the slip) then retry.'));
       return;
     }
-    const msg = tout
-      ? tr('Marquer TOUT comme reçu et ajouter les quantités à l\'inventaire ?', 'Mark ALL as received and add quantities to inventory?')
-      : tr('Comptabiliser les quantités reçues saisies et les ajouter à l\'inventaire ?', 'Record the entered received quantities and add them to inventory?');
+    const inv = destFeedsInventory(form.destination);
+    const dst = bonDestinationLabel(form.destination);
+    const msg = inv
+      ? (tout ? tr('Marquer TOUT comme reçu et ajouter les quantités à l\'inventaire ?', 'Mark ALL as received and add quantities to inventory?')
+              : tr('Comptabiliser les quantités reçues saisies et les ajouter à l\'inventaire ?', 'Record the entered received quantities and add them to inventory?'))
+      : tr(`Réception « ${dst} » : à réception complète, l'écriture comptable sera créée automatiquement. Continuer ?`, `Receipt "${dst}": once fully received, the GL entry is created automatically. Continue?`);
     if (!window.confirm(msg)) return;
     setNotice(null);
     try {
-      const res = await receiveToInventory(tenant, { ...form, items }); // met à jour recu_synced (delta only)
+      const dest = form.destination || 'stock';
+      // Stock/revente → inventaire physique. Projet/consommable/capex → écriture GL (à réception complète).
+      const res = destFeedsInventory(dest)
+        ? await receiveToInventory(tenant, { ...form, items }) // met à jour recu_synced (delta only)
+        : { synced: 0, errors: 0 };
       const status = computeReceptionStatus(items, form.status);
-      const received = { ...form, status, items };
+      let received: BonCommande = { ...form, status, items };
+      // Automatisation comptable : à la réception COMPLÈTE d'un bon non-stock, passer l'écriture GL (idempotent).
+      let glMsg = '';
+      if (status === 'recu' && !destFeedsInventory(dest) && !received.gl_entry_id) {
+        const gl = await postBonReceptionGL(tenant, received);
+        if (gl.posted && gl.entryId) { received = { ...received, gl_entry_id: gl.entryId }; glMsg = dest === 'capex' ? tr(' · immobilisation + écriture GL créées ✓', ' · asset + GL entry created ✓') : tr(' · écriture comptable créée ✓', ' · GL entry created ✓'); }
+        else if (gl.error) glMsg = ' · ' + gl.error;
+      }
       await saveBonCommande(tenant, received);
       const refs = items.filter(l => l.source_job_id != null && l.source_index != null).map(l => ({ job_id: l.source_job_id!, index: l.source_index! }));
       if (refs.length) await setJobsApproStatut(tenant, refs, status === 'recu' ? 'recu' : 'commande');
-      setNotice(tr(`${bonStatusLabel(status)} — ${res.synced} article(s) ajoutés à l'inventaire${res.errors ? ` (${res.errors} en erreur)` : ''}.`, `${bonStatusLabel(status, false)} — ${res.synced} item(s) added to inventory${res.errors ? ` (${res.errors} errors)` : ''}.`));
+      const baseMsg = destFeedsInventory(dest)
+        ? tr(`${bonStatusLabel(status)} — ${res.synced} article(s) ajoutés à l'inventaire${res.errors ? ` (${res.errors} en erreur)` : ''}.`, `${bonStatusLabel(status, false)} — ${res.synced} item(s) added to inventory${res.errors ? ` (${res.errors} errors)` : ''}.`)
+        : tr(`${bonStatusLabel(status)} — ${bonDestinationLabel(dest)}.`, `${bonStatusLabel(status, false)} — ${bonDestinationLabel(dest, false)}.`);
+      setNotice(baseMsg + glMsg);
       setForm(received); await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
@@ -237,7 +256,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
       const t = computeBonTotal(b.items || [], b.province || 'QC');
       return {
         numero: b.numero || '', supplier: b.supplier || '', contact: b.supplier_contact || '',
-        project: projectLabelOf(b.project_id) || '', status: bonStatusLabel(b.status),
+        project: projectLabelOf(b.project_id) || '', destination: bonDestinationLabel(b.destination), status: bonStatusLabel(b.status),
         expected: b.expected_date || '', subtotal: t.subtotal, taxes: t.taxes, total: t.total,
       };
     });
@@ -246,6 +265,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
       { key: 'supplier', label: tr('Fournisseur', 'Supplier') },
       { key: 'contact', label: tr('Contact', 'Contact') },
       { key: 'project', label: tr('Projet', 'Project') },
+      { key: 'destination', label: tr('Destination', 'Destination') },
       { key: 'status', label: tr('Statut', 'Status') },
       { key: 'expected', label: tr('Date prévue', 'Expected'), type: 'date' },
       { key: 'subtotal', label: tr('Sous-total', 'Subtotal'), type: 'money' },
@@ -350,6 +370,24 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                 </select></label>
               <label className="block"><span className="text-xs font-semibold text-gray-500">{tr('Date prévue', 'Expected')}</span>
                 <input type="date" value={form.expected_date || ''} onChange={e => setForm(f => f ? { ...f, expected_date: e.target.value || null } : f)} className={`mt-1 w-full ${inputCls}`} /></label>
+            </div>
+          </div>
+
+          {/* Destination / classe d'achat : pilote le routage automatisé à la réception (stock / projet / charge / immobilisation / revente) */}
+          <div className="grid gap-3 rounded-xl border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-500/30 dark:bg-indigo-500/10 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="block"><span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{tr('Destination (classe d\'achat)', 'Destination (purchase class)')}</span>
+              <select value={form.destination || 'stock'} onChange={e => setForm(f => f ? { ...f, destination: e.target.value as BonDestination } : f)} disabled={!canEdit || form.status === 'recu'} className={`mt-1 w-full ${inputCls}`}>
+                {BON_DESTINATIONS.map(d => <option key={d.key} value={d.key}>{d.fr}</option>)}
+              </select></label>
+            {form.destination === 'consommable' && (
+              <label className="block"><span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{tr('Catégorie fiscale (charge)', 'Fiscal category (expense)')}</span>
+                <select value={form.fiscal_category || ''} onChange={e => setForm(f => f ? { ...f, fiscal_category: e.target.value || null } : f)} disabled={!canEdit || form.status === 'recu'} className={`mt-1 w-full ${inputCls}`}>
+                  <option value="">{tr('Matériaux (5260) — défaut', 'Materials (5260) — default')}</option>
+                  {FISCAL_CATEGORIES.filter(c => c.kind === 'expense').map(c => <option key={c.key} value={c.key}>{c.fr} ({c.glCode})</option>)}
+                </select></label>
+            )}
+            <div className="flex items-end text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+              {BON_DESTINATIONS.find(d => d.key === (form.destination || 'stock'))?.hint}
             </div>
           </div>
 
