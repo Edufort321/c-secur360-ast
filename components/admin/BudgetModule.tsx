@@ -2,9 +2,10 @@
 // Budget annuel vs réel (#41) : saisie du budget par compte (produits/charges) + comparaison au réel
 // (grand livre) avec écarts $ et %. Couleurs : dépassement de charges = rouge, revenu sous budget = rouge.
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Download } from 'lucide-react';
 import { getAccounts, getLedger } from '@/lib/accounting';
 import { getBudgets, saveBudget, actualByAccount, budgetVsActual, type BudgetRow } from '@/lib/budget';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 
 type Tr = (f: string, e: string) => string;
 const mny = (v: number) => `${(Number(v) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} $`;
@@ -47,6 +48,23 @@ export function BudgetModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
     setSaving(false);
   }
 
+  function exportCsv() {
+    const rows = [
+      ...revenue.map(r => ({ ...r, section: tr('Produits', 'Revenue') })),
+      ...expense.map(r => ({ ...r, section: tr('Charges', 'Expenses') })),
+    ];
+    const cols: CsvColumn<BudgetRow & { section: string }>[] = [
+      { key: 'section', label: tr('Section', 'Section') },
+      { key: 'code', label: tr('Compte', 'Account') },
+      { key: 'name', label: tr('Nom', 'Name') },
+      { key: 'budget', label: tr('Budget', 'Budget'), type: 'money' },
+      { key: 'actual', label: tr('Réel', 'Actual'), type: 'money' },
+      { key: 'variance', label: tr('Écart ($)', 'Variance ($)'), type: 'money' },
+      { key: 'variancePct', label: tr('Écart (%)', 'Variance (%)'), map: (v, r) => (r.budget ? Number(v).toFixed(1) : '') },
+    ];
+    downloadCsv(`budget-${year}.csv`, rows, cols);
+  }
+
   if (loading) return <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>;
 
   const inp = 'w-28 rounded-lg border border-gray-200 bg-white px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-800';
@@ -85,7 +103,10 @@ export function BudgetModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
             {[nowYear + 1, nowYear, nowYear - 1, nowYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        {canEdit && Object.keys(edited).length > 0 && <button onClick={saveAll} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer le budget', 'Save budget')}</button>}
+        <div className="flex items-center gap-2">
+          <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={14} /> {tr('Exporter CSV', 'Export CSV')}</button>
+          {canEdit && Object.keys(edited).length > 0 && <button onClick={saveAll} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer le budget', 'Save budget')}</button>}
+        </div>
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20">{notice}</div>}
 

@@ -21,12 +21,14 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import SearchInput from '../components/SearchInput';
 import { getScanUrl } from '../config/app';
 import { useLanguage } from '../contexts/LanguageContext';
+import { downloadCsv } from '@/lib/csv';
 
 // ============== UI COMPONENTS ==============
 
@@ -218,6 +220,38 @@ const ArticlesView = React.memo(({
     return [...set].sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
   }, [storageUnits, items, dashboardFilters.department, filters.department]);
 
+  // Export CSV de la liste filtrée des articles (socle lib/csv : BOM Excel-FR, colonnes typées).
+  const exportArticlesCsv = () => {
+    const fr = language === 'fr';
+    const rows = (filteredItems || []).map(it => ({
+      code: it.code || '',
+      name: it.name || '',
+      category: it.category || '',
+      department: it.department || it.departmentName || '',
+      location: it.isMultiLocation && it.locations ? it.locations.map(l => l.location || l.name).filter(Boolean).join(' | ') : (it.location || ''),
+      quantity: it.quantity ?? 0,
+      unit: it.unit || '',
+      minQuantity: it.minQuantity ?? '',
+      costPrice: it.costPrice ?? it.cost ?? '',
+      salePrice: it.salePrice ?? 0,
+      stockValue: (Number(it.quantity) || 0) * (Number(it.costPrice ?? it.cost) || 0),
+    }));
+    const cols = [
+      { key: 'code', label: fr ? 'Code' : 'Code' },
+      { key: 'name', label: fr ? 'Article' : 'Item' },
+      { key: 'category', label: fr ? 'Catégorie' : 'Category' },
+      { key: 'department', label: fr ? 'Département' : 'Department' },
+      { key: 'location', label: fr ? 'Emplacement(s)' : 'Location(s)' },
+      { key: 'quantity', label: fr ? 'Quantité' : 'Quantity', type: 'number' },
+      { key: 'unit', label: fr ? 'Unité' : 'Unit' },
+      { key: 'minQuantity', label: fr ? 'Seuil min.' : 'Min. threshold', type: 'number' },
+      { key: 'costPrice', label: fr ? 'Prix coûtant' : 'Cost price', type: 'money' },
+      { key: 'salePrice', label: fr ? 'Prix de vente' : 'Sale price', type: 'money' },
+      { key: 'stockValue', label: fr ? 'Valeur en stock (coût)' : 'Stock value (cost)', type: 'money' },
+    ];
+    downloadCsv(`inventaire-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  };
+
   // État pour le dropdown d'impression
   const [showPrintDropdown, setShowPrintDropdown] = useState(false);
   const printDropdownRef = useRef(null);
@@ -360,6 +394,15 @@ const ArticlesView = React.memo(({
               <span className="hidden sm:inline">{selectedItems.length > 0 ? `Supprimer (${selectedItems.length})` : 'Supprimer'}</span>
             </button>
           )}
+          <button
+            onClick={exportArticlesCsv}
+            disabled={filteredItems.length === 0}
+            title={language === 'fr' ? 'Exporter la liste filtrée en CSV (Excel)' : 'Export the filtered list to CSV (Excel)'}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 disabled:opacity-50 transition-all whitespace-nowrap"
+          >
+            <Download size={16} />
+            <span className="hidden sm:inline">{language === 'fr' ? 'Exporter CSV' : 'Export CSV'}</span>
+          </button>
           {importFromCatalogue && (
             <Button variant="secondary" icon={Layers} onClick={importFromCatalogue} className="whitespace-nowrap" title="Importer les articles du catalogue matériel standardisé">
               <span className="hidden sm:inline">Importer du catalogue</span>
