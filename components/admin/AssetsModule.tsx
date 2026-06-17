@@ -2,8 +2,9 @@
 // Registre des immobilisations (#livre) : biens de l'entreprise (ordinateur, mobilier, équipement…)
 // + comptabilisation à l'actif (DR 1500 Immobilisations / CR 1000 Banque ou 2000 Fournisseurs).
 import { useEffect, useState } from 'react';
-import { Loader2, Trash2, Plus, Boxes, Check } from 'lucide-react';
+import { Loader2, Trash2, Plus, Boxes, Check, Download } from 'lucide-react';
 import { getAssets, saveAsset, deleteAsset, assetsBookValue, annualDepreciation, ASSET_CATEGORIES, type CompanyAsset } from '@/lib/assets';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 import { getAccounts, createEntry } from '@/lib/accounting';
 
 type Tr = (f: string, e: string) => string;
@@ -48,6 +49,20 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); } finally { setPosting(null); }
   }
 
+  function exportCsv() {
+    const cols: CsvColumn<CompanyAsset>[] = [
+      { key: 'name', label: tr('Bien', 'Asset') },
+      { key: 'category', label: tr('Catégorie', 'Category') },
+      { key: 'acquisition_date', label: tr('Acquis', 'Acquired'), type: 'date' },
+      { key: 'cost', label: tr('Coût', 'Cost'), type: 'money' },
+      { key: 'id', label: tr('Valeur comptable', 'Book value'), map: (_v, a) => assetsBookValue([a]), type: 'money' },
+      { key: 'id', label: tr('Amort. annuel', 'Annual deprec.'), map: (_v, a) => (a.status === 'disposed' ? 0 : annualDepreciation(a)), type: 'money' },
+      { key: 'status', label: tr('Statut', 'Status'), map: v => (v === 'disposed' ? tr('Cédé', 'Disposed') : tr('Actif', 'Active')) },
+      { key: 'gl_entry_id', label: tr('Comptabilisé', 'Posted'), map: v => (v ? tr('Oui (1500)', 'Yes (1500)') : tr('Non', 'No')) },
+    ];
+    downloadCsv(`immobilisations-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  }
+
   if (loading) return <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>;
 
   return (
@@ -60,7 +75,10 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-[11px] font-semibold uppercase text-gray-400">{tr('Biens actifs', 'Active assets')}</div><div className="text-lg font-extrabold text-gray-800 dark:text-gray-100">{rows.filter(a => a.status !== 'disposed').length}</div></div>
       </div>
 
-      {canEdit && !edit && <button onClick={() => setEdit(blank())} className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={15} /> {tr('Nouveau bien', 'New asset')}</button>}
+      <div className="flex flex-wrap items-center gap-2">
+        {canEdit && !edit && <button onClick={() => setEdit(blank())} className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={15} /> {tr('Nouveau bien', 'New asset')}</button>}
+        {rows.length > 0 && <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={14} /> {tr('Exporter CSV', 'Export CSV')}</button>}
+      </div>
 
       {edit && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">

@@ -2,8 +2,9 @@
 // Abonnements récurrents (#35) : registre des contrats récurrents d'un tenant + MRR/ARR + facturation
 // (manuelle « Facturer maintenant » ou automatique via cron). Génère des factures standard.
 import { useEffect, useState } from 'react';
-import { Loader2, Trash2, Plus, Repeat, TrendingUp } from 'lucide-react';
+import { Loader2, Trash2, Plus, Repeat, TrendingUp, Download } from 'lucide-react';
 import { getRecurring, saveRecurring, deleteRecurring, computeRecurringMetrics, type RecurringSub } from '@/lib/recurring';
+import { downloadCsv, type CsvColumn } from '@/lib/csv';
 
 type Tr = (f: string, e: string) => string;
 const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
@@ -34,6 +35,21 @@ export function RecurringModule({ tenant, tr, canEdit }: { tenant: string; tr: T
     catch (e: any) { setNotice(e?.message); } finally { setBilling(null); }
   }
 
+  function exportCsv() {
+    const lbl: any = { active: tr('Actif', 'Active'), paused: tr('En pause', 'Paused'), cancelled: tr('Annulé', 'Cancelled') };
+    const cols: CsvColumn<RecurringSub>[] = [
+      { key: 'client_name', label: tr('Client', 'Client') },
+      { key: 'plan_name', label: tr('Plan', 'Plan') },
+      { key: 'amount', label: tr('Montant (avant taxes)', 'Amount (pre-tax)'), type: 'money' },
+      { key: 'interval', label: tr('Période', 'Interval'), map: v => (v === 'annual' ? tr('Annuel', 'Annual') : tr('Mensuel', 'Monthly')) },
+      { key: 'start_date', label: tr('Début', 'Start'), type: 'date' },
+      { key: 'next_billing_date', label: tr('Prochaine facturation', 'Next billing'), type: 'date' },
+      { key: 'billing_count', label: tr('Nb facturations', 'Billing count'), type: 'number' },
+      { key: 'status', label: tr('Statut', 'Status'), map: v => lbl[v as string] || v },
+    ];
+    downloadCsv(`abonnements-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+  }
+
   if (loading) return <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>;
 
   const STAT: any = { active: { l: tr('Actif', 'Active'), c: 'bg-emerald-100 text-emerald-700' }, paused: { l: tr('En pause', 'Paused'), c: 'bg-amber-100 text-amber-700' }, cancelled: { l: tr('Annulé', 'Cancelled'), c: 'bg-gray-100 text-gray-500' } };
@@ -49,7 +65,10 @@ export function RecurringModule({ tenant, tr, canEdit }: { tenant: string; tr: T
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-[11px] font-semibold uppercase text-gray-400">{tr('Actifs', 'Active')}</div><div className="text-lg font-extrabold text-gray-800 dark:text-gray-100">{activeCount}</div><div className="text-[11px] text-gray-400">{tr('abonnements', 'subscriptions')}</div></div>
       </div>
 
-      {canEdit && !edit && <button onClick={() => setEdit(blank())} className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={15} /> {tr('Nouvel abonnement', 'New subscription')}</button>}
+      <div className="flex flex-wrap items-center gap-2">
+        {canEdit && !edit && <button onClick={() => setEdit(blank())} className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={15} /> {tr('Nouvel abonnement', 'New subscription')}</button>}
+        {rows.length > 0 && <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={14} /> {tr('Exporter CSV', 'Export CSV')}</button>}
+      </div>
 
       {edit && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
