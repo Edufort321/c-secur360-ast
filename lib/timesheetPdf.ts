@@ -100,7 +100,7 @@ export async function exportTimesheetPdf(opts: {
     y = (doc as any).lastAutoTable?.finalY ?? y;
   }
 
-  // ── Bloc signatures (employé + approbation client) — à faire signer ──
+  // ── Bloc signatures (employé + approbation SUPERVISEUR) — document INTERNE de paie ──
   const Hp0 = doc.internal.pageSize.getHeight();
   y += 30;
   if (y > Hp0 - 110) { doc.addPage(); y = 60; }
@@ -113,7 +113,7 @@ export async function exportTimesheetPdf(opts: {
   };
   doc.setFont('helvetica', 'normal');
   sigCol(M, tr("Signature de l'employé", 'Employee signature'), sheet.employee_name || '');
-  sigCol(M + colW + 30, tr('Signature du client (approbation)', 'Client signature (approval)'), '');
+  sigCol(M + colW + 30, tr('Signature du superviseur (approbation)', 'Supervisor signature (approval)'), (sheet as any).approved_by_name || '');
   y += 70;
 
   // ── Pied de page numéroté (socle partagé DGA) ──
