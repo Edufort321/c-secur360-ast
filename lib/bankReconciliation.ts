@@ -14,15 +14,27 @@ export type BankLine = {
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
-/** Parse un montant texte FR/EN ("1 234,56", "1,234.56", "-45.00 $") -> nombre. */
+/** Parse un montant texte FR/EN ("1 234,56", "1,234.56", "-45.00 $", "(45,00)", "45.00 DR") -> nombre. */
 function parseAmount(s: string): number {
-  let t = String(s ?? '').replace(/[^\d.,-]/g, '').trim();
+  const raw = String(s ?? '').trim();
+  if (!raw) return 0;
+  // Signes de négatif : parenthèses comptables, suffixe DR/Db (débit), tiret.
+  const neg = /\(.*\)/.test(raw) || /\b(dr|db|débit|debit)\b/i.test(raw) || /-/.test(raw.replace(/[^\d-]/g, ''));
+  let t = raw.replace(/[()]/g, '').replace(/[^\d.,-]/g, '').trim();
   if (!t) return 0;
   if (t.includes(',') && t.includes('.')) t = t.replace(/,/g, '');      // 1,234.56 -> 1234.56
-  else if (t.includes(',')) t = t.replace(',', '.');                    // 1234,56  -> 1234.56
-  const n = parseFloat(t);
-  return isNaN(n) ? 0 : n;
+  else if (t.includes(',')) {                                           // virgule = décimale OU séparateur de milliers
+    const dec = t.lastIndexOf(',');
+    t = (t.slice(0, dec).replace(/[.,]/g, '') + '.' + t.slice(dec + 1)).replace(/[^0-9.\-]/g, '');
+  }
+  let n = parseFloat(t.replace(/(?!^)-/g, '')); // ignore les tirets internes
+  if (isNaN(n)) return 0;
+  n = Math.abs(n);
+  return neg ? -n : n;
 }
+const isDateLike = (c: string) => /^\s*\d{4}-\d{1,2}-\d{1,2}/.test(c) || /^\s*\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}\s*$/.test(c);
+// « ressemble à un montant » : contient des chiffres + un indice monétaire (décimale, $, signe, parenthèses) et n'est pas une date.
+const isAmountLike = (c: string) => !!c && !isDateLike(c) && /\d/.test(c) && /[.,]\d{1,2}\s*$|[$€]|\(|\)|^-|\d-?\s*(dr|cr|db)?$/i.test(c.trim());
 
 /** Normalise une date vers YYYY-MM-DD (accepte deja-ISO ou JJ/MM/AAAA — defaut CA/FR). */
 function normDate(s: string): string {
@@ -54,33 +66,61 @@ function splitCsvLine(line: string, delim: string): string[] {
   return out.map(s => s.trim());
 }
 
-/** Parse un releve bancaire CSV -> lignes. Heuristique d'en-tete + colonnes. */
+/** Parse un releve bancaire CSV -> lignes. TOLÉRANT : saute le préambule (n° compte, soldes…),
+ *  détecte le séparateur (',' ';' ou tab), l'en-tête où qu'il soit, et les colonnes (montant unique
+ *  OU débit/crédit séparés). Si aucun en-tête, infère date / montant / description. */
 export function parseBankCsv(text: string): BankLine[] {
   const lines = String(text ?? '').split(/\r?\n/).filter(l => l.trim().length);
   if (!lines.length) return [];
-  const delim = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
-  const head = splitCsvLine(lines[0], delim).map(h => h.toLowerCase());
-  const hasHeader = head.some(h => /date|montant|amount|desc|libell|débit|debit|crédit|credit/.test(h));
-  const find = (re: RegExp) => head.findIndex(h => re.test(h));
-  let iDate = 0, iDesc = 1, iAmt = 2, iDr = -1, iCr = -1, start = 0;
-  if (hasHeader) {
-    start = 1;
-    iDate = find(/date/); iDesc = find(/desc|libell|détail|detail|narration/);
+  // Séparateur : celui qui découpe le plus de colonnes en moyenne sur les 1res lignes.
+  const sample = lines.slice(0, 10);
+  const score = (d: string) => sample.reduce((s, l) => s + splitCsvLine(l, d).length, 0);
+  const delim = [';', '\t', ','].sort((a, b) => score(b) - score(a))[0];
+  const rows = lines.map(l => splitCsvLine(l, delim));
+
+  // 1) Cherche une LIGNE D'EN-TÊTE dans les 15 premières (date + un indice de montant).
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const lc = rows[i].map(h => h.toLowerCase());
+    if (lc.some(h => /date/.test(h)) && lc.some(h => /montant|amount|débit|debit|crédit|credit|retrait|dépôt|depot|withdraw|deposit|solde|balance/.test(h))) { headerIdx = i; break; }
+  }
+  let iDate = 0, iDesc = 1, iAmt = -1, iDr = -1, iCr = -1, start = 0;
+  if (headerIdx >= 0) {
+    const head = rows[headerIdx].map(h => h.toLowerCase());
+    const find = (re: RegExp) => head.findIndex(h => re.test(h));
+    iDate = find(/date/); iDesc = find(/desc|libell|détail|detail|narration|opération|operation|transaction|tiers|payee/);
     iAmt = find(/montant|amount|^total/);
-    iDr = find(/débit|debit|retrait|withdraw/); iCr = find(/crédit|credit|dépôt|depot|deposit/);
+    iDr = find(/débit|debit|retrait|withdraw|sortie/); iCr = find(/crédit|credit|dépôt|depot|deposit|entrée/);
     if (iDate < 0) iDate = 0;
+    if (iDesc < 0) iDesc = rows[headerIdx].findIndex((_, k) => k !== iDate && k !== iAmt && k !== iDr && k !== iCr);
+    if (iDesc < 0) iDesc = 1;
+    start = headerIdx + 1;
+  } else {
+    // 2) Pas d'en-tête : on démarre à la 1re ligne contenant une DATE, et on infère les colonnes.
+    start = rows.findIndex(r => r.some(isDateLike));
+    if (start < 0) start = 0;
+    const s = rows[start] || [];
+    iDate = s.findIndex(isDateLike); if (iDate < 0) iDate = 0;
+    const amtCols = s.map((c, k) => ({ k, ok: isAmountLike(c) })).filter(x => x.ok && x.k !== iDate).map(x => x.k);
+    iAmt = amtCols.length ? amtCols[0] : -1; // 1re colonne « montant » après la date
+    iDesc = s.findIndex((c, k) => k !== iDate && !isAmountLike(c) && (c || '').trim().length > 0);
+    if (iDesc < 0) iDesc = s.findIndex((_, k) => k !== iDate && k !== iAmt);
     if (iDesc < 0) iDesc = 1;
   }
+
   const out: BankLine[] = [];
-  for (let i = start; i < lines.length; i++) {
-    const c = splitCsvLine(lines[i], delim);
-    if (!c.length) continue;
-    const amount = (iCr >= 0 || iDr >= 0)
-      ? r2((iCr >= 0 ? parseAmount(c[iCr]) : 0) - (iDr >= 0 ? parseAmount(c[iDr]) : 0))
-      : r2(parseAmount(c[iAmt >= 0 ? iAmt : 2]));
-    const stmt_date = normDate(c[iDate >= 0 ? iDate : 0]);
+  for (let i = start; i < rows.length; i++) {
+    const c = rows[i];
+    if (!c.length || c.every(x => !x.trim())) continue;
+    const stmt_date = normDate(c[iDate] || '');
+    // Ignore les lignes de SOLDE / report (pas une vraie opération).
+    if (/solde|balance|report|total/i.test(c[iDesc >= 0 ? iDesc : 1] || '')) continue;
+    let amount: number;
+    if (iCr >= 0 || iDr >= 0) amount = r2((iCr >= 0 ? Math.abs(parseAmount(c[iCr])) : 0) - (iDr >= 0 ? Math.abs(parseAmount(c[iDr])) : 0));
+    else amount = r2(parseAmount(c[iAmt >= 0 ? iAmt : 2] || ''));
     const description = (c[iDesc >= 0 ? iDesc : 1] || '').slice(0, 300);
     if (!stmt_date && !description && !amount) continue;
+    if (!/^\d{4}-\d{2}-\d{2}/.test(stmt_date) && !amount) continue; // ni date valide ni montant -> bruit
     out.push({ stmt_date, description, amount, reconciled: false, matched_transaction_id: null });
   }
   return out;
