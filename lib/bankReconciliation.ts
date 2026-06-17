@@ -113,7 +113,8 @@ export function parseBankCsv(text: string): BankLine[] {
   // Ordre des dates J/M vs M/J : on scanne le fichier (un composant > 12 tranche). Défaut M/J (relevés nord-américains).
   let dayFirst = false;
   for (let i = start; i < rows.length; i++) { const m = (rows[i][iDate] || '').match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.]\d{2,4}/); if (m) { if (+m[1] > 12) { dayFirst = true; break; } if (+m[2] > 12) { dayFirst = false; break; } } }
-  const nd = (v: string) => { const t = String(v || '').trim(); if (/^\d{4}-\d{1,2}-\d{1,2}/.test(t)) { const [y, mo, da] = t.split(/[-/]/); return `${y}-${mo.padStart(2, '0')}-${da.padStart(2, '0')}`; } const m = t.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/); if (!m) return t; let [, p, q, y] = m as any; if (y.length === 2) y = '20' + y; const mo = dayFirst ? q : p, da = dayFirst ? p : q; return `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`; };
+  const fmt = (y: string, mo: number, da: number) => { if (mo > 12 && da <= 12) { const t = mo; mo = da; da = t; } if (mo < 1 || mo > 12 || da < 1 || da > 31) return ''; return `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`; };
+  const nd = (v: string) => { const t = String(v || '').trim(); const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (iso) return fmt(iso[1], +iso[2], +iso[3]); const m = t.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/); if (!m) return ''; let [, p, q, y] = m as any; if (y.length === 2) y = '20' + y; return fmt(y, dayFirst ? +q : +p, dayFirst ? +p : +q); };
   const amtOf = (c: string[]) => {
     if (iCr >= 0 || iDr >= 0) return r2((iCr >= 0 ? Math.abs(parseAmount(c[iCr])) : 0) - (iDr >= 0 ? Math.abs(parseAmount(c[iDr])) : 0));
     for (const k of amtCols) { const v = c[k]; if (v && v.trim()) return r2(parseAmount(v)); }   // 1re colonne devise non vide (CAD avant USD)
@@ -186,8 +187,9 @@ export async function insertBankLines(tenant: string, lines: BankLine[]): Promis
   }
   const fresh = lines.filter(l => !(l.external_id && have.has(l.external_id)));
   if (!fresh.length) return 0;
+  const validDate = (d?: string) => (/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) ? d : null); // sinon null (jamais de 400)
   const base = fresh.map(l => ({
-    tenant_id: tenant, stmt_date: l.stmt_date || null, description: l.description || '',
+    tenant_id: tenant, stmt_date: validDate(l.stmt_date), description: l.description || '',
     amount: r2(l.amount), matched_transaction_id: l.matched_transaction_id ?? null, reconciled: !!l.reconciled,
   }));
   // Tente avec external_id/treasury_account_id ; repli sans ces colonnes si migration 208 absente.

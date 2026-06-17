@@ -7172,7 +7172,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         if (!resp.ok) { failed++; lastErr = j.error || `HTTP ${resp.status}`; setBatch(b => b && { ...b, done: i + 1, failed }); continue; }
         // Un RELEVÉ n'est PAS une pièce justificative : on ne l'attache PAS aux transactions (le flag « pièce
         // manquante » reste actif). On n'attache le fichier que pour un reçu/facture UNIQUE.
-        const isStatement = !!(j.summary && j.summary.is_statement) || (Array.isArray(j.extractedList) && j.extractedList.length > 1);
+        // Un relevé (PDF multi-lignes) ET tout fichier de DONNÉES (CSV/Excel/OFX/QFX) ne sont JAMAIS des pièces justificatives.
+        const isDataFile = /csv|excel|spreadsheet|officedocument|x-ofx/i.test(file.type || '') || /\.(csv|xlsx?|ofx|qfx)$/i.test(file.name || '');
+        const isStatement = isDataFile || !!(j.summary && j.summary.is_statement) || (Array.isArray(j.extractedList) && j.extractedList.length > 1);
         const url = isStatement ? null : await uploadReceipt(tenant, file).catch(() => null);
         const handle = (r: 'created' | 'duplicate' | 'empty' | 'transfer') => { if (r === 'created') created++; else if (r === 'duplicate') dups++; else if (r === 'transfer') transfers++; else failed++; };
         if (j.summary && j.summary.is_statement) { anyStmt = true; declCred += Number(j.summary.total_credits) || 0; declDeb += Number(j.summary.total_debits) || 0; } // résumé déclaré (cumulé)
