@@ -3,7 +3,7 @@
 // transactions, projets, banque et inventaire avec le grand livre, et signale les écarts à corriger
 // AVANT la mise en production. Chaque contrôle indique où aller corriger.
 import React, { useEffect, useState } from 'react';
-import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, XCircle, Info, ShieldCheck } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, XCircle, Info, ShieldCheck, Download } from 'lucide-react';
 import { runReconciliation, type ReconResult } from '@/lib/reconciliation';
 
 type Tr = (f: string, e: string) => string;
@@ -15,9 +15,23 @@ const STYLE: Record<string, { icon: any; box: string; dot: string }> = {
   error: { icon: XCircle,       box: 'border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-900/20',             dot: 'text-rose-600' },
 };
 
-export function ReconciliationPanel({ tenant, tr }: { tenant: string; tr: Tr }) {
+export function ReconciliationPanel({ tenant, tr, canExport = true }: { tenant: string; tr: Tr; canExport?: boolean }) {
   const [res, setRes] = useState<ReconResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  async function exportTenant() {
+    setExporting(true);
+    try {
+      const resp = await fetch(`/api/admin/export-tenant?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+      if (!resp.ok) { const j = await resp.json().catch(() => ({})); alert(j.error || `Erreur (${resp.status})`); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `export_${tenant}_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e: any) { alert('Erreur : ' + (e?.message || e)); }
+    finally { setExporting(false); }
+  }
 
   async function run() { setLoading(true); try { setRes(await runReconciliation(tenant)); } catch { setRes(null); } finally { setLoading(false); } }
   useEffect(() => { run(); /* eslint-disable-next-line */ }, [tenant]);
@@ -36,7 +50,15 @@ export function ReconciliationPanel({ tenant, tr }: { tenant: string; tr: Tr }) 
           <h2 className="flex items-center gap-1.5 text-base font-bold text-gray-800 dark:text-gray-100"><ShieldCheck size={18} /> {tr('Contrôle d’intégrité — réconciliation', 'Integrity check — reconciliation')}</h2>
           <p className="text-xs text-gray-500">{tr('Croise factures, transactions, projets, banque et inventaire avec le grand livre. À vérifier avant la mise en production.', 'Cross-checks invoices, transactions, projects, bank and inventory with the ledger. Review before go-live.')}</p>
         </div>
-        <button onClick={run} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"><RefreshCw size={15} /> {tr('Relancer', 'Re-run')}</button>
+        <div className="flex items-center gap-2">
+          {canExport && (
+            <button onClick={exportTenant} disabled={exporting} title={tr('Exporter toutes les données du tenant (Excel) — sauvegarde', 'Export all tenant data (Excel) — backup')}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
+              {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {tr('Exporter les données', 'Export data')}
+            </button>
+          )}
+          <button onClick={run} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"><RefreshCw size={15} /> {tr('Relancer', 'Re-run')}</button>
+        </div>
       </div>
 
       {/* Synthèse */}

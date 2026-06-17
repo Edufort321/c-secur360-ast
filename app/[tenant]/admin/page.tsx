@@ -448,7 +448,7 @@ export default function AdminPage() {
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'etat-financier' && <FinancialDashboard tenant={tenant} tr={tr} />}
         {tab === 'budget' && <BudgetModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
-        {tab === 'controle' && <ReconciliationPanel tenant={tenant} tr={tr} />}
+        {tab === 'controle' && <ReconciliationPanel tenant={tenant} tr={tr} canExport={!!perms.manageAll} />}
         {tab === 'actionnaires' && <ShareholdersModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'alertes' && <AlertsModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'audit' && <AuditLog tenant={tenant} tr={tr} />}
