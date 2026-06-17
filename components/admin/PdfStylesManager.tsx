@@ -115,7 +115,7 @@ export function PdfStylesManager({ tenant, tr, canEdit }: { tenant: string; tr: 
       )}
 
       {canEdit && <div className="flex justify-end"><button onClick={save} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button></div>}
-      <p className="text-[11px] text-gray-400">{tr('Appliqué progressivement aux exports (paie, feuille de temps, bon de commande déjà branchés). Le socle DGA reste identique partout.', 'Applied progressively to exports (payroll, timesheet, PO already wired). The DGA base stays identical everywhere.')}</p>
+      <p className="text-[11px] text-gray-400">{tr('Appliqué aux exports : soumission, facture, paie, feuille de temps, projet, bon de commande, DGA et inspection. Le rapport terrain garde son propre thème de couleurs intégré. Le socle DGA reste identique partout.', 'Applied to exports: quote, invoice, payroll, timesheet, project, PO, DGA and inspection. The field report keeps its own built-in color theme. The DGA base stays identical everywhere.')}</p>
     </div>
   );
 }
