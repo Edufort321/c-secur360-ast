@@ -7,6 +7,8 @@ import {
   BarChart3, Trash2, Users
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 
 // ── Supabase (best-effort) ─────────────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -695,11 +697,13 @@ function Textarea({ value, onChange, placeholder = '', rows = 3, disabled = fals
 }
 
 // ── Section: Site ──────────────────────────────────────────────────────────
-function SiteSection({ language, permit, readOnly, onUpdate }: {
+function SiteSection({ language, permit, readOnly, onUpdate, personnel, projects }: {
   language: Language;
   permit: HotWorkPermit;
   readOnly: boolean;
   onUpdate: (updater: (p: HotWorkPermit) => HotWorkPermit) => void;
+  personnel: EntityOption[];
+  projects: EntityOption[];
 }) {
   const t = T[language];
   const ts = t.site;
@@ -715,7 +719,8 @@ function SiteSection({ language, permit, readOnly, onUpdate }: {
       <Card title={ts.projectInfo} icon={<MapPin className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={ts.projectNumber}>
-            <TextInput value={si.projectNumber} onChange={v => upd('projectNumber', v)} placeholder={ts.projectNumberPh} disabled={readOnly} />
+            <EntitySearch value={si.projectNumber} placeholder={ts.projectNumberPh} readOnly={readOnly}
+              options={projects} onText={v => upd('projectNumber', v)} onPick={o => upd('projectNumber', o.label)} />
           </Field>
           <Field label={ts.workLocation}>
             <TextInput value={si.workLocation} onChange={v => upd('workLocation', v)} placeholder={ts.workLocationPh} disabled={readOnly} />
@@ -724,7 +729,8 @@ function SiteSection({ language, permit, readOnly, onUpdate }: {
             <TextInput value={si.contractor} onChange={v => upd('contractor', v)} placeholder={ts.contractorPh} disabled={readOnly} />
           </Field>
           <Field label={ts.supervisor}>
-            <TextInput value={si.supervisor} onChange={v => upd('supervisor', v)} placeholder={ts.supervisorPh} disabled={readOnly} />
+            <EntitySearch value={si.supervisor} placeholder={ts.supervisorPh} readOnly={readOnly}
+              options={personnel} onText={v => upd('supervisor', v)} onPick={o => upd('supervisor', o.label)} />
           </Field>
           <Field label={ts.entryDate}>
             <TextInput type="date" value={si.entryDate} onChange={v => upd('entryDate', v)} disabled={readOnly} />
@@ -852,11 +858,12 @@ function HazardsSection({ language, permit, readOnly, onUpdate }: {
 }
 
 // ── Section: Precautions ───────────────────────────────────────────────────
-function PrecautionsSection({ language, permit, readOnly, onUpdate }: {
+function PrecautionsSection({ language, permit, readOnly, onUpdate, personnel }: {
   language: Language;
   permit: HotWorkPermit;
   readOnly: boolean;
   onUpdate: (updater: (p: HotWorkPermit) => HotWorkPermit) => void;
+  personnel: EntityOption[];
 }) {
   const t = T[language].precautions;
   const pr = permit.precautions;
@@ -875,7 +882,8 @@ function PrecautionsSection({ language, permit, readOnly, onUpdate }: {
                 <NumberInput value={pr.fireWatchDuration} onChange={v => upd('fireWatchDuration', v)} min={0.5} disabled={readOnly} />
               </Field>
               <Field label={t.fireWatchPerson}>
-                <TextInput value={pr.fireWatchPerson} onChange={v => upd('fireWatchPerson', v)} placeholder={t.fireWatchPersonPh} disabled={readOnly} />
+                <EntitySearch value={pr.fireWatchPerson} placeholder={t.fireWatchPersonPh} readOnly={readOnly}
+                  options={personnel} onText={v => upd('fireWatchPerson', v)} onPick={o => upd('fireWatchPerson', o.label)} />
               </Field>
               <div className="sm:col-span-2">
                 <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 border border-amber-200 dark:border-amber-800">
@@ -929,11 +937,12 @@ function PrecautionsSection({ language, permit, readOnly, onUpdate }: {
 }
 
 // ── Section: Authorization ─────────────────────────────────────────────────
-function AuthorizationSection({ language, permit, readOnly, onUpdate }: {
+function AuthorizationSection({ language, permit, readOnly, onUpdate, personnel }: {
   language: Language;
   permit: HotWorkPermit;
   readOnly: boolean;
   onUpdate: (updater: (p: HotWorkPermit) => HotWorkPermit) => void;
+  personnel: EntityOption[];
 }) {
   const t = T[language].authorization;
   const auth = permit.authorization;
@@ -961,7 +970,8 @@ function AuthorizationSection({ language, permit, readOnly, onUpdate }: {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Field label={t.authorizedBy}>
-              <TextInput value={auth.authorizedBy} onChange={v => upd('authorizedBy', v)} placeholder={t.authorizedByPh} disabled={readOnly} />
+              <EntitySearch value={auth.authorizedBy} placeholder={t.authorizedByPh} readOnly={readOnly}
+                options={personnel} onText={v => upd('authorizedBy', v)} onPick={o => upd('authorizedBy', o.label)} />
             </Field>
           </div>
           <Field label={t.authDate}>
@@ -1008,7 +1018,8 @@ function AuthorizationSection({ language, permit, readOnly, onUpdate }: {
             {auth.workers.map((worker, idx) => (
               <div key={worker.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-600">
                 <Field label={`${t.workerName} ${idx + 1}`}>
-                  <TextInput value={worker.name} onChange={v => updateWorker(worker.id, 'name', v)} placeholder={t.workerNamePh} disabled={readOnly} />
+                  <EntitySearch value={worker.name} placeholder={t.workerNamePh} readOnly={readOnly}
+                    options={personnel} onText={v => updateWorker(worker.id, 'name', v)} onPick={o => updateWorker(worker.id, 'name', o.label)} />
                 </Field>
                 <Field label={t.workerCert}>
                   <TextInput value={worker.certification} onChange={v => updateWorker(worker.id, 'certification', v)} placeholder={t.workerCertPh} disabled={readOnly} />
@@ -1191,6 +1202,7 @@ export default function HotWork({
     ...initialData,
   }));
 
+  const dir = useTenantDirectory(tenant);
   const [section, setSection] = useState<Section>('site');
   const [menuOpen, setMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -1402,16 +1414,16 @@ export default function HotWork({
       <main ref={contentRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
         <div className="max-w-5xl mx-auto">
           {section === 'site' && (
-            <SiteSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />
+            <SiteSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} personnel={dir.personnel} projects={dir.projects} />
           )}
           {section === 'hazards' && (
             <HazardsSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />
           )}
           {section === 'precautions' && (
-            <PrecautionsSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />
+            <PrecautionsSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} personnel={dir.personnel} />
           )}
           {section === 'authorization' && (
-            <AuthorizationSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />
+            <AuthorizationSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} personnel={dir.personnel} />
           )}
           {section === 'finalization' && (
             <FinalizationSection
