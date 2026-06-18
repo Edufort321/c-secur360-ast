@@ -42,7 +42,7 @@ import { getTransactions, getTransactionItems, saveTransaction, setTransactionSt
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { downloadCsv as downloadCsvCols, type CsvColumn } from '@/lib/csv';
-import { getCurrencyConfig, rateToBase, currencyMeta, type CurrencyConfig } from '@/lib/currency';
+import { getCurrencyConfig, rateToBase, currencyMeta, formatMoney, type CurrencyConfig } from '@/lib/currency';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
 import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
@@ -7224,7 +7224,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
                   </div>
                   <div className="mt-2 flex items-baseline justify-between">
                     <span className="text-[11px] text-gray-400">{inv.gl_entry_id ? <span className="inline-flex items-center gap-1 text-emerald-600"><Check size={12} /> GL</span> : tr('Non comptabilisée', 'Not posted')}</span>
-                    <span className={`font-extrabold text-gray-900 dark:text-white ${invView === 'gallery' ? 'text-2xl' : 'text-lg'}`}>{mny(inv.total)}</span>
+                    <span className={`font-extrabold text-gray-900 dark:text-white ${invView === 'gallery' ? 'text-2xl' : 'text-lg'}`}>{formatMoney(Number(inv.total) || 0, (inv as any).currency)}</span>
                   </div>
                   {canEdit && (
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-xs dark:border-gray-700">
@@ -8262,7 +8262,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}><span className="inline-block max-w-[220px] truncate align-middle" title={t.vendor_name || ''}>{t.vendor_name || '—'}</span>{t.receipt_url
                     ? <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600" title={tr('Pièce jointe', 'Attachment')}><Paperclip size={13} /></a>
                     : (t.txn_type !== 'revenue' && <span className="ml-2 inline-flex items-center gap-0.5 align-middle rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Pièce justificative manquante — requise pour la déduction / preuve fiscale.', 'Missing receipt — required for deduction / tax proof.')}>⚠ {tr('pièce', 'doc')}</span>)}</td>
-                  <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(t.total)}</td>
+                  <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{formatMoney(Number(t.total) || 0, (t as any).currency)}</td>
                   <td className="px-4 py-2" data-label={tr('Statut', 'Status')}>
                     {(t as any).needs_review
                       ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">⏳ {tr('À vérifier', 'To review')}</span>
