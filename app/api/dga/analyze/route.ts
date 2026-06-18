@@ -70,14 +70,11 @@ Donne une analyse claire, priorisée, actionnable. Réponds en JSON STRICT, sans
  "fullMonths": <entier mois avant suivi complet, généralement 12>,
  "recheckJustification": "1 phrase justifiant les intervalles selon les normes et la tendance"}`;
 
-// Extraction ROBUSTE de l'objet JSON de la réponse IA. Gère : le préremplissage « { » (réponse =
-// continuation sans accolade initiale), une éventuelle prose avant/après, les clôtures ``` et les
-// accolades à l'intérieur des chaînes (scan équilibré). Renvoie l'objet ou null si rien d'exploitable.
+// Extraction ROBUSTE de l'objet JSON de la réponse IA. Gère : une éventuelle prose avant/après, les
+// clôtures ``` et les accolades à l'intérieur des chaînes (scan équilibré). Renvoie l'objet ou null.
 function extractJson(rawText: string): any | null {
   if (!rawText) return null;
-  // Rétablit l'accolade ouvrante du préremplissage si absente ; retire les fences markdown éventuels.
-  let s = rawText.trim().replace(/^```(?:json)?/i, '').replace(/```$/,'').trim();
-  if (!s.startsWith('{')) s = '{' + s;
+  const s = rawText.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
   try { return JSON.parse(s); } catch { /* on tente l'extraction équilibrée */ }
   const start = s.indexOf('{');
   if (start < 0) return null;
@@ -122,9 +119,10 @@ Analyse l'évolution et donne ton diagnostic expert.`;
     const resp = await anthropicMessages(apiKey, {
       max_tokens: 8000, // marge large : le JSON bilingue (summaries + recommandations) ne doit JAMAIS être tronqué
       system: KNOWLEDGE,
+      // PAS de préremplissage assistant : certains modèles le refusent (« conversation must end with a user
+      // message »). On exige le JSON dans la consigne + extraction robuste (extractJson) en sortie.
       messages: [
-        { role: 'user', content: userMsg },
-        { role: 'assistant', content: '{' }, // préremplissage : force une sortie JSON stricte
+        { role: 'user', content: userMsg + '\n\nRéponds UNIQUEMENT avec l\'objet JSON demandé, sans aucun texte avant ni après, sans bloc de code markdown.' },
       ],
     });
     if (!resp.ok) {
