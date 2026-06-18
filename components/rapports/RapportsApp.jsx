@@ -4,7 +4,12 @@
 // (rapports, gabarits, logo, thème, file d'attente) d'un tenant resterait visible sous un autre
 // tenant dans le MÊME navigateur (fuite inter-tenant côté client).
 function __rptTenant(){ try{ return (window.location.pathname.split("/").filter(Boolean)[0]) || "demo"; }catch{ return "demo"; } }
-function __rptNS(k){ return __rptTenant() + "::" + k; }
+// Type de document : le même moteur sert au « Rapport terrain » (défaut) ET à la « Maintenance
+// d'équipement » (doc_type='maintenance'). Réglé par la prop docType de App ; sert à séparer le
+// stockage (localStorage + Supabase via &docType=) sans dupliquer le moteur.
+let __rptDocType = "rapport";
+function __rptDoc(){ return __rptDocType; }
+function __rptNS(k){ return __rptTenant() + "::" + (__rptDocType === "maintenance" ? "maint::" : "") + k; }
 if (typeof window !== "undefined" && !window.storage) { window.storage = { get: async (k)=>{ try{ const v=localStorage.getItem(__rptNS(k)); return v==null?null:{value:v}; }catch{ return null; } }, set: async (k,v)=>{ try{ localStorage.setItem(__rptNS(k),v); }catch{} }, delete: async (k)=>{ try{ localStorage.removeItem(__rptNS(k)); }catch{} } }; }
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -266,7 +271,7 @@ async function loadTheme(){ try{ const r=await window.storage.get(THEME_KEY); re
 async function saveTheme(th){ try{ await window.storage.set(THEME_KEY, JSON.stringify(th)); }catch(e){ console.error(e); } }
 // Persistance SERVEUR (Supabase via /api/rapports/data) + cache localStorage pour le hors-ligne.
 async function loadDB(){
-  try{ const r=await fetch("/api/rapports/data?kind=reports&tenant="+encodeURIComponent(__rptTenant()),{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ ...(x.data||{}), id:x.id, status:x.status||x.data?.status||"in_progress" })); try{ await window.storage.set(DB_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
+  try{ const r=await fetch("/api/rapports/data?kind=reports&docType="+encodeURIComponent(__rptDoc())+"&tenant="+encodeURIComponent(__rptTenant()),{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ ...(x.data||{}), id:x.id, status:x.status||x.data?.status||"in_progress" })); try{ await window.storage.set(DB_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
   try{ const c=await window.storage.get(DB_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; } // repli hors-ligne
 }
 async function saveDB(list){ try{ await window.storage.set(DB_KEY, JSON.stringify(list)); }catch{} } // cache local (write-through)
@@ -292,7 +297,7 @@ async function flushPending(){
   for(const op of q){
     try{
       let res;
-      if(op.action==="upsert") res=await fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:op.kind, item:op.item, tenant:__rptTenant() }) });
+      if(op.action==="upsert") res=await fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:op.kind, item:op.item, docType:__rptDoc(), tenant:__rptTenant() }) });
       else res=await fetch(`/api/rapports/data?kind=${op.kind}&id=${encodeURIComponent(op.id)}&tenant=${encodeURIComponent(__rptTenant())}`,{ method:"DELETE", credentials:"include" });
       if(!res.ok && res.status!==401) keep.push(op); // 401 = session expirée : on n'empile pas indéfiniment
     }catch{ keep.push(op); } // toujours hors-ligne : on garde
@@ -306,20 +311,20 @@ if(typeof window!=="undefined"){ window.addEventListener("online", ()=>{ flushPe
 // Push serveur d'UN rapport (debounce par id, car l'édition déclenche à chaque frappe).
 const _rapTimers={};
 function pushReport(report){ if(!report?.id) return; clearTimeout(_rapTimers[report.id]); _rapTimers[report.id]=setTimeout(()=>{
-  fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report, tenant:__rptTenant() }) })
+  fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"reports", item:report, docType:__rptDoc(), tenant:__rptTenant() }) })
     .then(r=>{ if(!r.ok && r.status!==401) queueOp({kind:"reports",action:"upsert",id:report.id,item:report}); })
     .catch(()=>queueOp({kind:"reports",action:"upsert",id:report.id,item:report})); // hors-ligne -> file
 },600); }
 function pushDelete(id){ fetch("/api/rapports/data?kind=reports&id="+id+"&tenant="+encodeURIComponent(__rptTenant()),{ method:"DELETE", credentials:"include" })
   .then(r=>{ if(!r.ok && r.status!==401) queueOp({kind:"reports",action:"delete",id}); })
   .catch(()=>queueOp({kind:"reports",action:"delete",id})); }
-function pushTpl(tpl){ if(!tpl?.id) return; fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"templates", item:tpl, tenant:__rptTenant() }) }).catch(()=>{}); }
+function pushTpl(tpl){ if(!tpl?.id) return; fetch("/api/rapports/data",{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body:JSON.stringify({ kind:"templates", item:tpl, docType:__rptDoc(), tenant:__rptTenant() }) }).catch(()=>{}); }
 function pushTplDelete(id){ fetch("/api/rapports/data?kind=templates&id="+id+"&tenant="+encodeURIComponent(__rptTenant()),{ method:"DELETE", credentials:"include" }).catch(()=>{}); }
 async function loadLogo(){ try{ const r=await window.storage.get(LOGO_KEY); return r?r.value:null; }catch{ return null; } }
 async function saveLogo(d){ try{ await window.storage.set(LOGO_KEY, d); }catch(e){ console.error(e); } }
 async function clearLogo(){ try{ await window.storage.delete(LOGO_KEY); }catch(e){ console.error(e); } }
 async function loadTemplates(){
-  try{ const r=await fetch("/api/rapports/data?kind=templates&tenant="+encodeURIComponent(__rptTenant()),{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ id:x.id, name:x.name, num:x.num, blocks:x.blocks||[] })); try{ await window.storage.set(TPL_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
+  try{ const r=await fetch("/api/rapports/data?kind=templates&docType="+encodeURIComponent(__rptDoc())+"&tenant="+encodeURIComponent(__rptTenant()),{credentials:"include"}); if(r.ok){ const j=await r.json(); const items=(j.items||[]).map(x=>({ id:x.id, name:x.name, num:x.num, blocks:x.blocks||[] })); try{ await window.storage.set(TPL_KEY, JSON.stringify(items)); }catch{} return items; } }catch{}
   try{ const c=await window.storage.get(TPL_KEY); return c?JSON.parse(c.value):[]; }catch{ return []; }
 }
 async function saveTemplates(list){ try{ await window.storage.set(TPL_KEY, JSON.stringify(list)); }catch{} }
@@ -911,7 +916,9 @@ async function pdfFileToText(file, maxPages=20){
 
 //  APP
 // ============================================================
-export default function App(){
+export default function App({ docType } = {}){
+  // Le même moteur sert Rapport terrain (défaut) et Maintenance d'équipement (docType='maintenance').
+  __rptDocType = (docType === "maintenance") ? "maintenance" : "rapport";
   const [db,setDb]=useState([]);
   const [loaded,setLoaded]=useState(false);
   const [logo,setLogo]=useState(null);

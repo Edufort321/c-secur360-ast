@@ -28,10 +28,14 @@ export async function GET(req: NextRequest) {
   const rt = resolveTenant(u, new URL(req.url).searchParams.get('tenant'));
   if ('error' in rt) return rt.error;
   const tenant = rt.tenant;
-  const kind = new URL(req.url).searchParams.get('kind') || 'reports';
+  const sp = new URL(req.url).searchParams;
+  const kind = sp.get('kind') || 'reports';
+  const docType = sp.get('docType') || 'rapport';
   const { data, error } = await supabaseAdmin.from(TABLE(kind)).select('*').eq('tenant_id', tenant).eq('deleted', false).order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true, items: data || [] });
+  // Filtre doc_type en JS (résilient si la colonne 229 n'est pas encore appliquée → traité comme 'rapport').
+  const items = (data || []).filter((r: any) => (r.doc_type || 'rapport') === docType);
+  return NextResponse.json({ ok: true, items });
 }
 
 // POST { kind, item } -> upsert (tenant forcé à la session). `item` = doc complet { id, ... }.
@@ -46,11 +50,17 @@ export async function POST(req: NextRequest) {
   const item = body.item || {};
   if (!item.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
 
+  const docType = body.docType === 'maintenance' ? 'maintenance' : 'rapport';
   const row: any = (kind === 'templates')
-    ? { id: item.id, tenant_id: tenant, name: item.name || '', num: item.num || null, blocks: item.blocks || [], deleted: false, updated_at: new Date().toISOString() }
-    : { id: item.id, tenant_id: tenant, title: item.title || '', status: item.status || 'in_progress', template: item.template || null, num: item.num || null, data: item, author_email: item.author_email || u.email || null, version: item.version || 1, project_id: (item.link && item.link.projectId) || null, planner_job_id: (item.link && item.link.jobId) || null, deleted: false, updated_at: new Date().toISOString() };
+    ? { id: item.id, tenant_id: tenant, name: item.name || '', num: item.num || null, blocks: item.blocks || [], doc_type: docType, deleted: false, updated_at: new Date().toISOString() }
+    : { id: item.id, tenant_id: tenant, title: item.title || '', status: item.status || 'in_progress', template: item.template || null, num: item.num || null, data: item, author_email: item.author_email || u.email || null, version: item.version || 1, project_id: (item.link && item.link.projectId) || null, planner_job_id: (item.link && item.link.jobId) || null, doc_type: docType, deleted: false, updated_at: new Date().toISOString() };
 
-  const { error } = await supabaseAdmin.from(TABLE(kind)).upsert(row, { onConflict: 'id' });
+  let { error } = await supabaseAdmin.from(TABLE(kind)).upsert(row, { onConflict: 'id' });
+  if (error && /doc_type/.test(error.message || '')) {
+    // Colonne 229 pas encore appliquée → réessai sans doc_type (zéro régression pour les rapports).
+    const { doc_type, ...legacy } = row;
+    ({ error } = await supabaseAdmin.from(TABLE(kind)).upsert(legacy, { onConflict: 'id' }));
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

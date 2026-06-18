@@ -4,8 +4,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Square, AlertTriangle, QrCode, Clock, DollarSign, CheckCircle, CalendarClock, ListChecks, Building2 } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import InspectionFormBuilder from '@/components/maintenance/InspectionFormBuilder';
+import dynamic from 'next/dynamic';
 import ClientTree from '@/components/maintenance/ClientTree';
+// Maintenance d'équipement = MÊME moteur que le Rapport terrain (gabarits/blocs/IA/PDF), docType='maintenance'.
+const MaintReports = dynamic(() => import('@/components/rapports/RapportsApp'), { ssr: false }) as any;
 import {
   getEquipmentList, getMaintTemplates, saveMaintTemplate, deleteMaintTemplate, instantiateTemplate,
   getMaintSheets, saveMaintSheet, deleteMaintSheet, getMaintLogs, saveMaintLog,
@@ -173,8 +175,8 @@ export default function MaintenancePage() {
           ))}
         </div>
 
-        {/* ── FORMULAIRES D'INSPECTION (constructeur customisable) ── */}
-        {tab === 'formulaires' && <InspectionFormBuilder tenant={tenant} tr={(fr) => fr} />}
+        {/* ── FORMULAIRES (moteur Rapport terrain réutilisé : gabarits customisables, IA, PDF) ── */}
+        {tab === 'formulaires' && <div className="-mx-4 lg:-mx-6"><MaintReports docType="maintenance" /></div>}
 
         {/* ── CLIENTS & ÉQUIPEMENTS (arborescence) ── */}
         {tab === 'clients' && <ClientTree tenant={tenant} tr={(fr) => fr} />}
