@@ -34,6 +34,10 @@ export default function ModulesPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [upsell, setUpsell] = useState<string | null>(null);
+  // Widgets ÉPINGLÉS en haut du dashboard (case à cocher dans chaque widget) — persisté par tenant.
+  const [pins, setPins] = useState<Record<string, boolean>>({});
+  useEffect(() => { try { const s = localStorage.getItem(`dashPins_${tenant}`); if (s) setPins(JSON.parse(s)); } catch { /* ignore */ } }, [tenant]);
+  const togglePin = (k: string) => setPins(p => { const n = { ...p, [k]: !p[k] }; try { localStorage.setItem(`dashPins_${tenant}`, JSON.stringify(n)); } catch { /* ignore */ } return n; });
 
   const [proj, setProj] = useState({ soumission: 0, encours: 0, facture: 0, amount: 0 });
   const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
@@ -308,8 +312,10 @@ export default function ModulesPage() {
           </div>
 
           {/* Vue d'ensemble des non-conformités/anomalies (coordination+ ou si nom dans le formulaire) */}
+          {/* Bandeau des widgets ÉPINGLÉS (cases à cocher dans chaque widget) */}
+          {pins.safety && <div className="mb-3"><SafetyBoard lang={lang === 'en' ? 'en' : 'fr'} variant="strip" /></div>}
           <AiTokenAlert tenant={tenant} tr={tr} />
-          <SafetyBoard lang={lang === 'en' ? 'en' : 'fr'} />
+          <div className="mb-4"><SafetyBoard lang={lang === 'en' ? 'en' : 'fr'} variant="card" pinned={!!pins.safety} onTogglePin={() => togglePin('safety')} /></div>
           <div className="mb-4"><AnomaliesPanel tenant={tenant} /></div>
 
           {loading ? (
