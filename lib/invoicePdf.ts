@@ -3,7 +3,7 @@
 import { getInvoiceItems, getCompanySettings, TAX_BY_PROVINCE, type Invoice } from '@/lib/invoicing';
 import { applyFooters } from '@/lib/pdf/letterhead';
 
-const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+import { formatMoney } from '@/lib/currency';
 
 async function toDataUrl(url: string): Promise<string | null> {
   try {
@@ -21,6 +21,8 @@ async function toDataUrl(url: string): Promise<string | null> {
 
 export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promise<void> {
   const [items, company] = await Promise.all([getInvoiceItems(tenant, invoice.id!), getCompanySettings(tenant)]);
+  // Multi-devise (#43) : montants formatés avec le symbole de la devise de la facture (défaut CAD).
+  const mny = (n: number) => formatMoney(Number(n) || 0, (invoice as any).currency || 'CAD');
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default;
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });

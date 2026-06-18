@@ -6,9 +6,9 @@ import {
   CATEGORIE_LABELS, catLabel, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
 } from '@/lib/soumissions';
 import { drawCoverLetterPage, applyFooters, drawLogo, type CoverLetterData } from '@/lib/pdf/letterhead';
+import { formatMoney } from '@/lib/currency';
 
 const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
-const money = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
 
 async function loadImg(url?: string | null): Promise<string | null> {
   if (!url) return null;
@@ -46,6 +46,8 @@ function hexRgb(hex?: string | null): [number, number, number] {
 export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[], opts: SoumissionPdfOpts = {}): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const cat = opts.cat || null;
+  // Multi-devise (#43) : montants formatés avec le symbole de la devise de la soumission (défaut CAD).
+  const money = (n: number) => formatMoney(Number(n) || 0, s.currency || 'CAD');
   // Libellé d'une catégorie en respectant le RENOMMAGE des postes du catalogue (catLabel) — #48.
   const catName = (c: Categorie) => catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c]);
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
