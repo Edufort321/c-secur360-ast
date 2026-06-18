@@ -6,9 +6,12 @@ import { useEffect, useState } from 'react';
 import { Loader2, Plus, Trash2, Save, ChevronUp, ChevronDown, ClipboardList, Copy, FilePlus2 } from 'lucide-react';
 import {
   getInspectionTemplates, saveInspectionTemplate, deleteInspectionTemplate, emptyTemplate, newId, countItems,
-  STARTER_TEMPLATES, starterToTemplate,
-  ITEM_TYPES, type InspectionFormTemplate, type FormSection, type FormItem, type FormItemType,
+  STARTER_TEMPLATES, starterToTemplate, getSubmissions, RESULT_META,
+  ITEM_TYPES, type InspectionFormTemplate, type FormSection, type FormItem, type FormItemType, type InspectionSubmission,
 } from '@/lib/inspectionForms';
+import { getEquipmentList } from '@/lib/maintenance';
+import InspectionFill from '@/components/maintenance/InspectionFill';
+import { ClipboardCheck, Wrench } from 'lucide-react';
 
 type Tr = (fr: string, en: string) => string;
 const INP = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900';
@@ -17,11 +20,21 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
   const [list, setList] = useState<InspectionFormTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState<InspectionFormTemplate | null>(null);
+  const [fill, setFill] = useState<InspectionFormTemplate | null>(null);
+  const [mode, setMode] = useState<'forms' | 'sheets'>('forms');
+  const [equip, setEquip] = useState<{ id: string; name: string }[]>([]);
+  const [subs, setSubs] = useState<InspectionSubmission[]>([]);
+  const [subsLoading, setSubsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
   async function reload() { setLoading(true); setList(await getInspectionTemplates(tenant)); setLoading(false); }
   useEffect(() => { reload(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tenant]);
+  useEffect(() => {
+    getEquipmentList(tenant).then(eqs => setEquip((eqs || []).map(e => ({ id: e.id, name: e.equipment_name || e.equipment_serial || e.equipment_type || 'Équipement' }))), () => {});
+  }, [tenant]);
+  async function loadSubs() { setSubsLoading(true); setSubs(await getSubmissions(tenant, { limit: 200 })); setSubsLoading(false); }
+  useEffect(() => { if (mode === 'sheets') loadSubs(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mode, tenant]);
 
   // ── Mutations locales sur le gabarit en édition ──
   const patch = (p: Partial<InspectionFormTemplate>) => setEdit(e => e ? { ...e, ...p } : e);
@@ -60,6 +73,14 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
   function duplicate(t: InspectionFormTemplate) {
     setEdit({ ...t, id: undefined, name: t.name + tr(' (copie)', ' (copy)'),
       sections: (t.sections || []).map(s => ({ ...s, id: newId(), items: s.items.map(it => ({ ...it, id: newId() })) })) });
+  }
+
+  const resBadge = (c: string) => (({ emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300', amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300', rose: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300', red: 'bg-red-600 text-white' } as Record<string, string>)[c] || 'bg-gray-100 text-gray-600');
+
+  // ── Vue REMPLISSAGE (pousser une feuille) ──
+  if (fill) {
+    return <InspectionFill tenant={tenant} tr={tr} template={fill} equipmentOptions={equip}
+      onClose={() => setFill(null)} onSaved={() => { setFill(null); setMode('sheets'); loadSubs(); }} />;
   }
 
   // ── Vue ÉDITEUR ──
@@ -135,6 +156,13 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
   // ── Vue LISTE ──
   return (
     <div className="space-y-4">
+      {/* Bascule : gabarits (formulaires) vs feuilles d'inspection remplies */}
+      <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        <button onClick={() => setMode('forms')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${mode === 'forms' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}><ClipboardList size={14} /> {tr('Formulaires', 'Forms')}</button>
+        <button onClick={() => setMode('sheets')} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${mode === 'sheets' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}><ClipboardCheck size={14} /> {tr('Feuilles d’inspection', 'Inspection sheets')}</button>
+      </div>
+
+      {mode === 'forms' && (<>
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm text-gray-500">{tr('Créez des formulaires d’inspection sur mesure (check-lists) à coller en QR sur vos équipements.', 'Build custom inspection forms (checklists) to attach via QR to your equipment.')}</p>
         <button onClick={() => setEdit(emptyTemplate())} className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"><FilePlus2 size={15} /> {tr('Nouveau formulaire', 'New form')}</button>
@@ -163,7 +191,8 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
                 </div>
                 {t.category && <div className="text-xs text-gray-500">{t.category}</div>}
                 <div className="mt-1 text-[11px] text-gray-400">{t.sections?.length || 0} {tr('section(s)', 'section(s)')} · {countItems(t)} {tr('point(s)', 'item(s)')}</div>
-                <div className="mt-3 flex gap-2">
+                <button onClick={() => setFill(t)} className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-700"><ClipboardCheck size={14} /> {tr('Faire une inspection', 'Run inspection')}</button>
+                <div className="mt-2 flex gap-2">
                   <button onClick={() => setEdit(t)} className="flex-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900 dark:bg-blue-600 dark:hover:bg-blue-700">{tr('Éditer', 'Edit')}</button>
                   <button onClick={() => duplicate(t)} title={tr('Dupliquer', 'Duplicate')} className="rounded-lg border border-gray-300 px-2 py-1.5 text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"><Copy size={14} /></button>
                   <button onClick={() => remove(t.id)} title={tr('Supprimer', 'Delete')} className="rounded-lg border border-rose-300 px-2 py-1.5 text-rose-500 hover:bg-rose-50"><Trash2 size={14} /></button>
@@ -172,6 +201,34 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
             ))}
           </div>
         )}
+      </>)}
+
+      {/* ── FEUILLES D'INSPECTION remplies ── */}
+      {mode === 'sheets' && (
+        subsLoading ? <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>
+          : subs.length === 0 ? <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune inspection. Onglet « Formulaires » → « Faire une inspection ».', 'No inspection yet. "Forms" tab → "Run inspection".')}</div>
+            : (
+              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr>
+                    <th className="px-3 py-2">{tr('Date', 'Date')}</th><th className="px-3 py-2">{tr('Formulaire', 'Form')}</th><th className="px-3 py-2">{tr('Équipement', 'Equipment')}</th><th className="px-3 py-2">{tr('Inspecteur', 'Inspector')}</th><th className="px-3 py-2">{tr('Résultat', 'Result')}</th><th className="px-3 py-2 text-right">{tr('Anomalies', 'Anomalies')}</th>
+                  </tr></thead>
+                  <tbody>
+                    {subs.map(s => { const rm = s.overall_result ? RESULT_META[s.overall_result] : null; return (
+                      <tr key={s.id} className="border-t border-gray-100 dark:border-gray-700/50">
+                        <td className="px-3 py-2 text-gray-500">{(s.created_at || '').slice(0, 10)}</td>
+                        <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{s.template_name || '—'}{s.status === 'draft' && <span className="ml-1 rounded bg-gray-100 px-1 text-[9px] text-gray-500 dark:bg-gray-700">{tr('brouillon', 'draft')}</span>}</td>
+                        <td className="px-3 py-2 text-gray-500">{s.equipment_name || '—'}</td>
+                        <td className="px-3 py-2 text-gray-500">{s.inspector_name || '—'}</td>
+                        <td className="px-3 py-2">{rm ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resBadge(rm.color)}`}>{tr(rm.fr, rm.en)}</span> : '—'}</td>
+                        <td className="px-3 py-2 text-right font-semibold">{s.anomalies_count || 0}</td>
+                      </tr>
+                    ); })}
+                  </tbody>
+                </table>
+              </div>
+            )
+      )}
     </div>
   );
 }

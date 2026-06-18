@@ -74,6 +74,74 @@ export function countItems(tpl: InspectionFormTemplate): number {
   return (tpl.sections || []).reduce((n, s) => n + (s.items?.length || 0), 0);
 }
 
+// ── FEUILLES D'INSPECTION remplies (migration 226) ──────────────────────────────
+export type InspectionAnswer = { value?: any; anomaly?: boolean; detail?: string; photos?: string[] };
+export type OverallResult = 'conforme' | 'conditionnel' | 'non_conforme' | 'retrait';
+
+export type InspectionSubmission = {
+  id?: string; tenant_id?: string;
+  template_id?: string; template_name?: string; template_snapshot?: InspectionFormTemplate;
+  equipment_id?: string | null; equipment_name?: string | null; client_id?: string | null;
+  title?: string | null; inspector_name?: string | null; status?: 'draft' | 'submitted';
+  answers: Record<string, InspectionAnswer>;
+  overall_result?: OverallResult; anomalies_count?: number; notes?: string;
+  created_at?: string; submitted_at?: string | null;
+};
+
+export const RESULT_META: Record<OverallResult, { fr: string; en: string; color: string }> = {
+  conforme: { fr: 'Conforme', en: 'Pass', color: 'emerald' },
+  conditionnel: { fr: 'Conditionnel', en: 'Conditional', color: 'amber' },
+  non_conforme: { fr: 'Non conforme', en: 'Fail', color: 'rose' },
+  retrait: { fr: 'Retrait de service', en: 'Out of service', color: 'red' },
+};
+
+/** Un item est-il en ÉCHEC d'après sa réponse ? (non-conforme pour pass_fail, « non » pour checkbox). */
+function isFail(item: FormItem, ans?: InspectionAnswer): boolean {
+  if (!ans) return false;
+  if (item.type === 'pass_fail') return ans.value === 'non_conforme';
+  if (item.type === 'checkbox') return ans.value === false;
+  return !!ans.anomaly; // autres types : anomalie déclarée explicitement
+}
+
+/** Calcule le résultat global + le nombre d'anomalies (précédence retrait > non_conforme > conditionnel). */
+export function computeResult(tpl: InspectionFormTemplate, answers: Record<string, InspectionAnswer>): { result: OverallResult; anomalies: number } {
+  let anomalies = 0, withdrawal = false, critical = false, minor = false;
+  for (const s of tpl.sections || []) for (const it of s.items || []) {
+    if (isFail(it, answers[it.id])) {
+      anomalies++;
+      if (it.withdrawal) withdrawal = true; else if (it.critical) critical = true; else minor = true;
+    }
+  }
+  const result: OverallResult = withdrawal ? 'retrait' : critical ? 'non_conforme' : minor ? 'conditionnel' : 'conforme';
+  return { result, anomalies };
+}
+
+export async function getSubmissions(tenant: string, opts?: { equipmentId?: string; limit?: number }): Promise<InspectionSubmission[]> {
+  let q = supabase.from('inspection_submissions').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(opts?.limit || 200);
+  if (opts?.equipmentId) q = q.eq('equipment_id', opts.equipmentId);
+  const { data, error } = await q;
+  if (error) return [];
+  return (data as any[]) || [];
+}
+
+export async function saveSubmission(tenant: string, sub: InspectionSubmission): Promise<{ id?: string; error?: string }> {
+  const row: any = {
+    tenant_id: tenant,
+    template_id: sub.template_id || null, template_name: sub.template_name || null, template_snapshot: sub.template_snapshot || null,
+    equipment_id: sub.equipment_id || null, equipment_name: sub.equipment_name || null, client_id: sub.client_id || null,
+    title: sub.title || null, inspector_name: sub.inspector_name || null,
+    status: sub.status || 'submitted', answers: sub.answers || {},
+    overall_result: sub.overall_result || null, anomalies_count: sub.anomalies_count || 0, notes: sub.notes || null,
+    submitted_at: (sub.status === 'submitted') ? new Date().toISOString() : null,
+  };
+  if (sub.id) {
+    const { error } = await supabase.from('inspection_submissions').update(row).eq('id', sub.id).eq('tenant_id', tenant);
+    return { id: sub.id, error: error?.message };
+  }
+  const { data, error } = await supabase.from('inspection_submissions').insert(row).select('id').single();
+  return { id: (data as any)?.id, error: error?.message };
+}
+
 // ── GABARITS PRÉ-MONTÉS (check-lists SST courantes, conforme/non-conforme/S.O.) ──────────────
 type StarterItem = { label: string; type?: FormItemType; critical?: boolean; withdrawal?: boolean; options?: string[] };
 type Starter = { name: string; category: string; sections: { title: string; items: StarterItem[] }[] };
