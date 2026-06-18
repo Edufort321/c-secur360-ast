@@ -28,7 +28,7 @@ type Project  = { id: string; project_number: string; title: string | null; clie
 type Rate     = { code: string; rate_regular: number; rate_overtime: number; rate_premium: number };
 type Vehicle  = { id: string; name: string; make: string; model: string; type: string };
 type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string; total_commissions?: number; commission_details?: any[]; adjustment_note?: string | null; rejection_note?: string | null; adjustment_flag?: boolean };
-type Allowance = { id: string; name: string; amount: number; is_taxable: boolean };
+type Allowance = { id: string; name: string; amount: number; is_taxable: boolean; personnel_ids?: string[]; recurring_task_ids?: string[] };
 type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number };
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
 type AssignedVehicle = { id: string; name: string; make: string; model: string; regime?: string; km_rate_override?: number | null; is_sales_employee?: boolean };
@@ -140,6 +140,18 @@ export default function TimesheetDetailPage() {
     return () => { active = false; };
   }, [tenant]);
   const isSubsistenceAllowance = (name?: string) => /subsist/i.test(String(name || ''));
+  // Applicabilité d'un avantage (#paie) : visible sur la ligne SEULEMENT s'il s'applique à l'employé de
+  // la feuille ET au contexte de la ligne (tâche récurrente / projet). Listes vides = s'applique à tous.
+  function allowanceApplies(a: Allowance, e: { category: string; recurring_task_id?: string }): boolean {
+    const pids = a.personnel_ids || [], tids = a.recurring_task_ids || [];
+    const persOk = pids.length === 0 || (sheet && pids.includes(String(sheet.employee_id)));
+    let taskOk = tids.length === 0;
+    if (!taskOk) {
+      if (e.category === 'project') taskOk = tids.includes('__project__');
+      else if (e.recurring_task_id) taskOk = tids.includes(String(e.recurring_task_id));
+    }
+    return !!persOk && taskOk;
+  }
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [kmRate, setKmRate]     = useState(0);
   const [loading, setLoading]   = useState(true);
@@ -229,7 +241,7 @@ export default function TimesheetDetailPage() {
       if (sh) {
         const [{ data: prof }, { data: allws }, { data: bonuses }] = await Promise.all([
           supabase.from('employee_profiles').select('hourly_rate,ot_multiplier,dt_multiplier').eq('tenant_id', tenant).eq('employee_id', sh.employee_id).maybeSingle(),
-          supabase.from('timesheet_allowances').select('id,name,amount,is_taxable').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
+          supabase.from('timesheet_allowances').select('*').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
           supabase.from('timesheet_hour_bonuses').select('id,name,trigger_hours,bonus_amount').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
         ]);
         if (prof) setProfile(prof as EmployeeProfile);
@@ -1059,14 +1071,14 @@ export default function TimesheetDetailPage() {
                   </div>
                 </div>
 
-                {/* Avantages (si configurés) */}
-                {allowances.length > 0 && (
+                {/* Avantages (si configurés) — filtrés par applicabilité (employé + tâche/projet de la ligne) */}
+                {allowances.filter(a => allowanceApplies(a, e)).length > 0 && (
                   <div className="mt-3 border-t border-slate-100 pt-3">
                     <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                       <Gift size={12} /> Avantages
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      {allowances.map(a => {
+                      {allowances.filter(a => allowanceApplies(a, e)).map(a => {
                         const checked = e.allowances.some(x => x.id === a.id);
                         // Avertissement #49 : subsistance cochée sur un projet où le per diem n'est PAS applicable (interne).
                         const naWarn = checked && isSubsistenceAllowance(a.name) && !!e.project_number && perDiemNA.has(e.project_number);

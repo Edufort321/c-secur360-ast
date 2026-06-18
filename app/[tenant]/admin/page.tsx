@@ -5916,35 +5916,42 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
 }
 
 function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  type Row = { id?: string; name: string; amount: string; is_taxable: boolean; active: boolean; sort_order: number };
+  type Row = { id?: string; name: string; amount: string; is_taxable: boolean; active: boolean; sort_order: number; sell_amount?: string; source?: string; catalogue_key?: string | null; personnel_ids: string[]; recurring_task_ids: string[] };
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<{ id: string; name: string }[]>([]);
+  const [emps, setEmps] = useState<{ id: string; name: string }[]>([]);
+  const [expanded, setExpanded] = useState<number | null>(null);
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const PROJECT_TOKEN = '__project__';
 
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('timesheet_allowances').select('*').eq('tenant_id', tenant).order('sort_order').order('name');
-    setRows((data || []).map((r: any) => ({ ...r, amount: String(r.amount || '') })));
+    setRows((data || []).map((r: any) => ({ ...r, amount: String(r.amount || ''), sell_amount: r.sell_amount != null ? String(r.sell_amount) : '', personnel_ids: Array.isArray(r.personnel_ids) ? r.personnel_ids : [], recurring_task_ids: Array.isArray(r.recurring_task_ids) ? r.recurring_task_ids : [] })));
+    try { setTasks((await listRecurringTasks(tenant)).map((t: any) => ({ id: t.id, name: t.name }))); } catch { /* ignore */ }
+    try { const { data: e } = await supabase.from('planner_personnel').select('id, name, is_active').eq('tenant_id', tenant).order('name'); setEmps((e || []).filter((x: any) => x.is_active !== false && x.name).map((x: any) => ({ id: x.id, name: x.name }))); } catch { /* ignore */ }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
-  const add = () => setRows(p => [...p, { name: '', amount: '', is_taxable: false, active: true, sort_order: p.length }]);
+  const add = () => setRows(p => [...p, { name: '', amount: '', is_taxable: false, active: true, sort_order: p.length, source: 'manual', personnel_ids: [], recurring_task_ids: [] }]);
+  const toggleIn = (i: number, k: 'personnel_ids' | 'recurring_task_ids', id: string) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: r[k].includes(id) ? r[k].filter(x => x !== id) : [...r[k], id] } : r));
 
   async function save() {
     setSaving(true); setNotice(null);
     try {
       for (const r of rows) {
         if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name.trim(), amount: parseFloat(r.amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order };
+        const payload: any = { tenant_id: tenant, name: r.name.trim(), amount: parseFloat(r.amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order, personnel_ids: r.personnel_ids, recurring_task_ids: r.recurring_task_ids };
         if (r.id) await supabase.from('timesheet_allowances').update(payload).eq('id', r.id);
         else await supabase.from('timesheet_allowances').insert(payload);
       }
       setNotice(tr('Avantages enregistrés ✓', 'Allowances saved ✓')); load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+    } catch (e: any) { setNotice('Erreur (migration 222 ?) : ' + (e?.message || 'DB')); } finally { setSaving(false); }
   }
 
   async function del(i: number) {
@@ -5975,17 +5982,24 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
           <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
               <th className="px-2 py-1.5">{tr("Nom (affiché à l'employé)", 'Name (shown to employee)')}</th>
-              <th className="px-2">{tr('Montant $', 'Amount $')}</th>
+              <th className="px-2">{tr('Payé employé $', 'Paid to employee $')}</th>
+              <th className="px-2">{tr('Vendant (client)', 'Sell (client)')}</th>
               <th className="px-2">{tr('Imposable', 'Taxable')}</th>
-              <th className="px-2">{tr('Ordre', 'Order')}</th>
+              <th className="px-2">{tr('Applicable à', 'Applies to')}</th>
               <th className="px-2">{tr('Actif', 'Active')}</th>
               <th></th>
             </tr></thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-2 py-1" data-label={tr("Nom (affiché à l'employé)", 'Name (shown to employee)')}><input className={`${inp} w-40`} value={r.name} placeholder={tr('Ex: Dîner', 'Ex: Lunch')} onChange={e => upd(i, 'name', e.target.value)} /></td>
-                  <td className="px-2" data-label={tr('Montant $', 'Amount $')}>
+              {rows.map((r, i) => {
+                const appliesAll = r.personnel_ids.length === 0 && r.recurring_task_ids.length === 0;
+                return (
+                <React.Fragment key={r.id || i}>
+                <tr className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="px-2 py-1" data-label={tr("Nom", 'Name')}>
+                    <input className={`${inp} w-40`} value={r.name} placeholder={tr('Ex: Dîner', 'Ex: Lunch')} onChange={e => upd(i, 'name', e.target.value)} disabled={r.source === 'catalogue'} />
+                    {r.source === 'catalogue' && <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Vient du catalogue des taux', 'From rate catalogue')}>📘 {tr('catalogue', 'catalogue')}</span>}
+                  </td>
+                  <td className="px-2" data-label={tr('Payé employé $', 'Paid $')}>
                     <div className="flex items-center gap-1">
                       <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.amount} placeholder="35.00"
                         onChange={e => upd(i, 'amount', e.target.value)}
@@ -5993,13 +6007,39 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                       <span className="text-xs text-gray-400">$</span>
                     </div>
                   </td>
+                  <td className="px-2 text-gray-500" data-label={tr('Vendant', 'Sell')}>{r.sell_amount ? `${r.sell_amount} $` : '—'}</td>
                   <td className="px-2 text-center" data-label={tr('Imposable', 'Taxable')}><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
-                  <td className="px-2" data-label={tr('Ordre', 'Order')}><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
+                  <td className="px-2" data-label={tr('Applicable à', 'Applies to')}>
+                    <button onClick={() => setExpanded(expanded === i ? null : i)} className={`rounded-lg border px-2 py-1 text-xs font-semibold ${appliesAll ? 'border-gray-300 text-gray-500' : 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300'}`}>
+                      {appliesAll ? tr('Tous', 'All') : `${r.recurring_task_ids.length || tr('toutes tâches', 'all tasks')} · ${r.personnel_ids.length || tr('tous empl.', 'all empl.')}`} ▾
+                    </button>
+                  </td>
                   <td className="px-2 text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
                   <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
                 </tr>
-              ))}
-              {rows.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun avantage configuré.', 'No allowance configured.')}</td></tr>}
+                {expanded === i && (
+                  <tr className="bg-gray-50/60 dark:bg-gray-900/30"><td colSpan={7} className="px-3 py-3">
+                    <p className="mb-2 text-[11px] text-gray-500">{tr('Coché = la case à cocher apparaît dans la feuille de temps pour ces tâches/employés. Rien de coché = s’applique à TOUS.', 'Checked = the checkbox appears in the timesheet for those tasks/employees. Nothing checked = applies to ALL.')}</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <div className="mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">{tr('Tâches / contextes', 'Tasks / contexts')}</div>
+                        <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={r.recurring_task_ids.includes(PROJECT_TOKEN)} onChange={() => toggleIn(i, 'recurring_task_ids', PROJECT_TOKEN)} /> {tr('Lignes de projet / soumission', 'Project / quote lines')}</label>
+                        {tasks.map(t => <label key={t.id} className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={r.recurring_task_ids.includes(t.id)} onChange={() => toggleIn(i, 'recurring_task_ids', t.id)} /> {t.name}</label>)}
+                        {tasks.length === 0 && <span className="text-[11px] text-gray-400">{tr('Aucune tâche récurrente.', 'No recurring task.')}</span>}
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">{tr('Employés', 'Employees')}</div>
+                        <div className="max-h-40 overflow-y-auto">
+                          {emps.map(e => <label key={e.id} className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={r.personnel_ids.includes(e.id)} onChange={() => toggleIn(i, 'personnel_ids', e.id)} /> {e.name}</label>)}
+                          {emps.length === 0 && <span className="text-[11px] text-gray-400">{tr('Aucun employé.', 'No employee.')}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </td></tr>
+                )}
+                </React.Fragment>
+              ); })}
+              {rows.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun avantage configuré.', 'No allowance configured.')}</td></tr>}
             </tbody>
           </table>
         </div>
