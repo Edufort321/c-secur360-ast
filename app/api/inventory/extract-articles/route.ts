@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // #Inventaire — Import IA d'articles depuis une feuille Excel STRICTE (gabarit impose).
 // Calque sur /api/dga/extract : proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote
@@ -66,21 +67,16 @@ export async function POST(req: NextRequest) {
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        // Haiku 4.5 : rapide et suffisant pour la detection de colonnes / normalisation structuree.
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: PROMPT },
-            { type: 'text', text: 'LIGNES BRUTES (JSON) :\n' + JSON.stringify(rows).slice(0, 180000) },
-          ],
-        }],
-      }),
+    const resp = await anthropicMessages(apiKey, {
+      model: 'claude-haiku-4-5-20251001', // extraction = modèle économique (repli auto si indisponible)
+      max_tokens: 8000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: PROMPT },
+          { type: 'text', text: 'LIGNES BRUTES (JSON) :\n' + JSON.stringify(rows).slice(0, 180000) },
+        ],
+      }],
     });
 
     if (!resp.ok) {

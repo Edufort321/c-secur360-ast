@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Analyse IA « investisseur / crise » (#33) : on envoie valorisation, bilan, EBITDA/CAPEX, Altman Z
 // et la dilution simulée ; l'IA renvoie lecture investisseur, risques de crise et recommandations
@@ -47,11 +48,7 @@ ALTMAN Z'': ${(z.z || 0).toFixed(2)} (zone: ${z.zone || 'n/d'} — ${z.label || 
 DILUTION SIMULÉE : pré-money ${Math.round(sim.preMoney || 0)}$ + investissement ${Math.round(sim.investment || 0)}$ → post-money ${Math.round(sim.postMoney || 0)}$ ; nouvel investisseur ${ (sim.newInvestorPct || 0).toFixed(1)}%` : ''}`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 2048, system: [ANTI_INJECTION, SYS].join('\n'), messages: [{ role: 'user', content: ctx }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 2048, system: [ANTI_INJECTION, SYS].join('\n'), messages: [{ role: 'user', content: ctx }] });
     if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents(MODEL, data?.usage); if (cost > 0) await recordAiUsage(tenant, 'finance', cost, { feature: 'investor' }); } catch { /* best-effort */ } }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { getNorm } from '@/lib/confinedSpace/norms';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Conseiller IA « espace clos » (à la manière du conseiller AST) + rafraîchissement automatique des
 // normes par recherche web. Proxy serveur (clé non exposée), budget scopé au tenant, anti-abus.
@@ -39,13 +40,10 @@ export async function POST(req: NextRequest) {
 Donne, en te basant sur des sources officielles récentes (autorité : ${norm.authority}) : les seuils atmosphériques (O₂ min/max %, LIE max %, H₂S max ppm, CO max ppm), l'intervalle de reprise/surveillance recommandé, l'exigence de surveillant et le ratio, l'exigence de surveillance continue, et les références réglementaires exactes (numéros d'articles/règlements à jour).
 Réponds en JSON STRICT, sans texte autour :
 {"limits":[{"key":"o2","label":"Oxygène (O₂)","unit":"%","min":19.5,"max":23.0},{"key":"lel","label":"Gaz inflammables (LIE)","unit":"% LIE","max":10},{"key":"h2s","label":"H₂S","unit":"ppm","max":10},{"key":"co","label":"CO","unit":"ppm","max":35}],"defaultRetestMinutes":15,"attendantPerEntrants":2,"continuousMonitoring":true,"regulations":["..."],"notes":"...","citations":[{"title":"...","url":"..."}]}`;
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 2048, system: KNOWLEDGE,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }],
-          messages: [{ role: 'user', content: prompt }],
-        }),
+      const resp = await anthropicMessages(apiKey, {
+        max_tokens: 2048, system: KNOWLEDGE,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }],
+        messages: [{ role: 'user', content: prompt }],
       });
       if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
       const data = await resp.json();
@@ -77,10 +75,7 @@ Réponds en JSON STRICT, sans texte autour :
  "risk_level":"faible|moyen|élevé|critique",
  "missing_info":["informations manquantes à obtenir pour sécuriser l'entrée"],
  "rationale_fr":"justification synthétique selon la norme de la province"}`;
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 3500, system: KNOWLEDGE, messages: [{ role: 'user', content: prompt }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 3500, system: KNOWLEDGE, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'espace-clos-advise' }); } catch {} }

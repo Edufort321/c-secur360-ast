@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // « Scanner (IA) » d'une pièce jointe pour PRÉ-REMPLIR une (ou plusieurs) transaction(s) :
 //   - IMAGE  -> Claude Vision (OCR du reçu)            -> { extracted } (1 transaction)
@@ -29,11 +30,7 @@ RÈGLES STRICTES — n'omets AUCUNE opération :
 Réponds UNIQUEMENT en JSON valide : {"items":[${SCHEMA}],${STMT_SUMMARY}}. N'invente RIEN.`;
 
 async function callAnthropic(apiKey: string, system: string, content: any, maxTokens = 4096): Promise<any> {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content }] }),
-  });
+  const resp = await anthropicMessages(apiKey, { max_tokens: maxTokens, system, messages: [{ role: 'user', content }] });
   if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
   return resp.json();
 }

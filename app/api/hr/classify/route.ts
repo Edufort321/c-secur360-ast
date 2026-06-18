@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // RH — Classement automatique d'un document déposé (assistance IA). Détermine le TYPE,
 // une CATÉGORIE, le NOM de la personne concernée (extrait du document, le cas échéant),
@@ -52,14 +53,9 @@ export async function POST(req: NextRequest) {
     : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } };
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'),
-        max_tokens: 512,
-        messages: [{ role: 'user', content: [docBlock, { type: 'text', text: PROMPT + '\n' + ANTI_INJECTION }] }],
-      }),
+    const resp = await anthropicMessages(apiKey, {
+      max_tokens: 512,
+      messages: [{ role: 'user', content: [docBlock, { type: 'text', text: PROMPT + '\n' + ANTI_INJECTION }] }],
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();

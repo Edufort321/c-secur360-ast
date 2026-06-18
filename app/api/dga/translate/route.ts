@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // #DGA — Traduction du commentaire/recommandation expert (FR <-> EN), pour le mode
 // « traduction auto selon la langue du header ». Proxy serveur (clé non exposée).
@@ -24,11 +25,7 @@ export async function POST(req: NextRequest) {
   const system = `Tu es un traducteur technique (diagnostic d'huile de transformateur, DGA, normes IEEE/IEC/ASTM). Traduis fidèlement le texte vers ${langName}, en conservant le ton d'ingénieur, la terminologie normalisée et la mise en forme (sauts de ligne, tirets). Réponds UNIQUEMENT avec la traduction, sans préambule ni guillemets.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 1536, system, messages: [{ role: 'user', content: text }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 1536, system, messages: [{ role: 'user', content: text }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'translate' }); } catch { /* best-effort */ } }

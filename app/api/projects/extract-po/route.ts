@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // « Importer le bon de commande (IA) » : on envoie le BC (PDF/image) à Anthropic (vision). L'IA extrait
 // le N° de BC, le montant, les dates, le titre des travaux, et le PROFIL CLIENT (adresse, facturation,
@@ -27,11 +28,7 @@ RÈGLES : n'invente JAMAIS une valeur absente (mets "" ou 0). province = code 2 
 Réponds UNIQUEMENT en JSON valide : ${SCHEMA}`;
 
 async function callAnthropic(apiKey: string, content: any): Promise<any> {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4096, system: [ANTI_INJECTION, SYS].join('\n'), messages: [{ role: 'user', content }] }),
-  });
+  const resp = await anthropicMessages(apiKey, { max_tokens: 4096, system: [ANTI_INJECTION, SYS].join('\n'), messages: [{ role: 'user', content }] });
   if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
   return resp.json();
 }

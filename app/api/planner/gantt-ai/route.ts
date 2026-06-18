@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Assistant IA du PLANIFICATEUR : valide et OPTIMISE la logique d'un Gantt (séquençage, dépendances,
 // durées réalistes, effectif). Clé Anthropic côté serveur, budget IA scopé au tenant de la SESSION,
@@ -58,11 +59,7 @@ ${JSON.stringify(slim)}`;
 
   const system = [ANTI_INJECTION].join('\n');
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 4096, system, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 4096, system, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'planner', cost, { feature: 'gantt-ai' }); } catch { /* best-effort */ } }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // « Importer le bordereau de réception (IA) » : on envoie l'image/PDF/Excel du bordereau + les lignes
 // du bon de commande. L'IA lit ce qui a été RÉELLEMENT reçu et le rattache aux lignes du bon (par code
@@ -21,11 +22,7 @@ const SYS = `Tu es un commis à la RÉCEPTION de marchandises. On te donne (1) l
 Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
 
 async function callAnthropic(apiKey: string, system: string, content: any): Promise<any> {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4096, system, messages: [{ role: 'user', content }] }),
-  });
+  const resp = await anthropicMessages(apiKey, { max_tokens: 4096, system, messages: [{ role: 'user', content }] });
   if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
   return resp.json();
 }

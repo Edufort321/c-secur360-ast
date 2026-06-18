@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { scopeForModule } from '@/lib/norms/registry';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Assistant « Normes à jour » — fournit, selon le module en cours, les normes/standards et la
 // LÉGISLATION applicable, TOUJOURS à jour, via l'outil serveur web_search (Anthropic exécute les
@@ -56,11 +57,8 @@ Donne 4 à 8 items pertinents, du plus important au moins important.`;
     let data: any = null;
     let costCents = 0;
     for (let i = 0; i < 6; i++) {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ ...baseBody, messages }),
-      });
+      const { model: _model, ...baseBodyNoModel } = baseBody;
+      const resp = await anthropicMessages(apiKey, { ...baseBodyNoModel, messages });
       if (!resp.ok) { const e = await resp.text().catch(() => ''); return NextResponse.json({ error: `Appel IA échoué (${resp.status}). ${e.slice(0, 250)}` }, { status: 502 }); }
       data = await resp.json();
       const searches = (data?.content || []).filter((b: any) => b?.type === 'server_tool_use' && b?.name === 'web_search').length;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Module « Rapport Terrain » — proxy SERVEUR des appels IA (extraction PDF/manuscrit, correction,
 // traduction…). La clé Anthropic reste côté serveur (jamais dans le navigateur, contrairement à
@@ -28,11 +29,7 @@ export async function POST(req: NextRequest) {
   const system = [ANTI_INJECTION, typeof body.system === 'string' ? body.system : ''].filter(Boolean).join('\n');
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens, system, messages }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens, system, messages });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 250)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'rapports', cost, { feature: 'ai' }); } catch { /* best-effort */ } }

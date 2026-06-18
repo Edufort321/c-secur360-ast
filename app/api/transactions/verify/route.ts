@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // « Vérifier IA » d'une transaction : l'utilisateur remplit, l'IA vérifie la COHÉRENCE comptable/fiscale
 // et renvoie des CORRECTIONS concrètes. Proxy SERVEUR (clé Anthropic jamais côté navigateur), budget IA
@@ -41,11 +42,7 @@ Si tout est correct : ok=true, issues=[]. Sois CONCIS, CONCRET, en FRANÇAIS.`,
   const userMsg = `Transaction à vérifier (province ${txn.province || 'QC'}, type ${txn.txn_type || 'expense'}) :\n${JSON.stringify(txn).slice(0, 6000)}`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1500, system, messages: [{ role: 'user', content: userMsg }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 1500, system, messages: [{ role: 'user', content: userMsg }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents(MODEL, data?.usage); if (cost > 0) await recordAiUsage(tenant, 'transactions', cost, { feature: 'verify' }); } catch { /* best-effort */ } }

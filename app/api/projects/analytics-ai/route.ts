@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Analyse IA « dirigeant » du portefeuille de projets : on envoie les KPIs agrégés + la marge par projet,
 // l'IA renvoie un diagnostic (projets non profitables, meilleures/pires ventes, risques, recommandations).
@@ -41,11 +42,7 @@ MARGE PAR PROJET (${metrics.length}):
 ${lines || '(aucune donnée financière)'}`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 2048, system: [ANTI_INJECTION, SYS].join('\n'), messages: [{ role: 'user', content: ctx }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 2048, system: [ANTI_INJECTION, SYS].join('\n'), messages: [{ role: 'user', content: ctx }] });
     if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents(MODEL, data?.usage); if (cost > 0) await recordAiUsage(tenant, 'projects', cost, { feature: 'analytics' }); } catch { /* best-effort */ } }

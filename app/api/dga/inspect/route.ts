@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // #DGA — Aide technique IA pour l'inspection de routine d'un transformateur à l'huile.
 // À partir des points en ANOMALIE relevés, propose des correctifs concrets (cause probable +
@@ -33,11 +34,7 @@ ${anomalies.map((a: any, i: number) => `${i + 1}. [${a.category || ''}] ${a.labe
 Donne les correctifs.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 2048, system: SYSTEM, messages: [{ role: 'user', content: userMsg }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 2048, system: SYSTEM, messages: [{ role: 'user', content: userMsg }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'inspect' }); } catch { /* best-effort */ } }

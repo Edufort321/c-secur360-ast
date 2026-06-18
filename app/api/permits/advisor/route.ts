@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { getPermitNorm, PROV_LABELS, type Prov } from '@/lib/permits/norms';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // Conseiller IA GÉNÉRIQUE pour TOUS les types de permis (travail à chaud, LOTO, électrique, hauteur,
 // excavation, chimique, pression). Adapté au type + province. Action 'refresh-norms' = MAJ par web.
@@ -35,10 +36,7 @@ export async function POST(req: NextRequest) {
     if (action === 'refresh-norms') {
       const prompt = `Recherche les EXIGENCES RÉGLEMENTAIRES ACTUELLES pour un permis « ${norm.labelFr} » dans « ${provLabel} » (${province}), Canada (autorités : ${norm.authorities.join(', ')}). Donne références exactes à jour + check-list normalisée + paramètres clés.
 Réponds en JSON STRICT : {"references":["…"],"checklist":["…"],"params":{},"citations":[{"title":"","url":""}]}`;
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 2048, system: SYSTEM, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }], messages: [{ role: 'user', content: prompt }] }),
-      });
+      const resp = await anthropicMessages(apiKey, { max_tokens: 2048, system: SYSTEM, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }], messages: [{ role: 'user', content: prompt }] });
       if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
       const data = await resp.json();
       if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage, 4); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'norm-refresh', type, province }); } catch {} }
@@ -61,10 +59,7 @@ Produis une analyse SST complète et prudente. Réponds en JSON STRICT, sans tex
  "risk_level":"faible|moyen|élevé|critique",
  "missing_info":["infos manquantes à obtenir"],
  "rationale_fr":"justification selon la norme/province"}`;
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: prompt }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const c = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (c > 0) await recordAiUsage(tenant, 'permits', c, { feature: 'advise', type }); } catch {} }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // #Inventaire — Assistant Prix IA : recherche WEB du prix coutant a jour des articles.
 // Proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote serveur). Utilise l'outil
@@ -44,7 +45,6 @@ Un objet par article (meme code). Introuvable -> webPrice:0. webPrice = nombre s
   const baseBody: any = {
     // OPTIMISATION COUTS : Sonnet 4.6 (moins cher qu'Opus, supporte la recherche web), sortie courte,
     // 1 recherche web par article max (la recherche web est facturee a l'unite).
-    model: 'claude-sonnet-4-6',
     max_tokens: 1500,
     tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(12, items.length) }],
     messages: [{ role: 'user', content: prompt }],
@@ -57,11 +57,7 @@ Un objet par article (meme code). Introuvable -> webPrice:0. webPrice = nombre s
     // Boucle de continuation : l'outil serveur peut renvoyer stop_reason "pause_turn" -> on renvoie
     // la reponse de l'assistant telle quelle pour que le serveur reprenne sa boucle de recherche.
     for (let i = 0; i < 6; i++) {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ ...baseBody, messages }),
-      });
+      const resp = await anthropicMessages(apiKey, { ...baseBody, messages });
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return NextResponse.json({ error: `Appel IA echoue (${resp.status}). ${errText.slice(0, 300)}` }, { status: 502 });

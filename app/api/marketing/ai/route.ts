@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { anthropicMessages } from '@/lib/anthropicModel';
 
 // IA MARKETING du TENANT. Toute la conso est plafonnée par le FORFAIT du tenant (ai_budgets/ai_usage).
 // L'IA s'appuie sur le PROFIL D'ENTREPRISE du tenant (tenant_marketing_profile) — la plateforme ne
@@ -54,10 +55,7 @@ Produis un PACK MARKETING cohérent et conforme, adapté à l'entreprise (profil
  "warnings":["allégations à sourcer, le cas échéant"]}`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 3500, system, messages: [{ role: 'user', content: prompt }] }),
-    });
+    const resp = await anthropicMessages(apiKey, { max_tokens: 3500, system, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();
     try { const cost = aiCallCostCents(MODEL, data?.usage); if (cost > 0) await recordAiUsage(tenant, 'marketing', cost, { feature: format }); } catch {}

@@ -7,6 +7,7 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { ANTI_INJECTION } from '@/lib/aiGuard';
+import { anthropicMessages } from '@/lib/anthropicModel';
 import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import { OIL_FIELDS, FURAN_FIELDS } from '@/lib/dga/fields';
 
@@ -50,20 +51,15 @@ export async function extractDgaFromPdf(pdfBase64: string, tenant: string): Prom
   if (!apiKey) throw new DgaExtractError('IA non configuree (ANTHROPIC_API_KEY absente).', 503);
   if (!pdfBase64) throw new DgaExtractError('pdfBase64 requis', 400);
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({
-      model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'),
-      max_tokens: 16384, // marge suffisante pour un rapport multi-transformateurs (sinon JSON tronque = transfos perdus)
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-          { type: 'text', text: PROMPT },
-        ],
-      }],
-    }),
+  const resp = await anthropicMessages(apiKey, {
+    max_tokens: 16384, // marge suffisante pour un rapport multi-transformateurs (sinon JSON tronque = transfos perdus)
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+        { type: 'text', text: PROMPT },
+      ],
+    }],
   });
   if (!resp.ok) { const e = await resp.text(); throw new DgaExtractError(`Anthropic ${resp.status}: ${e.slice(0, 300)}`, 502); }
   const data = await resp.json();
