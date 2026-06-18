@@ -62,6 +62,8 @@ export type Soumission = {
   sellers_split?: { seller_id: string; pct: number }[] | null;
   // Approbation (migration 139).
   approved_by?: string | null; approved_at?: string | null; approval_note?: string | null;
+  // Multi-devise (#43, migration 221) — défaut CAD / 1.
+  currency?: string; fx_rate?: number;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -457,6 +459,8 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
     sellers_split: Array.isArray(header.sellers_split) && header.sellers_split.length ? header.sellers_split : null,
     // Approbation (migration 139).
     approved_by: header.approved_by ?? null, approved_at: header.approved_at ?? null, approval_note: header.approval_note ?? null,
+    // Multi-devise (migration 221) — retirés automatiquement si les colonnes manquent.
+    currency: header.currency || 'CAD', fx_rate: Number(header.fx_rate) || 1,
   };
   let id = header.id;
   // Upsert résilient : si une colonne de suivi manque (migration 138 non passée), on la retire et on réessaie.

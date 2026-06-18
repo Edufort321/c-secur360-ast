@@ -16,6 +16,7 @@ import {
 } from '@/lib/soumissions';
 import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
 import { downloadCsv, type CsvColumn } from '@/lib/csv';
+import { getCurrencyConfig, rateToBase, currencyMeta, type CurrencyConfig } from '@/lib/currency';
 import { useAutoDraft, readDraft, clearDraft, hasDraft } from '@/lib/useDraft';
 import { frLongDate } from '@/lib/pdf/letterhead';
 import { createPortal } from 'react-dom';
@@ -39,6 +40,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [notice, setNotice] = useState<string | null>(null);
   const blankHdr = (): Soumission => ({ numero: '', revision: 1, year: nowYear, status: 'draft', total: 0, client_snapshot: {} });
   const [hdr, setHdr] = useState<Soumission>(blankHdr());
+  const [curCfg, setCurCfg] = useState<CurrencyConfig | null>(null); // multi-devise (#43)
+  useEffect(() => { getCurrencyConfig(tenant).then(setCurCfg, () => {}); }, [tenant]);
   const [items, setItems] = useState<SoumissionItem[]>([]);
   const [clientName, setClientName] = useState('');
   const [listView, setListView] = useState<'grid' | 'gallery'>('grid'); // liste soumissions : grille (défaut) / galerie
@@ -978,6 +981,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   ))}
                 </select>
               </label>
+              {curCfg && curCfg.enabled.length > 1 && (
+                <label className="text-xs font-semibold text-gray-500">{tr('Devise', 'Currency')}
+                  <select value={hdr.currency || curCfg.base} onChange={e => { const c = e.target.value; setHdr(h => ({ ...h, currency: c, fx_rate: rateToBase(curCfg, c) })); }} className={`mt-1 w-full ${inputCls}`}>
+                    {curCfg.enabled.map(c => <option key={c} value={c}>{c} ({currencyMeta(c).symbol})</option>)}
+                  </select>
+                </label>
+              )}
               {/* Note : la récurrence des taux passe par le Catalogue des prix (Admin → Catalogue de taux). */}
               <div className={`sm:col-span-2 rounded-lg border px-3 py-2 text-xs ${catalogues.length === 0 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200' : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200'}`}>
                 {catalogues.length === 0
