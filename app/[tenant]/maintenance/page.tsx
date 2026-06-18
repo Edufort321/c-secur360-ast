@@ -6,6 +6,7 @@ import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Sq
 import { PortalHeader } from '@/components/PortalHeader';
 import dynamic from 'next/dynamic';
 import ClientTree from '@/components/maintenance/ClientTree';
+import PlanningBoard from '@/components/maintenance/PlanningBoard';
 // Maintenance d'équipement = MÊME moteur que le Rapport terrain (gabarits/blocs/IA/PDF), docType='maintenance'.
 const MaintReports = dynamic(() => import('@/components/rapports/RapportsApp'), { ssr: false }) as any;
 import {
@@ -22,7 +23,7 @@ const FREQS = ['quotidien', 'hebdomadaire', 'mensuel', 'semestriel', 'annuel', '
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
 const hrs = (min: number) => `${(Math.round((Number(min) || 0) / 6) / 10).toLocaleString('fr-CA')} h`;
 
-type Tab = 'dashboard' | 'equipements' | 'gabarits' | 'formulaires' | 'clients';
+type Tab = 'dashboard' | 'equipements' | 'gabarits' | 'formulaires' | 'clients' | 'planif';
 
 export default function MaintenancePage() {
   const params = useParams();
@@ -170,7 +171,7 @@ export default function MaintenancePage() {
 
         {/* Onglets */}
         <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          {([['dashboard', 'Tableau de bord', LayoutDashboard], ['equipements', 'Équipements & feuilles', Wrench], ['gabarits', 'Gabarits', ClipboardList], ['formulaires', 'Formulaires d\'inspection', ListChecks], ['clients', 'Clients & équipements', Building2]] as [Tab, string, any][]).map(([k, lbl, Icon]) => (
+          {([['dashboard', 'Tableau de bord', LayoutDashboard], ['equipements', 'Équipements & feuilles', Wrench], ['gabarits', 'Gabarits', ClipboardList], ['formulaires', 'Formulaires d\'inspection', ListChecks], ['clients', 'Clients & équipements', Building2], ['planif', 'Planification', CalendarClock]] as [Tab, string, any][]).map(([k, lbl, Icon]) => (
             <button key={k} onClick={() => setTab(k)} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${tab === k ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}><Icon size={15} /> {lbl}</button>
           ))}
         </div>
@@ -180,6 +181,9 @@ export default function MaintenancePage() {
 
         {/* ── CLIENTS & ÉQUIPEMENTS (arborescence) ── */}
         {tab === 'clients' && <ClientTree tenant={tenant} tr={(fr) => fr} />}
+
+        {/* ── PLANIFICATION (échéances à venir + notification client) ── */}
+        {tab === 'planif' && <PlanningBoard tenant={tenant} tr={(fr) => fr} />}
 
         {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
