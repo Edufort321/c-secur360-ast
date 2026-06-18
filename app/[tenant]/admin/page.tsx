@@ -7300,6 +7300,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [notice, setNotice] = useState<string | null>(null);
   const blankItem = (code = '5300'): TransactionItem => ({ description: '', account_code: code, amount: 0, taxable: true });
   const [hdr, setHdr] = useState<Transaction>({ transaction_number: '', vendor_name: '', txn_type: 'expense', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+  const [curCfg, setCurCfg] = useState<CurrencyConfig | null>(null); // multi-devise (#43)
+  useEffect(() => { getCurrencyConfig(tenant).then(setCurCfg, () => {}); }, [tenant]);
   // Personnel (pour « dépense payée par une personne » → remboursement / investissement).
   const [persons, setPersons] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => { supabase.from('planner_personnel').select('id, name').eq('tenant_id', tenant).eq('is_active', true).order('name').then(({ data }) => setPersons((data as any[]) || []), () => {}); }, [tenant]);
@@ -7859,6 +7861,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{isRevenue ? tr('Client', 'Client') : tr('Fournisseur', 'Vendor')}<input value={hdr.vendor_name || ''} onChange={e => setHdr(h => ({ ...h, vendor_name: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.txn_date} onChange={e => setHdr(h => ({ ...h, txn_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={hdr.province} onChange={e => setHdr(h => ({ ...h, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
+            {curCfg && curCfg.enabled.length > 1 && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Devise', 'Currency')}<select value={(hdr as any).currency || curCfg.base} onChange={e => { const c = e.target.value; setHdr(h => ({ ...h, currency: c, fx_rate: rateToBase(curCfg, c) } as any)); }} className={`mt-1 w-full ${inputCls}`}>{curCfg.enabled.map(c => <option key={c} value={c}>{c} ({currencyMeta(c).symbol})</option>)}</select></label>
+            )}
             <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque / carte', 'Cash / bank / card')}</option><option value="on_account">{isRevenue ? tr('À recevoir (client)', 'Receivable (client)') : tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
             {hdr.payment_method === 'cash' && (
               <label className="text-xs font-semibold text-gray-500">{tr('Compte', 'Account')}
