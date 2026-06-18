@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Square, AlertTriangle, QrCode, Clock, DollarSign, CheckCircle, CalendarClock, ListChecks } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { BackButton } from '@/components/BackButton';
 import InspectionFormBuilder from '@/components/maintenance/InspectionFormBuilder';
 import {
   getEquipmentList, getMaintTemplates, saveMaintTemplate, deleteMaintTemplate, instantiateTemplate,
@@ -156,7 +155,6 @@ export default function MaintenancePage() {
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-gray-900 dark:text-gray-100">
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 py-6 lg:px-6">
-        <BackButton fallback={`/${tenant}/modules`} className="mb-4" />
         <div className="mb-4 flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-orange-600 text-white shadow-sm"><Wrench size={22} /></div>
           <div>

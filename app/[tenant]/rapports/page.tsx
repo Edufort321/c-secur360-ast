@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { BackButton } from '@/components/BackButton';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 
 // Module « Rapports terrain » — constructeur de rapports techniques (extraction IA PDF/manuscrit,
@@ -21,7 +20,6 @@ export default function RapportsPage() {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <PortalHeader tenant={tenant} />
-      <div className="px-4 pt-3"><BackButton fallback={`/${tenant}/modules`} /></div>
       {access === 'locked' ? (
         <div className="mx-auto max-w-md px-4 py-20 text-center">
           <Lock className="mx-auto text-gray-400" size={40} />

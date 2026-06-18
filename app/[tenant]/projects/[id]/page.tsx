@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Save, Loader2, FileText, Clock, DollarSign, Download, Receipt, Trash2, BookOpen, Menu, X } from 'lucide-react';
-import { BackButton } from '@/components/BackButton';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { ProjectTimesheetSummary } from '@/components/projet/ProjectTimesheetSummary';
@@ -320,7 +319,6 @@ export default function ProjectDetailPage() {
       <PortalHeader tenant={tenant} />
 
       <div className="w-full px-4 py-6 lg:px-6">
-        <BackButton fallback={`/${tenant}/projects`} className="mb-4" />
 
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>

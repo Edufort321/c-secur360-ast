@@ -10,7 +10,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PortalHeader } from '@/components/PortalHeader';
-import { BackButton } from '@/components/BackButton';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 import { supabase } from '@/lib/supabase';
@@ -549,7 +548,6 @@ export default function DgaPage() {
   return (
     <Shell tenant={tenant}>
       <div className="w-full max-w-none px-3 py-6 sm:px-5 lg:px-8 xl:px-10">
-        {view === 'list' && <BackButton fallback={`/${tenant}/modules`} className="mb-3" />}
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-600 text-white"><FlaskConical size={18} /></span>

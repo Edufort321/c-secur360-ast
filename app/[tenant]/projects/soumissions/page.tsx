@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { BackButton } from '@/components/BackButton';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -20,7 +19,6 @@ export default function SoumissionsPage() {
       <div className="w-full px-4 py-6 lg:px-6">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <BackButton fallback={`/${tenant}/projects`} className="mb-2" />
             <h1 className="text-2xl font-bold">{tr('Soumissions', 'Quotes')}</h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {tr("Créez et suivez vos soumissions. À l'acceptation, la soumission devient un projet (n° S → P).", 'Create and track quotes. On acceptance, a quote becomes a project (# S → P).')}
