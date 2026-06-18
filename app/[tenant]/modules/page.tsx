@@ -57,10 +57,10 @@ export default function ModulesPage() {
   }, [tenant]);
   // Pastilles sécurité (réutilisé carte + bandeau épinglé).
   const safetyDots = (b: any) => ([
-    { dot: 'bg-emerald-500', v: b.daysSinceAccident, l: tr('j. sans accident', 'd. without accident') },
-    { dot: 'bg-sky-500', v: b.daysSinceNearMiss, l: tr('j. sans passé proche', 'd. without near-miss') },
-    { dot: b.accidentsYTD ? 'bg-rose-500' : 'bg-gray-300', v: b.accidentsYTD, l: tr('acc. ' + b.year, 'acc. ' + b.year) },
-    { dot: b.nearMissYTD ? 'bg-amber-500' : 'bg-gray-300', v: b.nearMissYTD, l: tr('p.proches ' + b.year, 'near ' + b.year) },
+    { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', v: b.daysSinceAccident, l: tr('j. sans accident', 'd. without accident') },
+    { dot: 'bg-sky-500', text: 'text-sky-600 dark:text-sky-400', v: b.daysSinceNearMiss, l: tr('j. sans passé proche', 'd. without near-miss') },
+    { dot: b.accidentsYTD ? 'bg-rose-500' : 'bg-gray-300', text: b.accidentsYTD ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400', v: b.accidentsYTD, l: tr('acc. ' + b.year, 'acc. ' + b.year) },
+    { dot: b.nearMissYTD ? 'bg-amber-500' : 'bg-gray-300', text: b.nearMissYTD ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400', v: b.nearMissYTD, l: tr('p.proches ' + b.year, 'near ' + b.year) },
   ]);
 
   const [proj, setProj] = useState({ soumission: 0, encours: 0, facture: 0, amount: 0 });
@@ -342,17 +342,28 @@ export default function ModulesPage() {
           {cards.filter(c => pins[c.key]).length > 0 && (
             <div className="mb-4 flex flex-wrap gap-3">
               {cards.filter(c => pins[c.key]).map(c => (
-                <div key={c.key} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
-                  <span className="text-2xl font-extrabold leading-none">{c.big}</span>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-gray-800 dark:text-gray-100">{c.title}</div>
-                    {c.key === 'events' && safety ? (
-                      <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                        {safetyDots(safety).map((d, i) => <span key={i} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400"><span className={`h-2 w-2 rounded-full ${d.dot}`} /><b className="text-gray-800 dark:text-gray-100">{d.v}</b> {d.l}</span>)}
-                      </div>
-                    ) : <div className="max-w-[240px] truncate text-[11px] text-gray-400">{c.sub}</div>}
+                c.key === 'events' && safety ? (
+                  // Sécurité épinglé : grands chiffres COLORÉS (jours sans accident/passé proche, acc./presque cette année).
+                  <div key={c.key} className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="mb-1 text-xs font-bold text-gray-800 dark:text-gray-100">{c.title}</div>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1">
+                      {safetyDots(safety).map((d, i) => (
+                        <div key={i} className="text-center">
+                          <div className={`text-3xl font-extrabold leading-none ${d.text}`}>{d.v}</div>
+                          <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">{d.l}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div key={c.key} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
+                    <span className="text-2xl font-extrabold leading-none">{c.big}</span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-gray-800 dark:text-gray-100">{c.title}</div>
+                      <div className="max-w-[240px] truncate text-[11px] text-gray-400">{c.sub}</div>
+                    </div>
+                  </div>
+                )
               ))}
             </div>
           )}
@@ -377,12 +388,13 @@ export default function ModulesPage() {
                       </div>
                     </div>
                     <div className="text-3xl font-bold">{c.big}</div>
-                    <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{c.sub}</div>
+                    {/* Carte Accidents : on N'affiche PAS le sous-titre redondant (acc./année) — les pastilles ci-dessous le couvrent. */}
+                    {c.key !== 'events' && <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{c.sub}</div>}
                     {c.key === 'events' && safety && (
                       <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-100 pt-2 dark:border-gray-700">
                         {safetyDots(safety).map((d, i) => (
                           <span key={i} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${d.dot}`} /><b className="text-gray-800 dark:text-gray-100">{d.v}</b> <span className="truncate">{d.l}</span>
+                            <span className={`h-2 w-2 shrink-0 rounded-full ${d.dot}`} /><b className={d.text}>{d.v}</b> <span className="truncate">{d.l}</span>
                           </span>
                         ))}
                       </div>
