@@ -301,7 +301,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500 dark:bg-gray-900/40">
-                <tr><th className="px-3 py-2">{tr('Numéro', 'Number')}</th><th className="px-3 py-2">{tr('Fournisseur', 'Supplier')}</th><th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right">{tr('Total', 'Total')}</th><th className="px-3 py-2"></th></tr>
+                <tr><th className="px-3 py-2">{tr('Numéro', 'Number')}</th><th className="px-3 py-2">{tr('Fournisseur', 'Supplier')}</th><th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3 py-2">{tr('Destination', 'Destination')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right">{tr('Total', 'Total')}</th><th className="px-3 py-2"></th></tr>
               </thead>
               <tbody>
                 {bons.filter(b => { const s = q.trim().toLowerCase(); return !s || [b.numero, b.supplier, projectLabelOf(b.project_id), b.status].some(v => String(v || '').toLowerCase().includes(s)); }).map(b => (
@@ -309,6 +309,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                     <td className="px-3 py-2 font-mono">{b.numero}</td>
                     <td className="px-3 py-2">{b.supplier || '—'}</td>
                     <td className="px-3 py-2 text-xs text-gray-500">{projectLabelOf(b.project_id) || '—'}</td>
+                    <td className="px-3 py-2"><span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">{bonDestinationLabel(b.destination)}</span></td>
                     <td className="px-3 py-2">{statusBadge(b.status)}</td>
                     <td className="px-3 py-2 text-right font-semibold">{mny(b.total || 0)}</td>
                     <td className="px-3 py-2 text-right">
@@ -317,7 +318,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                     </td>
                   </tr>
                 ))}
-                {bons.length === 0 && <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-400">{tr('Aucun bon de commande.', 'No purchase orders.')}</td></tr>}
+                {bons.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">{tr('Aucun bon de commande.', 'No purchase orders.')}</td></tr>}
               </tbody>
             </table>
           </div>

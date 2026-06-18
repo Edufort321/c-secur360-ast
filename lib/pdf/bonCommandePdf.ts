@@ -2,7 +2,7 @@
  * Générateur PDF professionnel pour un Bon de commande (achat fournisseur).
  * Même mise en page que les PDF Projet/Soumission (bande foncée, sections, tableaux).
  */
-import { computeBonTotal, lineReception, bonStatusLabel, type BonCommande } from '@/lib/bonsCommande';
+import { computeBonTotal, lineReception, bonStatusLabel, bonDestinationLabel, type BonCommande } from '@/lib/bonsCommande';
 
 const PAGE_W = 210, PAGE_H = 297, ML = 15, MR = 15;
 const CW = PAGE_W - ML - MR;
@@ -93,6 +93,7 @@ export async function exportBonCommandePdf(opts: {
     [tr('Statut', 'Status'), bonStatusLabel(b.status, fr)],
     [tr('Contact', 'Contact'), b.supplier_contact || '—'],
     [tr('Projet', 'Project'), opts.projectLabel || '—'],
+    [tr('Destination', 'Destination'), bonDestinationLabel(b.destination, fr)],
     [tr('Date prévue', 'Expected'), b.expected_date || '—'],
   ];
   let c = 0, rowY = y, maxY = y;
