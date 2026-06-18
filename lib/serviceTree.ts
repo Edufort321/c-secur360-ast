@@ -4,8 +4,18 @@
 import { supabase } from '@/lib/supabase';
 
 export type SClient = { id: string; name: string; active?: boolean };
-export type SEquip = { id: string; name: string; type?: string | null; serial?: string | null; location?: string | null; client_id?: string | null };
+export type SEquip = {
+  id: string; name: string; type?: string | null; serial?: string | null; location?: string | null;
+  client_id?: string | null; brand?: string | null; model?: string | null; frequency?: string | null;
+  public_alerts?: boolean; default_gabarit_id?: string | null;
+};
 export type LastInsp = { result?: string; date?: string; anomalies?: number };
+
+// Champs d'une fiche équipement (création/édition depuis le module Maintenance).
+export type EquipInput = {
+  type?: string; name?: string; serial?: string; brand?: string; model?: string;
+  location?: string; frequency?: string; public_alerts?: boolean; client_id?: string | null; default_gabarit_id?: string | null;
+};
 
 export async function getServiceClients(tenant: string): Promise<SClient[]> {
   const { data, error } = await supabase.from('clients').select('id, name, active').eq('tenant_id', tenant).order('name');
@@ -21,18 +31,63 @@ export async function createServiceClient(tenant: string, name: string): Promise
 }
 
 export async function getServiceEquipment(tenant: string): Promise<SEquip[]> {
-  const { data, error } = await supabase.from('equipment')
-    .select('id, equipment_type, equipment_name, equipment_serial, equipment_location, client_id')
-    .eq('tenant_id', tenant).order('equipment_name');
+  // select('*') = résilient si les colonnes marque/modèle/récurrence (mig 234) ne sont pas encore appliquées.
+  const { data, error } = await supabase.from('equipment').select('*').eq('tenant_id', tenant).order('equipment_name');
   if (error) return [];
   return (data as any[]).map(e => ({
     id: e.id, name: e.equipment_name || e.equipment_serial || e.equipment_type || 'Équipement',
     type: e.equipment_type, serial: e.equipment_serial, location: e.equipment_location, client_id: e.client_id,
+    brand: e.equipment_brand ?? null, model: e.equipment_model ?? null, frequency: e.inspection_frequency ?? null,
+    public_alerts: e.public_alerts_enabled === true, default_gabarit_id: e.default_gabarit_id ?? null,
   }));
 }
 
 export async function setEquipmentClient(tenant: string, equipmentId: string, clientId: string | null): Promise<{ error?: string }> {
   const { error } = await supabase.from('equipment').update({ client_id: clientId }).eq('tenant_id', tenant).eq('id', equipmentId);
+  return { error: error?.message };
+}
+
+// Lignes de la fiche équipement à écrire, avec repli résilient si une colonne récente manque.
+function equipRow(input: EquipInput): Record<string, any> {
+  const row: Record<string, any> = {};
+  if (input.type !== undefined) row.equipment_type = (input.type || '').trim() || 'Équipement';
+  if (input.name !== undefined) row.equipment_name = input.name?.trim() || null;
+  if (input.serial !== undefined) row.equipment_serial = input.serial?.trim() || null;
+  if (input.location !== undefined) row.equipment_location = input.location?.trim() || null;
+  if (input.brand !== undefined) row.equipment_brand = input.brand?.trim() || null;
+  if (input.model !== undefined) row.equipment_model = input.model?.trim() || null;
+  if (input.frequency !== undefined) row.inspection_frequency = input.frequency || null;
+  if (input.public_alerts !== undefined) row.public_alerts_enabled = !!input.public_alerts;
+  if (input.client_id !== undefined) row.client_id = input.client_id || null;
+  if (input.default_gabarit_id !== undefined) row.default_gabarit_id = input.default_gabarit_id || null;
+  return row;
+}
+// Colonnes potentiellement absentes (selon migrations appliquées) — retirées au repli.
+const OPTIONAL_EQUIP_COLS = ['equipment_brand', 'equipment_model', 'public_alerts_enabled', 'default_gabarit_id', 'client_id'];
+function stripOptional(row: Record<string, any>): Record<string, any> {
+  const r = { ...row }; for (const c of OPTIONAL_EQUIP_COLS) delete r[c]; return r;
+}
+
+export async function createServiceEquipment(tenant: string, input: EquipInput): Promise<{ id?: string; error?: string }> {
+  const row = { tenant_id: tenant, ...equipRow({ type: input.type || 'Équipement', ...input }) };
+  let { data, error } = await supabase.from('equipment').insert(row).select('id').single();
+  if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
+    ({ data, error } = await supabase.from('equipment').insert(stripOptional(row)).select('id').single());
+  }
+  return { id: (data as any)?.id, error: error?.message };
+}
+
+export async function updateServiceEquipment(tenant: string, id: string, input: EquipInput): Promise<{ error?: string }> {
+  const row = equipRow(input);
+  let { error } = await supabase.from('equipment').update(row).eq('tenant_id', tenant).eq('id', id);
+  if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
+    ({ error } = await supabase.from('equipment').update(stripOptional(row)).eq('tenant_id', tenant).eq('id', id));
+  }
+  return { error: error?.message };
+}
+
+export async function deleteServiceEquipment(tenant: string, id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from('equipment').delete().eq('tenant_id', tenant).eq('id', id);
   return { error: error?.message };
 }
 
