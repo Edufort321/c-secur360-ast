@@ -6,7 +6,7 @@
 import React from 'react';
 import {
   computeLigneMontant, computeItemTotal, computeSoumissionTotal, applyMarkup, discountAmount,
-  CATEGORIE_LABELS, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
+  CATEGORIE_LABELS, catLabel, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
 } from '@/lib/soumissions';
 
 const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
@@ -46,6 +46,8 @@ export function SoumissionPrintReport(props: {
   };
 
   const ligneRemplie = (l: any) => computeLigneMontant(l, cat) > 0 || (l.description && l.description.trim());
+  // Libellé de catégorie en respectant le RENOMMAGE des postes du catalogue (#48).
+  const catName = (c: Categorie) => catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c]);
   const ligneCalcul = (l: any): string => {
     const c = l.categorie;
     if (c === 'mo_bureau' || c === 'mo_chantier') {
@@ -148,7 +150,7 @@ export function SoumissionPrintReport(props: {
                   </div>
                   {mode === 'par_item' ? (
                     (it.lignes || []).filter(ligneRemplie).map((l, j) => {
-                      const d = l.description || CATEGORIE_LABELS[l.categorie] || '';
+                      const d = l.description || catName(l.categorie);
                       return d ? <div key={j} style={{ fontSize: 10, color: '#5a5a5a', padding: '1px 0 1px 10px' }}>• {d}</div> : null;
                     })
                   ) : CATS.map(c => {
@@ -156,9 +158,9 @@ export function SoumissionPrintReport(props: {
                     if (!ls.length) return null;
                     return (
                       <div key={c}>
-                        <div style={SP.catLbl}>{String(CATEGORIE_LABELS[c] || c)}</div>
+                        <div style={SP.catLbl}>{String(catName(c) || c)}</div>
                         {ls.map((l, j) => {
-                          const desc = l.description || CATEGORIE_LABELS[c] || '';
+                          const desc = l.description || catName(c);
                           if (mode === 'global_desc') return <div key={j} style={{ fontSize: 10, padding: '1px 0 1px 10px' }}>{desc}</div>;
                           return (
                             <div key={j} style={SP.row}>

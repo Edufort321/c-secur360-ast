@@ -3,7 +3,7 @@
 // et/ou SOMMAIRE global. Montant d'une colonne vide = 0 $.
 import {
   computeLigneMontant, computeItemTotal, computeSoumissionTotal, applyMarkup, hoursByCategory,
-  CATEGORIE_LABELS, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
+  CATEGORIE_LABELS, catLabel, type CatalogueTaux, type Soumission, type SoumissionItem, type Categorie,
 } from '@/lib/soumissions';
 import { drawCoverLetterPage, applyFooters, drawLogo, type CoverLetterData } from '@/lib/pdf/letterhead';
 
@@ -46,6 +46,8 @@ function hexRgb(hex?: string | null): [number, number, number] {
 export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[], opts: SoumissionPdfOpts = {}): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const cat = opts.cat || null;
+  // Libellé d'une catégorie en respectant le RENOMMAGE des postes du catalogue (catLabel) — #48.
+  const catName = (c: Categorie) => catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c]);
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' }); // 612 x 792
   const M = 42, W = 612, R = W - M; // marge DGA
@@ -130,7 +132,7 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90);
       for (const l of (it.lignes || [])) {
         if (!ligneRemplie(l)) continue;
-        const d = l.description || (CATEGORIE_LABELS[l.categorie] || '');
+        const d = l.description || catName(l.categorie);
         if (!d) continue;
         ensure(12); const dl = doc.splitTextToSize('• ' + String(d), R - M - 8); doc.text(dl, M + 8, y); y += 12 * dl.length;
       }
@@ -142,10 +144,10 @@ export async function exportSoumissionPdf(s: Soumission, items: SoumissionItem[]
       const ls = (it.lignes || []).filter(l => l.categorie === c && (mode === 'global_desc' ? (l.description && l.description.trim()) : ligneRemplie(l)));
       if (!ls.length) continue;
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(120, 120, 120);
-      ensure(16); doc.text(String(CATEGORIE_LABELS[c] || c).toUpperCase(), M, y); y += 12;
+      ensure(16); doc.text(String(catName(c) || c).toUpperCase(), M, y); y += 12;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40);
       for (const l of ls) {
-        const desc = l.description || (CATEGORIE_LABELS[c] || '');
+        const desc = l.description || catName(c);
         if (mode === 'global_desc') {
           ensure(13); const dl = doc.splitTextToSize(String(desc), R - M - 8); doc.text(dl, M + 8, y); y += 13 * Math.max(1, dl.length); continue;
         }
