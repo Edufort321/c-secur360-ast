@@ -54,7 +54,7 @@ export default function PermitDetailPage() {
         }
         // Try work_permits
         const { data: wp } = await supabase
-          .from('work_permits').select('type, data').eq('permit_number', id).maybeSingle();
+          .from('work_permits').select('type, data').eq('tenant_id', tenant).eq('permit_number', id).maybeSingle();
         if (wp?.data) {
           setPermitData(wp.data);
           setPermitType(wp.type || 'hot_work');

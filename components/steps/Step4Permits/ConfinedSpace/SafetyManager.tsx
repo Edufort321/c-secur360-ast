@@ -1279,10 +1279,11 @@ export const useSafetyManager = create<SafetyManagerState>()(
               await supabase
                 .from('confined_space_permits')
                 .upsert({
+                  tenant_id: csTenant(), // ISOLATION inter-tenant (sinon écriture/collision globale)
                   permit_number: permit.permit_number,
                   data: permit,
                   updated_at: new Date().toISOString()
-                });
+                }, { onConflict: 'tenant_id,permit_number' });
               console.log('✅ Permit sauvegardé silencieusement dans Supabase');
             } catch (supabaseError) {
               console.error('❌ Erreur Supabase, fallback localStorage:', supabaseError);
@@ -1347,11 +1348,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
               const { data, error } = await supabase
                 .from('confined_space_permits')
                 .upsert({
+                  tenant_id: csTenant(), // ISOLATION inter-tenant
                   permit_number: permit.permit_number,
                   data: permit,
                   updated_at: new Date().toISOString()
-                });
-                
+                }, { onConflict: 'tenant_id,permit_number' });
+
               if (error) throw error;
               console.log('✅ Permit sauvegardé dans Supabase');
             } catch (supabaseError) {
@@ -1403,6 +1405,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
               const { data, error } = await supabase
                 .from('confined_space_permits')
                 .select('data')
+                .eq('tenant_id', csTenant()) // ISOLATION : ne charge que les permis DU tenant
                 .eq('permit_number', permitNumber)
                 .single();
                 
@@ -1472,6 +1475,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
               const { data, error } = await supabase
                 .from('confined_space_permits')
                 .select('data')
+                .eq('tenant_id', csTenant()) // ISOLATION : historique DU tenant seulement (corrige fuite inter-tenant)
                 .order('updated_at', { ascending: false })
                 .limit(50);
                 
