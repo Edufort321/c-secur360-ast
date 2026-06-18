@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Square, AlertTriangle, QrCode, Clock, DollarSign, CheckCircle, CalendarClock, ListChecks, Building2 } from 'lucide-react';
+import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Square, AlertTriangle, QrCode, Clock, DollarSign, CheckCircle, CalendarClock, ListChecks, Building2, Settings } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import dynamic from 'next/dynamic';
 import ClientTree from '@/components/maintenance/ClientTree';
@@ -23,7 +23,7 @@ const FREQS = ['quotidien', 'hebdomadaire', 'mensuel', 'semestriel', 'annuel', '
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
 const hrs = (min: number) => `${(Math.round((Number(min) || 0) / 6) / 10).toLocaleString('fr-CA')} h`;
 
-type Tab = 'dashboard' | 'equipements' | 'gabarits' | 'formulaires' | 'clients' | 'planif';
+type Tab = 'dashboard' | 'equipements' | 'gabarits' | 'formulaires' | 'clients' | 'planif' | 'systeme';
 
 export default function MaintenancePage() {
   const params = useParams();
@@ -171,7 +171,7 @@ export default function MaintenancePage() {
 
         {/* Onglets */}
         <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          {([['dashboard', 'Tableau de bord', LayoutDashboard], ['equipements', 'Équipements & feuilles', Wrench], ['gabarits', 'Gabarits', ClipboardList], ['formulaires', 'Formulaires d\'inspection', ListChecks], ['clients', 'Clients & équipements', Building2], ['planif', 'Planification', CalendarClock]] as [Tab, string, any][]).map(([k, lbl, Icon]) => (
+          {([['dashboard', 'Tableau de bord', LayoutDashboard], ['equipements', 'Équipements & feuilles', Wrench], ['gabarits', 'Gabarits', ClipboardList], ['formulaires', 'Formulaires d\'inspection', ListChecks], ['clients', 'Clients & équipements', Building2], ['planif', 'Planification', CalendarClock], ['systeme', 'Système', Settings]] as [Tab, string, any][]).map(([k, lbl, Icon]) => (
             <button key={k} onClick={() => setTab(k)} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${tab === k ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}><Icon size={15} /> {lbl}</button>
           ))}
         </div>
@@ -185,31 +185,16 @@ export default function MaintenancePage() {
         {/* ── PLANIFICATION (échéances à venir + notification client) ── */}
         {tab === 'planif' && <PlanningBoard tenant={tenant} tr={(fr) => fr} />}
 
-        {/* ── DASHBOARD ── */}
-        {tab === 'dashboard' && (
+        {/* ── SYSTÈME : alertes publiques (scan QR) + n° de support ── */}
+        {tab === 'systeme' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: 'Correctifs ouverts', value: String(kpis.openActions), icon: AlertTriangle, color: kpis.openActions ? 'text-red-600' : 'text-emerald-600' },
-                { label: 'Maintenances en retard', value: String(kpis.overdue), icon: CalendarClock, color: kpis.overdue ? 'text-amber-600' : 'text-emerald-600' },
-                { label: 'Temps total', value: hrs(kpis.minutes), icon: Clock, color: 'text-blue-600' },
-                { label: 'Coût total', value: mny(kpis.cost), icon: DollarSign, color: 'text-violet-600' },
-              ].map(k => { const I = k.icon; return (
-                <div key={k.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                  <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{k.label}</span><I size={15} className="text-slate-300" /></div>
-                  <div className={`text-xl font-extrabold ${k.color}`}>{k.value}</div>
-                </div>
-              ); })}
-            </div>
-
-            {/* Alertes publiques reçues par scan QR */}
             <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm dark:border-orange-800 dark:bg-orange-900/20">
               <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-orange-800 dark:text-orange-200"><AlertTriangle size={15} /> Alertes publiques (scan QR) {newAlerts.length > 0 && <span className="rounded-full bg-orange-600 px-2 py-0.5 text-[11px] text-white">{newAlerts.length}</span>}</h3>
               {alerts.length === 0 ? (
                 <p className="text-xs text-orange-700/80 dark:text-orange-300/80">Aucune alerte reçue. Activez « Alertes publiques par scan » sur une fiche d'équipement et collez son QR.</p>
               ) : (
                 <div className="space-y-1.5">
-                  {alerts.slice(0, 12).map(a => (
+                  {alerts.slice(0, 50).map(a => (
                     <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${a.status === 'resolved' ? 'border-slate-200 bg-white/60 opacity-60 dark:border-gray-700 dark:bg-gray-800/40' : 'border-orange-200 bg-white dark:border-orange-700 dark:bg-gray-800'}`}>
                       <div className="min-w-0 flex-1">
                         <span className="mr-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">{a.alert_type}</span>
@@ -235,6 +220,27 @@ export default function MaintenancePage() {
                 <button onClick={saveSupport} disabled={supportBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{supportBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── DASHBOARD ── */}
+        {tab === 'dashboard' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Correctifs ouverts', value: String(kpis.openActions), icon: AlertTriangle, color: kpis.openActions ? 'text-red-600' : 'text-emerald-600' },
+                { label: 'Maintenances en retard', value: String(kpis.overdue), icon: CalendarClock, color: kpis.overdue ? 'text-amber-600' : 'text-emerald-600' },
+                { label: 'Temps total', value: hrs(kpis.minutes), icon: Clock, color: 'text-blue-600' },
+                { label: 'Coût total', value: mny(kpis.cost), icon: DollarSign, color: 'text-violet-600' },
+              ].map(k => { const I = k.icon; return (
+                <div key={k.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{k.label}</span><I size={15} className="text-slate-300" /></div>
+                  <div className={`text-xl font-extrabold ${k.color}`}>{k.value}</div>
+                </div>
+              ); })}
+            </div>
+
+            {/* Alertes publiques (scan QR) → déplacées dans l'onglet « Système ». */}
 
             {/* Correctifs à faire */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
