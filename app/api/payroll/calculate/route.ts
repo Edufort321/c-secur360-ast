@@ -14,7 +14,7 @@ type Item = { personnel_id: string; name?: string; gross: number; allowances?: n
 const r2 = (v: number) => Math.round((Number(v) || 0) * 100) / 100;
 
 /** Construit les PARAMÈTRES effectifs du tenant : params de l'année + taux employeur + surcharge JSON. */
-export function effectiveParams(settings: any, year: number): PayrollYearParams {
+function effectiveParams(settings: any, year: number): PayrollYearParams {
   const base = paramsForYear(year);
   const employer = {
     fssRate: settings?.fss_rate != null ? Number(settings.fss_rate) : base.employer.fssRate,
