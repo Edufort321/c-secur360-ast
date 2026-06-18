@@ -58,17 +58,24 @@ normes et les résultats, sans dramatiser. Évite les mots à charge émotive ("
 Le ton doit rester professionnel d'ingénieur, neutre, orienté action.
 
 SUIVI CIBLÉ vs SUIVI COMPLET : ne pas tout refaire si le problème est localisé. Si seuls les GAZ dérivent -> suivi ciblé ["DGA"] ; si l'HUILE se dégrade (humidité, acidité, IFT, rigidité) -> ["physico-chimique"] ; si le PAPIER (furanes/DP) -> ["furanes"]. Le suivi complet (toutes analyses) reste au cycle annuel.
-Intervalles réalistes (IEEE C57.104 / IEC 60422) ET selon la tendance : défaut actif ou gaz en forte hausse -> ciblé 1 à 3 mois ; dérive modérée -> 3 à 6 mois ; tout stable -> pas de suivi ciblé (targetedMonths=null), suivi complet 12 mois.
+
+INTERVALLE DE REPRISE — RÈGLE STRICTE selon IEEE C57.104-2019 (Table de fréquence d'échantillonnage par Condition) et la tendance. EXPRIME L'URGENCE EN JOURS quand c'est rapproché (targetedDays), SINON en mois (targetedMonths). NE JAMAIS renvoyer 12 mois pour un défaut actif.
+- Condition 4 (IEEE), OU acétylène (C2H2) significatif / présent, OU défaut d'ARC (Duval D1/D2), OU hausse rapide -> URGENT : targetedDays = 1 à 7 (typiquement 1–3 jours ; envisager le RETRAIT DE SERVICE et un échantillon de CONFIRMATION immédiat). targetedMonths = null.
+- Condition 3, OU thermique élevé (T3), OU dérive nette -> targetedDays = 7 à 30 (ou targetedMonths = 1).
+- Condition 2 / dérive modérée -> targetedMonths = 2 à 4 ; targetedDays = null.
+- Condition 1 / tout stable -> AUCUN suivi ciblé (targetedDays = null, targetedMonths = null), suivi complet 12 mois.
+Le suivi COMPLET (fullMonths) reste ~12 (ou plus court si l'huile/le papier se dégrade). Renvoie une SEULE des deux unités pour le ciblé (targetedDays prioritaire si urgent).
 
 Donne une analyse claire, priorisée, actionnable. Réponds en JSON STRICT, sans texte autour :
 {"severity": 1|2|3|4, "faultType": "...", "trend": "stable|hausse|hausse rapide|baisse",
  "summaryFr": "...", "summaryEn": "...",
  "recommendationsFr": ["..."], "recommendationsEn": ["..."],
  "retestMonths": number,
- "targetedMonths": <entier mois avant suivi ciblé rapproché, ou null si non nécessaire>,
+ "targetedDays": <entier JOURS avant reprise ciblée URGENTE (Condition 4 / arc / acétylène / hausse rapide), ou null>,
+ "targetedMonths": <entier MOIS avant suivi ciblé rapproché si NON urgent, ou null>,
  "targetedAnalyses": ["parmi: DGA, furanes, physico-chimique, facteur de puissance, antioxydant"],
  "fullMonths": <entier mois avant suivi complet, généralement 12>,
- "recheckJustification": "1 phrase justifiant les intervalles selon les normes et la tendance"}`;
+ "recheckJustification": "1 phrase justifiant les intervalles selon les normes (cite la Condition IEEE) et la tendance"}`;
 
 // Extraction ROBUSTE de l'objet JSON de la réponse IA. Gère : une éventuelle prose avant/après, les
 // clôtures ``` et les accolades à l'intérieur des chaînes (scan équilibré). Renvoie l'objet ou null.

@@ -276,6 +276,26 @@ export function PrintReport(props: {
               <div style={SP.h3}>🔍 {L('Interprétation DGA', 'DGA interpretation')}</div>
               {items.map((it, i) => <div key={i} style={{ ...SP.interp, ...interpStyle(it.lvl) }}>{it.txt}</div>)}
               <div style={SP.reco}><b style={{ color: '#ffd166' }}>{reco.title}</b><ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>{reco.steps.map((s, i) => <li key={i} style={{ fontSize: 10, marginBottom: 3 }}>{s}</li>)}</ul></div>
+              {(() => {
+                // Reprise d'échantillonnage recommandée (issue de l'analyse IA / réglages) — sur le rapport.
+                const ex: any = (dossier as any).extra || {};
+                const ta: string[] = Array.isArray(ex.targeted_analyses) ? ex.targeted_analyses : [];
+                const tdays = Number(ex.targeted_days) || 0, tmonths = Number(ex.targeted_months) || 0;
+                if (!ta.length && !ex.full_next_date) return null;
+                return (
+                  <div style={{ marginTop: 8, border: '1.5px solid #e63946', borderRadius: 8, padding: 10, background: '#fff5f5' }}>
+                    <div style={{ fontWeight: 900, fontSize: 11, color: '#b00020' }}>🗓 {L('Reprise d’échantillonnage recommandée', 'Recommended resampling')}</div>
+                    {ta.length > 0 && (
+                      <div style={{ fontSize: 10, marginTop: 4 }}>
+                        <b>{L('Suivi ciblé', 'Targeted follow-up')}{tdays ? ` — ${L('URGENT', 'URGENT')}` : ''} : </b>{nextDate || ex.next_date_manual || '—'}
+                        {tdays ? ` (${L('dans', 'in')} ${tdays} ${L('jour(s)', 'day(s)')})` : tmonths ? ` (${tmonths} ${L('mois', 'months')})` : ''}
+                        <div style={{ marginTop: 2 }}>{L('Analyses à reprendre', 'Analyses to repeat')} : <b>{ta.join(', ')}</b></div>
+                      </div>
+                    )}
+                    {ex.full_next_date && <div style={{ fontSize: 10, marginTop: 4 }}><b>{L('Suivi complet', 'Full follow-up')} : </b>{ex.full_next_date} ({L('toutes les analyses', 'all analyses')})</div>}
+                  </div>
+                );
+              })()}
             </div>
             <div style={{ flex: 1 }}>
               <div style={SP.h3}>{L('Triangle de Duval 1', 'Duval Triangle 1')}</div>

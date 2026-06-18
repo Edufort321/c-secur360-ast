@@ -23,7 +23,7 @@ import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
 import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
-  ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, autoNextDate, dueStatusByDate,
+  ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
 } from '@/lib/dga/catalog';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 import { AnomalySection } from '@/components/dga/AnomalySection';
@@ -223,8 +223,12 @@ export function TransfoView(props: {
   const lastGas = lastGasMeasure(data) || lastMeasure;
   // « Auto » = on suit d'ABORD la RECOMMANDATION de l'analyseur (targeted_months / full_next_date),
   // sinon l'intervalle IEEE selon la condition de la dernière mesure de gaz.
+  const recoDays = Number(extra.targeted_days) || null;   // reprise URGENTE en jours (Condition 4 / arc)
   const recoMonths = Number(extra.targeted_months) || null;
-  const recoNext = (recoMonths && lastGas?.sample_date) ? addMonths(lastGas.sample_date, recoMonths) : (extra.full_next_date || null);
+  const recoBase = lastGas?.sample_date;
+  const recoNext = (recoDays && recoBase) ? addDays(recoBase, recoDays)
+    : (recoMonths && recoBase) ? addMonths(recoBase, recoMonths)
+    : (extra.full_next_date || null);
   const autoNext = recoNext || autoNextDate(lastGas.sample_date, worstCondition(lastGas));
   const effNext = extra.next_date_manual || autoNext;
   const due = dueStatusByDate(effNext);
@@ -283,17 +287,20 @@ export function TransfoView(props: {
       const fullEn = (a.summaryEn || a.summary || '') + just;
       setRecoDraft(lang === 'en' ? fullEn : fullFr);
       const patch: any = { manual_reco_fr: fullFr, manual_reco_en: fullEn, manual_reco: lang === 'en' ? fullEn : fullFr };
-      if (a.targetedMonths && lastMeasure) {
-        const td = addMonths(lastMeasure.sample_date || '', Math.round(a.targetedMonths));
-        if (td) { patch.next_date_manual = td; patch.interval_id = 'custom'; setDateDraft(td); }
-        patch.targeted_analyses = Array.isArray(a.targetedAnalyses) ? a.targetedAnalyses : [];
-        patch.targeted_months = Math.round(a.targetedMonths);
-      } else { patch.targeted_analyses = []; patch.targeted_months = null; }
+      // Reprise ciblée : l'urgence en JOURS (Condition 4 / arc / acétylène) PRIME sur les mois.
+      const base = lastMeasure?.sample_date || '';
+      const tDays = Number(a.targetedDays) > 0 ? Math.round(a.targetedDays) : null;
+      const tMonths = Number(a.targetedMonths) > 0 ? Math.round(a.targetedMonths) : null;
+      patch.targeted_days = tDays;
+      patch.targeted_months = tMonths;
+      patch.targeted_analyses = (tDays || tMonths) && Array.isArray(a.targetedAnalyses) ? a.targetedAnalyses : [];
+      const targetedDate = tDays ? addDays(base, tDays) : (tMonths ? addMonths(base, tMonths) : null);
+      if (targetedDate) { patch.next_date_manual = targetedDate; patch.interval_id = 'custom'; setDateDraft(targetedDate); }
       const fullMonths = a.fullMonths ?? a.retestMonths;
-      if (fullMonths && lastMeasure) {
-        const fd = addMonths(lastMeasure.sample_date || '', Math.round(fullMonths));
+      if (fullMonths && base) {
+        const fd = addMonths(base, Math.round(fullMonths));
         if (fd) patch.full_next_date = fd;
-        if (!a.targetedMonths && fd) { patch.next_date_manual = fd; patch.interval_id = 'custom'; setDateDraft(fd); }
+        if (!targetedDate && fd) { patch.next_date_manual = fd; patch.interval_id = 'custom'; setDateDraft(fd); }
       }
       await updateExtra(patch);
     } catch (e: any) { setNotice(tr('Analyse IA impossible : ', 'AI analysis failed: ') + (e?.message || e)); }
@@ -538,8 +545,8 @@ export function TransfoView(props: {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {extra.targeted_analyses && extra.targeted_analyses.length > 0 && (
                     <div className="flex-1 rounded-lg border border-rose-300 bg-rose-50 p-2.5 dark:border-rose-500/40 dark:bg-rose-500/10" style={{ minWidth: 220 }}>
-                      <div className="text-xs font-bold text-rose-700 dark:text-rose-300">🎯 {tr('Suivi ciblé rapproché', 'Targeted close follow-up')}</div>
-                      {extra.next_date_manual && <div className="mt-0.5 text-xs">{extra.next_date_manual}{extra.targeted_months ? ` · ${extra.targeted_months} ${tr('mois', 'months')}` : ''}</div>}
+                      <div className="text-xs font-bold text-rose-700 dark:text-rose-300">🎯 {tr('Suivi ciblé rapproché', 'Targeted close follow-up')}{extra.targeted_days ? ` ⚠ ${tr('URGENT', 'URGENT')}` : ''}</div>
+                      {extra.next_date_manual && <div className="mt-0.5 text-xs">{extra.next_date_manual}{extra.targeted_days ? ` · ${tr('dans', 'in')} ${extra.targeted_days} ${tr('jour(s)', 'day(s)')}` : extra.targeted_months ? ` · ${extra.targeted_months} ${tr('mois', 'months')}` : ''}</div>}
                       <div className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">{tr('Analyses à reprendre', 'Analyses to repeat')} : <b>{extra.targeted_analyses.join(', ')}</b></div>
                     </div>
                   )}
