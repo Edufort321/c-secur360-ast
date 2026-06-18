@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // Assistant IA du PLANIFICATEUR : valide et OPTIMISE la logique d'un Gantt (séquençage, dépendances,
 // durées réalistes, effectif). Clé Anthropic côté serveur, budget IA scopé au tenant de la SESSION,
@@ -65,9 +66,8 @@ ${JSON.stringify(slim)}`;
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'planner', cost, { feature: 'gantt-ai' }); } catch { /* best-effort */ } }
     const txt = (data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n');
     const clean = txt.replace(/```json|```/g, '').trim();
-    const m = clean.match(/\{[\s\S]*\}/);
-    let parsed: any = {};
-    try { parsed = JSON.parse(m ? m[0] : clean); } catch { return NextResponse.json({ error: 'Réponse IA illisible', raw: clean.slice(0, 400) }, { status: 502 }); }
+    const parsed = extractJsonValue(clean);
+    if (!parsed) return NextResponse.json({ error: 'Réponse IA illisible', raw: clean.slice(0, 400) }, { status: 502 });
     return NextResponse.json({ ok: true, ...parsed });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur IA' }, { status: 500 });

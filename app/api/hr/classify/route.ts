@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // RH — Classement automatique d'un document déposé (assistance IA). Détermine le TYPE,
 // une CATÉGORIE, le NOM de la personne concernée (extrait du document, le cas échéant),
@@ -61,9 +62,7 @@ export async function POST(req: NextRequest) {
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'rh', cost, { feature: 'classify' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(jsonStr); } catch { const m = jsonStr.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } } }
+    const parsed = extractJsonValue(text);
     if (!parsed) return NextResponse.json({ error: 'Réponse IA non exploitable' }, { status: 422 });
     return NextResponse.json({ ok: true, classification: parsed });
   } catch (e: any) {

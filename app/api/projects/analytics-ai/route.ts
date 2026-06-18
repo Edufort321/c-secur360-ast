@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // Analyse IA « dirigeant » du portefeuille de projets : on envoie les KPIs agrégés + la marge par projet,
 // l'IA renvoie un diagnostic (projets non profitables, meilleures/pires ventes, risques, recommandations).
@@ -14,7 +15,7 @@ const MODEL = (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6');
 const SCHEMA = `{"health":"excellent|bon|a_surveiller|critique","summary":"2-3 phrases pour un dirigeant","insights":[{"severity":"info|warning|critical","title":"court","detail":"explication chiffrée"}],"unprofitable":[{"number":"n° projet","reason":"pourquoi non profitable","action":"correctif concret"}],"recommendations":["action priorisée"]}`;
 const SYS = `Tu es un CONTRÔLEUR DE GESTION expérimenté (entreprise de services SST/industriels au Québec). On te fournit les indicateurs d'un portefeuille de projets et la marge par projet. Donne une analyse de DIRIGEANT : santé globale, projets non profitables (marge négative ou faible) avec correctif concret, meilleures vs pires performances, taux de conversion soumission→projet, et 3 à 6 recommandations priorisées et actionnables. Sois concis, chiffré, sans bla-bla. Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
 
-function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
+function parseJson(text: string): any { return extractJsonValue(text); }
 
 export async function POST(req: NextRequest) {
  try {

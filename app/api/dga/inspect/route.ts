@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // #DGA — Aide technique IA pour l'inspection de routine d'un transformateur à l'huile.
 // À partir des points en ANOMALIE relevés, propose des correctifs concrets (cause probable +
@@ -39,9 +40,7 @@ Donne les correctifs.`;
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'inspect' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(jsonStr); } catch { const m = jsonStr.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } } }
+    const parsed = extractJsonValue(text);
     if (!parsed) return NextResponse.json({ error: 'Reponse IA non parsable', raw: text.slice(0, 500) }, { status: 422 });
     return NextResponse.json({ ok: true, advice: parsed });
   } catch (e: any) {

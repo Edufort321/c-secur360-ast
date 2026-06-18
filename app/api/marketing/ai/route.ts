@@ -3,6 +3,7 @@ import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // IA MARKETING du TENANT. Toute la conso est plafonnée par le FORFAIT du tenant (ai_budgets/ai_usage).
 // L'IA s'appuie sur le PROFIL D'ENTREPRISE du tenant (tenant_marketing_profile) — la plateforme ne
@@ -61,8 +62,7 @@ Produis un PACK MARKETING cohérent et conforme, adapté à l'entreprise (profil
     try { const cost = aiCallCostCents(MODEL, data?.usage); if (cost > 0) await recordAiUsage(tenant, 'marketing', cost, { feature: format }); } catch {}
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     const s = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(s); } catch { const m = s.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch {} } }
+    const parsed = extractJsonValue(s);
     if (!parsed) return NextResponse.json({ error: 'Réponse IA non parsable' }, { status: 422 });
     return NextResponse.json({ ok: true, pack: parsed });
   } catch (e: any) {

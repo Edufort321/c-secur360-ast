@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/apiAuth';
 import { ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // IA du Studio MARKETING (espace /admin, réservé super-admin). Clé Anthropic CÔTÉ SERVEUR, prompt
 // construit ici (le client n'envoie que des paramètres). Le prompt IMPOSE les normes légales :
@@ -21,8 +22,9 @@ async function callClaude(apiKey: string, system: string, prompt: string, opts?:
   const data = await resp.json();
   const txt = (data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n');
   const clean = txt.replace(/```json|```/g, '').trim();
-  const m = clean.match(/\{[\s\S]*\}/);
-  try { return JSON.parse(m ? m[0] : clean); } catch { throw new Error('Réponse IA illisible'); }
+  const v = extractJsonValue(clean);
+  if (v == null) throw new Error('Réponse IA illisible');
+  return v;
 }
 
 export async function POST(req: NextRequest) {

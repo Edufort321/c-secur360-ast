@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // Analyse IA « investisseur / crise » (#33) : on envoie valorisation, bilan, EBITDA/CAPEX, Altman Z
 // et la dilution simulée ; l'IA renvoie lecture investisseur, risques de crise et recommandations
@@ -21,7 +22,7 @@ Analyse :
 - DÉCISIONS FROIDES : restructuration, contrôle des dépenses, CAPEX (maintenance/équipement) VS libérer du staff — tranche selon la RENTABILITÉ pure, chiffre l'impact (marge, payback, runway). Jusqu'à la décision de cessation si les chiffres l'imposent, mais alerte bien avant.
 Concis. Réponds UNIQUEMENT en JSON valide : ${SCHEMA}.`;
 
-function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
+function parseJson(text: string): any { return extractJsonValue(text); }
 
 export async function POST(req: NextRequest) {
  try {

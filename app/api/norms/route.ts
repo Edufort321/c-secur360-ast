@@ -3,6 +3,7 @@ import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { scopeForModule } from '@/lib/norms/registry';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // Assistant « Normes à jour » — fournit, selon le module en cours, les normes/standards et la
 // LÉGISLATION applicable, TOUJOURS à jour, via l'outil serveur web_search (Anthropic exécute les
@@ -69,9 +70,7 @@ Donne 4 à 8 items pertinents, du plus important au moins important.`;
     if (tenant && costCents > 0) { await recordAiUsage(tenant, key === 'general' ? 'normes' : key, costCents, { feature: 'norms' }); }
 
     const text = (data?.content || []).filter((b: any) => b?.type === 'text').map((b: any) => b.text || '').join('').trim();
-    const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(jsonStr); } catch { const m = jsonStr.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } } }
+    const parsed = extractJsonValue(text);
     if (!parsed) return NextResponse.json({ error: 'Réponse IA non exploitable', raw: text.slice(0, 400) }, { status: 422 });
 
     return NextResponse.json({ ok: true, ...parsed });
