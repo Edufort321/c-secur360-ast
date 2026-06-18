@@ -13,6 +13,10 @@ export type ProjectActualExpense = {
 };
 export type ProjectActuals = {
   total: number; labor: number; km: number; materiel: number; allowances: number;
+  // Coût de main-d'œuvre CHARGÉ (best practice job costing) : charges patronales + avantages.
+  laborBurden: number;     // montant du fardeau = labor × laborBurdenPct
+  laborBurdenPct: number;  // taux de fardeau appliqué (payroll_settings.labor_burden_pct, défaut 0.35)
+  costReal: number;        // COÛT RÉEL du projet = MO chargée + km + matériel + primes + dépenses
   expensesBillable: number; // dépenses refacturables (reimbursable) — entrent dans la facture
   expensesTotal: number;    // toutes les dépenses pointées sur le projet (coût)
   hours: { reg: number; supp: number; maj: number };
@@ -26,7 +30,7 @@ export type ProjectActuals = {
   materielMissingPrice?: { name: string; qty: number }[]; // articles consommés SANS prix vendant à jour
 };
 
-const EMPTY: ProjectActuals = { total: 0, labor: 0, km: 0, materiel: 0, allowances: 0, expensesBillable: 0, expensesTotal: 0, hours: { reg: 0, supp: 0, maj: 0 }, entries: [], expenseEntries: [], count: 0, source: 'timesheets' };
+const EMPTY: ProjectActuals = { total: 0, labor: 0, km: 0, materiel: 0, allowances: 0, laborBurden: 0, laborBurdenPct: 0.35, costReal: 0, expensesBillable: 0, expensesTotal: 0, hours: { reg: 0, supp: 0, maj: 0 }, entries: [], expenseEntries: [], count: 0, source: 'timesheets' };
 
 const sumAllowances = (a: any): number =>
   Array.isArray(a) ? a.reduce((s, x) => s + (Number(x?.amount) || 0), 0) : 0;
@@ -88,6 +92,10 @@ export async function computeProjectActuals(tenant: string, projectId: string): 
   const { data: kmRows } = await supabase.from('rate_settings').select('value').eq('tenant_id', tenant).eq('category', 'km').limit(1);
   const kmRate = kmRows && kmRows[0] ? Number(kmRows[0].value) || 0 : 0;
 
+  // 4b. Taux de FARDEAU de main-d'œuvre (charges patronales + avantages) pour le coût réel — best-effort.
+  let burdenPct = 0.35;
+  try { const { data: ps } = await supabase.from('payroll_settings').select('labor_burden_pct').eq('tenant_id', tenant).maybeSingle(); if (ps && (ps as any).labor_burden_pct != null) burdenPct = Number((ps as any).labor_burden_pct) || 0; } catch { /* migration 233 absente */ }
+
   const out: ProjectActuals = { ...EMPTY, entries: [], expenseEntries, expensesBillable, expensesTotal };
   for (const e of entries as any[]) {
     const sheet = sheetMap[e.timesheet_id] || {};
@@ -117,7 +125,11 @@ export async function computeProjectActuals(tenant: string, projectId: string): 
   }
   out.count = out.entries.length + out.expenseEntries.length;
   // Coût de main-d'œuvre (sert de base « Feuille de temps » à la facture, hors dépenses refacturables ajoutées à part).
-  out.total = out.labor + out.km + out.materiel + out.allowances;
+  out.total = Math.round((out.labor + out.km + out.materiel + out.allowances) * 100) / 100;
+  // COÛT RÉEL (job costing) : main-d'œuvre CHARGÉE (fardeau) + km + matériel + primes + dépenses.
+  out.laborBurdenPct = burdenPct;
+  out.laborBurden = Math.round(out.labor * burdenPct * 100) / 100;
+  out.costReal = Math.round((out.labor + out.laborBurden + out.km + out.materiel + out.allowances + out.expensesTotal) * 100) / 100;
   out.entries.sort((a, b) => (a.date < b.date ? 1 : -1));
   return out;
 }
