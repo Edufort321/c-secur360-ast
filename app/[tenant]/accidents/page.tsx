@@ -5,8 +5,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
   ArrowLeft, Plus, AlertTriangle, Shield, Truck, Building2,
-  Activity, Clock, Search, ChevronRight, Download,
+  Activity, Clock, Search, ChevronRight, Download, Monitor,
 } from 'lucide-react';
+import Link from 'next/link';
 import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -65,6 +66,7 @@ const T = {
     subtitle: 'Declarations, analyses et decompte securitaire',
     nearMiss: 'Passe proche',
     newReport: 'Nouveau rapport',
+    broadcast: 'Diffuser (plein ecran)',
     daysAccident: 'jours sans accident',
     daysNearMiss: 'jours sans passe proche',
     resetTitle: 'Reinitialiser le compteur',
@@ -88,6 +90,7 @@ const T = {
     subtitle: 'Reports, investigations and safety day count',
     nearMiss: 'Near miss',
     newReport: 'New report',
+    broadcast: 'Broadcast (full screen)',
     daysAccident: 'days without accident',
     daysNearMiss: 'days without near miss',
     resetTitle: 'Reset the counter',
@@ -248,7 +251,15 @@ export default function AccidentsPage() {
                   <p className="text-xs text-gray-400">{t.subtitle}</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/${tenant}/accidents/affichage`}
+                  title={t.broadcast}
+                  className="flex items-center gap-1.5 text-sm px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg font-medium"
+                >
+                  <Monitor size={15} />
+                  {t.broadcast}
+                </Link>
                 <button
                   onClick={() => newReport('near_miss')}
                   className="flex items-center gap-1.5 text-sm px-3 py-2 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-lg font-medium"
