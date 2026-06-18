@@ -10,6 +10,7 @@ import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
 import { AnomaliesPanel } from '@/components/dashboard/AnomaliesPanel';
 import { KioskBroadcast } from '@/components/dashboard/KioskBroadcast';
+import { buildKioskSlides } from '@/lib/kioskCards';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
@@ -39,11 +40,15 @@ export default function ModulesPage() {
   useEffect(() => { try { const s = localStorage.getItem(`dashPins_${tenant}`); if (s) setPins(JSON.parse(s)); } catch { /* ignore */ } }, [tenant]);
   const togglePin = (k: string) => setPins(p => { const n = { ...p, [k]: !p[k] }; try { localStorage.setItem(`dashPins_${tenant}`, JSON.stringify(n)); } catch { /* ignore */ } return n; });
   // Mode diffusion en veille (kiosque) — réglage tenant (Admin › Système). Lecture best-effort (migration 219).
-  const [kiosk, setKiosk] = useState<{ on: boolean; idle: number }>({ on: false, idle: 60 });
+  const [kiosk, setKiosk] = useState<{ on: boolean; idle: number; cards: string[] | null }>({ on: false, idle: 60, cards: null });
   useEffect(() => {
     if (!tenant) return;
+    // Champs 219 (toujours présents) — read fiable pour ne pas désactiver le kiosque si 224 absente.
     supabase.from('company_settings').select('kiosk_broadcast, kiosk_idle_seconds').eq('tenant_id', tenant).maybeSingle()
-      .then(({ data }) => { if (data) setKiosk({ on: !!(data as any).kiosk_broadcast, idle: Number((data as any).kiosk_idle_seconds) || 60 }); }, () => {});
+      .then(({ data }) => { if (data) setKiosk(k => ({ ...k, on: !!(data as any).kiosk_broadcast, idle: Number((data as any).kiosk_idle_seconds) || 60 })); }, () => {});
+    // Cartes sélectionnées (migration 224) — best-effort : son absence ne casse pas la lecture ci-dessus.
+    supabase.from('company_settings').select('kiosk_cards').eq('tenant_id', tenant).maybeSingle()
+      .then(({ data }) => { if (data && Array.isArray((data as any).kiosk_cards)) setKiosk(k => ({ ...k, cards: (data as any).kiosk_cards })); }, () => {});
   }, [tenant]);
   // Relevés sécurité (jours sans accident…) injectés dans la carte « Accidents & Presque-acc. ».
   const [safety, setSafety] = useState<any>(null);
@@ -281,7 +286,8 @@ export default function ModulesPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-      <KioskBroadcast enabled={kiosk.on} idleSeconds={kiosk.idle} lang={lang === 'en' ? 'en' : 'fr'} />
+      <KioskBroadcast enabled={kiosk.on} idleSeconds={kiosk.idle} selectedKeys={kiosk.cards} lang={lang === 'en' ? 'en' : 'fr'}
+        slides={buildKioskSlides({ lang: lang === 'en' ? 'en' : 'fr', safety, proj, ast, permit, plan, invCount, dgaStats, inspStats, tsStats, maintStats })} />
       <PortalHeader tenant={tenant} />
 
       <div className="px-4 pt-3 lg:px-6">
