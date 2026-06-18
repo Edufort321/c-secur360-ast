@@ -36,6 +36,7 @@ export type Invoice = {
   gst_amount: number; qst_amount: number; pst_amount: number; total: number;
   notes?: string | null; payment_terms?: string | null; paid_date?: string | null; gl_entry_id?: string | null;
   currency?: string; fx_rate?: number;   // multi-devise (#43) — défaut CAD / 1
+  revenue_category?: string | null;      // catégorie de revenu (ventilation état financier, migration 231)
 };
 export type CompanySettings = {
   tenant_id?: string; legal_name?: string; address?: string; city?: string; province?: string; postal_code?: string;
@@ -109,11 +110,12 @@ export async function saveInvoice(tenant: string, header: Invoice, items: Invoic
     due_date: header.due_date ?? null, province: header.province, notes: header.notes ?? null,
     payment_terms: header.payment_terms ?? null, paid_date: header.paid_date ?? null, gl_entry_id: header.gl_entry_id ?? null,
     ...(header.currency ? { currency: header.currency, fx_rate: Number(header.fx_rate) || 1 } : {}),
+    ...(header.revenue_category ? { revenue_category: header.revenue_category } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
-  // Multi-devise (#43) résilient : si les colonnes currency/fx_rate n'existent pas (migration 221), on les retire.
-  const isMissingCur = (e: any) => /currency|fx_rate/i.test(String(e?.message || ''));
-  const stripCur = (p: any) => { const { currency, fx_rate, ...rest } = p; return rest; };
+  // Résilient : si des colonnes optionnelles n'existent pas (migrations 221/231), on les retire et on réessaie.
+  const isMissingCur = (e: any) => /currency|fx_rate|revenue_category/i.test(String(e?.message || ''));
+  const stripCur = (p: any) => { const { currency, fx_rate, revenue_category, ...rest } = p; return rest; };
   let id = header.id;
   if (id) {
     let { error } = await supabase.from('commerce_invoices').update(payload).eq('id', id);

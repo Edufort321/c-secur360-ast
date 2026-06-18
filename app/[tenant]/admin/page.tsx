@@ -7110,6 +7110,11 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.issue_date} onChange={e => setHdr(h => ({ ...h, issue_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Échéance', 'Due date')}<input type="date" value={hdr.due_date || ''} onChange={e => setHdr(h => ({ ...h, due_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Conditions', 'Terms')}<input value={hdr.payment_terms || ''} onChange={e => setHdr(h => ({ ...h, payment_terms: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            {/* Catégorie de revenu (ventilation état financier) — utile surtout pour les services/projets sans produit catalogue. */}
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Catégorie de revenu (ventilation financière)', 'Revenue category (financial breakdown)')}
+              <input list="rev-cat-list" value={(hdr as any).revenue_category || ''} onChange={e => setHdr(h => ({ ...h, revenue_category: e.target.value } as any))} placeholder={tr('Ex. Service, Projet, Maintenance, Produit, Location…', 'Ex. Service, Project, Maintenance, Product, Rental…')} className={`mt-1 w-full ${inputCls}`} />
+              <datalist id="rev-cat-list"><option value="Service" /><option value="Projet" /><option value="Maintenance" /><option value="Produit" /><option value="Location" /><option value="Inspection" /></datalist>
+            </label>
           </div>
           <div className="mt-4 space-y-2">
             {items.map((it, i) => (

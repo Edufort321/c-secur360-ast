@@ -150,17 +150,18 @@ export const GRANULARITY_LABELS: Record<Granularity, string> = {
 // (product_class — snapshot mig 194). Async (réseau) — à appeler depuis un composant.
 export async function revenueByClass(tenant: string, from?: string, to?: string): Promise<{ name: string; value: number }[]> {
   const { supabase } = await import('@/lib/supabase');
-  let q = supabase.from('commerce_invoices')
-    .select('issue_date, status, commerce_invoice_items(subtotal, product_class, description)')
-    .eq('tenant_id', tenant).in('status', ['sent', 'paid']);
-  if (from) q = q.gte('issue_date', from);
-  if (to) q = q.lte('issue_date', to);
-  const { data, error } = await q;
+  const sel = (cat: boolean) => `issue_date, status${cat ? ', revenue_category' : ''}, commerce_invoice_items(subtotal, product_class, description)`;
+  const run = (cat: boolean) => { let q = supabase.from('commerce_invoices').select(sel(cat)).eq('tenant_id', tenant).in('status', ['sent', 'paid']); if (from) q = q.gte('issue_date', from); if (to) q = q.lte('issue_date', to); return q; };
+  let { data, error } = await run(true);
+  // Résilient : si revenue_category (migration 231) n'existe pas encore, on réessaie sans.
+  if (error && /revenue_category/i.test(String(error.message || ''))) ({ data, error } = await run(false));
   if (error) return [];
   const byClass: Record<string, number> = {};
   for (const inv of (data || []) as any[]) {
+    // Ventilation : classe du PRODUIT (ligne) -> sinon CATÉGORIE de revenu de la facture -> sinon « Non classé ».
+    const invCat = (inv.revenue_category || '').trim();
     for (const l of inv.commerce_invoice_items || []) {
-      const cls = (l.product_class || '').trim() || 'Non classé';
+      const cls = (l.product_class || '').trim() || invCat || 'Non classé';
       byClass[cls] = (byClass[cls] || 0) + (Number(l.subtotal) || 0);
     }
   }
