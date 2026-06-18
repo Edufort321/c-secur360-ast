@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
+import { anthropicMessages, resolveAnthropicModel } from '@/lib/anthropicModel';
 
 // #DGA — Analyseur IA expert. Connaissances normatives intégrées (IEEE C57.104, IEC 60599, Duval,
 // Rogers, Doernenburg, qualité d'huile, furannes/DP, tendances). Proxy serveur (clé non exposée).
@@ -93,27 +94,29 @@ Historique des mesures (ancien -> récent) : ${JSON.stringify(measures)}
 Analyse l'évolution et donne ton diagnostic expert.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'),
-        max_tokens: 2048,
-        system: KNOWLEDGE,
-        messages: [{ role: 'user', content: userMsg }],
-      }),
+    // Repli auto de modèle si ANTHROPIC_MODEL est périmé (404). max_tokens 4096 : évite la troncature
+    // du JSON bilingue (summaries + recommandations). Préremplissage « { » : force une SORTIE JSON STRICTE
+    // (l'assistant continue l'objet) -> fiabilise le parsing (corrige « Réponse IA non parsable »).
+    const resp = await anthropicMessages(apiKey, {
+      max_tokens: 4096,
+      system: KNOWLEDGE,
+      messages: [
+        { role: 'user', content: userMsg },
+        { role: 'assistant', content: '{' },
+      ],
     });
     if (!resp.ok) {
       const e = await resp.text();
       return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 });
     }
     const data = await resp.json();
-    if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'analyze' }); } catch { /* best-effort */ } }
+    if (tenant) { try { const cost = aiCallCostCents(resolveAnthropicModel(), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'analyze' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    // On a prérempli « { » : la réponse poursuit le JSON -> on le rétablit, puis on retire une éventuelle clôture ```.
+    const candidate = (text.startsWith('{') ? text : '{' + text).replace(/```\s*$/, '').trim();
     let parsed: any = null;
-    try { parsed = JSON.parse(jsonStr); } catch { const m = jsonStr.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } } }
-    if (!parsed) return NextResponse.json({ error: 'Reponse IA non parsable', raw: text.slice(0, 500) }, { status: 422 });
+    try { parsed = JSON.parse(candidate); } catch { const m = candidate.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } } }
+    if (!parsed) return NextResponse.json({ error: 'Reponse IA non parsable', raw: candidate.slice(0, 500) }, { status: 422 });
     return NextResponse.json({ ok: true, analysis: parsed });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur analyse' }, { status: 500 });
