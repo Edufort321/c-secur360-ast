@@ -477,6 +477,24 @@ function isoYearOf(dateStr: string): number {
   return d.getFullYear();
 }
 
+// Ligne d'édition des coordonnées bancaires d'un employé (#52). Le n° de compte est masqué au repos ;
+// on le ressaisit pour le modifier (sinon on n'envoie pas de nouveau numéro). Institution/transit/titulaire visibles.
+function BankRow({ emp, current, busy, onSave, tr }: { emp: { id: string; name: string }; current: any; busy: boolean; onSave: (id: string, patch: any) => void; tr: (f: string, e: string) => string }) {
+  const [inst, setInst] = useState(current.institution_number || '');
+  const [transit, setTransit] = useState(current.transit_number || '');
+  const [holder, setHolder] = useState(current.account_holder || '');
+  const [account, setAccount] = useState('');
+  const cls = 'rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900';
+  return (
+    <div className="grid gap-2 sm:grid-cols-[3rem_4rem_1fr_auto]">
+      <input value={inst} onChange={e => setInst(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="Inst." title={tr('Institution (3 ch.)', 'Institution (3 digits)')} className={`w-16 ${cls}`} />
+      <input value={transit} onChange={e => setTransit(e.target.value.replace(/\D/g, '').slice(0, 5))} placeholder="Transit" title={tr('Transit (5 ch.)', 'Transit (5 digits)')} className={`w-20 ${cls}`} />
+      <input value={account} onChange={e => setAccount(e.target.value.replace(/\D/g, '').slice(0, 12))} placeholder={current.has_account ? tr('Compte (laisser vide = inchangé)', 'Account (blank = unchanged)') : tr('N° de compte', 'Account no.')} title={tr('Compte (7–12 ch.)', 'Account (7–12 digits)')} className={cls} />
+      <button onClick={() => onSave(emp.id, { account_holder: holder || emp.name, institution_number: inst, transit_number: transit, ...(account ? { account_number: account } : {}) })} disabled={busy} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{busy ? '…' : tr('Enregistrer', 'Save')}</button>
+    </div>
+  );
+}
+
 function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [sheets, setSheets] = useState<any[]>([]);
   const [rows, setRows] = useState<PayrollRow[]>([]); // lignes de paie calculées (taux, brut, net, dépenses)
@@ -488,6 +506,27 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   const [open, setOpen] = useState<Set<string>>(new Set()); // semaines dépliées (clé = period_start)
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [tenantName, setTenantName] = useState<string>(tenant);
+  // Coordonnées bancaires (#52) : état masqué chargé via route serveur ; édition par employé.
+  const [showBank, setShowBank] = useState(false);
+  const [bankMap, setBankMap] = useState<Record<string, any>>({});
+  const [bankBusy, setBankBusy] = useState<string | null>(null);
+  async function loadBank() {
+    try { const r = await fetch(`/api/hr/bank?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }); const j = await r.json(); if (r.ok) { const m: Record<string, any> = {}; (j.accounts || []).forEach((a: any) => { m[a.personnel_id] = a; }); setBankMap(m); } } catch { /* ignore */ }
+  }
+  async function saveBank(personnel_id: string, patch: { account_holder?: string; institution_number?: string; transit_number?: string; account_number?: string }) {
+    setBankBusy(personnel_id);
+    try {
+      const r = await fetch('/api/hr/bank', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, personnel_id, ...patch }) });
+      const j = await r.json(); if (!r.ok) { alert(j.error || tr('Enregistrement impossible.', 'Save failed.')); }
+      else await loadBank();
+    } catch { alert(tr('Erreur réseau.', 'Network error.')); } finally { setBankBusy(null); }
+  }
+  // Employés uniques (id + nom) présents dans la paie — cibles de saisie bancaire.
+  const bankEmployees = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach(r => { if (r.employeeId) m.set(r.employeeId, r.employeeName); });
+    return [...m.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [rows]);
 
   async function load() {
     setLoading(true);
@@ -570,6 +609,20 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const style = await pdfStyleFor(tenant, 'paie').catch(() => undefined);
     await exportPayrollRegisterPdf({ tr, logoUrl, tenantName, periodLabel, rows: rs, style });
   }
+  // Export DÉPÔT DIRECT (#52) : montants nets agrégés par employé + coordonnées bancaires (route serveur), CSV banque.
+  async function exportDepositCsv(ids: string[], periodLabel: string) {
+    const rs = rowsFor(ids); if (!rs.length) { alert(tr('Aucune feuille à exporter.', 'Nothing to export.')); return; }
+    const items = rs.filter(r => r.employeeId && r.totalToPay > 0).map(r => ({ personnel_id: r.employeeId, name: r.employeeName, amount: r.totalToPay }));
+    if (!items.length) { alert(tr('Aucun montant à verser.', 'Nothing to deposit.')); return; }
+    try {
+      const res = await fetch('/api/payroll/deposit-csv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, items, periodLabel }) });
+      const j = await res.json();
+      if (!res.ok) { alert(j.error || tr('Export impossible.', 'Export failed.')); return; }
+      if (j.missing?.length) alert(tr(`⚠️ Coordonnées bancaires manquantes (exclus du fichier) : ${j.missing.join(', ')}. Saisissez-les via « Coordonnées bancaires ».`, `⚠️ Missing bank info (excluded): ${j.missing.join(', ')}.`));
+      if (j.count > 0) downloadCsv(`depot_direct_${periodLabel.replace(/[^\w]+/g, '_')}.csv`, j.csv);
+      else if (!j.missing?.length) alert(tr('Aucun dépôt à générer.', 'No deposit to generate.'));
+    } catch { alert(tr('Erreur réseau.', 'Network error.')); }
+  }
 
   const mny = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
   const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' });
@@ -594,8 +647,38 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
             {employees.map(emp => <option key={emp as string} value={emp as string}>{emp as string}</option>)}
           </select>
         )}
-        <p className="text-xs text-gray-400">{tr('Classé par semaine. Cliquez une semaine pour voir l’équipe, vérifier/approuver/ajuster, et exporter (CSV/PDF) pour la banque.', 'Grouped by week. Click a week to see the team, verify/approve/adjust, and export (CSV/PDF) for the bank.')}</p>
+        <button onClick={() => { setShowBank(true); loadBank(); }} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Banknote size={13} /> {tr('Coordonnées bancaires', 'Bank info')}</button>
+        <p className="text-xs text-gray-400">{tr('Classé par semaine. Cliquez une semaine pour voir l’équipe, vérifier/approuver/ajuster, et exporter (CSV/PDF/Dépôt) pour la banque.', 'Grouped by week. Click a week to see the team, verify/approve/adjust, and export (CSV/PDF/Deposit) for the bank.')}</p>
       </div>
+
+      {/* Modale Coordonnées bancaires (#52) — saisie sécurisée par employé (numéros masqués au repos). */}
+      {showBank && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowBank(false)}>
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">{tr('Coordonnées bancaires (dépôt direct)', 'Bank info (direct deposit)')}</h3>
+              <button onClick={() => setShowBank(false)} className="text-gray-400 hover:text-gray-700">✕</button>
+            </div>
+            <p className="mb-3 text-xs text-gray-500">{tr('Donnée très sensible (Loi 25) : chiffrée côté serveur, masquée ici. Institution 3 ch. · Transit 5 ch. · Compte 7–12 ch.', 'Highly sensitive (Law 25): server-side, masked here. Institution 3 digits · Transit 5 · Account 7–12.')}</p>
+            {bankEmployees.length === 0 ? <div className="py-6 text-center text-sm text-gray-400">{tr('Aucun employé payé (générez d’abord des feuilles de temps).', 'No paid employee yet.')}</div> : (
+              <div className="space-y-2">
+                {bankEmployees.map(emp => {
+                  const b = bankMap[emp.id] || {};
+                  return (
+                    <div key={emp.id} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{emp.name}</span>
+                        {b.has_account ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{tr('Compte', 'Account')} {b.account_masked}</span> : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">{tr('À saisir', 'To enter')}</span>}
+                      </div>
+                      <BankRow emp={emp} current={b} busy={bankBusy === emp.id} onSave={saveBank} tr={tr} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Barre de sélection (lot) */}
       {selArr.length > 0 && (
@@ -607,6 +690,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
           <span className="mx-1 h-4 w-px bg-blue-200" />
           <button onClick={() => exportCsvFor(selArr, 'selection')} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"><Download size={13} /> CSV</button>
           <button onClick={() => exportPdfFor(selArr, tr('Sélection', 'Selection'))} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700"><FileText size={13} /> PDF</button>
+          <button onClick={() => exportDepositCsv(selArr, tr('Sélection', 'Selection'))} title={tr('Fichier de dépôt direct pour la banque', 'Direct deposit file for the bank')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"><Download size={13} /> {tr('Dépôt', 'Deposit')}</button>
           <button onClick={() => setSel(new Set())} className="ml-auto text-xs font-semibold text-blue-600 hover:underline">{tr('Effacer', 'Clear')}</button>
         </div>
       )}
@@ -634,6 +718,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
               <div className="ml-auto flex items-center gap-1.5">
                 <button onClick={() => exportCsvFor(w.sheets.map(s => s.id), `S${w.week}_${yearFilter}`)} className="inline-flex items-center gap-1 rounded-lg border border-violet-300 px-2 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50"><Download size={12} /> CSV</button>
                 <button onClick={() => exportPdfFor(w.sheets.map(s => s.id), pend)} className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"><FileText size={12} /> PDF</button>
+                <button onClick={() => exportDepositCsv(w.sheets.map(s => s.id), pend)} title={tr('Fichier de dépôt direct pour la banque', 'Direct deposit file for the bank')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Download size={12} /> {tr('Dépôt', 'Deposit')}</button>
               </div>
             </div>
             {isOpen && (
