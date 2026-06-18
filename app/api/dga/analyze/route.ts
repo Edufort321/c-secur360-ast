@@ -70,6 +70,28 @@ Donne une analyse claire, priorisée, actionnable. Réponds en JSON STRICT, sans
  "fullMonths": <entier mois avant suivi complet, généralement 12>,
  "recheckJustification": "1 phrase justifiant les intervalles selon les normes et la tendance"}`;
 
+// Extraction ROBUSTE de l'objet JSON de la réponse IA. Gère : le préremplissage « { » (réponse =
+// continuation sans accolade initiale), une éventuelle prose avant/après, les clôtures ``` et les
+// accolades à l'intérieur des chaînes (scan équilibré). Renvoie l'objet ou null si rien d'exploitable.
+function extractJson(rawText: string): any | null {
+  if (!rawText) return null;
+  // Rétablit l'accolade ouvrante du préremplissage si absente ; retire les fences markdown éventuels.
+  let s = rawText.trim().replace(/^```(?:json)?/i, '').replace(/```$/,'').trim();
+  if (!s.startsWith('{')) s = '{' + s;
+  try { return JSON.parse(s); } catch { /* on tente l'extraction équilibrée */ }
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) { try { return JSON.parse(s.slice(start, i + 1)); } catch { return null; } } }
+  }
+  return null; // accolade jamais refermée -> JSON tronqué
+}
+
 export async function POST(req: NextRequest) {
   const guard = await aiGuard(req); if (guard.err) return guard.err; // auth + anti-abus
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -98,11 +120,11 @@ Analyse l'évolution et donne ton diagnostic expert.`;
     // du JSON bilingue (summaries + recommandations). Préremplissage « { » : force une SORTIE JSON STRICTE
     // (l'assistant continue l'objet) -> fiabilise le parsing (corrige « Réponse IA non parsable »).
     const resp = await anthropicMessages(apiKey, {
-      max_tokens: 4096,
+      max_tokens: 8000, // marge large : le JSON bilingue (summaries + recommandations) ne doit JAMAIS être tronqué
       system: KNOWLEDGE,
       messages: [
         { role: 'user', content: userMsg },
-        { role: 'assistant', content: '{' },
+        { role: 'assistant', content: '{' }, // préremplissage : force une sortie JSON stricte
       ],
     });
     if (!resp.ok) {
@@ -112,11 +134,12 @@ Analyse l'évolution et donne ton diagnostic expert.`;
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents(resolveAnthropicModel(), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'analyze' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    // On a prérempli « { » : la réponse poursuit le JSON -> on le rétablit, puis on retire une éventuelle clôture ```.
-    const candidate = (text.startsWith('{') ? text : '{' + text).replace(/```\s*$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(candidate); } catch { const m = candidate.match(/\{[\s\S]*\}/); if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } } }
-    if (!parsed) return NextResponse.json({ error: 'Reponse IA non parsable', raw: candidate.slice(0, 500) }, { status: 422 });
+    const stopReason = data?.stop_reason; // 'max_tokens' = réponse tronquée
+    const parsed = extractJson(text);
+    if (!parsed) {
+      const why = stopReason === 'max_tokens' ? ' (réponse tronquée — réessayez)' : '';
+      return NextResponse.json({ error: 'Reponse IA non parsable' + why, raw: text.slice(0, 800) }, { status: 422 });
+    }
     return NextResponse.json({ ok: true, analysis: parsed });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur analyse' }, { status: 500 });
