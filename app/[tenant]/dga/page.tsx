@@ -96,7 +96,7 @@ export default function DgaPage() {
     try { await supabase.from('dga_measures').update({ seen: true }).eq('tenant_id', tenant).eq('dossier_id', id).eq('seen', false); } catch { /* tolère (colonne seen via migration 153) */ }
   }
   // Bascule le drapeau manuel « traité / à traiter » (persiste, sert au filtre).
-  async function toggleTreated(id: string, val: boolean) { await setTreated(id, val); reload(); }
+  async function toggleTreated(id: string, val: boolean) { await setTreated(tenant, id, val); reload(); }
   function openFiche(d: Dossier) {
     setSelId(d.id!); setView('fiche');
     if (d.id && (measuresByDossier[d.id] || []).some(m => (m as any).seen === false)) markDossierSeen(d.id).then(reload);
@@ -218,7 +218,7 @@ export default function DgaPage() {
     setEditMeasure(null);
     setMeasures(await listMeasures(tenant, selId)); setView('fiche');
   }
-  async function delMeasure(id?: string) { if (!id) return; await deleteMeasure(id); if (selId) setMeasures(await listMeasures(tenant, selId)); reload(); }
+  async function delMeasure(id?: string) { if (!id) return; await deleteMeasure(tenant, id); if (selId) setMeasures(await listMeasures(tenant, selId)); reload(); }
   function delDossier() {
     if (!selId) return;
     const d = dossiers.find(x => x.id === selId);
@@ -226,7 +226,7 @@ export default function DgaPage() {
       title: tr('Supprimer le transformateur', 'Delete transformer'),
       message: tr(`Supprimer « ${d?.ident || ''} » et toutes ses mesures ? Action irréversible.`, `Delete "${d?.ident || ''}" and all its measurements? This cannot be undone.`),
       confirmLabel: tr('Supprimer', 'Delete'),
-      onConfirm: async () => { await deleteDossier(selId); setSelId(null); setView('list'); reload(); },
+      onConfirm: async () => { await deleteDossier(tenant, selId); setSelId(null); setView('list'); reload(); },
     });
   }
 
@@ -253,7 +253,7 @@ export default function DgaPage() {
       title: tr('Supprimer le transformateur', 'Delete transformer'),
       message: tr(`Supprimer « ${d?.ident || ''} » et ses mesures ? Action irréversible.`, `Delete "${d?.ident || ''}" and its measurements? This cannot be undone.`),
       confirmLabel: tr('Supprimer', 'Delete'),
-      onConfirm: async () => { await deleteDossier(id); reload(); },
+      onConfirm: async () => { await deleteDossier(tenant, id); reload(); },
     });
   }
   function deleteSelected() {
@@ -263,7 +263,7 @@ export default function DgaPage() {
       title: tr('Supprimer la sélection', 'Delete selection'),
       message: tr(`Supprimer ${ids.length} transformateur(s) et leurs mesures ? Action irréversible.`, `Delete ${ids.length} transformer(s) and their measurements? This cannot be undone.`),
       confirmLabel: tr('Supprimer', 'Delete'),
-      onConfirm: async () => { for (const id of ids) await deleteDossier(id); exitDelMode(); reload(); },
+      onConfirm: async () => { for (const id of ids) await deleteDossier(tenant, id); exitDelMode(); reload(); },
     });
   }
 
@@ -533,7 +533,7 @@ export default function DgaPage() {
           await saveMeasure(tenant, did, { ...m, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'pdf' });
         }
         // Nouveaux résultats importés -> statut « À TRAITER » (sinon le dossier reste affiché « Traité »).
-        if (measuresToAdd.length) { try { await setTreated(did, false); } catch { /* colonne treated absente (migration 154) */ } }
+        if (measuresToAdd.length) { try { await setTreated(tenant, did, false); } catch { /* colonne treated absente (migration 154) */ } }
         lastId = did;
       }
       setImportPreview(null); await reload();

@@ -73,12 +73,12 @@ export default function CapaPage() {
 
   async function setStatus(id: string, status: IncidentActionStatus) {
     setActions(prev => prev.map(a => a.id === id ? { ...a, status } : a)); // optimiste
-    await updateIncidentAction(id, { status });
+    await updateIncidentAction(tenant, id, { status });
   }
   async function remove(id: string) {
     if (typeof window !== 'undefined' && !window.confirm(t.confirmDel)) return;
     setActions(prev => prev.filter(a => a.id !== id));
-    await deleteIncidentAction(id);
+    await deleteIncidentAction(tenant, id);
   }
 
   function dueBucket(a: IncidentAction): 'overdue' | 'soon' | 'none' | 'later' {

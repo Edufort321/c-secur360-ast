@@ -47,14 +47,14 @@ export async function createIncidentAction(
   return (data as IncidentAction) ?? null;
 }
 
-export async function updateIncidentAction(id: string, patch: Partial<IncidentAction>): Promise<void> {
+export async function updateIncidentAction(tenant: string, id: string, patch: Partial<IncidentAction>): Promise<void> {
   await supabase.from('incident_actions')
     .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('tenant_id', tenant).eq('id', id); // ISOLATION inter-tenant
 }
 
-export async function deleteIncidentAction(id: string): Promise<void> {
-  await supabase.from('incident_actions').delete().eq('id', id);
+export async function deleteIncidentAction(tenant: string, id: string): Promise<void> {
+  await supabase.from('incident_actions').delete().eq('tenant_id', tenant).eq('id', id); // ISOLATION inter-tenant
 }
 
 // Une action est en retard si elle a une echeance passee et n'est ni faite ni verifiee.

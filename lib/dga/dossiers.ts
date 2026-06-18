@@ -173,11 +173,11 @@ export async function saveDossier(tenant: string, d: Dossier): Promise<{ data?: 
   }
   return res.error ? { error: res.error.message } : { data: res.data as Dossier };
 }
-export async function deleteDossier(id: string) { await supabase.from('dga_dossiers').delete().eq('id', id); }
+export async function deleteDossier(tenant: string, id: string) { await supabase.from('dga_dossiers').delete().eq('tenant_id', tenant).eq('id', id); }
 
 // Drapeau manuel « traité / à traiter » (persiste ; sert au filtre de la liste).
-export async function setTreated(id: string, treated: boolean): Promise<{ error?: string }> {
-  const { error } = await supabase.from('dga_dossiers').update({ treated }).eq('id', id);
+export async function setTreated(tenant: string, id: string, treated: boolean): Promise<{ error?: string }> {
+  const { error } = await supabase.from('dga_dossiers').update({ treated }).eq('tenant_id', tenant).eq('id', id);
   return error ? { error: error.message } : {};
 }
 
@@ -191,7 +191,7 @@ export async function saveMeasure(tenant: string, dossierId: string, m: Measure)
   const { data, error } = await supabase.from('dga_measures').insert(payload).select().single();
   return error ? { error: error.message } : { data: data as Measure };
 }
-export async function deleteMeasure(id: string) { await supabase.from('dga_measures').delete().eq('id', id); }
+export async function deleteMeasure(tenant: string, id: string) { await supabase.from('dga_measures').delete().eq('tenant_id', tenant).eq('id', id); }
 
 // Assemblage intelligent : retrouve un dossier existant correspondant (par n° série, sinon par nom).
 export function matchDossier(dossiers: Dossier[], eq: { serialNo?: string; identification?: string; equipment?: string }): Dossier | null {

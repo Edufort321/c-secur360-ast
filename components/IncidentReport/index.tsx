@@ -2553,11 +2553,11 @@ function CapaPanel({ tenant, incidentId, lang, readOnly }: {
   }
   async function setStatus(id: string, status: IncidentActionStatus) {
     setActions(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-    await updateIncidentAction(id, { status });
+    await updateIncidentAction(tenant, id, { status });
   }
   async function remove(id: string) {
     setActions(prev => prev.filter(a => a.id !== id));
-    await deleteIncidentAction(id);
+    await deleteIncidentAction(tenant, id);
   }
 
   if (!incidentId) {
