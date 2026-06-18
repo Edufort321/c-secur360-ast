@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
+import { EntitySearch } from '@/components/ui/EntitySearch';
 import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
   CheckSquare, Scale, PenLine, ArrowLeft, Save, Send, Plus,
@@ -1675,35 +1676,6 @@ function LocationSection({ report, onChange, readOnly }: {
         </div>
       </div>
     </Card>
-  );
-}
-
-// Recherche dynamique réutilisable (personnel, véhicule…) avec saisie LIBRE permise (sous-traitant/autre).
-// Filtre les options par libellé/sous-libellé ; onPick remplit, onText laisse taper n'importe quoi.
-function EntitySearch({ value, onText, onPick, options, placeholder, readOnly }: {
-  value: string; onText: (v: string) => void; onPick: (o: { id: string; label: string; sub?: string }) => void;
-  options: { id: string; label: string; sub?: string }[]; placeholder?: string; readOnly?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const q = (value || '').toLowerCase().trim();
-  const filtered = (q ? options.filter(o => o.label.toLowerCase().includes(q) || (o.sub || '').toLowerCase().includes(q)) : options).slice(0, 8);
-  return (
-    <div className="relative">
-      <input value={value} onChange={e => { onText(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder={placeholder} disabled={readOnly}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-50" />
-      {open && !readOnly && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-          {filtered.map(o => (
-            <button key={o.id} type="button" onMouseDown={e => { e.preventDefault(); onPick(o); setOpen(false); }}
-              className="flex w-full flex-col items-start px-3 py-1.5 text-left text-sm hover:bg-blue-50">
-              <span className="font-medium text-gray-800">{o.label}</span>
-              {o.sub && <span className="text-xs text-gray-400">{o.sub}</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
