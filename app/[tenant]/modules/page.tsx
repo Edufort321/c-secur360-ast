@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List,
+  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck,
 } from 'lucide-react';
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -343,14 +343,16 @@ export default function ModulesPage() {
             <div className="mb-4 flex flex-wrap gap-3">
               {cards.filter(c => pins[c.key]).map(c => (
                 c.key === 'events' && safety ? (
-                  // Sécurité épinglé : grands chiffres COLORÉS (jours sans accident/passé proche, acc./presque cette année).
-                  <div key={c.key} className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
-                    <div className="mb-1 text-xs font-bold text-gray-800 dark:text-gray-100">{c.title}</div>
-                    <div className="flex flex-wrap gap-x-6 gap-y-1">
+                  // Sécurité épinglé : WIDGET PLEINE LARGEUR avec GROSSES PASTILLES de couleur.
+                  <div key={c.key} className="w-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-100"><ShieldCheck size={16} className="text-emerald-600" /> {c.title}</div>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                       {safetyDots(safety).map((d, i) => (
-                        <div key={i} className="text-center">
-                          <div className={`text-3xl font-extrabold leading-none ${d.text}`}>{d.v}</div>
-                          <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">{d.l}</div>
+                        <div key={i} className="flex flex-col items-center gap-2">
+                          <div className={`grid h-24 w-24 place-items-center rounded-full text-white shadow-lg ${d.dot}`}>
+                            <span className="text-4xl font-black leading-none">{d.v}</span>
+                          </div>
+                          <div className="text-center text-xs font-semibold text-gray-600 dark:text-gray-300">{d.l}</div>
                         </div>
                       ))}
                     </div>
@@ -381,9 +383,10 @@ export default function ModulesPage() {
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{c.title}</span>
                       <div className="flex items-center gap-1.5">
-                        <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler en haut', 'Pin to top')}
+                        {/* Case « épingler » : seulement sur la carte Accidents/Presque-acc. */}
+                        {c.key === 'events' && <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
-                          className="cursor-pointer accent-emerald-600" />
+                          className="cursor-pointer accent-emerald-600" />}
                         <div className="grid h-8 w-8 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
                       </div>
                     </div>
@@ -410,9 +413,11 @@ export default function ModulesPage() {
                 const Icon = iconFor(c.key);
                 const inner = (
                   <div className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${i ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
-                    <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler en haut', 'Pin to top')}
-                      onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
-                      className="cursor-pointer accent-emerald-600" />
+                    {c.key === 'events'
+                      ? <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
+                          onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
+                          className="cursor-pointer accent-emerald-600" />
+                      : <span className="w-[13px] shrink-0" />}
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
                     <div className="w-40 shrink-0 font-semibold">{c.title}</div>
                     <div className="w-14 shrink-0 text-2xl font-bold">{c.big}</div>
