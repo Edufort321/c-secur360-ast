@@ -5,7 +5,7 @@
 import { supabase } from '@/lib/supabase';
 
 export type PayrollRow = {
-  id: string; employeeName: string; employeeEmail: string;
+  id: string; employeeId: string; employeeName: string; employeeEmail: string;
   periodStart: string; periodEnd: string; status: string; week: number;
   hrsReg: number; hrsOt: number; hrsDt: number; rate: number;
   gross: number;          // rémunération brute (heures × taux + multiplicateurs)
@@ -52,7 +52,7 @@ export async function buildPayrollRows(tenant: string, sheets: any[]): Promise<P
     const reimbursable = r2(reimbMap[String(s.id)] || 0);
     const net = r2(n(s.total_amount));
     return {
-      id: String(s.id), employeeName: s.employee_name || '—', employeeEmail: s.employee_email || '',
+      id: String(s.id), employeeId: String(s.employee_id || ''), employeeName: s.employee_name || '—', employeeEmail: s.employee_email || '',
       periodStart: s.period_start, periodEnd: s.period_end, status: s.status, week: isoWeekNum(s.period_start),
       hrsReg, hrsOt, hrsDt, rate, gross, allowances,
       fedDed: r2(n(s.federal_deductions)), qcDed: r2(n(s.quebec_deductions)), vehDed: r2(n(s.vehicle_deduction)),
