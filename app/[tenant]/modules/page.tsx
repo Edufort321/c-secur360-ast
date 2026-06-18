@@ -9,7 +9,6 @@ import {
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
 import { AnomaliesPanel } from '@/components/dashboard/AnomaliesPanel';
-import { SafetyBoard } from '@/components/dashboard/SafetyBoard';
 import { KioskBroadcast } from '@/components/dashboard/KioskBroadcast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -46,6 +45,18 @@ export default function ModulesPage() {
     supabase.from('company_settings').select('kiosk_broadcast, kiosk_idle_seconds').eq('tenant_id', tenant).maybeSingle()
       .then(({ data }) => { if (data) setKiosk({ on: !!(data as any).kiosk_broadcast, idle: Number((data as any).kiosk_idle_seconds) || 60 }); }, () => {});
   }, [tenant]);
+  // Relevés sécurité (jours sans accident…) injectés dans la carte « Accidents & Presque-acc. ».
+  const [safety, setSafety] = useState<any>(null);
+  useEffect(() => {
+    fetch('/api/incidents/safety-board', { credentials: 'include' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j?.ok) setSafety(j); }).catch(() => {});
+  }, [tenant]);
+  // Pastilles sécurité (réutilisé carte + bandeau épinglé).
+  const safetyDots = (b: any) => ([
+    { dot: 'bg-emerald-500', v: b.daysSinceAccident, l: tr('j. sans accident', 'd. without accident') },
+    { dot: 'bg-sky-500', v: b.daysSinceNearMiss, l: tr('j. sans passé proche', 'd. without near-miss') },
+    { dot: b.accidentsYTD ? 'bg-rose-500' : 'bg-gray-300', v: b.accidentsYTD, l: tr('acc. ' + b.year, 'acc. ' + b.year) },
+    { dot: b.nearMissYTD ? 'bg-amber-500' : 'bg-gray-300', v: b.nearMissYTD, l: tr('p.proches ' + b.year, 'near ' + b.year) },
+  ]);
 
   const [proj, setProj] = useState({ soumission: 0, encours: 0, facture: 0, amount: 0 });
   const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
@@ -321,10 +332,25 @@ export default function ModulesPage() {
           </div>
 
           {/* Vue d'ensemble des non-conformités/anomalies (coordination+ ou si nom dans le formulaire) */}
-          {/* Bandeau des widgets ÉPINGLÉS (cases à cocher dans chaque widget) */}
-          {pins.safety && <div className="mb-3"><SafetyBoard lang={lang === 'en' ? 'en' : 'fr'} variant="strip" /></div>}
+          {/* Bandeau des CARTES ÉPINGLÉES (case à cocher sur chaque carte de module) */}
+          {cards.filter(c => pins[c.key]).length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-3">
+              {cards.filter(c => pins[c.key]).map(c => (
+                <div key={c.key} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
+                  <span className="text-2xl font-extrabold leading-none">{c.big}</span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-gray-800 dark:text-gray-100">{c.title}</div>
+                    {c.key === 'events' && safety ? (
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                        {safetyDots(safety).map((d, i) => <span key={i} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400"><span className={`h-2 w-2 rounded-full ${d.dot}`} /><b className="text-gray-800 dark:text-gray-100">{d.v}</b> {d.l}</span>)}
+                      </div>
+                    ) : <div className="max-w-[240px] truncate text-[11px] text-gray-400">{c.sub}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <AiTokenAlert tenant={tenant} tr={tr} />
-          <div className="mb-4"><SafetyBoard lang={lang === 'en' ? 'en' : 'fr'} variant="card" pinned={!!pins.safety} onTogglePin={() => togglePin('safety')} /></div>
           <div className="mb-4"><AnomaliesPanel tenant={tenant} /></div>
 
           {loading ? (
@@ -335,12 +361,26 @@ export default function ModulesPage() {
                 const Icon = iconFor(c.key);
                 const inner = (
                   <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
-                    <div className="mb-2 flex items-center justify-between">
+                    <div className="mb-2 flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{c.title}</span>
-                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
+                      <div className="flex items-center gap-1.5">
+                        <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler en haut', 'Pin to top')}
+                          onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
+                          className="cursor-pointer accent-emerald-600" />
+                        <div className="grid h-8 w-8 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
+                      </div>
                     </div>
                     <div className="text-3xl font-bold">{c.big}</div>
                     <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{c.sub}</div>
+                    {c.key === 'events' && safety && (
+                      <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-100 pt-2 dark:border-gray-700">
+                        {safetyDots(safety).map((d, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                            <span className={`h-2 w-2 shrink-0 rounded-full ${d.dot}`} /><b className="text-gray-800 dark:text-gray-100">{d.v}</b> <span className="truncate">{d.l}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
                 return c.href ? <Link key={c.key} href={c.href} className="block">{inner}</Link> : <div key={c.key}>{inner}</div>;
@@ -352,10 +392,13 @@ export default function ModulesPage() {
                 const Icon = iconFor(c.key);
                 const inner = (
                   <div className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${i ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
+                    <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler en haut', 'Pin to top')}
+                      onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
+                      className="cursor-pointer accent-emerald-600" />
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
                     <div className="w-40 shrink-0 font-semibold">{c.title}</div>
                     <div className="w-14 shrink-0 text-2xl font-bold">{c.big}</div>
-                    <div className="flex-1 truncate text-sm text-gray-500 dark:text-gray-400">{c.sub}</div>
+                    <div className="flex-1 truncate text-sm text-gray-500 dark:text-gray-400">{c.key === 'events' && safety ? safetyDots(safety).map(d => `${d.v} ${d.l}`).join(' · ') : c.sub}</div>
                     {c.href && <ArrowRight size={16} className="text-gray-400" />}
                   </div>
                 );
