@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getLedger, getAccounts, getTrialBalance } from '@/lib/accounting';
 import RevenueClassManager from '@/components/finance/RevenueClassManager';
+import WipReport from '@/components/finance/WipReport';
 import {
   computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
 } from '@/lib/financialAnalytics';
@@ -301,6 +302,9 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
         <p className="mt-2 text-[11px] text-slate-400">{tr('Source : classe du produit (ligne de facture) → sinon catégorie de revenu (facture/transaction) → sinon « Non classé ».', 'Source: product class (invoice line) → else revenue category (invoice/transaction) → else "Unclassified".')}</p>
         <RevenueClassManager tenant={tenant} tr={tr} />
       </div>
+
+      {/* Travaux en cours (WIP) — chantiers actifs : coût chargé, facturé, marge, sur/sous-facturation */}
+      <WipReport tenant={tenant} tr={tr} />
 
       {/* Analyse IA */}
       <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/10">
