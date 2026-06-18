@@ -7,6 +7,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 
 // ── Supabase (best-effort) ─────────────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -637,10 +639,14 @@ function Checkbox({ label, checked, onChange, disabled = false }: {
 }
 
 // ── Section: Site ──────────────────────────────────────────────────────────
-function SiteSection({ language, permitData, readOnly, onUpdate }: {
+function SiteSection({ language, permitData, readOnly, onUpdate, personnel, projects }: {
   language: Language; permitData: ElectricalPermit; readOnly: boolean;
   onUpdate: (patch: Partial<ElectricalPermit['siteInfo']>) => void;
+  personnel: EntityOption[]; projects: EntityOption[];
 }) {
+  const Labeled = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div><label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">{label}</label>{children}</div>
+  );
   const t = T[language];
   const ts = t.site;
   const si = permitData.siteInfo;
@@ -657,10 +663,10 @@ function SiteSection({ language, permitData, readOnly, onUpdate }: {
     <div>
       <Card title={ts.cardProject} icon={<MapPin className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <InputField label={ts.projectNumber} value={si.projectNumber} onChange={v => onUpdate({ projectNumber: v })} disabled={readOnly} />
+          <Labeled label={ts.projectNumber}><EntitySearch value={si.projectNumber} readOnly={readOnly} options={projects} onText={v => onUpdate({ projectNumber: v })} onPick={o => onUpdate({ projectNumber: o.label })} /></Labeled>
           <InputField label={ts.workLocation} value={si.workLocation} onChange={v => onUpdate({ workLocation: v })} disabled={readOnly} />
           <InputField label={ts.contractor} value={si.contractor} onChange={v => onUpdate({ contractor: v })} disabled={readOnly} />
-          <InputField label={ts.supervisor} value={si.supervisor} onChange={v => onUpdate({ supervisor: v })} disabled={readOnly} />
+          <Labeled label={ts.supervisor}><EntitySearch value={si.supervisor} readOnly={readOnly} options={personnel} onText={v => onUpdate({ supervisor: v })} onPick={o => onUpdate({ supervisor: o.label })} /></Labeled>
           <InputField label={ts.entryDate} value={si.entryDate} type="datetime-local" onChange={v => onUpdate({ entryDate: v })} disabled={readOnly} />
           <InputField label={ts.duration} value={si.duration} onChange={v => onUpdate({ duration: v })} placeholder="ex: 4h" disabled={readOnly} />
           <InputField label={ts.workerCount} value={si.workerCount} type="number" onChange={v => onUpdate({ workerCount: Number(v) })} disabled={readOnly} />
@@ -1142,6 +1148,7 @@ export default function Electrical({
     ...createDefaultPermit(selectedProvince),
     ...initialData,
   }));
+  const dir = useTenantDirectory(tenant);
   const [section, setSection] = useState<Section>('site');
   const [menuOpen, setMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -1355,6 +1362,8 @@ export default function Electrical({
               permitData={permit}
               readOnly={readOnly}
               onUpdate={patch => updatePermit(p => ({ ...p, siteInfo: { ...p.siteInfo, ...patch } }))}
+              personnel={dir.personnel}
+              projects={dir.projects}
             />
           )}
 

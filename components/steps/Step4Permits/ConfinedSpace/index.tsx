@@ -10,6 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
 import { ProvinceCode, ConfinedSpacePermit, generatePermitNumber, generateId } from './SafetyManager';
 import SiteInformation from './SiteInformation';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 import AtmosphericTesting from './AtmosphericTesting';
 import EntryRegistry from './EntryRegistry';
 import RescuePlan from './RescuePlan';
@@ -315,6 +316,7 @@ export default function ConfinedSpace({
   const resolvedProvince: ProvinceCode = (selectedProvince ?? province) as ProvinceCode;
   const resolvedOnSave = onSave ?? onSubmit;
   const t = T[language];
+  const dir = useTenantDirectory(tenant);
 
   const [permit, setPermit] = useState<ConfinedSpacePermit>(() => ({
     ...createDefaultPermit(resolvedProvince),
@@ -605,6 +607,8 @@ export default function ConfinedSpace({
               permitData={permit}
               selectedProvince={activeProvince}
               readOnly={readOnly}
+              personnel={dir.personnel}
+              projects={dir.projects}
               onUpdate={(data) => updatePermit(p => ({ ...p, siteInformation: { ...p.siteInformation, ...data } }))}
             />
           )}

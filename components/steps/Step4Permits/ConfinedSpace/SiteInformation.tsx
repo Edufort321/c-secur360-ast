@@ -6,6 +6,7 @@ import {
   Ruler, AlertTriangle, Wind, Flame, Zap, Droplets, ChevronDown, ChevronUp, Plus, X
 } from 'lucide-react';
 import { ConfinedSpacePermit, ProvinceCode } from './SafetyManager';
+import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Language = 'fr' | 'en';
@@ -15,6 +16,8 @@ interface Props {
   permitData: ConfinedSpacePermit;
   selectedProvince: ProvinceCode;
   readOnly?: boolean;
+  personnel?: EntityOption[];
+  projects?: EntityOption[];
   onUpdate: (data: Partial<ConfinedSpacePermit['siteInformation']>) => void;
 }
 
@@ -239,7 +242,7 @@ function Card({
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
-export default function SiteInformation({ language, permitData, selectedProvince, readOnly = false, onUpdate }: Props) {
+export default function SiteInformation({ language, permitData, selectedProvince, readOnly = false, personnel = [], projects = [], onUpdate }: Props) {
   const t = T[language];
   const si = permitData.siteInformation;
 
@@ -288,8 +291,8 @@ export default function SiteInformation({ language, permitData, selectedProvince
       <Card title={t.sections.project} icon={<Building className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t.projectNumber}>
-            <input type="text" value={si.projectNumber ?? ''} onChange={e => update('projectNumber', e.target.value)}
-              placeholder={t.projectNumberPh} disabled={readOnly} className={inputClass} />
+            <EntitySearch value={si.projectNumber ?? ''} readOnly={readOnly} options={projects}
+              onText={v => update('projectNumber', v)} onPick={o => update('projectNumber', o.label)} placeholder={t.projectNumberPh} />
           </Field>
           <Field label={t.workLocation}>
             <input type="text" value={si.workLocation ?? ''} onChange={e => update('workLocation', e.target.value)}
@@ -300,8 +303,8 @@ export default function SiteInformation({ language, permitData, selectedProvince
               placeholder={t.contractorPh} disabled={readOnly} className={inputClass} />
           </Field>
           <Field label={t.supervisor}>
-            <input type="text" value={si.supervisor ?? ''} onChange={e => update('supervisor', e.target.value)}
-              placeholder={t.supervisorPh} disabled={readOnly} className={inputClass} />
+            <EntitySearch value={si.supervisor ?? ''} readOnly={readOnly} options={personnel}
+              onText={v => update('supervisor', v)} onPick={o => update('supervisor', o.label)} placeholder={t.supervisorPh} />
           </Field>
           <Field label={t.entryDate}>
             <input type="datetime-local" value={si.entryDate ?? ''} onChange={e => update('entryDate', e.target.value)}
