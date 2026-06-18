@@ -46,6 +46,9 @@ export async function exportInvoicePdf(tenant: string, invoice: Invoice): Promis
   for (const line of [company?.address, [company?.city, company?.province, company?.postal_code].filter(Boolean).join(', '), company?.phone, company?.email].filter(Boolean) as string[]) { right(line, ry); ry += 13; }
   if (company?.gst_number) { right(`TPS/TVH : ${company.gst_number}`, ry); ry += 13; }
   if (company?.qst_number) { right(`TVQ : ${company.qst_number}`, ry); ry += 13; }
+  // Licences entrepreneur (conformité Québec : RBQ / CMEQ / NEQ).
+  const lic = [(company as any)?.rbq_license && `RBQ ${(company as any).rbq_license}`, (company as any)?.cmeq_member && `CMEQ ${(company as any).cmeq_member}`, (company as any)?.neq && `NEQ ${(company as any).neq}`].filter(Boolean).join(' · ');
+  if (lic) { right(lic, ry); ry += 13; }
 
   y = Math.max(y + 56, ry) + 16;
 

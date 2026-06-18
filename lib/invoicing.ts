@@ -46,6 +46,8 @@ export type CompanySettings = {
   dunning_enabled?: boolean; dunning_days?: number[];
   // Règle frais de subsistance par défaut selon la portée du projet (interne/externe).
   subsistence_interne?: boolean; subsistence_externe?: boolean;
+  // Licences entrepreneur (Québec) — affichées sur soumissions/factures (conformité RBQ/CMEQ).
+  rbq_license?: string; cmeq_member?: string; neq?: string;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -72,8 +74,9 @@ export async function saveCompanySettings(tenant: string, s: CompanySettings) {
   const row: any = { ...s, tenant_id: tenant, updated_at: new Date().toISOString() };
   let { error } = await supabase.from('company_settings').upsert(row, { onConflict: 'tenant_id' });
   // Résilience : si une colonne récente n'existe pas encore (migration non appliquée), on la retire et on réessaie.
-  if (error && /(dunning_enabled|dunning_days|stripe_account_id|stripe_charges_enabled|subsistence_interne|subsistence_externe|column).*(does not exist|schema cache)/i.test(error.message || '')) {
+  if (error && /(dunning_enabled|dunning_days|stripe_account_id|stripe_charges_enabled|subsistence_interne|subsistence_externe|rbq_license|cmeq_member|neq|column).*(does not exist|schema cache)/i.test(error.message || '')) {
     delete row.dunning_enabled; delete row.dunning_days; delete row.subsistence_interne; delete row.subsistence_externe;
+    delete row.rbq_license; delete row.cmeq_member; delete row.neq;
     ({ error } = await supabase.from('company_settings').upsert(row, { onConflict: 'tenant_id' }));
   }
   if (error) throw error;
