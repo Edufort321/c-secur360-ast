@@ -25,6 +25,7 @@ export type Transaction = {
   settlement_kind?: 'standard' | 'reimbursement' | 'investment' | 'investor_advance' | 'shares_payment';
   currency?: string;   // devise du document (multi-devise #43, défaut CAD)
   fx_rate?: number;    // taux vers la devise de base au moment de l'opération (défaut 1)
+  revenue_category?: string | null; // classe de revenu (ventilation état financier, migration 232) — si txn_type='revenue'
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -78,11 +79,12 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     settlement_kind: header.settlement_kind || 'standard',
     ...(header.needs_review !== undefined ? { needs_review: header.needs_review } : {}),
     ...(header.currency ? { currency: header.currency, fx_rate: Number(header.fx_rate) || 1 } : {}),
+    ...(header.revenue_category ? { revenue_category: header.revenue_category } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
-  // Si une colonne récente n'existe pas encore (migration 185/187/207/221), on la retire et on réessaie.
-  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review|paid_by_person_id|settlement_kind|currency|fx_rate/i.test(String(e?.message || ''));
-  const strip = (p: any) => { const { treasury_account_id, needs_review, paid_by_person_id, settlement_kind, currency, fx_rate, ...rest } = p; return rest; };
+  // Si une colonne récente n'existe pas encore (migration 185/187/207/221/232), on la retire et on réessaie.
+  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review|paid_by_person_id|settlement_kind|currency|fx_rate|revenue_category/i.test(String(e?.message || ''));
+  const strip = (p: any) => { const { treasury_account_id, needs_review, paid_by_person_id, settlement_kind, currency, fx_rate, revenue_category, ...rest } = p; return rest; };
   let id = header.id;
   if (id) {
     let { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);

@@ -8,6 +8,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Percent, Users, Wallet, Activity, Sparkles, Loader2, CalendarClock, AlertTriangle, Package, BookOpen,
 } from 'lucide-react';
 import { getLedger, getAccounts, getTrialBalance } from '@/lib/accounting';
+import RevenueClassManager from '@/components/finance/RevenueClassManager';
 import {
   computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
 } from '@/lib/financialAnalytics';
@@ -268,10 +269,10 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
         </div>
       )}
 
-      {/* Revenus par classe de produit (ventilation du bilan) */}
-      {revByClass.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Revenus par classe de produit', 'Revenue by product class')}</h3>
+      {/* Revenus par classe (produit OU catégorie de revenu) + gestion des classes */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Revenus par classe', 'Revenue by class')}</h3>
+        {revByClass.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -294,9 +295,12 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
               })}
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">{tr('Source : lignes de facture classées par produit (catalogue). Classez vos produits pour affiner la ventilation.', 'Source: invoice lines classed by product (catalogue). Class your products to refine the breakdown.')}</p>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-slate-400">{tr('Aucun revenu classé sur la période. Assignez une CLASSE à vos revenus (facture ou transaction) — créez vos classes ci-dessous.', 'No classified revenue in the period. Assign a CLASS to your revenue (invoice or transaction) — create your classes below.')}</p>
+        )}
+        <p className="mt-2 text-[11px] text-slate-400">{tr('Source : classe du produit (ligne de facture) → sinon catégorie de revenu (facture/transaction) → sinon « Non classé ».', 'Source: product class (invoice line) → else revenue category (invoice/transaction) → else "Unclassified".')}</p>
+        <RevenueClassManager tenant={tenant} tr={tr} />
+      </div>
 
       {/* Analyse IA */}
       <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/10">

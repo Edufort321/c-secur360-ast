@@ -165,5 +165,15 @@ export async function revenueByClass(tenant: string, from?: string, to?: string)
       byClass[cls] = (byClass[cls] || 0) + (Number(l.subtotal) || 0);
     }
   }
+  // + REVENUS saisis comme TRANSACTIONS (txn_type='revenue'), ventilés par revenue_category (migration 232).
+  try {
+    const runTx = (cat: boolean) => { let t = supabase.from('transactions').select(`txn_date, txn_type, subtotal${cat ? ', revenue_category' : ''}`).eq('tenant_id', tenant).eq('txn_type', 'revenue'); if (from) t = t.gte('txn_date', from); if (to) t = t.lte('txn_date', to); return t; };
+    let { data: txs, error: te } = await runTx(true);
+    if (te && /revenue_category/i.test(String(te.message || ''))) ({ data: txs } = await runTx(false));
+    for (const t of (txs || []) as any[]) {
+      const cls = (t.revenue_category || '').trim() || 'Non classé';
+      byClass[cls] = (byClass[cls] || 0) + (Number(t.subtotal) || 0);
+    }
+  } catch { /* transactions optionnelles */ }
   return Object.entries(byClass).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 }

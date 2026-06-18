@@ -51,6 +51,7 @@ import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { downloadCsv as downloadCsvCols, type CsvColumn } from '@/lib/csv';
 import { getCurrencyConfig, rateToBase, currencyMeta, formatMoney, type CurrencyConfig } from '@/lib/currency';
+import { useRevenueClasses } from '@/lib/revenueClasses';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
 import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
@@ -6852,6 +6853,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
 // ============================================================
 function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean; initialProject?: string | null }) {
   const today = new Date().toISOString().slice(0, 10);
+  const { names: revClassNames } = useRevenueClasses(tenant); // classes de revenu gérées (datalist)
   const [view, setView] = useState<'list' | 'edit' | 'settings' | 'projets'>('list');
   const [invView, setInvView] = useState<'grid' | 'gallery'>('grid'); // liste factures : grille (défaut) / galerie
   const [invQ, setInvQ] = useState(''); // recherche dynamique (n° facture, client)
@@ -7113,7 +7115,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
             {/* Catégorie de revenu (ventilation état financier) — utile surtout pour les services/projets sans produit catalogue. */}
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Catégorie de revenu (ventilation financière)', 'Revenue category (financial breakdown)')}
               <input list="rev-cat-list" value={(hdr as any).revenue_category || ''} onChange={e => setHdr(h => ({ ...h, revenue_category: e.target.value } as any))} placeholder={tr('Ex. Service, Projet, Maintenance, Produit, Location…', 'Ex. Service, Project, Maintenance, Product, Rental…')} className={`mt-1 w-full ${inputCls}`} />
-              <datalist id="rev-cat-list"><option value="Service" /><option value="Projet" /><option value="Maintenance" /><option value="Produit" /><option value="Location" /><option value="Inspection" /></datalist>
+              <datalist id="rev-cat-list">{(revClassNames.length ? revClassNames : ['Service', 'Projet', 'Maintenance', 'Produit', 'Location', 'Inspection']).map(n => <option key={n} value={n} />)}</datalist>
             </label>
           </div>
           <div className="mt-4 space-y-2">
@@ -7298,6 +7300,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
 // TRANSACTIONS — depenses / achats fournisseurs + ecriture d'achat -> GL
 // ============================================================
 function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+  const { names: revClassNames } = useRevenueClasses(tenant); // classes de revenu gérées (saisie de revenu)
   const today = new Date().toISOString().slice(0, 10);
   const [view, setView] = useState<'list' | 'edit' | 'bank' | 'accounts' | 'balances' | 'advances'>('list');
   const [bal, setBal] = useState<Record<string, { debit: number; credit: number }>>({}); // soldes (balance de vérification)
@@ -7881,6 +7884,11 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <label className="text-xs font-semibold text-gray-500">{tr('Devise', 'Currency')}<select value={(hdr as any).currency || curCfg.base} onChange={e => { const c = e.target.value; setHdr(h => ({ ...h, currency: c, fx_rate: rateToBase(curCfg, c) } as any)); }} className={`mt-1 w-full ${inputCls}`}>{curCfg.enabled.map(c => <option key={c} value={c}>{c} ({currencyMeta(c).symbol})</option>)}</select></label>
             )}
             <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque / carte', 'Cash / bank / card')}</option><option value="on_account">{isRevenue ? tr('À recevoir (client)', 'Receivable (client)') : tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
+            {/* Classe de revenu (ventilation état financier) — uniquement pour un REVENU. */}
+            {isRevenue && <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Classe de revenu', 'Revenue class')}
+              <input list="txn-rev-cat-list" value={(hdr as any).revenue_category || ''} onChange={e => setHdr(h => ({ ...h, revenue_category: e.target.value } as any))} placeholder={tr('Choisir / créer une classe (ventilation)', 'Pick / create a class (breakdown)')} className={`mt-1 w-full ${inputCls}`} />
+              <datalist id="txn-rev-cat-list">{(revClassNames.length ? revClassNames : ['Service', 'Projet', 'Maintenance', 'Produit', 'Location']).map(n => <option key={n} value={n} />)}</datalist>
+            </label>}
             {hdr.payment_method === 'cash' && (
               <label className="text-xs font-semibold text-gray-500">{tr('Compte', 'Account')}
                 <div className="mt-1 flex items-center gap-1">
