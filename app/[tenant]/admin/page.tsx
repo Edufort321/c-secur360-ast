@@ -22,6 +22,7 @@ import { ReconciliationPanel } from '@/components/admin/ReconciliationPanel';
 import { PdfStylesManager } from '@/components/admin/PdfStylesManager';
 import { KioskSettings } from '@/components/admin/KioskSettings';
 import { CurrencySettings } from '@/components/admin/CurrencySettings';
+import PayrollRunPanel from '@/components/admin/PayrollRunPanel';
 import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
@@ -803,6 +804,9 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
           <button onClick={() => setSel(new Set())} className="ml-auto text-xs font-semibold text-blue-600 hover:underline">{tr('Effacer', 'Clear')}</button>
         </div>
       )}
+
+      {/* Paie réelle (#43) : retenues à la source + comptabilisation sur les feuilles sélectionnées. */}
+      {selArr.length > 0 && <PayrollRunPanel tenant={tenant} tr={tr} rows={rowsFor(selArr)} />}
 
       {/* Semaines */}
       {weeks.length === 0 && <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune feuille de temps pour cette année.', 'No timesheet this year.')}</div>}
