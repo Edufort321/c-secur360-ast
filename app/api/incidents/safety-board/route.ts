@@ -19,12 +19,27 @@ export async function GET(req: NextRequest) {
   const todayIso = new Date().toISOString().slice(0, 10);
   const year = new Date().getFullYear();
 
-  // Jour 0 = début de l'abonnement (création du tenant). Repli : 1 an en arrière si indisponible.
-  let baseline = new Date(Date.now() - 365 * dayMs).toISOString().slice(0, 10);
+  // Jour 0 = début de l'abonnement. Sources par ordre : réinit. manuelle (company_settings) → création du
+  // tenant → 1re ouverture de compte du tenant. Repli FINAL = aujourd'hui (0 jour), jamais une valeur factice.
+  let baseline: string | null = null;
   try {
-    const { data: t } = await supabaseAdmin.from('tenants').select('created_at').eq('subdomain', tenant).maybeSingle();
-    if ((t as any)?.created_at) baseline = dOnly((t as any).created_at) || baseline;
-  } catch { /* repli */ }
+    const { data: cs } = await supabaseAdmin.from('company_settings').select('safety_baseline_date').eq('tenant_id', tenant).maybeSingle();
+    if ((cs as any)?.safety_baseline_date) baseline = dOnly((cs as any).safety_baseline_date);
+  } catch { /* colonne optionnelle */ }
+  if (!baseline) {
+    try {
+      // tenant_id applicatif = subdomain ; on tente les deux clés par robustesse.
+      const { data: t } = await supabaseAdmin.from('tenants').select('created_at').or(`subdomain.eq.${tenant},id.eq.${tenant}`).maybeSingle();
+      baseline = dOnly((t as any)?.created_at);
+    } catch { /* ignore */ }
+  }
+  if (!baseline) {
+    try {
+      const { data: us } = await supabaseAdmin.from('users').select('created_at').eq('tenant_id', tenant).order('created_at', { ascending: true }).limit(1).maybeSingle();
+      baseline = dOnly((us as any)?.created_at);
+    } catch { /* ignore */ }
+  }
+  if (!baseline) baseline = todayIso; // inconnu → 0 jour (pas de chiffre trompeur)
 
   // Incidents (accidents) + passés proches : incident_reports (par type) + table near_miss_events (héritée).
   const [{ data: reports }, { data: nm }] = await Promise.all([
