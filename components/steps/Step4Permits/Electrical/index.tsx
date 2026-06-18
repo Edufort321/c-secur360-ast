@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { currentTenantSlug } from "@/lib/tenantSlug";
 import {
   MapPin, Zap, Lock, Shield, CheckCircle, Menu, X, Save, Download,
   Printer, Plus, ChevronRight, AlertTriangle, Home, FileText, BarChart3,
@@ -1176,7 +1177,7 @@ export default function Electrical({
           updated_at: payload.updated_at,
         });
       }
-      localStorage.setItem(`permit-${payload.permit_number}`, JSON.stringify(payload));
+      localStorage.setItem(`${currentTenantSlug()}::permit-${payload.permit_number}`, JSON.stringify(payload));
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch {

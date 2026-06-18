@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { currentTenantSlug } from "@/lib/tenantSlug";
 import {
   MapPin, Wind, Users, Shield, CheckCircle, Menu, X, Save, Download,
   Printer, History, Plus, ChevronRight, AlertTriangle, Clock, Home,
@@ -372,7 +373,7 @@ export default function ConfinedSpace({
         });
         if (error) { setSaveStatus('error'); return; }
       }
-      localStorage.setItem(`cs-permit-${payload.permit_number}`, JSON.stringify(payload));
+      localStorage.setItem(`${currentTenantSlug()}::cs-permit-${payload.permit_number}`, JSON.stringify(payload));
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
+import { currentTenantSlug } from "@/lib/tenantSlug";
 import {
   ClipboardList, List, Shield, Wrench, Users, CheckCircle,
   Menu, X, Save, Download, Printer, Plus, ChevronRight,
@@ -4167,7 +4168,7 @@ export default function ASTPermit({
         });
         if (error) { setSaveStatus('error'); return false; }
       }
-      localStorage.setItem(`ast-permit-${payload.permit_number}`, JSON.stringify(payload));
+      localStorage.setItem(`${currentTenantSlug()}::ast-permit-${payload.permit_number}`, JSON.stringify(payload));
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
       return true;
