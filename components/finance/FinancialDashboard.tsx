@@ -34,6 +34,28 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [fiscalStartMonth, setFiscalStartMonth] = useState(1);
+  const [preset, setPreset] = useState<string>('');
+
+  // Présélections de période rapides (vue dirigeant : un clic = fenêtre + granularité adaptée).
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  function applyPreset(kind: string) {
+    setPreset(kind);
+    const today = new Date();
+    const end = iso(today);
+    const back = (months: number, g: Granularity) => { const d = new Date(today.getFullYear(), today.getMonth() - months, today.getDate()); setFrom(iso(d)); setTo(end); setGranularity(g); };
+    if (kind === '7j') { const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7); setFrom(iso(d)); setTo(end); setGranularity('day'); }
+    else if (kind === '30j') { const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30); setFrom(iso(d)); setTo(end); setGranularity('day'); }
+    else if (kind === '3m') back(3, 'week');
+    else if (kind === '6m') back(6, 'month');
+    else if (kind === '12m') back(12, 'month');
+    else if (kind === 'ytd') { const fyStart = new Date(today.getFullYear(), fiscalStartMonth - 1, 1); if (fyStart > today) fyStart.setFullYear(fyStart.getFullYear() - 1); setFrom(iso(fyStart)); setTo(end); setGranularity('month'); }
+    else if (kind === 'all') { setFrom(''); setTo(''); setGranularity('month'); }
+  }
+  const PRESETS: { k: string; l: string }[] = [
+    { k: '7j', l: tr('7 jours', '7 days') }, { k: '30j', l: tr('30 jours', '30 days') },
+    { k: '3m', l: tr('3 mois', '3 mo') }, { k: '6m', l: tr('6 mois', '6 mo') },
+    { k: '12m', l: tr('12 mois', '12 mo') }, { k: 'ytd', l: tr('Exercice', 'FYTD') }, { k: 'all', l: tr('Tout', 'All') },
+  ];
 
   const [aiBusy, setAiBusy] = useState(false);
   const [ai, setAi] = useState<AiAnalysis | null>(null);
@@ -134,23 +156,34 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   return (
     <div className="space-y-4">
       {/* Barre de filtres */}
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-xs font-semibold text-gray-400">{tr('Période', 'Period')} :</span>
+        {PRESETS.map(p => (
+          <button key={p.k} onClick={() => applyPreset(p.k)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${preset === p.k ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-gray-700 dark:text-slate-300 dark:hover:bg-gray-600'}`}>
+            {p.l}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
         <label className="text-xs font-semibold text-gray-500">{tr('Granularité', 'Granularity')}
           <select value={granularity} onChange={e => setGranularity(e.target.value as Granularity)} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700">
             {(['day', 'week', 'month', 'quarter', 'year'] as Granularity[]).map(g => <option key={g} value={g}>{tr(GRANULARITY_LABELS[g], g)}</option>)}
           </select>
         </label>
-        <label className="text-xs font-semibold text-gray-500">{tr('Du', 'From')}<input type="date" value={from} onChange={e => setFrom(e.target.value)} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
-        <label className="text-xs font-semibold text-gray-500">{tr('Au', 'To')}<input type="date" value={to} onChange={e => setTo(e.target.value)} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
+        <label className="text-xs font-semibold text-gray-500">{tr('Du', 'From')}<input type="date" value={from} onChange={e => { setFrom(e.target.value); setPreset(''); }} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
+        <label className="text-xs font-semibold text-gray-500">{tr('Au', 'To')}<input type="date" value={to} onChange={e => { setTo(e.target.value); setPreset(''); }} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
         <label className="text-xs font-semibold text-gray-500">{tr('Début d’exercice', 'Fiscal start')}
           <select value={fiscalStartMonth} onChange={e => setFiscalStartMonth(Number(e.target.value))} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700">
             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{tr(m, m)}</option>)}
           </select>
         </label>
-        {(from || to) && <button onClick={() => { setFrom(''); setTo(''); }} className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-600">{tr('Effacer dates', 'Clear dates')}</button>}
+        {(from || to) && <button onClick={() => { setFrom(''); setTo(''); setPreset(''); }} className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-600">{tr('Effacer dates', 'Clear dates')}</button>}
         <div className="ml-auto flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
           <CalendarClock size={14} /> {tr('Fin d’exercice', 'Fiscal year-end')} : {nextClose.fyEnd} ({nextClose.fyDays} {tr('j', 'd')})
         </div>
+      </div>
       </div>
 
       {/* KPI cards */}
@@ -251,6 +284,53 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Variations par période — Δ vs période précédente (CA, charges, marge) avec flèches */}
+      {a.periods.length > 1 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Variations par période', 'Period-over-period variations')}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-xs">
+              <thead className="text-slate-400"><tr>
+                <th className="px-2 py-1 text-left">{tr('Période', 'Period')}</th>
+                <th className="px-2 py-1">{tr('CA', 'Revenue')}</th><th className="px-2 py-1">Δ CA</th>
+                <th className="px-2 py-1">{tr('Charges', 'Expenses')}</th><th className="px-2 py-1">Δ {tr('Ch.', 'Exp.')}</th>
+                <th className="px-2 py-1">{tr('Marge', 'Margin')}</th><th className="px-2 py-1">Δ {tr('Marge', 'Margin')}</th>
+                <th className="px-2 py-1">EBITDA</th>
+              </tr></thead>
+              <tbody>
+                {a.periods.map((p, i) => {
+                  const prev = i > 0 ? a.periods[i - 1] : null;
+                  const dRev = prev ? p.revenue - prev.revenue : null;
+                  const dExp = prev ? p.expense - prev.expense : null;
+                  const dMar = prev ? p.margin - prev.margin : null;
+                  const pct = (cur: number, pr: number) => (pr !== 0 ? ((cur - pr) / Math.abs(pr)) * 100 : null);
+                  const arrow = (d: number | null, goodUp: boolean) => {
+                    if (d == null || Math.abs(d) < 0.5) return <span className="text-slate-300">—</span>;
+                    const good = goodUp ? d > 0 : d < 0;
+                    const Ic = d > 0 ? TrendingUp : TrendingDown;
+                    return <span className={`inline-flex items-center justify-end gap-0.5 font-semibold ${good ? 'text-emerald-600' : 'text-rose-600'}`}><Ic size={11} />{mnyK(Math.abs(d))}</span>;
+                  };
+                  const pctCell = (cur: number, pr: number | undefined) => { const v = prev ? pct(cur, pr as number) : null; return v == null ? '' : <span className="ml-1 text-[10px] text-slate-400">{v >= 0 ? '+' : ''}{v.toFixed(0)}%</span>; };
+                  return (
+                    <tr key={p.key} className="border-t border-slate-100 dark:border-gray-700/50">
+                      <td className="px-2 py-1.5 text-left font-semibold text-slate-700 dark:text-slate-200">{p.label}</td>
+                      <td className="px-2 py-1.5 text-blue-600">{mny(p.revenue)}</td>
+                      <td className="px-2 py-1.5">{arrow(dRev, true)}{prev && pctCell(p.revenue, prev.revenue)}</td>
+                      <td className="px-2 py-1.5 text-rose-500">{mny(p.expense)}</td>
+                      <td className="px-2 py-1.5">{arrow(dExp, false)}{prev && pctCell(p.expense, prev.expense)}</td>
+                      <td className={`px-2 py-1.5 font-semibold ${p.margin >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{mny(p.margin)}</td>
+                      <td className="px-2 py-1.5">{arrow(dMar, true)}</td>
+                      <td className={`px-2 py-1.5 ${p.ebitda >= 0 ? 'text-teal-600' : 'text-red-600'}`}>{mny(p.ebitda)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">{tr('Δ = variation vs période précédente (vert = favorable). Choisissez la granularité (mensuel par défaut) et la période ci-dessus.', 'Δ = change vs previous period (green = favorable). Pick granularity and period above.')}</p>
+        </div>
+      )}
 
       {/* Masse salariale vs CA */}
       {chartData.some(d => d.Paie > 0) && (
