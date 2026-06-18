@@ -697,13 +697,14 @@ function Textarea({ value, onChange, placeholder = '', rows = 3, disabled = fals
 }
 
 // ── Section: Site ──────────────────────────────────────────────────────────
-function SiteSection({ language, permit, readOnly, onUpdate, personnel, projects }: {
+function SiteSection({ language, permit, readOnly, onUpdate, personnel, projects, suppliers }: {
   language: Language;
   permit: HotWorkPermit;
   readOnly: boolean;
   onUpdate: (updater: (p: HotWorkPermit) => HotWorkPermit) => void;
   personnel: EntityOption[];
   projects: EntityOption[];
+  suppliers: EntityOption[];
 }) {
   const t = T[language];
   const ts = t.site;
@@ -726,7 +727,8 @@ function SiteSection({ language, permit, readOnly, onUpdate, personnel, projects
             <TextInput value={si.workLocation} onChange={v => upd('workLocation', v)} placeholder={ts.workLocationPh} disabled={readOnly} />
           </Field>
           <Field label={ts.contractor}>
-            <TextInput value={si.contractor} onChange={v => upd('contractor', v)} placeholder={ts.contractorPh} disabled={readOnly} />
+            <EntitySearch value={si.contractor} placeholder={ts.contractorPh} readOnly={readOnly}
+              options={suppliers} onText={v => upd('contractor', v)} onPick={o => upd('contractor', o.label)} />
           </Field>
           <Field label={ts.supervisor}>
             <EntitySearch value={si.supervisor} placeholder={ts.supervisorPh} readOnly={readOnly}
@@ -1414,7 +1416,7 @@ export default function HotWork({
       <main ref={contentRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
         <div className="max-w-5xl mx-auto">
           {section === 'site' && (
-            <SiteSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} personnel={dir.personnel} projects={dir.projects} />
+            <SiteSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} personnel={dir.personnel} projects={dir.projects} suppliers={dir.suppliers} />
           )}
           {section === 'hazards' && (
             <HazardsSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />

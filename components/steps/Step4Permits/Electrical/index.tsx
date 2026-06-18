@@ -639,10 +639,10 @@ function Checkbox({ label, checked, onChange, disabled = false }: {
 }
 
 // ── Section: Site ──────────────────────────────────────────────────────────
-function SiteSection({ language, permitData, readOnly, onUpdate, personnel, projects }: {
+function SiteSection({ language, permitData, readOnly, onUpdate, personnel, projects, suppliers }: {
   language: Language; permitData: ElectricalPermit; readOnly: boolean;
   onUpdate: (patch: Partial<ElectricalPermit['siteInfo']>) => void;
-  personnel: EntityOption[]; projects: EntityOption[];
+  personnel: EntityOption[]; projects: EntityOption[]; suppliers: EntityOption[];
 }) {
   const Labeled = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div><label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">{label}</label>{children}</div>
@@ -665,7 +665,7 @@ function SiteSection({ language, permitData, readOnly, onUpdate, personnel, proj
         <div className="grid gap-4 sm:grid-cols-2">
           <Labeled label={ts.projectNumber}><EntitySearch value={si.projectNumber} readOnly={readOnly} options={projects} onText={v => onUpdate({ projectNumber: v })} onPick={o => onUpdate({ projectNumber: o.label })} /></Labeled>
           <InputField label={ts.workLocation} value={si.workLocation} onChange={v => onUpdate({ workLocation: v })} disabled={readOnly} />
-          <InputField label={ts.contractor} value={si.contractor} onChange={v => onUpdate({ contractor: v })} disabled={readOnly} />
+          <Labeled label={ts.contractor}><EntitySearch value={si.contractor} readOnly={readOnly} options={suppliers} onText={v => onUpdate({ contractor: v })} onPick={o => onUpdate({ contractor: o.label })} /></Labeled>
           <Labeled label={ts.supervisor}><EntitySearch value={si.supervisor} readOnly={readOnly} options={personnel} onText={v => onUpdate({ supervisor: v })} onPick={o => onUpdate({ supervisor: o.label })} /></Labeled>
           <InputField label={ts.entryDate} value={si.entryDate} type="datetime-local" onChange={v => onUpdate({ entryDate: v })} disabled={readOnly} />
           <InputField label={ts.duration} value={si.duration} onChange={v => onUpdate({ duration: v })} placeholder="ex: 4h" disabled={readOnly} />
@@ -1364,6 +1364,7 @@ export default function Electrical({
               onUpdate={patch => updatePermit(p => ({ ...p, siteInfo: { ...p.siteInfo, ...patch } }))}
               personnel={dir.personnel}
               projects={dir.projects}
+              suppliers={dir.suppliers}
             />
           )}
 

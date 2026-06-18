@@ -18,6 +18,7 @@ interface Props {
   readOnly?: boolean;
   personnel?: EntityOption[];
   projects?: EntityOption[];
+  suppliers?: EntityOption[];
   onUpdate: (data: Partial<ConfinedSpacePermit['siteInformation']>) => void;
 }
 
@@ -242,7 +243,7 @@ function Card({
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
-export default function SiteInformation({ language, permitData, selectedProvince, readOnly = false, personnel = [], projects = [], onUpdate }: Props) {
+export default function SiteInformation({ language, permitData, selectedProvince, readOnly = false, personnel = [], projects = [], suppliers = [], onUpdate }: Props) {
   const t = T[language];
   const si = permitData.siteInformation;
 
@@ -299,8 +300,8 @@ export default function SiteInformation({ language, permitData, selectedProvince
               placeholder={t.workLocationPh} disabled={readOnly} className={inputClass} />
           </Field>
           <Field label={t.contractor}>
-            <input type="text" value={si.contractor ?? ''} onChange={e => update('contractor', e.target.value)}
-              placeholder={t.contractorPh} disabled={readOnly} className={inputClass} />
+            <EntitySearch value={si.contractor ?? ''} readOnly={readOnly} options={suppliers}
+              onText={v => update('contractor', v)} onPick={o => update('contractor', o.label)} placeholder={t.contractorPh} />
           </Field>
           <Field label={t.supervisor}>
             <EntitySearch value={si.supervisor ?? ''} readOnly={readOnly} options={personnel}

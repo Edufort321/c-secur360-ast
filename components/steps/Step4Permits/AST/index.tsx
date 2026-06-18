@@ -1684,9 +1684,9 @@ function RiskMatrix({ prob, sev, lang }: { prob: number; sev: number; lang: Lang
 }
 
 // ── Section: Task ──────────────────────────────────────────────────────────
-function TaskSection({ ast, onChange, language, readOnly, personnel = [], projects = [] }: {
+function TaskSection({ ast, onChange, language, readOnly, personnel = [], projects = [], suppliers = [] }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
-  language: Language; readOnly: boolean; personnel?: EntityOption[]; projects?: EntityOption[];
+  language: Language; readOnly: boolean; personnel?: EntityOption[]; projects?: EntityOption[]; suppliers?: EntityOption[];
 }) {
   const t = T[language].task;
   const ti = ast.taskInfo;
@@ -1758,7 +1758,7 @@ function TaskSection({ ast, onChange, language, readOnly, personnel = [], projec
             <TextInput value={ti.department} onChange={v => set('department', v)} disabled={readOnly} />
           </Field>
           <Field label={t.contractor}>
-            <TextInput value={ti.contractor} onChange={v => set('contractor', v)} disabled={readOnly} />
+            <EntitySearch value={ti.contractor} readOnly={readOnly} options={suppliers} onText={v => set('contractor', v)} onPick={o => set('contractor', o.label)} />
           </Field>
           <Field label={t.supervisor}>
             <EntitySearch value={ti.supervisor} readOnly={readOnly} options={personnel} onText={v => set('supervisor', v)} onPick={o => set('supervisor', o.label)} />
@@ -4378,7 +4378,7 @@ export default function ASTPermit({
       <main ref={contentRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
         <div className="max-w-5xl mx-auto">
           {section === 'task' && (
-            <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} personnel={dir.personnel} projects={dir.projects} />
+            <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} personnel={dir.personnel} projects={dir.projects} suppliers={dir.suppliers} />
           )}
           {section === 'energy' && (
             <LotoSection ast={ast} onChange={updateAst} readOnly={readOnly} language={language} tenant={tenant} />

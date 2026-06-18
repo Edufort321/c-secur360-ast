@@ -6,9 +6,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { EntityOption } from '@/components/ui/EntitySearch';
 
-export function useTenantDirectory(tenant?: string): { personnel: EntityOption[]; projects: EntityOption[] } {
+export function useTenantDirectory(tenant?: string): { personnel: EntityOption[]; projects: EntityOption[]; suppliers: EntityOption[] } {
   const [personnel, setPersonnel] = useState<EntityOption[]>([]);
   const [projects, setProjects] = useState<EntityOption[]>([]);
+  const [suppliers, setSuppliers] = useState<EntityOption[]>([]);
   useEffect(() => {
     if (!tenant) return;
     let active = true;
@@ -18,7 +19,10 @@ export function useTenantDirectory(tenant?: string): { personnel: EntityOption[]
       .catch(() => {});
     supabase.from('projects').select('id, project_number, title').eq('tenant_id', tenant).order('created_at', { ascending: false })
       .then(({ data }) => { if (active) setProjects((data || []).filter((p: any) => p.project_number || p.title).map((p: any) => ({ id: p.id, label: p.project_number || p.title || '', sub: p.project_number ? (p.title || '') : '' }))); }, () => {});
+    // Fournisseurs (achat/contractant) — best-effort.
+    supabase.from('suppliers').select('id, name, contact_name').eq('tenant_id', tenant).order('name')
+      .then(({ data }) => { if (active) setSuppliers((data || []).filter((s: any) => s.name).map((s: any) => ({ id: s.id, label: s.name, sub: s.contact_name || '' }))); }, () => {});
     return () => { active = false; };
   }, [tenant]);
-  return { personnel, projects };
+  return { personnel, projects, suppliers };
 }

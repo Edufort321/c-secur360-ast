@@ -609,6 +609,7 @@ export default function ConfinedSpace({
               readOnly={readOnly}
               personnel={dir.personnel}
               projects={dir.projects}
+              suppliers={dir.suppliers}
               onUpdate={(data) => updatePermit(p => ({ ...p, siteInformation: { ...p.siteInformation, ...data } }))}
             />
           )}
