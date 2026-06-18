@@ -36,6 +36,15 @@ export async function setEquipmentClient(tenant: string, equipmentId: string, cl
   return { error: error?.message };
 }
 
+/** Nombre de PROJETS par client (lien maintenance ↔ projets via projects.end_client_id). */
+export async function getClientProjectCounts(tenant: string): Promise<Record<string, number>> {
+  const { data, error } = await supabase.from('projects').select('end_client_id').eq('tenant_id', tenant);
+  const m: Record<string, number> = {};
+  if (error) return m;
+  for (const p of (data as any[])) { const c = p.end_client_id; if (c) m[c] = (m[c] || 0) + 1; }
+  return m;
+}
+
 /** Dernière inspection par équipement (résultat + date) pour l'état de l'arborescence. */
 export async function getLastInspections(tenant: string): Promise<Record<string, LastInsp>> {
   const { data, error } = await supabase.from('inspection_submissions')

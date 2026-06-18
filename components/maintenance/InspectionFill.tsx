@@ -6,6 +6,8 @@ import { useMemo, useState } from 'react';
 import { Loader2, Save, X, Camera } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { uploadPhoto } from '@/lib/utils/photo';
+import { EntitySearch } from '@/components/ui/EntitySearch';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 import {
   computeResult, saveSubmission, createMaintActionsFromSubmission, RESULT_META,
   type InspectionFormTemplate, type InspectionAnswer, type InspectionSubmission,
@@ -24,6 +26,7 @@ export default function InspectionFill({ tenant, tr, template, equipmentOptions 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
+  const { personnel } = useTenantDirectory(tenant); // recherche dynamique de l'inspecteur (saisie libre permise)
 
   const upd = (id: string, p: Partial<InspectionAnswer>) => setAnswers(a => ({ ...a, [id]: { ...a[id], ...p } }));
   const { result, anomalies } = useMemo(() => computeResult(template, answers), [template, answers]);
@@ -96,7 +99,7 @@ export default function InspectionFill({ tenant, tr, template, equipmentOptions 
               {equipmentOptions.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select></label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-gray-500"><span>{tr('Inspecteur', 'Inspector')}</span>
-            <input className={INP} value={inspector} onChange={e => setInspector(e.target.value)} placeholder={tr('Votre nom', 'Your name')} /></label>
+            <EntitySearch value={inspector} onText={setInspector} onPick={o => setInspector(o.label)} options={personnel} placeholder={tr('Votre nom (ou choisir)', 'Your name (or pick)')} /></label>
         </div>
       </div>
 

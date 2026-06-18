@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X } from 'lucide-react';
 import {
-  getServiceClients, createServiceClient, getServiceEquipment, setEquipmentClient, getLastInspections,
+  getServiceClients, createServiceClient, getServiceEquipment, setEquipmentClient, getLastInspections, getClientProjectCounts,
   type SClient, type SEquip, type LastInsp,
 } from '@/lib/serviceTree';
 import { getInspectionTemplates, RESULT_META, countItems, type InspectionFormTemplate } from '@/lib/inspectionForms';
@@ -18,6 +18,7 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
   const [clients, setClients] = useState<SClient[]>([]);
   const [equip, setEquip] = useState<SEquip[]>([]);
   const [last, setLast] = useState<Record<string, LastInsp>>({});
+  const [projCounts, setProjCounts] = useState<Record<string, number>>({});
   const [templates, setTemplates] = useState<InspectionFormTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -28,8 +29,8 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
 
   async function reload() {
     setLoading(true);
-    const [c, e, l] = await Promise.all([getServiceClients(tenant), getServiceEquipment(tenant), getLastInspections(tenant)]);
-    setClients(c); setEquip(e); setLast(l); setLoading(false);
+    const [c, e, l, pc] = await Promise.all([getServiceClients(tenant), getServiceEquipment(tenant), getLastInspections(tenant), getClientProjectCounts(tenant)]);
+    setClients(c); setEquip(e); setLast(l); setProjCounts(pc); setLoading(false);
   }
   useEffect(() => {
     reload();
@@ -96,7 +97,10 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
                   {isOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
                   <Building2 size={15} className="text-slate-500" />
                   <span className="font-bold text-gray-800 dark:text-gray-100">{c.name}</span>
-                  <span className="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-gray-700">{items.length} {tr('équip.', 'equip.')}</span>
+                  <span className="ml-auto flex items-center gap-1.5">
+                    {projCounts[c.id] > 0 && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">{projCounts[c.id]} {tr('projet(s)', 'project(s)')}</span>}
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-gray-700">{items.length} {tr('équip.', 'equip.')}</span>
+                  </span>
                 </button>
                 {isOpen && (items.length ? items.map(EquipRow) : <div className="px-3 py-3 text-xs text-gray-400">{tr('Aucun équipement. Rattachez-en via la liste « non assignés » ci-dessous.', 'No equipment. Assign some from the "unassigned" list below.')}</div>)}
               </div>
