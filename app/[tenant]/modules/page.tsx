@@ -10,6 +10,7 @@ import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
 import { AnomaliesPanel } from '@/components/dashboard/AnomaliesPanel';
 import { SafetyBoard } from '@/components/dashboard/SafetyBoard';
+import { KioskBroadcast } from '@/components/dashboard/KioskBroadcast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
@@ -38,6 +39,13 @@ export default function ModulesPage() {
   const [pins, setPins] = useState<Record<string, boolean>>({});
   useEffect(() => { try { const s = localStorage.getItem(`dashPins_${tenant}`); if (s) setPins(JSON.parse(s)); } catch { /* ignore */ } }, [tenant]);
   const togglePin = (k: string) => setPins(p => { const n = { ...p, [k]: !p[k] }; try { localStorage.setItem(`dashPins_${tenant}`, JSON.stringify(n)); } catch { /* ignore */ } return n; });
+  // Mode diffusion en veille (kiosque) — réglage tenant (Admin › Système). Lecture best-effort (migration 219).
+  const [kiosk, setKiosk] = useState<{ on: boolean; idle: number }>({ on: false, idle: 60 });
+  useEffect(() => {
+    if (!tenant) return;
+    supabase.from('company_settings').select('kiosk_broadcast, kiosk_idle_seconds').eq('tenant_id', tenant).maybeSingle()
+      .then(({ data }) => { if (data) setKiosk({ on: !!(data as any).kiosk_broadcast, idle: Number((data as any).kiosk_idle_seconds) || 60 }); }, () => {});
+  }, [tenant]);
 
   const [proj, setProj] = useState({ soumission: 0, encours: 0, facture: 0, amount: 0 });
   const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
@@ -262,6 +270,7 @@ export default function ModulesPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+      <KioskBroadcast enabled={kiosk.on} idleSeconds={kiosk.idle} lang={lang === 'en' ? 'en' : 'fr'} />
       <PortalHeader tenant={tenant} />
 
       <div className="px-4 pt-3 lg:px-6">
