@@ -7,30 +7,38 @@ import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, 
 import { listRecurringTasks, saveRecurringTask, deleteRecurringTask, type RecurringTask } from '@/lib/recurringTasks';
 import { getCatalogueConditions, DEFAULT_EMPLOYEE_FACTOR, type CatalogueCondition, type GridCondition } from '@/lib/catalogueConditions';
 import { supabase } from '@/lib/supabase';
-import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
-import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
-import { FinancialDashboard } from '@/components/finance/FinancialDashboard';
-import { ShareholdersModule } from '@/components/admin/ShareholdersModule';
-import { AuditLog } from '@/components/admin/AuditLog';
-import { AlertsModule } from '@/components/admin/AlertsModule';
-import { RecurringModule } from '@/components/admin/RecurringModule';
-import { AssetsModule } from '@/components/admin/AssetsModule';
-import { BankConnect } from '@/components/admin/BankConnect';
-import { OnboardingWizard } from '@/components/admin/OnboardingWizard';
-import { BudgetModule } from '@/components/admin/BudgetModule';
-import { ReconciliationPanel } from '@/components/admin/ReconciliationPanel';
-import { PdfStylesManager } from '@/components/admin/PdfStylesManager';
+import dynamic from 'next/dynamic';
+import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
+import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor, Users } from 'lucide-react';
+// Panneaux légers / fréquents : import statique.
 import { KioskSettings } from '@/components/admin/KioskSettings';
 import { CurrencySettings } from '@/components/admin/CurrencySettings';
 import PayrollRunPanel from '@/components/admin/PayrollRunPanel';
-import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
-import { SuppliersManager } from '@/components/admin/SuppliersManager';
-import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
-import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor, Users } from 'lucide-react';
-import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
-import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
-import { ErpSharing } from '@/components/admin/ErpSharing';
+
+// PERF (#43) : modules d'ONGLETS lourds (graphiques, PDF, finance, formulaires) chargés À LA DEMANDE
+// (next/dynamic, ssr:false) — chaque module ne télécharge son code qu'à l'ouverture de son onglet, ce qui
+// allège fortement le bundle initial de la page admin.
+const dynLoading = () => <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div>;
+const dynOpts = { ssr: false as const, loading: dynLoading };
+const SoumissionsModule = dynamic(() => import('@/components/soumissions/SoumissionsModule').then(m => m.SoumissionsModule), dynOpts);
+const BonsCommandeModule = dynamic(() => import('@/components/bons/BonsCommandeModule').then(m => m.BonsCommandeModule), dynOpts);
+const FinancialDashboard = dynamic(() => import('@/components/finance/FinancialDashboard').then(m => m.FinancialDashboard), dynOpts);
+const ShareholdersModule = dynamic(() => import('@/components/admin/ShareholdersModule').then(m => m.ShareholdersModule), dynOpts);
+const AuditLog = dynamic(() => import('@/components/admin/AuditLog').then(m => m.AuditLog), dynOpts);
+const AlertsModule = dynamic(() => import('@/components/admin/AlertsModule').then(m => m.AlertsModule), dynOpts);
+const RecurringModule = dynamic(() => import('@/components/admin/RecurringModule').then(m => m.RecurringModule), dynOpts);
+const AssetsModule = dynamic(() => import('@/components/admin/AssetsModule').then(m => m.AssetsModule), dynOpts);
+const BankConnect = dynamic(() => import('@/components/admin/BankConnect').then(m => m.BankConnect), dynOpts);
+const OnboardingWizard = dynamic(() => import('@/components/admin/OnboardingWizard').then(m => m.OnboardingWizard), dynOpts);
+const BudgetModule = dynamic(() => import('@/components/admin/BudgetModule').then(m => m.BudgetModule), dynOpts);
+const ReconciliationPanel = dynamic(() => import('@/components/admin/ReconciliationPanel').then(m => m.ReconciliationPanel), dynOpts);
+const PdfStylesManager = dynamic(() => import('@/components/admin/PdfStylesManager').then(m => m.PdfStylesManager), dynOpts);
+const SuppliersManager = dynamic(() => import('@/components/admin/SuppliersManager').then(m => m.SuppliersManager), dynOpts);
+const ProductsCatalog = dynamic(() => import('@/components/admin/ProductsCatalog').then(m => m.ProductsCatalog), dynOpts);
+const PermissionsMatrix = dynamic(() => import('@/components/admin/PermissionsMatrix').then(m => m.PermissionsMatrix), dynOpts);
+const RHDossiers = dynamic(() => import('@/components/admin/RHDossiers').then(m => m.RHDossiers), dynOpts);
+const ErpSharing = dynamic(() => import('@/components/admin/ErpSharing').then(m => m.ErpSharing), dynOpts);
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
