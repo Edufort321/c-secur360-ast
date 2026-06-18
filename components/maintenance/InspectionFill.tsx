@@ -15,11 +15,11 @@ type Tr = (fr: string, en: string) => string;
 type EquipOpt = { id: string; name: string };
 const INP = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900';
 
-export default function InspectionFill({ tenant, tr, template, equipmentOptions = [], onClose, onSaved }:
-  { tenant: string; tr: Tr; template: InspectionFormTemplate; equipmentOptions?: EquipOpt[]; onClose: () => void; onSaved: () => void }) {
+export default function InspectionFill({ tenant, tr, template, equipmentOptions = [], presetEquipmentId, clientId, onClose, onSaved }:
+  { tenant: string; tr: Tr; template: InspectionFormTemplate; equipmentOptions?: EquipOpt[]; presetEquipmentId?: string; clientId?: string | null; onClose: () => void; onSaved: () => void }) {
   const [answers, setAnswers] = useState<Record<string, InspectionAnswer>>({});
   const [inspector, setInspector] = useState('');
-  const [equipmentId, setEquipmentId] = useState('');
+  const [equipmentId, setEquipmentId] = useState(presetEquipmentId || '');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function InspectionFill({ tenant, tr, template, equipmentOptions 
     const eq = equipmentOptions.find(e => e.id === equipmentId);
     const sub: InspectionSubmission = {
       template_id: template.id, template_name: template.name, template_snapshot: template,
-      equipment_id: equipmentId || null, equipment_name: eq?.name || null,
+      equipment_id: equipmentId || null, equipment_name: eq?.name || null, client_id: clientId || null,
       title: template.name, inspector_name: inspector || null, status,
       answers, overall_result: result, anomalies_count: anomalies, notes,
     };

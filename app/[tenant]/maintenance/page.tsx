@@ -2,9 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Square, AlertTriangle, QrCode, Clock, DollarSign, CheckCircle, CalendarClock, ListChecks } from 'lucide-react';
+import { Wrench, LayoutDashboard, ClipboardList, Plus, Trash2, Loader2, Play, Square, AlertTriangle, QrCode, Clock, DollarSign, CheckCircle, CalendarClock, ListChecks, Building2 } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import InspectionFormBuilder from '@/components/maintenance/InspectionFormBuilder';
+import ClientTree from '@/components/maintenance/ClientTree';
 import {
   getEquipmentList, getMaintTemplates, saveMaintTemplate, deleteMaintTemplate, instantiateTemplate,
   getMaintSheets, saveMaintSheet, deleteMaintSheet, getMaintLogs, saveMaintLog,
@@ -19,7 +20,7 @@ const FREQS = ['quotidien', 'hebdomadaire', 'mensuel', 'semestriel', 'annuel', '
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
 const hrs = (min: number) => `${(Math.round((Number(min) || 0) / 6) / 10).toLocaleString('fr-CA')} h`;
 
-type Tab = 'dashboard' | 'equipements' | 'gabarits' | 'formulaires';
+type Tab = 'dashboard' | 'equipements' | 'gabarits' | 'formulaires' | 'clients';
 
 export default function MaintenancePage() {
   const params = useParams();
@@ -167,13 +168,16 @@ export default function MaintenancePage() {
 
         {/* Onglets */}
         <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          {([['dashboard', 'Tableau de bord', LayoutDashboard], ['equipements', 'Équipements & feuilles', Wrench], ['gabarits', 'Gabarits', ClipboardList], ['formulaires', 'Formulaires d\'inspection', ListChecks]] as [Tab, string, any][]).map(([k, lbl, Icon]) => (
+          {([['dashboard', 'Tableau de bord', LayoutDashboard], ['equipements', 'Équipements & feuilles', Wrench], ['gabarits', 'Gabarits', ClipboardList], ['formulaires', 'Formulaires d\'inspection', ListChecks], ['clients', 'Clients & équipements', Building2]] as [Tab, string, any][]).map(([k, lbl, Icon]) => (
             <button key={k} onClick={() => setTab(k)} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${tab === k ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}><Icon size={15} /> {lbl}</button>
           ))}
         </div>
 
         {/* ── FORMULAIRES D'INSPECTION (constructeur customisable) ── */}
         {tab === 'formulaires' && <InspectionFormBuilder tenant={tenant} tr={(fr) => fr} />}
+
+        {/* ── CLIENTS & ÉQUIPEMENTS (arborescence) ── */}
+        {tab === 'clients' && <ClientTree tenant={tenant} tr={(fr) => fr} />}
 
         {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
