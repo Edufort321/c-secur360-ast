@@ -74,7 +74,7 @@ interface CorrectiveAction {
 interface IncidentReportData {
   incidentType: IncidentType;
   province: Province;
-  severityLevel: number; // 1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident
+  severityLevel: number; // GRAVITÉ seule (1=mineur .. 5=critique), indépendante du type (accident vs presque-accident = champ incidentType)
   incidentDate: string;
   incidentTime: string;
   reportedDate: string;
@@ -493,7 +493,7 @@ const TR = {
       title: 'Informations générales', type: "Type d'incident", province: 'Province / territoire', severity: 'Sévérité',
       dateIncident: "Date de l'incident", timeIncident: "Heure de l'incident", dateReport: 'Date du rapport',
       responsible: 'Responsable du rapport', name: 'Nom', namePh: 'Prénom Nom', titlePost: 'Titre / Poste', titlePostPh: 'Contremaître, HSE...', phone: 'Téléphone',
-      sev: ['1 — Mineur (presque-accident)', '2 — Faible (presque-accident)', '3 — Modéré (presque-accident)', '4 — Grave (incident)', '5 — Critique (incident)'],
+      sev: ['1 — Mineur', '2 — Faible', '3 — Modéré', '4 — Grave', '5 — Critique'],
       declDelay: 'Délai de déclaration', requiredForm: 'Formulaire requis',
     },
     loc: { title: "Lieu de l'incident", address: 'Adresse complète', addressPh: '123, rue Principale, Ville, QC', dept: 'Département / Unité', deptPh: 'Atelier, Chantier A, Bureau...', exact: 'Emplacement précis', exactPh: 'Escalier nord, zone de chargement...', weather: 'Conditions météo', lighting: 'Éclairage' },
@@ -533,7 +533,7 @@ const TR = {
       title: 'General information', type: 'Incident type', province: 'Province / territory', severity: 'Severity',
       dateIncident: 'Incident date', timeIncident: 'Incident time', dateReport: 'Report date',
       responsible: 'Report author', name: 'Name', namePh: 'First Last', titlePost: 'Title / Position', titlePostPh: 'Foreman, HSE...', phone: 'Phone',
-      sev: ['1 — Minor (near miss)', '2 — Low (near miss)', '3 — Moderate (near miss)', '4 — Serious (incident)', '5 — Critical (incident)'],
+      sev: ['1 — Minor', '2 — Low', '3 — Moderate', '4 — Serious', '5 — Critical'],
       declDelay: 'Reporting deadline', requiredForm: 'Required form',
     },
     loc: { title: 'Incident location', address: 'Full address', addressPh: '123 Main St, City, QC', dept: 'Department / Unit', deptPh: 'Shop, Site A, Office...', exact: 'Exact location', exactPh: 'North stairwell, loading area...', weather: 'Weather conditions', lighting: 'Lighting' },
