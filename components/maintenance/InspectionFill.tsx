@@ -7,7 +7,7 @@ import { Loader2, Save, X, Camera } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { uploadPhoto } from '@/lib/utils/photo';
 import {
-  computeResult, saveSubmission, RESULT_META,
+  computeResult, saveSubmission, createMaintActionsFromSubmission, RESULT_META,
   type InspectionFormTemplate, type InspectionAnswer, type InspectionSubmission,
 } from '@/lib/inspectionForms';
 
@@ -62,8 +62,12 @@ export default function InspectionFill({ tenant, tr, template, equipmentOptions 
       answers, overall_result: result, anomalies_count: anomalies, notes,
     };
     const r = await saveSubmission(tenant, sub);
+    if (r.error) { setSaving(false); setMsg(tr('Enregistrement impossible : ', 'Save failed: ') + r.error + tr(' (migration 226 appliquée ?)', ' (migration 226 applied?)')); return; }
+    // Interconnexion : une feuille soumise avec anomalies crée des actions correctives de maintenance.
+    if (status === 'submitted' && equipmentId && anomalies > 0) {
+      try { await createMaintActionsFromSubmission(tenant, sub); } catch { /* best-effort */ }
+    }
     setSaving(false);
-    if (r.error) { setMsg(tr('Enregistrement impossible : ', 'Save failed: ') + r.error + tr(' (migration 226 appliquée ?)', ' (migration 226 applied?)')); return; }
     onSaved();
   }
 

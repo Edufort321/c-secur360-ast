@@ -142,6 +142,32 @@ export async function saveSubmission(tenant: string, sub: InspectionSubmission):
   return { id: (data as any)?.id, error: error?.message };
 }
 
+/**
+ * Interconnexion inspection → MAINTENANCE : crée une action corrective (maintenance_actions) par point
+ * en ÉCHEC d'une feuille rattachée à un équipement. Retrait de service → priorité « critical » (alerte).
+ * Renvoie le nombre d'actions créées. Best-effort (n'empêche pas l'enregistrement de la feuille).
+ */
+export async function createMaintActionsFromSubmission(tenant: string, sub: InspectionSubmission): Promise<number> {
+  if (!sub.equipment_id) return 0;
+  const tpl = sub.template_snapshot; const answers = sub.answers || {};
+  const rows: any[] = [];
+  for (const s of tpl?.sections || []) for (const it of s.items || []) {
+    const a = answers[it.id]; if (!a) continue;
+    const fail = (it.type === 'pass_fail' && a.value === 'non_conforme') || (it.type === 'checkbox' && a.value === false);
+    if (!fail) continue;
+    rows.push({
+      tenant_id: tenant, equipment_id: sub.equipment_id,
+      description: `[Inspection ${sub.template_name || ''}] ${it.label}${a.detail ? ' — ' + a.detail : ''}${it.withdrawal ? ' (RETRAIT DE SERVICE)' : ''}`.slice(0, 500),
+      priority: it.withdrawal ? 'critical' : it.critical ? 'high' : 'normal',
+      status: 'todo',
+      photos: Array.isArray(a.photos) ? a.photos : [],
+    });
+  }
+  if (!rows.length) return 0;
+  try { const { error } = await supabase.from('maintenance_actions').insert(rows); return error ? 0 : rows.length; }
+  catch { return 0; }
+}
+
 // ── GABARITS PRÉ-MONTÉS (check-lists SST courantes, conforme/non-conforme/S.O.) ──────────────
 type StarterItem = { label: string; type?: FormItemType; critical?: boolean; withdrawal?: boolean; options?: string[] };
 type Starter = { name: string; category: string; sections: { title: string; items: StarterItem[] }[] };
