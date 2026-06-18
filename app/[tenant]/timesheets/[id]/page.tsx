@@ -191,10 +191,12 @@ export default function TimesheetDetailPage() {
       ]);
       if (!active) return;
       // Garde de propriété : on ne voit/édite QUE sa propre feuille. Un superviseur peut consulter
-      // celle d'un autre, mais en LECTURE SEULE (approbation). Sinon -> accès refusé.
+      // celle d'un autre, en LECTURE SEULE (approbation) — SAUF en mode admin (?admin=1) où l'admin
+      // peut éditer la feuille au nom de l'employé (gestion centralisée Admin › Feuilles de temps). Sinon refusé.
+      const adminEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('admin') === '1';
       if (sh && me && String(sh.employee_id) !== String(me.id)) {
         if (!isSup) { setForbidden(true); setLoading(false); return; }
-        setNotOwner(true);
+        if (!adminEdit) setNotOwner(true);
       }
       setSheet(sh);
       // Charge les lignes existantes + amorce les 7 jours de la période (lun→dim) manquants,

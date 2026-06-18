@@ -25,7 +25,7 @@ import { CurrencySettings } from '@/components/admin/CurrencySettings';
 import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
 import { SuppliersManager } from '@/components/admin/SuppliersManager';
 import { ProductsCatalog } from '@/components/admin/ProductsCatalog';
-import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor } from 'lucide-react';
+import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor, Users } from 'lucide-react';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { RHDossiers } from '@/components/admin/RHDossiers';
 import { CongeTypesManager } from '@/components/admin/CongeTypesManager';
@@ -512,6 +512,23 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   const [open, setOpen] = useState<Set<string>>(new Set()); // semaines dépliées (clé = period_start)
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [tenantName, setTenantName] = useState<string>(tenant);
+  // Vue « tous les employés actifs par semaine » (l'admin crée/édite la feuille au nom de l'employé).
+  const [empView, setEmpView] = useState(false);
+  const [activeEmps, setActiveEmps] = useState<{ id: string; name: string }[]>([]);
+  const [weekStart, setWeekStart] = useState(() => { const x = new Date(); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); });
+  const [creatingFor, setCreatingFor] = useState<string | null>(null);
+  const weekEndOf = (s: string) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10); };
+  const snapMonday = (s: string) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+  async function openOrCreateSheet(emp: { id: string; name: string }) {
+    const start = weekStart, end = weekEndOf(weekStart);
+    const existing = sheets.find(s => String(s.employee_id) === String(emp.id) && s.period_start === start);
+    if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}?admin=1`; return; }
+    setCreatingFor(emp.id);
+    const { data, error } = await supabase.from('timesheets').insert({ tenant_id: tenant, employee_id: emp.id, employee_name: emp.name, period_start: start, period_end: end, status: 'draft' }).select('id').single();
+    setCreatingFor(null);
+    if (error || !data) { alert(error?.message || tr('Création impossible.', 'Creation failed.')); return; }
+    window.location.href = `/${tenant}/timesheets/${data.id}?admin=1`;
+  }
   // Coordonnées bancaires (#52) : état masqué chargé via route serveur ; édition par employé.
   const [showBank, setShowBank] = useState(false);
   const [bankMap, setBankMap] = useState<Record<string, any>>({});
@@ -549,6 +566,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const list = data || [];
     setSheets(list);
     try { setRows(await buildPayrollRows(tenant, list)); } catch { setRows([]); }
+    try { const { data: emps } = await supabase.from('planner_personnel').select('id, name, is_active').eq('tenant_id', tenant).order('name'); setActiveEmps((emps || []).filter((e: any) => e.is_active !== false && e.name).map((e: any) => ({ id: e.id, name: e.name }))); } catch { /* ignore */ }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -680,8 +698,42 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
           </select>
         )}
         <button onClick={() => { setShowBank(true); loadBank(); }} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Banknote size={13} /> {tr('Coordonnées bancaires', 'Bank info')}</button>
+        <button onClick={() => setEmpView(v => !v)} className={`inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-semibold ${empView ? 'border-blue-500 bg-blue-600 text-white' : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300'}`}><Users size={13} /> {tr('Tous les employés (semaine)', 'All employees (week)')}</button>
         <p className="text-xs text-gray-400">{tr('Classé par semaine. Cliquez une semaine pour voir l’équipe, vérifier/approuver/ajuster, et exporter (CSV/PDF/Dépôt) pour la banque.', 'Grouped by week. Click a week to see the team, verify/approve/adjust, and export (CSV/PDF/Deposit) for the bank.')}</p>
       </div>
+
+      {/* Vue « tous les employés actifs » pour une semaine : créer/éditer la feuille au nom de l'employé (admin). */}
+      {empView && (
+        <div className="rounded-2xl border border-blue-200 bg-white p-4 dark:border-blue-500/30 dark:bg-gray-800">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Feuilles de la semaine — tous les employés actifs', 'Week sheets — all active employees')}</span>
+            <input type="date" value={weekStart} onChange={e => setWeekStart(snapMonday(e.target.value))} className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900" />
+            <span className="text-xs text-gray-400">{tr('Semaine du', 'Week of')} {weekStart} → {weekEndOf(weekStart)}</span>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr><th className="px-3 py-2">{tr('Employé', 'Employee')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right"></th></tr></thead>
+              <tbody>
+                {activeEmps.length === 0 && <tr><td colSpan={3} className="px-3 py-6 text-center text-gray-400">{tr('Aucun employé actif.', 'No active employee.')}</td></tr>}
+                {activeEmps.map(emp => {
+                  const sh = sheets.find(s => String(s.employee_id) === String(emp.id) && s.period_start === weekStart);
+                  return (
+                    <tr key={emp.id} className="border-t border-gray-100 dark:border-gray-700/50">
+                      <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{emp.name}</td>
+                      <td className="px-3 py-2">{sh ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tsCls(sh.status)}`}>{tsLabel(sh.status)}</span> : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-700">{tr('Aucune feuille', 'No sheet')}</span>}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button onClick={() => openOrCreateSheet(emp)} disabled={creatingFor === emp.id} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                          {creatingFor === emp.id ? <Loader2 size={12} className="animate-spin" /> : null} {sh ? tr('Éditer', 'Edit') : tr('Créer + éditer', 'Create + edit')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Modale Coordonnées bancaires (#52) — saisie sécurisée par employé (numéros masqués au repos). */}
       {showBank && (
