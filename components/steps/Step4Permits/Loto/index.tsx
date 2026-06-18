@@ -7,6 +7,8 @@ import {
   BarChart3, Trash2, Zap, ClipboardList, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 
 // ── Supabase (best-effort) ─────────────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -1326,11 +1328,12 @@ function VerificationSection({ language, permit, readOnly, onUpdate }: {
 }
 
 // ── Section: Personnel ─────────────────────────────────────────────────────
-function PersonnelSection({ language, permit, readOnly, onUpdate }: {
+function PersonnelSection({ language, permit, readOnly, onUpdate, personnel = [] }: {
   language: Language;
   permit: LotoPermit;
   readOnly: boolean;
   onUpdate: (updater: (p: LotoPermit) => LotoPermit) => void;
+  personnel?: EntityOption[];
 }) {
   const t = T[language].personnel;
   const coord = permit.personnel.coordinator;
@@ -1419,7 +1422,7 @@ function PersonnelSection({ language, permit, readOnly, onUpdate }: {
                 {workers.map(worker => (
                   <tr key={worker.id} className="border-b border-slate-100 dark:border-slate-700/50">
                     <td className="py-2 pr-3">
-                      <TextInput value={worker.name} onChange={v => updateWorker(worker.id, 'name', v)} placeholder={t.workerNamePh} disabled={readOnly} />
+                      <EntitySearch value={worker.name} readOnly={readOnly} options={personnel} onText={v => updateWorker(worker.id, 'name', v)} onPick={o => updateWorker(worker.id, 'name', o.label)} placeholder={t.workerNamePh} />
                     </td>
                     <td className="py-2 pr-3">
                       <TextInput value={worker.company} onChange={v => updateWorker(worker.id, 'company', v)} placeholder={t.workerCompanyPh} disabled={readOnly} />
@@ -1621,6 +1624,7 @@ export default function Loto({
     ...initialData,
   }));
 
+  const dir = useTenantDirectory(tenant);
   const [section, setSection] = useState<Section>('equipment');
   const [menuOpen, setMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -1845,7 +1849,7 @@ export default function Loto({
             <VerificationSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />
           )}
           {section === 'personnel' && (
-            <PersonnelSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} />
+            <PersonnelSection language={language} permit={permit} readOnly={readOnly} onUpdate={updatePermit} personnel={dir.personnel} />
           )}
           {section === 'finalization' && (
             <FinalizationSection

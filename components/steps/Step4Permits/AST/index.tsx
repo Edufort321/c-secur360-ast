@@ -11,6 +11,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
 import { useSite } from '@/contexts/SiteContext';
+import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 
 // ── Supabase (best-effort) ─────────────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -1682,9 +1684,9 @@ function RiskMatrix({ prob, sev, lang }: { prob: number; sev: number; lang: Lang
 }
 
 // ── Section: Task ──────────────────────────────────────────────────────────
-function TaskSection({ ast, onChange, language, readOnly }: {
+function TaskSection({ ast, onChange, language, readOnly, personnel = [], projects = [] }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
-  language: Language; readOnly: boolean;
+  language: Language; readOnly: boolean; personnel?: EntityOption[]; projects?: EntityOption[];
 }) {
   const t = T[language].task;
   const ti = ast.taskInfo;
@@ -1744,7 +1746,7 @@ function TaskSection({ ast, onChange, language, readOnly }: {
       <Card title={t.cardGeneral} icon={<ClipboardList className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label={t.projectNumber}>
-            <TextInput value={ti.projectNumber} onChange={v => set('projectNumber', v)} disabled={readOnly} />
+            <EntitySearch value={ti.projectNumber} readOnly={readOnly} options={projects} onText={v => set('projectNumber', v)} onPick={o => set('projectNumber', o.label)} />
           </Field>
           <Field label={t.projectName}>
             <TextInput value={ti.projectName} onChange={v => set('projectName', v)} disabled={readOnly} />
@@ -1759,7 +1761,7 @@ function TaskSection({ ast, onChange, language, readOnly }: {
             <TextInput value={ti.contractor} onChange={v => set('contractor', v)} disabled={readOnly} />
           </Field>
           <Field label={t.supervisor}>
-            <TextInput value={ti.supervisor} onChange={v => set('supervisor', v)} disabled={readOnly} />
+            <EntitySearch value={ti.supervisor} readOnly={readOnly} options={personnel} onText={v => set('supervisor', v)} onPick={o => set('supervisor', o.label)} />
           </Field>
           <Field label={t.supervisorCert}>
             <TextInput value={ti.supervisorCert} onChange={v => set('supervisorCert', v)} disabled={readOnly} />
@@ -4138,6 +4140,7 @@ export default function ASTPermit({
     ...initialData,
   }));
 
+  const dir = useTenantDirectory(tenant);
   const [section, setSection] = useState<SectionId>('task');
   const [menuOpen, setMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -4375,7 +4378,7 @@ export default function ASTPermit({
       <main ref={contentRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
         <div className="max-w-5xl mx-auto">
           {section === 'task' && (
-            <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+            <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} personnel={dir.personnel} projects={dir.projects} />
           )}
           {section === 'energy' && (
             <LotoSection ast={ast} onChange={updateAst} readOnly={readOnly} language={language} tenant={tenant} />
