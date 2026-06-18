@@ -9,6 +9,7 @@ import {
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
 import { AnomaliesPanel } from '@/components/dashboard/AnomaliesPanel';
+import { SafetyBoard } from '@/components/dashboard/SafetyBoard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
@@ -308,6 +309,7 @@ export default function ModulesPage() {
 
           {/* Vue d'ensemble des non-conformités/anomalies (coordination+ ou si nom dans le formulaire) */}
           <AiTokenAlert tenant={tenant} tr={tr} />
+          <SafetyBoard lang={lang === 'en' ? 'en' : 'fr'} />
           <div className="mb-4"><AnomaliesPanel tenant={tenant} /></div>
 
           {loading ? (
