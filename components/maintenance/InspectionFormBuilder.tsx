@@ -3,7 +3,9 @@
 // Liste des gabarits + éditeur : sections, items typés (conforme/non-conforme, texte, nombre, liste,
 // date, photo, case), flags critique/retrait, réordonnancement. Stocke dans inspection_form_templates.
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Save, ChevronUp, ChevronDown, ClipboardList, Copy, FilePlus2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, ChevronUp, ChevronDown, ClipboardList, Copy, FilePlus2, FileDown, Download } from 'lucide-react';
+import { exportInspectionPdf } from '@/lib/inspectionPdf';
+import { supabase } from '@/lib/supabase';
 import {
   getInspectionTemplates, saveInspectionTemplate, deleteInspectionTemplate, emptyTemplate, newId, countItems,
   STARTER_TEMPLATES, starterToTemplate, getSubmissions, RESULT_META,
@@ -25,6 +27,7 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
   const [equip, setEquip] = useState<{ id: string; name: string }[]>([]);
   const [subs, setSubs] = useState<InspectionSubmission[]>([]);
   const [subsLoading, setSubsLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -35,6 +38,20 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
   }, [tenant]);
   async function loadSubs() { setSubsLoading(true); setSubs(await getSubmissions(tenant, { limit: 200 })); setSubsLoading(false); }
   useEffect(() => { if (mode === 'sheets') loadSubs(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [mode, tenant]);
+  useEffect(() => { supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle().then(({ data }) => setLogoUrl((data as any)?.logo_url || null), () => {}); }, [tenant]);
+
+  // Export CSV de la liste des feuilles.
+  function exportSubsCsv() {
+    const H = ['Date', 'Formulaire', 'Équipement', 'Inspecteur', 'Résultat', 'Anomalies', 'Statut'];
+    const esc = (v: any) => { const s = String(v ?? ''); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const L = [H.join(',')];
+    for (const s of subs) L.push([s.created_at?.slice(0, 10), s.template_name, s.equipment_name, s.inspector_name, s.overall_result, s.anomalies_count || 0, s.status].map(esc).join(','));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + L.join('\r\n')], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `inspections_${tenant}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  }
+  async function pdfSub(s: InspectionSubmission) {
+    try { await exportInspectionPdf(tenant, s, { logoUrl, tenantName: tenant }); } catch (e: any) { alert(tr('Export PDF impossible : ', 'PDF export failed: ') + (e?.message || e)); }
+  }
 
   // ── Mutations locales sur le gabarit en édition ──
   const patch = (p: Partial<InspectionFormTemplate>) => setEdit(e => e ? { ...e, ...p } : e);
@@ -207,27 +224,49 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
       {mode === 'sheets' && (
         subsLoading ? <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>
           : subs.length === 0 ? <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune inspection. Onglet « Formulaires » → « Faire une inspection ».', 'No inspection yet. "Forms" tab → "Run inspection".')}</div>
-            : (
-              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr>
-                    <th className="px-3 py-2">{tr('Date', 'Date')}</th><th className="px-3 py-2">{tr('Formulaire', 'Form')}</th><th className="px-3 py-2">{tr('Équipement', 'Equipment')}</th><th className="px-3 py-2">{tr('Inspecteur', 'Inspector')}</th><th className="px-3 py-2">{tr('Résultat', 'Result')}</th><th className="px-3 py-2 text-right">{tr('Anomalies', 'Anomalies')}</th>
-                  </tr></thead>
-                  <tbody>
-                    {subs.map(s => { const rm = s.overall_result ? RESULT_META[s.overall_result] : null; return (
-                      <tr key={s.id} className="border-t border-gray-100 dark:border-gray-700/50">
-                        <td className="px-3 py-2 text-gray-500">{(s.created_at || '').slice(0, 10)}</td>
-                        <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{s.template_name || '—'}{s.status === 'draft' && <span className="ml-1 rounded bg-gray-100 px-1 text-[9px] text-gray-500 dark:bg-gray-700">{tr('brouillon', 'draft')}</span>}</td>
-                        <td className="px-3 py-2 text-gray-500">{s.equipment_name || '—'}</td>
-                        <td className="px-3 py-2 text-gray-500">{s.inspector_name || '—'}</td>
-                        <td className="px-3 py-2">{rm ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resBadge(rm.color)}`}>{tr(rm.fr, rm.en)}</span> : '—'}</td>
-                        <td className="px-3 py-2 text-right font-semibold">{s.anomalies_count || 0}</td>
-                      </tr>
-                    ); })}
-                  </tbody>
-                </table>
-              </div>
-            )
+            : (() => {
+              // KPI : total, par résultat, anomalies cumulées.
+              const k = { total: subs.length, conforme: 0, conditionnel: 0, non_conforme: 0, retrait: 0, anomalies: 0 } as any;
+              for (const s of subs) { if (s.overall_result && k[s.overall_result] != null) k[s.overall_result]++; k.anomalies += s.anomalies_count || 0; }
+              const kpis = [
+                { l: tr('Inspections', 'Inspections'), v: k.total, c: 'text-gray-800 dark:text-gray-100' },
+                { l: tr('Conformes', 'Pass'), v: k.conforme, c: 'text-emerald-600' },
+                { l: tr('Non conformes', 'Fail'), v: k.non_conforme + k.retrait, c: 'text-rose-600' },
+                { l: tr('Anomalies', 'Anomalies'), v: k.anomalies, c: 'text-amber-600' },
+              ];
+              return (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {kpis.map((x, i) => (
+                      <div key={i} className="rounded-xl border border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
+                        <div className={`text-xl font-extrabold ${x.c}`}>{x.v}</div><div className="text-[11px] text-gray-400">{x.l}</div>
+                      </div>
+                    ))}
+                    <button onClick={exportSubsCsv} className="ml-auto inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"><Download size={13} /> CSV</button>
+                  </div>
+                  <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr>
+                        <th className="px-3 py-2">{tr('Date', 'Date')}</th><th className="px-3 py-2">{tr('Formulaire', 'Form')}</th><th className="px-3 py-2">{tr('Équipement', 'Equipment')}</th><th className="px-3 py-2">{tr('Inspecteur', 'Inspector')}</th><th className="px-3 py-2">{tr('Résultat', 'Result')}</th><th className="px-3 py-2 text-right">{tr('Anomalies', 'Anomalies')}</th><th className="px-3 py-2 text-right">PDF</th>
+                      </tr></thead>
+                      <tbody>
+                        {subs.map(s => { const rm = s.overall_result ? RESULT_META[s.overall_result] : null; return (
+                          <tr key={s.id} className="border-t border-gray-100 dark:border-gray-700/50">
+                            <td className="px-3 py-2 text-gray-500">{(s.created_at || '').slice(0, 10)}</td>
+                            <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{s.template_name || '—'}{s.status === 'draft' && <span className="ml-1 rounded bg-gray-100 px-1 text-[9px] text-gray-500 dark:bg-gray-700">{tr('brouillon', 'draft')}</span>}</td>
+                            <td className="px-3 py-2 text-gray-500">{s.equipment_name || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{s.inspector_name || '—'}</td>
+                            <td className="px-3 py-2">{rm ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resBadge(rm.color)}`}>{tr(rm.fr, rm.en)}</span> : '—'}</td>
+                            <td className="px-3 py-2 text-right font-semibold">{s.anomalies_count || 0}</td>
+                            <td className="px-3 py-2 text-right"><button onClick={() => pdfSub(s)} title={tr('Exporter en PDF', 'Export to PDF')} className="rounded-lg border border-gray-300 px-2 py-1 text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"><FileDown size={14} /></button></td>
+                          </tr>
+                        ); })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()
       )}
     </div>
   );
