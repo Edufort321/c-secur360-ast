@@ -233,7 +233,38 @@ export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<{
       clearCatFallback(tenant, id); // tout est en base : plus besoin du repli
     }
   }
+  // Synchro vers Paie & Avantages : chaque subsistance/condition du catalogue (prix VENDANT) remonte en
+  // avantage (timesheet_allowances) où l'admin saisit le prix PAYÉ à l'employé. Best-effort (migration 222).
+  if (id) syncCatalogueAllowances(tenant, c).catch(() => { /* migration 222 absente */ });
   return { id: id as string, stripped };
+}
+
+/** Remonte les conditions du catalogue (vendant) vers les avantages de paie (sans écraser le prix employé). */
+export async function syncCatalogueAllowances(tenant: string, c: CatalogueTaux): Promise<void> {
+  const ex = c.extras || {};
+  const items: { key: string; name: string; sell: number }[] = [];
+  const push = (k: string, n: string, v: any) => { const val = Number(v) || 0; if (val > 0) items.push({ key: k, name: n, sell: val }); };
+  push('sub_h5', 'Subsistance 5 h', ex.sub_h5);
+  push('sub_h12', 'Subsistance 12 h', ex.sub_h12);
+  push('sub_h15', 'Subsistance 15 h', ex.sub_h15);
+  push('sub_nuitee', 'Subsistance nuitée', ex.sub_nuitee);
+  push('hebergement', 'Hébergement', ex.hebergement);
+  (c.custom_rates || []).forEach((r, i) => {
+    const slug = String(r.label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `custom_${i}`;
+    if ((Number(r.value) || 0) > 0) items.push({ key: `cat_${slug}`, name: r.label || `Frais ${i + 1}`, sell: Number(r.value) || 0 });
+  });
+  if (!items.length) return;
+  const { data: existing } = await supabase.from('timesheet_allowances').select('id, catalogue_key').eq('tenant_id', tenant).not('catalogue_key', 'is', null);
+  const byKey = new Map((existing || []).map((r: any) => [r.catalogue_key, r.id]));
+  for (const it of items) {
+    const exId = byKey.get(it.key);
+    if (exId) {
+      // Met à jour le nom + le prix VENDANT, sans toucher au prix employé (amount) déjà réglé par l'admin.
+      await supabase.from('timesheet_allowances').update({ name: it.name, sell_amount: it.sell, source: 'catalogue' }).eq('id', exId);
+    } else {
+      await supabase.from('timesheet_allowances').insert({ tenant_id: tenant, name: it.name, amount: it.sell, sell_amount: it.sell, source: 'catalogue', catalogue_key: it.key, is_taxable: false, active: true, sort_order: 100, personnel_ids: [], recurring_task_ids: [] });
+    }
+  }
 }
 export async function deleteCatalogue(tenant: string, id: string): Promise<void> {
   const { error } = await supabase.from('catalogue_taux').delete().eq('tenant_id', tenant).eq('id', id);
