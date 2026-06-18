@@ -1871,7 +1871,10 @@ function PersonsSection({ report, onChange, readOnly, personnelList }: {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 mb-2">
               <Field label={t.p.wName}>
-                <TextInput value={w.name} onChange={v => updateWitness(w.id, x => ({ ...x, name: v }))} readOnly={readOnly} />
+                <EntitySearch value={w.name} readOnly={readOnly}
+                  options={personnelList.map(pl => ({ id: pl.id, label: pl.name, sub: pl.role }))}
+                  onText={v => updateWitness(w.id, x => ({ ...x, name: v }))}
+                  onPick={o => updateWitness(w.id, x => ({ ...x, name: o.label, jobTitle: x.jobTitle || o.sub || '' }))} />
               </Field>
               <Field label={t.p.wPost}>
                 <TextInput value={w.jobTitle} onChange={v => updateWitness(w.id, x => ({ ...x, jobTitle: v }))} readOnly={readOnly} />
