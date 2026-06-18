@@ -1,31 +1,41 @@
 'use client';
-// Arborescence CLIENT → ÉQUIPEMENTS à vérifier (module Maintenance, phase 2). Une compagnie de service
-// voit tous ses clients (admin OU custom) avec les équipements rattachés et l'état de leur dernière
-// inspection ; rattache/déplace un équipement, crée un client custom, et lance une inspection depuis l'arbre.
-import { useEffect, useState } from 'react';
-import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X } from 'lucide-react';
+// Arborescence CLIENT → ÉQUIPEMENTS (module Maintenance). Une compagnie de service voit ses clients
+// (admin OU custom) avec les équipements rattachés et l'état de leur dernière inspection. On CRÉE des
+// équipements (nom, # série, marque, modèle, récurrence, alertes QR), on imprime leur QR (multi-format,
+// comme l'inventaire), on rattache/déplace, et on lance une INSPECTION depuis un GABARIT existant.
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X, QrCode, Pencil, Trash2, Bell } from 'lucide-react';
 import {
   getServiceClients, createServiceClient, getServiceEquipment, setEquipmentClient, getLastInspections, getClientProjectCounts,
-  type SClient, type SEquip, type LastInsp,
+  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment,
+  type SClient, type SEquip, type LastInsp, type EquipInput,
 } from '@/lib/serviceTree';
-import { getInspectionTemplates, RESULT_META, countItems, type InspectionFormTemplate } from '@/lib/inspectionForms';
-import InspectionFill from '@/components/maintenance/InspectionFill';
+import { RESULT_META } from '@/lib/inspectionForms';
+import { getGabarits, type Gabarit } from '@/lib/maintGabarits';
+import MaintInspectFill from '@/components/maintenance/MaintInspectFill';
+import EquipmentQrPrint from '@/components/maintenance/EquipmentQrPrint';
 
 type Tr = (fr: string, en: string) => string;
 const resBadge = (c?: string) => (({ emerald: 'bg-emerald-100 text-emerald-700', amber: 'bg-amber-100 text-amber-700', rose: 'bg-rose-100 text-rose-700', red: 'bg-red-600 text-white' } as Record<string, string>)[c || ''] || 'bg-gray-100 text-gray-500');
+const FREQS = ['', 'quotidien', 'hebdomadaire', 'mensuel', 'trimestriel', 'semestriel', 'annuel'];
+const INP = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900';
+
+type EquipDraft = EquipInput & { id?: string };
 
 export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
   const [clients, setClients] = useState<SClient[]>([]);
   const [equip, setEquip] = useState<SEquip[]>([]);
   const [last, setLast] = useState<Record<string, LastInsp>>({});
   const [projCounts, setProjCounts] = useState<Record<string, number>>({});
-  const [templates, setTemplates] = useState<InspectionFormTemplate[]>([]);
+  const [gabarits, setGabarits] = useState<Gabarit[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [newClient, setNewClient] = useState('');
   const [busy, setBusy] = useState(false);
-  const [picker, setPicker] = useState<{ equipmentId: string; clientId: string | null } | null>(null);
-  const [fill, setFill] = useState<{ template: InspectionFormTemplate; equipmentId: string; clientId: string | null } | null>(null);
+  const [picker, setPicker] = useState<{ equipment: SEquip } | null>(null);
+  const [fill, setFill] = useState<{ gabarit: Gabarit; equipment: SEquip } | null>(null);
+  const [equipForm, setEquipForm] = useState<EquipDraft | null>(null);
+  const [qrPrint, setQrPrint] = useState<SEquip[] | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -34,13 +44,12 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
   }
   useEffect(() => {
     reload();
-    getInspectionTemplates(tenant).then(t => setTemplates(t.filter(x => x.active !== false)), () => {});
+    getGabarits(tenant).then(setGabarits, () => {});
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [tenant]);
 
-  const equipOptions = equip.map(e => ({ id: e.id, name: e.name }));
   const byClient = (cid: string) => equip.filter(e => e.client_id === cid);
-  const unassigned = equip.filter(e => !e.client_id);
+  const unassigned = useMemo(() => equip.filter(e => !e.client_id), [equip]);
   const toggle = (id: string) => setOpen(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   async function addClient() {
@@ -51,12 +60,26 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
   async function moveEquip(equipmentId: string, clientId: string | null) {
     await setEquipmentClient(tenant, equipmentId, clientId); reload();
   }
+  async function saveEquip() {
+    if (!equipForm) return;
+    if (!(equipForm.name || '').trim() && !(equipForm.serial || '').trim()) { alert(tr('Nom ou # série requis.', 'Name or serial required.')); return; }
+    setBusy(true);
+    const r = equipForm.id ? await updateServiceEquipment(tenant, equipForm.id, equipForm) : await createServiceEquipment(tenant, equipForm);
+    setBusy(false);
+    if (r.error) { alert(r.error); return; }
+    setEquipForm(null); reload();
+  }
+  async function removeEquip(e: SEquip) {
+    if (!window.confirm(tr(`Supprimer « ${e.name} » ?`, `Delete "${e.name}"?`))) return;
+    await deleteServiceEquipment(tenant, e.id); reload();
+  }
 
   if (fill) {
-    return <InspectionFill tenant={tenant} tr={tr} template={fill.template} equipmentOptions={equipOptions}
-      presetEquipmentId={fill.equipmentId} clientId={fill.clientId}
+    return <MaintInspectFill tenant={tenant} tr={tr} gabarit={fill.gabarit} equipment={fill.equipment} clientId={fill.equipment.client_id}
       onClose={() => setFill(null)} onSaved={() => { setFill(null); reload(); }} />;
   }
+
+  const freqLabel = (f?: string | null) => f ? f : null;
 
   // Ligne d'équipement (réutilisée par client + non-assignés)
   const EquipRow = (e: SEquip) => {
@@ -64,14 +87,22 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
     const rm = li?.result ? RESULT_META[li.result as keyof typeof RESULT_META] : null;
     return (
       <div key={e.id} className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2 dark:border-gray-700/50">
-        <span className="min-w-0 flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{e.name}{e.serial ? <span className="text-gray-400"> · {e.serial}</span> : ''}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-gray-800 dark:text-gray-100">
+          {e.name}{e.serial ? <span className="text-gray-400"> · {e.serial}</span> : ''}
+          {(e.brand || e.model) ? <span className="text-gray-400"> · {[e.brand, e.model].filter(Boolean).join(' ')}</span> : ''}
+          {e.public_alerts && <Bell size={12} className="ml-1 inline text-orange-500" />}
+        </span>
+        {freqLabel(e.frequency) && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-gray-700">{e.frequency}</span>}
         {rm ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resBadge(rm.color)}`}>{tr(rm.fr, rm.en)}{li?.date ? ` · ${li.date}` : ''}</span>
           : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400 dark:bg-gray-700">{tr('jamais inspecté', 'never inspected')}</span>}
         <select value={e.client_id || ''} onChange={ev => moveEquip(e.id, ev.target.value || null)} className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-900" title={tr('Rattacher à un client', 'Assign to client')}>
           <option value="">{tr('— non assigné —', '— unassigned —')}</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <button onClick={() => setPicker({ equipmentId: e.id, clientId: e.client_id || null })} disabled={!templates.length} title={!templates.length ? tr('Créez d’abord un formulaire', 'Create a form first') : ''} className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50"><ClipboardCheck size={13} /> {tr('Inspecter', 'Inspect')}</button>
+        <button onClick={() => setQrPrint([e])} title={tr('Imprimer le QR', 'Print QR')} className="rounded-lg border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50 dark:border-gray-600"><QrCode size={14} /></button>
+        <button onClick={() => setEquipForm({ ...e, type: e.type || '', name: e.name, serial: e.serial || '', brand: e.brand || '', model: e.model || '', location: e.location || '', frequency: e.frequency || '', public_alerts: !!e.public_alerts, client_id: e.client_id })} title={tr('Modifier', 'Edit')} className="rounded-lg border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50 dark:border-gray-600"><Pencil size={14} /></button>
+        <button onClick={() => removeEquip(e)} title={tr('Supprimer', 'Delete')} className="rounded-lg border border-gray-300 p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:border-gray-600"><Trash2 size={14} /></button>
+        <button onClick={() => setPicker({ equipment: e })} disabled={!gabarits.length} title={!gabarits.length ? tr('Créez d’abord un gabarit', 'Create a template first') : ''} className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50"><ClipboardCheck size={13} /> {tr('Inspecter', 'Inspect')}</button>
       </div>
     );
   };
@@ -80,9 +111,11 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
         <Building2 size={16} className="text-orange-600" />
-        <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Clients & équipements à vérifier', 'Clients & equipment to inspect')}</span>
-        <div className="ml-auto flex items-center gap-2">
-          <input value={newClient} onChange={e => setNewClient(e.target.value)} onKeyDown={e => e.key === 'Enter' && addClient()} placeholder={tr('Nouveau client (custom)', 'New client (custom)')} className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900" />
+        <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Clients & équipements', 'Clients & equipment')}</span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button onClick={() => setEquipForm({ type: '', name: '', serial: '', brand: '', model: '', location: '', frequency: '', public_alerts: false, client_id: null })} className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"><Plus size={13} /> {tr('Nouvel équipement', 'New equipment')}</button>
+          {equip.length > 0 && <button onClick={() => setQrPrint(equip)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"><QrCode size={13} /> {tr('Imprimer tous les QR', 'Print all QR')}</button>}
+          <input value={newClient} onChange={e => setNewClient(e.target.value)} onKeyDown={e => e.key === 'Enter' && addClient()} placeholder={tr('Nouveau client', 'New client')} className={INP} />
           <button onClick={addClient} disabled={busy || !newClient.trim()} className="inline-flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700">{busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {tr('Client', 'Client')}</button>
         </div>
       </div>
@@ -102,11 +135,11 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-gray-700">{items.length} {tr('équip.', 'equip.')}</span>
                   </span>
                 </button>
-                {isOpen && (items.length ? items.map(EquipRow) : <div className="px-3 py-3 text-xs text-gray-400">{tr('Aucun équipement. Rattachez-en via la liste « non assignés » ci-dessous.', 'No equipment. Assign some from the "unassigned" list below.')}</div>)}
+                {isOpen && (items.length ? items.map(EquipRow) : <div className="px-3 py-3 text-xs text-gray-400">{tr('Aucun équipement. Crée-en un (« Nouvel équipement ») ou rattache-en depuis « non assignés ».', 'No equipment. Create one or assign from "unassigned".')}</div>)}
               </div>
             );
           })}
-          {clients.length === 0 && <p className="text-sm text-gray-400">{tr('Aucun client. Ajoutez vos clients (ou importez-les dans l’admin) puis rattachez les équipements.', 'No client. Add your clients (or import them in admin) then assign equipment.')}</p>}
+          {clients.length === 0 && <p className="text-sm text-gray-400">{tr('Aucun client. Ajoutez vos clients (ou importez-les dans l’admin) puis rattachez les équipements.', 'No client. Add your clients then assign equipment.')}</p>}
 
           {/* Équipements non assignés */}
           <div className="overflow-hidden rounded-2xl border border-dashed border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800">
@@ -117,23 +150,63 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
         </div>
       )}
 
-      {/* Sélecteur de formulaire avant l'inspection */}
+      {/* Sélecteur de GABARIT avant l'inspection */}
       {picker && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setPicker(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-bold text-gray-900 dark:text-white">{tr('Choisir le formulaire', 'Choose the form')}</h3><button onClick={() => setPicker(null)} className="text-gray-400 hover:text-gray-700">✕</button></div>
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-bold text-gray-900 dark:text-white">{tr('Choisir le gabarit', 'Choose the template')}</h3><button onClick={() => setPicker(null)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button></div>
+            <p className="mb-2 text-xs text-gray-500">{picker.equipment.name}</p>
             <div className="space-y-2">
-              {templates.map(t => (
-                <button key={t.id} onClick={() => { setFill({ template: t, equipmentId: picker.equipmentId, clientId: picker.clientId }); setPicker(null); }} className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm hover:bg-orange-50 dark:border-gray-700 dark:hover:bg-orange-500/10">
-                  <span className="font-semibold text-gray-800 dark:text-gray-100">{t.name}</span>
-                  <span className="text-[11px] text-gray-400">{countItems(t)} {tr('points', 'items')}</span>
+              {gabarits.map(g => (
+                <button key={g.id} onClick={() => { setFill({ gabarit: g, equipment: picker.equipment }); setPicker(null); }} className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm hover:bg-orange-50 dark:border-gray-700 dark:hover:bg-orange-500/10">
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{g.name}</span>
+                  <span className="text-[11px] text-gray-400">{g.blocks.length} {tr('bloc(s)', 'block(s)')}</span>
                 </button>
               ))}
-              {templates.length === 0 && <p className="text-xs text-gray-400">{tr('Aucun formulaire actif. Créez-en un dans « Formulaires d’inspection ».', 'No active form. Create one in "Inspection forms".')}</p>}
+              {gabarits.length === 0 && <p className="text-xs text-gray-400">{tr('Aucun gabarit. Créez-en un dans l’onglet « Gabarits ».', 'No template. Create one in the "Templates" tab.')}</p>}
             </div>
           </div>
         </div>
       )}
+
+      {/* Modale CRÉATION / ÉDITION d'équipement */}
+      {equipForm && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setEquipForm(null)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-bold text-gray-900 dark:text-white">{equipForm.id ? tr('Modifier l’équipement', 'Edit equipment') : tr('Nouvel équipement', 'New equipment')}</h3><button onClick={() => setEquipForm(null)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button></div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="text-xs font-semibold text-gray-500">{tr('Nom de la fiche', 'Equipment name')}<input value={equipForm.name || ''} onChange={e => setEquipForm({ ...equipForm, name: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" placeholder="Ex. Chariot élévateur #2" /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('# série', 'Serial #')}<input value={equipForm.serial || ''} onChange={e => setEquipForm({ ...equipForm, serial: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Marque', 'Brand')}<input value={equipForm.brand || ''} onChange={e => setEquipForm({ ...equipForm, brand: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Modèle', 'Model')}<input value={equipForm.model || ''} onChange={e => setEquipForm({ ...equipForm, model: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Type / catégorie', 'Type / category')}<input value={equipForm.type || ''} onChange={e => setEquipForm({ ...equipForm, type: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" placeholder="Ex. Levage" /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Emplacement', 'Location')}<input value={equipForm.location || ''} onChange={e => setEquipForm({ ...equipForm, location: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Récurrence de maintenance', 'Maintenance recurrence')}
+                <select value={equipForm.frequency || ''} onChange={e => setEquipForm({ ...equipForm, frequency: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700">
+                  {FREQS.map(f => <option key={f} value={f}>{f || tr('— aucune —', '— none —')}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Client', 'Client')}
+                <select value={equipForm.client_id || ''} onChange={e => setEquipForm({ ...equipForm, client_id: e.target.value || null })} className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700">
+                  <option value="">{tr('— non assigné —', '— unassigned —')}</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+              <input type="checkbox" checked={!!equipForm.public_alerts} onChange={e => setEquipForm({ ...equipForm, public_alerts: e.target.checked })} />
+              <Bell size={14} className="text-orange-500" /> {tr('Alertes publiques (scan QR) — permet à un externe de signaler un bris', 'Public alerts (QR scan) — lets an external report a breakdown')}
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setEquipForm(null)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={saveEquip} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : null} {tr('Enregistrer', 'Save')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Impression QR (multi-format, comme l'inventaire) */}
+      {qrPrint && <EquipmentQrPrint tenant={tenant} items={qrPrint} tr={tr} onClose={() => setQrPrint(null)} />}
     </div>
   );
 }

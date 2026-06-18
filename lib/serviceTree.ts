@@ -100,16 +100,30 @@ export async function getClientProjectCounts(tenant: string): Promise<Record<str
   return m;
 }
 
-/** Dernière inspection par équipement (résultat + date) pour l'état de l'arborescence. */
+/** Dernière inspection par équipement (résultat + date). Fusionne le moteur UNIQUE (rapports
+ *  docType='maintenance', via la route serveur car la table est fermée à l'anon) et l'historique
+ *  legacy (inspection_submissions). La plus récente l'emporte. */
 export async function getLastInspections(tenant: string): Promise<Record<string, LastInsp>> {
-  const { data, error } = await supabase.from('inspection_submissions')
-    .select('equipment_id, overall_result, anomalies_count, created_at')
-    .eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(2000);
   const map: Record<string, LastInsp> = {};
-  if (error) return map;
-  for (const r of (data as any[])) {
-    const eid = r.equipment_id; if (!eid || map[eid]) continue;
-    map[eid] = { result: r.overall_result, date: (r.created_at || '').slice(0, 10), anomalies: r.anomalies_count };
-  }
+  const consider = (eid: string | undefined, li: LastInsp) => {
+    if (!eid) return; const ex = map[eid];
+    if (!ex || (ex.date || '') < (li.date || '')) map[eid] = li;
+  };
+  // 1. Legacy inspection_submissions (accessible côté client).
+  try {
+    const { data } = await supabase.from('inspection_submissions')
+      .select('equipment_id, overall_result, anomalies_count, created_at')
+      .eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(2000);
+    for (const r of ((data as any[]) || [])) consider(r.equipment_id, { result: r.overall_result, date: (r.created_at || '').slice(0, 10), anomalies: r.anomalies_count });
+  } catch { /* table absente */ }
+  // 2. Moteur unique : rapports maintenance (via API serveur).
+  try {
+    const resp = await fetch(`/api/rapports/data?kind=reports&docType=maintenance&tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+    const j = await resp.json().catch(() => ({}));
+    for (const row of (Array.isArray(j.items) ? j.items : [])) {
+      const d = row.data || {};
+      consider(d.equipment_id, { result: d.overall_result, date: (d.performed_at || row.updated_at || '').slice(0, 10), anomalies: d.anomalies_count });
+    }
+  } catch { /* hors ligne / non authentifié */ }
   return map;
 }
