@@ -1214,13 +1214,17 @@ export default function IncidentReportForm({
   const readOnly = status === 'submitted' || status === 'closed';
 
   // Interconnexion Accidents↔Personnel : liste du personnel du tenant pour rattacher l'incident (personnel_id).
-  const [personnelList, setPersonnelList] = useState<{ id: string; name: string }[]>([]);
+  const [personnelList, setPersonnelList] = useState<{ id: string; name: string; role?: string }[]>([]);
   const [personnelId, setPersonnelId] = useState<string | null>(null);
+  // Véhicules du tenant — pour la recherche dynamique dans la section Véhicule (sous-traitant = saisie libre).
+  const [vehicleList, setVehicleList] = useState<{ id: string; name: string; make?: string; model?: string; plate?: string }[]>([]);
   useEffect(() => {
     fetch(`/api/permits/espace-clos/people?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
       .then(r => (r.ok ? r.json() : { people: [] }))
-      .then(j => setPersonnelList((j.people || []).map((p: any) => ({ id: p.id, name: p.name }))))
+      .then(j => setPersonnelList((j.people || []).map((p: any) => ({ id: p.id, name: p.name, role: p.role || '' }))))
       .catch(() => {});
+    if (supabase) supabase.from('vehicles').select('id, name, make, model, license_plate').eq('tenant_id', tenant).eq('active', true).order('name')
+      .then(({ data }) => setVehicleList((data || []).map((v: any) => ({ id: v.id, name: v.name || [v.make, v.model].filter(Boolean).join(' '), make: v.make, model: v.model, plate: v.license_plate }))), () => {});
   }, [tenant]);
 
   useEffect(() => {
@@ -1343,10 +1347,10 @@ export default function IncidentReportForm({
     switch (section) {
       case 'general':     return <GeneralSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} personnelId={personnelId} setPersonnelId={setPersonnelId} />;
       case 'location':    return <LocationSection    report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'persons':     return <PersonsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'persons':     return <PersonsSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} />;
       case 'body':        return <BodySection        report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'description': return <DescriptionSection report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} vehicleList={vehicleList} />;
       case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} tenant={tenant} reportNumber={reportNumber} lang={lang} />;
       case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} />;
@@ -1674,10 +1678,40 @@ function LocationSection({ report, onChange, readOnly }: {
   );
 }
 
-function PersonsSection({ report, onChange, readOnly }: {
+// Recherche dynamique réutilisable (personnel, véhicule…) avec saisie LIBRE permise (sous-traitant/autre).
+// Filtre les options par libellé/sous-libellé ; onPick remplit, onText laisse taper n'importe quoi.
+function EntitySearch({ value, onText, onPick, options, placeholder, readOnly }: {
+  value: string; onText: (v: string) => void; onPick: (o: { id: string; label: string; sub?: string }) => void;
+  options: { id: string; label: string; sub?: string }[]; placeholder?: string; readOnly?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const q = (value || '').toLowerCase().trim();
+  const filtered = (q ? options.filter(o => o.label.toLowerCase().includes(q) || (o.sub || '').toLowerCase().includes(q)) : options).slice(0, 8);
+  return (
+    <div className="relative">
+      <input value={value} onChange={e => { onText(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder} disabled={readOnly}
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-50" />
+      {open && !readOnly && filtered.length > 0 && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+          {filtered.map(o => (
+            <button key={o.id} type="button" onMouseDown={e => { e.preventDefault(); onPick(o); setOpen(false); }}
+              className="flex w-full flex-col items-start px-3 py-1.5 text-left text-sm hover:bg-blue-50">
+              <span className="font-medium text-gray-800">{o.label}</span>
+              {o.sub && <span className="text-xs text-gray-400">{o.sub}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PersonsSection({ report, onChange, readOnly, personnelList }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  personnelList: { id: string; name: string; role?: string }[];
 }) {
   function updatePerson(id: string, updater: (p: InjuredPerson) => InjuredPerson) {
     onChange(r => ({
@@ -1748,7 +1782,11 @@ function PersonsSection({ report, onChange, readOnly }: {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
               <Field label={t.p.fullName} required>
-                <TextInput value={person.name} onChange={v => updatePerson(person.id, p => ({ ...p, name: v }))} placeholder={t.g.namePh} readOnly={readOnly} />
+                <EntitySearch value={person.name} placeholder={t.g.namePh} readOnly={readOnly}
+                  options={personnelList.map(pl => ({ id: pl.id, label: pl.name, sub: pl.role }))}
+                  onText={v => updatePerson(person.id, p => ({ ...p, name: v }))}
+                  onPick={o => updatePerson(person.id, p => ({ ...p, name: o.label, jobTitle: p.jobTitle || o.sub || '' }))} />
+                <p className="mt-0.5 text-[11px] text-gray-400">{lang === 'fr' ? 'Cherchez dans le personnel, ou saisissez librement (sous-traitant, visiteur…).' : 'Search staff, or type freely (subcontractor, visitor…).'}</p>
               </Field>
               <Field label={t.p.jobTitle}>
                 <TextInput value={person.jobTitle} onChange={v => updatePerson(person.id, p => ({ ...p, jobTitle: v }))} readOnly={readOnly} />
@@ -1992,13 +2030,15 @@ function DescriptionSection({ report, onChange, readOnly }: {
   );
 }
 
-function VehicleSection({ report, onChange, readOnly }: {
+function VehicleSection({ report, onChange, readOnly, vehicleList }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  vehicleList: { id: string; name: string; make?: string; model?: string; plate?: string }[];
 }) {
   const { lang } = useLanguage();
   const t = TR[lang];
+  const [vehQ, setVehQ] = useState('');
   const upV = <K extends keyof IncidentReportData['vehicle']>(k: K, v: IncidentReportData['vehicle'][K]) =>
     onChange(r => ({ ...r, vehicle: { ...r.vehicle, [k]: v } }));
   const upP = <K extends keyof IncidentReportData['propertyDamage']>(k: K, v: IncidentReportData['propertyDamage'][K]) =>
@@ -2022,6 +2062,16 @@ function VehicleSection({ report, onChange, readOnly }: {
 
         {report.vehicleInvolved && (
           <div className="space-y-0">
+            {/* Recherche dynamique d'un véhicule du parc — saisie libre permise (véhicule tiers/sous-traitant). */}
+            {!readOnly && vehicleList.length > 0 && (
+              <Field label={lang === 'fr' ? 'Rechercher un véhicule du parc' : 'Search a fleet vehicle'}>
+                <EntitySearch value={vehQ} placeholder={lang === 'fr' ? 'Nom, marque, plaque…' : 'Name, make, plate…'}
+                  options={vehicleList.map(v => ({ id: v.id, label: v.name || [v.make, v.model].filter(Boolean).join(' '), sub: [v.plate, v.make, v.model].filter(Boolean).join(' · ') }))}
+                  onText={setVehQ}
+                  onPick={o => { const v = vehicleList.find(x => x.id === o.id); if (v) { setVehQ(v.name); onChange(r => ({ ...r, vehicle: { ...r.vehicle, vehicleId: v.id, make: v.make || r.vehicle.make, model: v.model || r.vehicle.model, licensePlate: v.plate || r.vehicle.licensePlate } })); } }} />
+                <p className="mt-0.5 text-[11px] text-gray-400">{lang === 'fr' ? 'Ou laissez vide et saisissez un véhicule tiers ci-dessous.' : 'Or leave empty and enter a third-party vehicle below.'}</p>
+              </Field>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
               <Field label={t.v.plate}>
                 <TextInput value={report.vehicle.licensePlate} onChange={v => upV('licensePlate', v)} readOnly={readOnly} />
