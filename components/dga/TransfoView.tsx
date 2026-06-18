@@ -25,6 +25,8 @@ import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
 } from '@/lib/dga/catalog';
+import { EntitySearch } from '@/components/ui/EntitySearch';
+import { getEquipmentList, saveMaintAction } from '@/lib/maintenance';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 import { AnomalySection } from '@/components/dga/AnomalySection';
 import { InspectionSection } from '@/components/dga/InspectionSection';
@@ -78,6 +80,10 @@ export function TransfoView(props: {
   const [pages, setPages] = useState({ titlePage: true, cover: true, results: true, analysis: true, trends: true, coverChart: true, photos: false, anomalies: false, inspections: false });
   const [globalNote, setGlobalNote] = useState('');
   const [projectNo, setProjectNo] = useState(extra.project_no || '');
+  // Interconnexion DGA → maintenance : registre d'équipement pour lier le transfo (extra.equipment_id).
+  const [equipOpts, setEquipOpts] = useState<{ id: string; label: string; sub?: string }[]>([]);
+  const [eqText, setEqText] = useState(extra.equipment_name || '');
+  useEffect(() => { if (!tenant) return; getEquipmentList(tenant).then(list => setEquipOpts((list || []).map(e => ({ id: e.id, label: e.equipment_name || e.equipment_serial || e.equipment_type || 'Équipement', sub: e.equipment_serial || undefined }))), () => {}); }, [tenant]);
   const [recoDraft, setRecoDraft] = useState(extra.manual_reco || '');
   const [dateDraft, setDateDraft] = useState(extra.next_date_manual || '');
   const [aiBusy, setAiBusy] = useState(false);
@@ -301,6 +307,17 @@ export function TransfoView(props: {
         const fd = addMonths(base, Math.round(fullMonths));
         if (fd) patch.full_next_date = fd;
         if (!targetedDate && fd) { patch.next_date_manual = fd; patch.interval_id = 'custom'; setDateDraft(fd); }
+      }
+      // Interconnexion DGA → MAINTENANCE : diagnostic sérieux sur un transfo LIÉ à un équipement -> action corrective.
+      const eqId = (dossier.extra || {}).equipment_id;
+      if (eqId && (Number(a.severity) >= 3 || tDays)) {
+        try {
+          await saveMaintAction(tenant, {
+            equipment_id: eqId, status: 'todo',
+            priority: Number(a.severity) >= 4 ? 'critical' : 'high',
+            description: `[DGA ${form.ident || form.serie || ''}] ${a.faultType || 'Anomalie'} — sévérité ${a.severity}${tDays ? ` · reprise ${tDays} j` : ''}. ${(fullFr || '').slice(0, 200)}`.slice(0, 500),
+          });
+        } catch { /* best-effort */ }
       }
       await updateExtra(patch);
     } catch (e: any) { setNotice(tr('Analyse IA impossible : ', 'AI analysis failed: ') + (e?.message || e)); }
@@ -559,6 +576,15 @@ export function TransfoView(props: {
                   )}
                 </div>
               )}
+              {/* Lien vers le registre d'équipement (interconnexion maintenance) */}
+              <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Équipement lié (maintenance)', 'Linked equipment (maintenance)')}</div>
+                <EntitySearch value={eqText} options={equipOpts}
+                  onText={v => setEqText(v)}
+                  onPick={o => { setEqText(o.label); updateExtra({ equipment_id: o.id, equipment_name: o.label }); }}
+                  placeholder={tr('Lier à un équipement du registre…', 'Link to a registered equipment…')} />
+                <p className="mt-1 text-[10px] text-gray-400">{extra.equipment_id ? tr('Un diagnostic de sévérité ≥ 3 créera une action corrective de maintenance sur cet équipement.', 'A severity ≥ 3 diagnosis will create a maintenance corrective action on this equipment.') : tr('Choisissez un équipement pour relier ce transfo au module Maintenance.', 'Pick an equipment to link this transformer to Maintenance.')}</p>
+              </div>
             </section>
 
             {/* CATALOGUE D'ANALYSES */}
