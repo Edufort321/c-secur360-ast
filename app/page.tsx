@@ -11,7 +11,7 @@ import {
   Package, ClipboardCheck, Clock, Truck,
   CheckSquare, BarChart3, ChevronLeft, ChevronRight, Lock,
   CheckCircle, Smartphone, Globe, ArrowRight, Phone, Mail,
-  Building2, Star, Menu, X, FileText, Megaphone
+  Building2, Star, Menu, X, FileText, Megaphone, Wrench, Activity, Plane
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -60,7 +60,10 @@ const MODULES_FR = [
   { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents et incidents',  desc: 'Tous les incidents : accidents, passes proches, vehicules, materiels et maladies — enquete, actions correctives et suivi reglementaire.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventaire',             desc: 'Gestion du stock, equipements de protection individuelle et consommables.' },
   { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Listes de verification, inspections periodiques et rapports d\'etat.' },
+  { icon: Wrench,         key: 'maintenance', name: 'Maintenance d\'equipement', desc: 'Entretien preventif, bons de travail, echeances et historique par equipement — avec alertes de bris par code QR.' },
+  { icon: Activity,       key: 'dga',         name: 'Diagnostic DGA',         desc: 'Analyse des gaz dissous des transformateurs : interpretation experte (IEEE/IEC/Duval), tendances, suivi et rapports.' },
   { icon: Clock,          key: 'temps',       name: 'Feuilles de temps',      desc: 'Saisie des heures, approbation superviseur et export comptable.' },
+  { icon: Plane,          key: 'conges',      name: 'Conges',                 desc: 'Demandes de conge en libre-service, approbation, calendrier d\'equipe et soldes — relie a la paie.' },
   { icon: Truck,          key: 'logbook',     name: 'Logbook vehicules',      desc: 'Carnet de bord numerique, kilometrage, incidents et entretien de flotte.' },
   { icon: CheckSquare,    key: 'todo',        name: 'To-Do / Taches',         desc: 'Gestion des taches, priorites, assignations et rappels automatiques.' },
   { icon: FileText,       key: 'rapports',    name: 'Rapports terrain',       desc: 'Constructeur de rapports techniques : gabarits, extraction IA de PDF/manuscrit, annotations, photos et export.' },
@@ -76,7 +79,10 @@ const MODULES_EN = [
   { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents & incidents',   desc: 'All incidents: accidents, near-misses, vehicle, property and illness — investigations, corrective actions and regulatory tracking.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventory',              desc: 'Stock management, personal protective equipment and consumables.' },
   { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Checklists, scheduled inspections and condition reports.' },
+  { icon: Wrench,         key: 'maintenance', name: 'Equipment maintenance',  desc: 'Preventive maintenance programs, work orders, due dates and per-equipment history — with QR-code breakdown alerts.' },
+  { icon: Activity,       key: 'dga',         name: 'DGA Diagnostic',         desc: 'Transformer dissolved gas analysis: expert interpretation (IEEE/IEC/Duval), trends, follow-up and reports.' },
   { icon: Clock,          key: 'temps',       name: 'Timesheets',             desc: 'Time entry, supervisor approval and accounting export.' },
+  { icon: Plane,          key: 'conges',      name: 'Time off',               desc: 'Self-service leave requests, approval, team calendar and balances — linked to payroll.' },
   { icon: Truck,          key: 'logbook',     name: 'Vehicle Logbook',        desc: 'Digital logbook, mileage, incidents and fleet maintenance tracking.' },
   { icon: CheckSquare,    key: 'todo',        name: 'Tasks / To-Do',          desc: 'Task management, priorities, assignments and automatic reminders.' },
   { icon: FileText,       key: 'rapports',    name: 'Field reports',          desc: 'Technical report builder: templates, AI extraction from PDF/handwriting, annotations, photos and export.' },
