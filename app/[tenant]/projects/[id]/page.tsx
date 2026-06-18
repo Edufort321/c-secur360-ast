@@ -15,6 +15,7 @@ import { CoutsTab } from '@/components/projet/CoutsTab';
 import { ProjectPerfStrip, ProjectsAnalytics } from '@/components/projects/ProjectsAnalytics';
 import { FactureTab } from '@/components/projet/FactureTab';
 import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
+import { createBonFromLines } from '@/lib/bonsCommande';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEntitlements } from '@/lib/entitlements';
 
@@ -50,6 +51,27 @@ export default function ProjectDetailPage() {
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
   const [tsActuals, setTsActuals] = useState<ProjectActuals | null>(null); // coût réel agrégé des feuilles de temps
+  // Création d'un bon de commande lié au projet (destination « projet ») — réservé au niveau administration éditable (tier ≥ 4).
+  const [poTier, setPoTier] = useState(0);
+  const [poBusy, setPoBusy] = useState(false);
+  useEffect(() => {
+    if (!tenant) return;
+    fetch(`/api/me/access?tenant=${encodeURIComponent(tenant)}`).then(r => r.ok ? r.json() : null).then(j => { if (j) setPoTier(Number(j.tier) || 0); }).catch(() => {});
+  }, [tenant]);
+  async function createProjectPO() {
+    if (poBusy) return;
+    if (!window.confirm(tr('Créer un bon de commande lié à ce projet (destination « projet ») ?', 'Create a purchase order linked to this project (destination "project")?'))) return;
+    setPoBusy(true); setNotice(null);
+    try {
+      const { numero } = await createBonFromLines(tenant, {
+        project_id: id, destination: 'projet', province: (p as any)?.province || 'QC',
+        notes: p?.project_number ? `Projet #${p.project_number}${p.title ? ' — ' + p.title : ''}` : null,
+        items: [{ designation: '', quantite: 1, cout_unitaire: 0, taxable: true }],
+      });
+      setNotice(tr(`Bon de commande ${numero} créé (destination projet). Complétez-le dans Admin › Ventes & achats › Bons de commande.`, `Purchase order ${numero} created (project destination). Complete it in Admin › Sales & Purchasing › Purchase orders.`));
+    } catch (e: any) { setNotice(tr('Création impossible : ', 'Creation failed: ') + (e?.message || e)); }
+    finally { setPoBusy(false); }
+  }
   // Règle frais de subsistance par défaut selon la portée (interne/externe) — paramètre tenant.
   const [subsRule, setSubsRule] = useState<{ interne: boolean; externe: boolean }>({ interne: false, externe: true });
   useEffect(() => {
@@ -565,8 +587,17 @@ export default function ProjectDetailPage() {
 
                 {/* Import IA du bon de commande : pré-remplit le projet + complète le client + joint le BC. */}
                 <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
-                  <POImportButton tenant={tenant} projectId={id} project={p} tr={tr}
-                    onApply={(fields) => setP((prev: any) => { const next = { ...prev }; Object.entries(fields).forEach(([k, val]) => { if (val !== undefined && val !== null && val !== '') next[k] = val; }); return next; })} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <POImportButton tenant={tenant} projectId={id} project={p} tr={tr}
+                      onApply={(fields) => setP((prev: any) => { const next = { ...prev }; Object.entries(fields).forEach(([k, val]) => { if (val !== undefined && val !== null && val !== '') next[k] = val; }); return next; })} />
+                    {poTier >= 4 && (
+                      <button onClick={createProjectPO} disabled={poBusy}
+                        title={tr('Créer un bon de commande lié à ce projet (numéro séquentiel partagé avec l’admin)', 'Create a purchase order linked to this project')}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                        {poBusy ? <Loader2 size={15} className="animate-spin" /> : <Receipt size={15} />} {tr('Créer un bon de commande', 'Create purchase order')}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Pièces jointes reçues du client (bon de commande, contrat, devis signé…) */}
