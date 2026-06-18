@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Link2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import ProjectChainPanel from '@/components/maintenance/ProjectChainPanel';
 
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
-export function CoutsTab({ estimate, actuals, poAmount }: { estimate: any; actuals: any; poAmount?: number | null }) {
+export function CoutsTab({ estimate, actuals, poAmount, tenant, projectId }: { estimate: any; actuals: any; poAmount?: number | null; tenant?: string; projectId?: string }) {
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
+  const [showChain, setShowChain] = useState(false);
 
   const est = Number(estimate?.total || 0);
   const laborBase = Number(actuals?.labor || 0);
@@ -32,6 +35,14 @@ export function CoutsTab({ estimate, actuals, poAmount }: { estimate: any; actua
 
   return (
     <div className="space-y-4">
+      {tenant && projectId && (
+        <div className="flex justify-end">
+          <button onClick={() => setShowChain(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-orange-300 px-3 py-1.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 dark:border-orange-500/40 dark:text-orange-300">
+            <Link2 size={15} /> {tr('Soumission ↔ temps réel ↔ facturation', 'Quote ↔ actual time ↔ billing')}
+          </button>
+        </div>
+      )}
+      {showChain && tenant && projectId && <ProjectChainPanel tenant={tenant} projectId={projectId} tr={tr} onClose={() => setShowChain(false)} />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card label={tr('Estimé (soumission)', 'Estimated (quote)')} value={money(est)} />
         <Card label={tr('Coût réel CHARGÉ', 'Real cost (burdened)')} value={money(real)} sub={burden > 0 ? `${tr('dont fardeau MO', 'incl. labor burden')} ${money(burden)} (${(burdenPct * 100).toFixed(0)} %)` : undefined} />

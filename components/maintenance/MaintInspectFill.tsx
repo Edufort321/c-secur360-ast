@@ -3,10 +3,11 @@
 // blocs du gabarit (section / inspection / mesures / photos / note), calcule le résultat global + les
 // anomalies, et enregistre dans la table `rapports` (docType='maintenance') via /api/rapports/data —
 // avec le lien équipement / client / projet (interconnexion soumission↔projet à venir).
-import { useState } from 'react';
-import { Loader2, X, AlertTriangle, Check, Camera } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, X, AlertTriangle, Check, Camera, Link2 } from 'lucide-react';
 import type { Gabarit } from '@/lib/maintGabarits';
 import type { SEquip } from '@/lib/serviceTree';
+import { getProjectsLite, type ProjectLite } from '@/lib/projectChain';
 
 type Tr = (fr: string, en: string) => string;
 type ItemState = 'ok' | 'anomaly';
@@ -19,6 +20,9 @@ export default function MaintInspectFill({
   projectId?: string | null; onClose: () => void; onSaved: () => void;
 }) {
   const [inspector, setInspector] = useState('');
+  const [projects, setProjects] = useState<ProjectLite[]>([]);
+  const [linkedProject, setLinkedProject] = useState<string>(projectId || '');
+  useEffect(() => { getProjectsLite(tenant).then(setProjects, () => {}); }, [tenant]);
   // Réponses : par bloc.item → { state, note, retrait, photos } ou valeur (section/mesures/note)
   const [insp, setInsp] = useState<Record<string, { state: ItemState; note?: string; retrait?: boolean; photos?: string[] }>>({});
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -67,7 +71,7 @@ export default function MaintInspectFill({
       equipment_id: equipment.id, equipment_name: equipment.name, client_id: clientId || equipment.client_id || null,
       inspector_name: inspector || null, performed_at: new Date().toISOString(),
       overall_result: result, anomalies_count: anomalies, blocks,
-      link: projectId ? { projectId } : undefined,
+      link: linkedProject ? { projectId: linkedProject } : undefined,
     };
     try {
       const r = await fetch('/api/rapports/data', {
@@ -98,9 +102,18 @@ export default function MaintInspectFill({
         </div>
 
         <div className="space-y-3 p-5">
-          <label className="block text-xs font-semibold text-slate-500">{tr('Inspecteur', 'Inspector')}
-            <input value={inspector} onChange={e => setInspector(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" placeholder={tr('Nom', 'Name')} />
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-semibold text-slate-500">{tr('Inspecteur', 'Inspector')}
+              <input value={inspector} onChange={e => setInspector(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" placeholder={tr('Nom', 'Name')} />
+            </label>
+            <label className="block text-xs font-semibold text-slate-500"><span className="flex items-center gap-1"><Link2 size={12} /> {tr('Projet / soumission (optionnel)', 'Project / quote (optional)')}</span>
+              <select value={linkedProject} onChange={e => setLinkedProject(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700">
+                <option value="">{tr('— aucun (maintenance hors contrat) —', '— none —')}</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.number}{p.title ? ` — ${p.title}` : ''}</option>)}
+              </select>
+            </label>
+          </div>
+          <p className="-mt-1 text-[11px] text-slate-400">{tr('Lier à un projet permet de comparer le temps réel au temps prévu (soumission) et de chaîner à la facturation.', 'Linking to a project compares actual vs estimated time and chains to billing.')}</p>
 
           {gabarit.blocks.map(b => (
             <div key={b.id} className="rounded-xl border border-slate-200 p-3 dark:border-gray-700">

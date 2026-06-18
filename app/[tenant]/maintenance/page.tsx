@@ -7,6 +7,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import ClientTree from '@/components/maintenance/ClientTree';
 import PlanningBoard from '@/components/maintenance/PlanningBoard';
 import GabaritManager from '@/components/maintenance/GabaritManager';
+import ProjectChainPanel from '@/components/maintenance/ProjectChainPanel';
 import { supabase } from '@/lib/supabase';
 import { getServiceClients, getServiceEquipment, getLastInspections, type SClient, type SEquip, type LastInsp } from '@/lib/serviceTree';
 import { RESULT_META } from '@/lib/inspectionForms';
@@ -22,6 +23,7 @@ export default function MaintenancePage() {
   const [tab, setTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
+  const [chainProject, setChainProject] = useState<string | null>(null);
 
   // Données de tableau de bord (lecture seule, sources canoniques des autres modules).
   const [equipment, setEquipment] = useState<SEquip[]>([]);
@@ -186,12 +188,14 @@ export default function MaintenancePage() {
                 <div className="space-y-1.5">
                   {rapports.slice(0, 20).map(r => {
                     const rm = (r.data?.overall_result || r.data?.result) ? RESULT_META[(r.data.overall_result || r.data.result) as keyof typeof RESULT_META] : null;
+                    const pid = r.project_id || r.data?.link?.projectId || null;
                     return (
                       <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 text-sm dark:border-gray-700">
                         <span className="min-w-0 flex-1 truncate">{r.title || r.num || 'Maintenance'}<span className="ml-2 text-xs text-slate-400">{r.updated_at ? new Date(r.updated_at).toLocaleDateString('fr-CA') : ''}{r.author_email ? ` · ${r.author_email}` : ''}</span></span>
                         <span className="flex items-center gap-2">
                           {rm && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-gray-700">{rm.fr}</span>}
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status === 'sent' || r.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{r.status || 'in_progress'}</span>
+                          {pid && <button onClick={() => setChainProject(pid)} className="rounded-lg border border-orange-300 px-2 py-0.5 text-[10px] font-semibold text-orange-600 hover:bg-orange-50">Soumission ↔ réel</button>}
                         </span>
                       </div>
                     );
@@ -202,6 +206,9 @@ export default function MaintenancePage() {
           </div>
         )}
       </div>
+
+      {/* Panneau de chaîne soumission ↔ temps réel ↔ facturation */}
+      {chainProject && <ProjectChainPanel tenant={tenant} projectId={chainProject} tr={(fr) => fr} onClose={() => setChainProject(null)} />}
     </div>
   );
 }
