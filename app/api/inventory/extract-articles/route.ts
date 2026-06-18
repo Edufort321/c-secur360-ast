@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // #Inventaire — Import IA d'articles depuis une feuille Excel STRICTE (gabarit impose).
 // Calque sur /api/dga/extract : proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote
@@ -88,12 +89,7 @@ export async function POST(req: NextRequest) {
     // Decompte REEL par tenant : cout = tokens Anthropic (usage) au tarif du modele.
     if (tenant) { try { const cost = aiCallCostCents('claude-haiku-4-5-20251001', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'inventaire', cost, { feature: 'import', rows: rows.length }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(jsonStr); } catch {
-      const m = jsonStr.match(/\{[\s\S]*\}/);
-      if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } }
-    }
+    const parsed = extractJsonValue(text); // extraction robuste (objet/tableau, prose, fences, troncature)
     if (!parsed) return NextResponse.json({ error: 'Reponse IA non parsable', raw: text.slice(0, 500) }, { status: 422 });
 
     // Refus de conformite : on remonte la liste des criteres minimum manquants.

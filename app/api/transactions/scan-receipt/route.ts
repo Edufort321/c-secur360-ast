@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // « Scanner (IA) » d'une pièce jointe pour PRÉ-REMPLIR une (ou plusieurs) transaction(s) :
 //   - IMAGE  -> Claude Vision (OCR du reçu)            -> { extracted } (1 transaction)
@@ -34,7 +35,7 @@ async function callAnthropic(apiKey: string, system: string, content: any, maxTo
   if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
   return resp.json();
 }
-function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
+function parseJson(text: string): any { return extractJsonValue(text); }
 
 export async function POST(req: NextRequest) {
  try {

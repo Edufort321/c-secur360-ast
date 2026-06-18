@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // Fournisseurs — Import IA d'une liste de fournisseurs depuis une feuille (Excel/CSV) à colonnes LIBRES.
 // Calque sur /api/clients/extract : proxy SERVEUR de l'appel Anthropic (clé serveur). Le client lit le
@@ -77,12 +78,7 @@ export async function POST(req: NextRequest) {
     if (tenant) { try { const cost = aiCallCostCents('claude-haiku-4-5-20251001', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'fournisseurs', cost, { feature: 'import', rows: rows.length }); } catch { /* best-effort */ } }
 
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
-    const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    let parsed: any = null;
-    try { parsed = JSON.parse(jsonStr); } catch {
-      const m = jsonStr.match(/\{[\s\S]*\}/);
-      if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
-    }
+    const parsed = extractJsonValue(text); // extraction robuste (objet/tableau, prose, fences, troncature)
     if (!parsed) return NextResponse.json({ error: 'Réponse IA non parsable' }, { status: 422 });
 
     if (parsed.conforme === false) {

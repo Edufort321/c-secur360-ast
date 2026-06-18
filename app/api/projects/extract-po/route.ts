@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 import { aiGuard, ANTI_INJECTION } from '@/lib/aiGuard';
 import { anthropicMessages } from '@/lib/anthropicModel';
+import { extractJsonValue } from '@/lib/aiJson';
 
 // « Importer le bon de commande (IA) » : on envoie le BC (PDF/image) à Anthropic (vision). L'IA extrait
 // le N° de BC, le montant, les dates, le titre des travaux, et le PROFIL CLIENT (adresse, facturation,
@@ -32,7 +33,7 @@ async function callAnthropic(apiKey: string, content: any): Promise<any> {
   if (!resp.ok) { const e = await resp.text(); throw new Error(`Anthropic ${resp.status}: ${e.slice(0, 200)}`); }
   return resp.json();
 }
-function parseJson(text: string): any { const m = text.match(/\{[\s\S]*\}/); try { return JSON.parse(m ? m[0] : text); } catch { return null; } }
+function parseJson(text: string): any { return extractJsonValue(text); }
 
 export async function POST(req: NextRequest) {
  try {
