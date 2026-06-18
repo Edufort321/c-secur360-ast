@@ -35,6 +35,7 @@ export type Invoice = {
   subtotal: number; gst_rate: number; qst_rate: number; pst_rate: number;
   gst_amount: number; qst_amount: number; pst_amount: number; total: number;
   notes?: string | null; payment_terms?: string | null; paid_date?: string | null; gl_entry_id?: string | null;
+  currency?: string; fx_rate?: number;   // multi-devise (#43) — défaut CAD / 1
 };
 export type CompanySettings = {
   tenant_id?: string; legal_name?: string; address?: string; city?: string; province?: string; postal_code?: string;
@@ -107,17 +108,23 @@ export async function saveInvoice(tenant: string, header: Invoice, items: Invoic
     client_snapshot: header.client_snapshot ?? null, status: header.status, issue_date: header.issue_date,
     due_date: header.due_date ?? null, province: header.province, notes: header.notes ?? null,
     payment_terms: header.payment_terms ?? null, paid_date: header.paid_date ?? null, gl_entry_id: header.gl_entry_id ?? null,
+    ...(header.currency ? { currency: header.currency, fx_rate: Number(header.fx_rate) || 1 } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
+  // Multi-devise (#43) résilient : si les colonnes currency/fx_rate n'existent pas (migration 221), on les retire.
+  const isMissingCur = (e: any) => /currency|fx_rate/i.test(String(e?.message || ''));
+  const stripCur = (p: any) => { const { currency, fx_rate, ...rest } = p; return rest; };
   let id = header.id;
   if (id) {
-    const { error } = await supabase.from('commerce_invoices').update(payload).eq('id', id);
+    let { error } = await supabase.from('commerce_invoices').update(payload).eq('id', id);
+    if (error && isMissingCur(error)) ({ error } = await supabase.from('commerce_invoices').update(stripCur(payload)).eq('id', id));
     if (error) throw error;
     await supabase.from('commerce_invoice_items').delete().eq('tenant_id', tenant).eq('invoice_id', id);
   } else {
-    const { data, error } = await supabase.from('commerce_invoices').insert(payload).select('id').single();
-    if (error) throw error;
-    id = data.id;
+    let res = await supabase.from('commerce_invoices').insert(payload).select('id').single();
+    if (res.error && isMissingCur(res.error)) res = await supabase.from('commerce_invoices').insert(stripCur(payload)).select('id').single();
+    if (res.error) throw res.error;
+    id = res.data.id;
   }
   const rows = items.map((it, i) => ({
     tenant_id: tenant, invoice_id: id, description: it.description, quantity: Number(it.quantity) || 0,

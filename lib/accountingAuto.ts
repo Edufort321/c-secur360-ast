@@ -124,6 +124,22 @@ export async function postTimesheetExpense(tenant: string, exp: any, accMap?: Re
  *   CR 1000 Banque (comptant) | CR 2000 Fournisseurs (à crédit) = total
  * Idempotent par (source_type='transaction', source_id). Met à jour gl_entry_id + statut 'posted'.
  */
+// Multi-devise : convertit les lignes GL vers la devise de BASE (× fx_rate) et rééquilibre au cent près.
+// fx_rate = 1 (défaut) → lignes inchangées (aucune régression sur l'existant).
+function applyFx<T extends { debit: number; credit: number }>(lines: T[], fxRate: any): T[] {
+  const fx = Number(fxRate) || 1;
+  if (fx === 1) return lines;
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const scaled = lines.map(l => ({ ...l, debit: r2((l.debit || 0) * fx), credit: r2((l.credit || 0) * fx) }));
+  const diff = r2(scaled.reduce((s, l) => s + l.debit, 0) - scaled.reduce((s, l) => s + l.credit, 0));
+  if (Math.abs(diff) >= 0.01) {
+    if (diff > 0) { const i = scaled.findIndex(l => l.credit > 0); if (i >= 0) scaled[i].credit = r2(scaled[i].credit + diff); }
+    else { const i = scaled.findIndex(l => l.debit > 0); if (i >= 0) scaled[i].debit = r2(scaled[i].debit + diff); }
+  }
+  return scaled;
+}
+const fxNote = (txn: any) => { const fx = Number(txn?.fx_rate) || 1; return fx !== 1 ? ` (${txn.currency} @ ${fx})` : ''; };
+
 export async function postTransactionPurchase(
   tenant: string, txn: any, items: any[], accMap?: Record<string, string>
 ): Promise<'created' | 'skipped' | 'no-accounts'> {
@@ -162,9 +178,9 @@ export async function postTransactionPurchase(
 
   const entryId = await createEntry(tenant, {
     entry_date: txn.txn_date || new Date().toISOString().slice(0, 10),
-    description: `Achat — ${txn.vendor_name || txn.transaction_number || ''}`,
+    description: `Achat — ${txn.vendor_name || txn.transaction_number || ''}${fxNote(txn)}`,
     reference: txn.transaction_number || undefined,
-    journal_code: 'ACH', source_type: 'transaction', source_id: txn.id, lines,
+    journal_code: 'ACH', source_type: 'transaction', source_id: txn.id, lines: applyFx(lines, txn.fx_rate),
   });
   await supabase.from('commerce_transactions').update({ gl_entry_id: entryId, status: txn.status === 'draft' ? 'posted' : txn.status }).eq('id', txn.id);
   return 'created';
@@ -269,8 +285,8 @@ export async function postTransactionRevenue(
   if ((Number(txn.qst_amount) || 0) > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: Number(txn.qst_amount), description: 'TVQ a payer' });
   const entryId = await createEntry(tenant, {
     entry_date: txn.txn_date || new Date().toISOString().slice(0, 10),
-    description: `Revenu — ${txn.vendor_name || txn.transaction_number || ''}`,
-    reference: txn.transaction_number || undefined, journal_code: 'VEN', source_type: 'transaction', source_id: txn.id, lines,
+    description: `Revenu — ${txn.vendor_name || txn.transaction_number || ''}${fxNote(txn)}`,
+    reference: txn.transaction_number || undefined, journal_code: 'VEN', source_type: 'transaction', source_id: txn.id, lines: applyFx(lines, txn.fx_rate),
   });
   await supabase.from('commerce_transactions').update({ gl_entry_id: entryId, status: txn.status === 'draft' ? 'posted' : txn.status }).eq('id', txn.id);
   return 'created';

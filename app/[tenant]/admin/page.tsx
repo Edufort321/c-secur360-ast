@@ -42,6 +42,7 @@ import { getTransactions, getTransactionItems, saveTransaction, setTransactionSt
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { downloadCsv as downloadCsvCols, type CsvColumn } from '@/lib/csv';
+import { getCurrencyConfig, rateToBase, currencyMeta, type CurrencyConfig } from '@/lib/currency';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
 import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
@@ -6850,6 +6851,8 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   const [notice, setNotice] = useState<string | null>(null);
   const blankItem = (): InvoiceItem => ({ description: '', quantity: 1, unit_price: 0, subtotal: 0, taxable: true });
   const [hdr, setHdr] = useState<Invoice>({ invoice_number: '', status: 'draft', issue_date: today, province: 'QC', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+  const [curCfg, setCurCfg] = useState<CurrencyConfig | null>(null); // multi-devise (#43)
+  useEffect(() => { getCurrencyConfig(tenant).then(setCurCfg, () => {}); }, [tenant]);
   const [clientName, setClientName] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
@@ -6980,10 +6983,11 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
       if (bankId && m['1100']) {
         const { data: ex } = await supabase.from('gl_entries').select('id').eq('tenant_id', tenant).eq('source_type', 'invoice_payment').eq('source_id', inv.id).limit(1);
         if (!ex || !ex.length) {
+          const baseTotal = Math.round((Number(inv.total) || 0) * (Number((inv as any).fx_rate) || 1) * 100) / 100; // devise de base
           await createEntry(tenant, {
             entry_date: payDate, description: `Encaissement — facture ${inv.invoice_number}`,
             reference: inv.invoice_number, journal_code: 'BNK', source_type: 'invoice_payment', source_id: inv.id,
-            lines: [{ account_id: bankId, debit: Number(inv.total) || 0, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: Number(inv.total) || 0, description: 'Clients' }],
+            lines: [{ account_id: bankId, debit: baseTotal, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: baseTotal, description: 'Clients' }],
           });
         }
       }
@@ -6998,14 +7002,21 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
     try {
       const accs = await getAccounts(tenant); const m: Record<string, string> = {}; accs.forEach(a => m[a.code] = a.id);
       if (!m['1100'] || !m['4000']) { setNotice(tr('Initialisez d\'abord le plan comptable (onglet Comptabilité).', 'Initialize the chart of accounts first.')); return; }
+      // Multi-devise : montants GL en devise de BASE = montant facture × fx_rate (défaut 1). Le débit Clients
+      // est la SOMME des crédits → écriture toujours équilibrée malgré les arrondis.
+      const fx = Number((inv as any).fx_rate) || 1;
+      const r2 = (n: number) => Math.round(n * 100) / 100;
+      const cVentes = r2((Number(inv.subtotal) || 0) * fx);
+      const cTaxFed = r2(((Number(inv.gst_amount) || 0) + (Number(inv.pst_amount) || 0)) * fx);
+      const cQst = r2((Number(inv.qst_amount) || 0) * fx);
       const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
-        { account_id: m['1100'], debit: Number(inv.total) || 0, credit: 0, description: 'Clients' },
-        { account_id: m['4000'], debit: 0, credit: Number(inv.subtotal) || 0, description: 'Ventes et services' },
+        { account_id: m['1100'], debit: r2(cVentes + cTaxFed + cQst), credit: 0, description: 'Clients' },
+        { account_id: m['4000'], debit: 0, credit: cVentes, description: 'Ventes et services' },
       ];
-      const taxFed = (Number(inv.gst_amount) || 0) + (Number(inv.pst_amount) || 0);
-      if (taxFed > 0 && m['2100']) lines.push({ account_id: m['2100'], debit: 0, credit: taxFed, description: 'TPS/TVH/PST à payer' });
-      if ((Number(inv.qst_amount) || 0) > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: Number(inv.qst_amount), description: 'TVQ à payer' });
-      const entryId = await createEntry(tenant, { entry_date: inv.issue_date, description: `Vente — facture ${inv.invoice_number}`, reference: inv.invoice_number, journal_code: 'VEN', source_type: 'invoice', source_id: inv.id, lines });
+      if (cTaxFed > 0 && m['2100']) lines.push({ account_id: m['2100'], debit: 0, credit: cTaxFed, description: 'TPS/TVH/PST à payer' });
+      if (cQst > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: cQst, description: 'TVQ à payer' });
+      const curNote = fx !== 1 ? ` (${(inv as any).currency} @ ${fx})` : '';
+      const entryId = await createEntry(tenant, { entry_date: inv.issue_date, description: `Vente — facture ${inv.invoice_number}${curNote}`, reference: inv.invoice_number, journal_code: 'VEN', source_type: 'invoice', source_id: inv.id, lines });
       await supabase.from('commerce_invoices').update({ gl_entry_id: entryId, status: inv.status === 'draft' ? 'sent' : inv.status }).eq('id', inv.id);
       setNotice(tr('Vente comptabilisée au grand livre.', 'Sale posted to ledger.')); await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
@@ -7080,6 +7091,9 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-3 sm:grid-cols-4">
             <label className="text-xs font-semibold text-gray-500">{tr('N° facture', 'Invoice #')}<input value={hdr.invoice_number} onChange={e => setHdr(h => ({ ...h, invoice_number: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            {curCfg && curCfg.enabled.length > 1 && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Devise', 'Currency')}<select value={(hdr as any).currency || curCfg.base} onChange={e => { const c = e.target.value; setHdr(h => ({ ...h, currency: c, fx_rate: rateToBase(curCfg, c) } as any)); }} className={`mt-1 w-full ${inputCls}`}>{curCfg.enabled.map(c => <option key={c} value={c}>{c} ({currencyMeta(c).symbol})</option>)}</select></label>
+            )}
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Client', 'Client')}<input value={clientName} onChange={e => setClientName(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={hdr.province} onChange={e => setHdr(h => ({ ...h, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.issue_date} onChange={e => setHdr(h => ({ ...h, issue_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>

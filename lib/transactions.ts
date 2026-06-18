@@ -23,6 +23,8 @@ export type Transaction = {
   //  'investor_advance' = ENTRÉE d'argent qui est une avance d'investisseur (dette à rembourser → CR 2400, pas un revenu)
   //  'shares_payment' = l'entreprise RÈGLE une dépense/immobilisation en émettant des actions/parts (aucun décaissement → CR 3100 Capital-actions)
   settlement_kind?: 'standard' | 'reimbursement' | 'investment' | 'investor_advance' | 'shares_payment';
+  currency?: string;   // devise du document (multi-devise #43, défaut CAD)
+  fx_rate?: number;    // taux vers la devise de base au moment de l'opération (défaut 1)
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -75,11 +77,12 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     paid_by_person_id: header.paid_by_person_id ?? null,
     settlement_kind: header.settlement_kind || 'standard',
     ...(header.needs_review !== undefined ? { needs_review: header.needs_review } : {}),
+    ...(header.currency ? { currency: header.currency, fx_rate: Number(header.fx_rate) || 1 } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
-  // Si une colonne récente n'existe pas encore (migration 185/187/207), on la retire et on réessaie.
-  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review|paid_by_person_id|settlement_kind/i.test(String(e?.message || ''));
-  const strip = (p: any) => { const { treasury_account_id, needs_review, paid_by_person_id, settlement_kind, ...rest } = p; return rest; };
+  // Si une colonne récente n'existe pas encore (migration 185/187/207/221), on la retire et on réessaie.
+  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review|paid_by_person_id|settlement_kind|currency|fx_rate/i.test(String(e?.message || ''));
+  const strip = (p: any) => { const { treasury_account_id, needs_review, paid_by_person_id, settlement_kind, currency, fx_rate, ...rest } = p; return rest; };
   let id = header.id;
   if (id) {
     let { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
