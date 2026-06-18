@@ -129,6 +129,17 @@ export default function TimesheetDetailPage() {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [rates, setRates]       = useState<Rate[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  // Projets où les frais de subsistance ne sont PAS applicables (règle interne/externe #49). Best-effort :
+  // si la colonne n'existe pas encore (migration 213 non appliquée), on n'affiche simplement pas l'avertissement.
+  const [perDiemNA, setPerDiemNA] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!tenant) return;
+    let active = true;
+    supabase.from('projects').select('project_number, subsistence_applicable').eq('tenant_id', tenant).eq('subsistence_applicable', false)
+      .then(({ data, error }) => { if (active && !error && data) setPerDiemNA(new Set(data.map((p: any) => String(p.project_number)).filter(Boolean))); }, () => {});
+    return () => { active = false; };
+  }, [tenant]);
+  const isSubsistenceAllowance = (name?: string) => /subsist/i.test(String(name || ''));
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [kmRate, setKmRate]     = useState(0);
   const [loading, setLoading]   = useState(true);
@@ -1055,13 +1066,17 @@ export default function TimesheetDetailPage() {
                     <div className="flex flex-wrap gap-3">
                       {allowances.map(a => {
                         const checked = e.allowances.some(x => x.id === a.id);
+                        // Avertissement #49 : subsistance cochée sur un projet où le per diem n'est PAS applicable (interne).
+                        const naWarn = checked && isSubsistenceAllowance(a.name) && !!e.project_number && perDiemNA.has(e.project_number);
                         return (
-                          <label key={a.id} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition select-none ${checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-500 hover:border-slate-300'} ${isReadOnly ? 'pointer-events-none' : ''}`}>
+                          <label key={a.id} title={naWarn ? 'Frais de subsistance NON applicables sur ce projet (interne) — selon la règle du tenant.' : undefined}
+                            className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition select-none ${naWarn ? 'border-amber-400 bg-amber-50 text-amber-800' : checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-500 hover:border-slate-300'} ${isReadOnly ? 'pointer-events-none' : ''}`}>
                             <input type="checkbox" checked={checked} disabled={isReadOnly}
                               onChange={ev => toggleAllowance(e.id, a, ev.target.checked)}
                               className="accent-emerald-600" />
                             {a.name}
                             {canSeeMoney && <span className="font-bold">{money(a.amount)}</span>}
+                            {naWarn && <AlertTriangle size={11} className="text-amber-600" />}
                           </label>
                         );
                       })}
