@@ -14,6 +14,8 @@ import {
   INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS,
   type InspectionType, type OverallResult, type InspectionFrequency,
 } from '@/components/InspectionForm/checklists';
+import { getInspectionTemplates, type InspectionFormTemplate } from '@/lib/inspectionForms';
+import InspectionFill from '@/components/maintenance/InspectionFill';
 import type { EquipmentRow } from '@/components/EquipmentForm';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -74,6 +76,11 @@ export default function EquipmentPublicPage() {
   const [alertForm,  setAlertForm]  = useState({ alert_type: 'bris', reporter_name: '', reporter_phone: '', description: '' });
   const [alertBusy,  setAlertBusy]  = useState(false);
   const [alertDone,  setAlertDone]  = useState(false);
+  // Inspection publique par QR : formulaires customisables actifs + feuille en cours de remplissage.
+  const [inspTpls,   setInspTpls]   = useState<InspectionFormTemplate[]>([]);
+  const [inspFill,   setInspFill]   = useState<InspectionFormTemplate | null>(null);
+  const [inspDone,   setInspDone]   = useState(false);
+  useEffect(() => { getInspectionTemplates(tenant).then(t => setInspTpls(t.filter(x => x.active !== false)), () => {}); }, [tenant]);
   // Export de la fiche (cases à cocher) — sections au choix.
   const [showExport, setShowExport] = useState(false);
   const [expBusy,    setExpBusy]    = useState(false);
@@ -285,6 +292,20 @@ export default function EquipmentPublicPage() {
           </div>
         )}
 
+        {/* Faire une inspection (formulaire customisable) — page publique par QR */}
+        {inspTpls.length > 0 && (inspDone ? (
+          <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-700 flex items-center gap-2"><CheckCircle size={16} /> {fr ? 'Inspection enregistrée — merci !' : 'Inspection saved — thank you!'}</div>
+        ) : (
+          <div className="bg-white rounded-xl border border-blue-200 overflow-hidden">
+            <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 text-sm font-semibold text-blue-800 flex items-center gap-2"><ClipboardCheck size={15} /> {fr ? 'Faire une inspection' : 'Run an inspection'}</div>
+            <div className="px-5 py-4 flex flex-wrap gap-2">
+              {inspTpls.map(t => (
+                <button key={t.id} onClick={() => setInspFill(t)} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"><ClipboardCheck size={14} /> {t.name}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+
         {/* Last inspection NCs */}
         {ncs.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -418,6 +439,20 @@ export default function EquipmentPublicPage() {
             <button onClick={doExport} disabled={expBusy || !Object.values(expSec).some(Boolean)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
               {expBusy ? <><Loader2 size={16} className="animate-spin" /> {fr ? 'Génération…' : 'Generating…'}</> : <><FileDown size={16} /> {fr ? 'Télécharger le PDF' : 'Download PDF'}</>}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Remplissage d'une inspection (plein écran) — depuis le scan QR public */}
+      {inspFill && equipment && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-gray-100 p-4 dark:bg-gray-900">
+          <div className="mx-auto max-w-3xl">
+            <InspectionFill
+              tenant={tenant} tr={(f, e) => (fr ? f : e)} template={inspFill}
+              equipmentOptions={[{ id: equipment.id, name: (equipment as any).equipment_name || (equipment as any).equipment_serial || 'Équipement' }]}
+              presetEquipmentId={equipment.id} clientId={(equipment as any).client_id || null}
+              onClose={() => setInspFill(null)} onSaved={() => { setInspFill(null); setInspDone(true); }}
+            />
           </div>
         </div>
       )}
