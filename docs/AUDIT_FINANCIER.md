@@ -91,15 +91,15 @@ Le cœur double-entrée est verrouillé au niveau base (triggers d'équilibre + 
 > Comptes 1590/5600 créés à la volée. Tout idempotent. **À valider par une personne qualifiée** avant la 1re clôture réelle. Migration **242** à appliquer.
 
 ### P2 — Contrôles & complétude
-| # | Écart | Section | Effort |
-|---|-------|---------|--------|
-| P2-1 | **Notes de crédit / remboursements** (contre-écriture liée à la facture) | §3 | M |
-| P2-2 | **Paiements partiels** (historique + statut intermédiaire, AR aging par stade) | §3 | M |
-| P2-3 | **`due_date` sur transactions** → vieillissement AP par conditions de paiement | §4 | S |
-| P2-4 | **Numérotation séquentielle des écritures** (`entry_number` auto) | §2 | S |
-| P2-5 | **Avantage automobile** porté à la paie/au GL (T4 case 34) | §5 | S |
-| P2-6 | **XML T4/RL-1** pour télétransmission ARC/RQ | §6 | L |
-| P2-7 | **DPA / demi-année** (amortissement fiscal distinct du comptable) | §7 | M |
+| # | Écart | Section | État |
+|---|-------|---------|------|
+| P2-3 | **`due_date` sur transactions** → vieillissement AP par conditions de paiement | §4 | ✅ mig 244 (champ Échéance + net 15/30/60 ; `getApAging` utilise l'échéance) |
+| P2-4 | **Numérotation séquentielle des écritures** (`entry_number` auto) | §2 | ✅ mig 243 (trigger atomique `gl_entry_counters`, sans renuméroter l'historique) |
+| P2-1 | **Notes de crédit / remboursements** (contre-écriture liée à la facture) | §3 | ⏳ M |
+| P2-2 | **Paiements partiels** (historique + statut intermédiaire, AR aging par stade) | §3 | ⏳ M |
+| P2-5 | **Avantage automobile** porté à la paie/au GL (T4 case 34) | §5 | ⏳ S |
+| P2-6 | **XML T4/RL-1** pour télétransmission ARC/RQ | §6 | ⏳ L |
+| P2-7 | **DPA / demi-année** (amortissement fiscal distinct du comptable) | §7 | ⏳ M |
 
 ### P3 — Renforcement / nice-to-have
 | # | Écart | Section |
