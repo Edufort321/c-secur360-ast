@@ -524,7 +524,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   const [tenantName, setTenantName] = useState<string>(tenant);
   // Vue « tous les employés enregistrés par semaine » (l'admin ouvre/vérifie la feuille de chacun, même sans donnée).
   const [empView, setEmpView] = useState(true);
-  const [activeEmps, setActiveEmps] = useState<{ id: string; name: string; active: boolean }[]>([]);
+  const [activeEmps, setActiveEmps] = useState<{ id: string; name: string; active: boolean; isUser?: boolean }[]>([]);
   const [weekStart, setWeekStart] = useState(() => { const x = new Date(); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); });
   const [creatingFor, setCreatingFor] = useState<string | null>(null);
   const weekEndOf = (s: string) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10); };
@@ -576,8 +576,22 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const list = data || [];
     setSheets(list);
     try { setRows(await buildPayrollRows(tenant, list)); } catch { setRows([]); }
-    // TOUS les employés enregistrés (actifs ET inactifs) — pour les voir même sans aucune feuille/donnée.
-    try { const { data: emps } = await supabase.from('planner_personnel').select('id, name, is_active').eq('tenant_id', tenant).order('name'); setActiveEmps((emps || []).filter((e: any) => e.name).map((e: any) => ({ id: e.id, name: e.name, active: e.is_active !== false }))); } catch { /* ignore */ }
+    // TOUS les employés enregistrés (planner_personnel) FUSIONNÉS avec les comptes de connexion (users),
+    // dédupliqués par courriel. On les voit même sans aucune feuille/donnée. Repli : si la requête users
+    // échoue (pas de colonne tenant_id), le personnel reste affiché.
+    let personnel: { id: string; name: string; email: string; active: boolean; isUser?: boolean }[] = [];
+    let extraUsers: { id: string; name: string; email: string; active: boolean; isUser?: boolean }[] = [];
+    try {
+      const { data: emps } = await supabase.from('planner_personnel').select('id, name, email, is_active').eq('tenant_id', tenant).order('name');
+      personnel = (emps || []).filter((e: any) => e.name || e.email).map((e: any) => ({ id: e.id, name: e.name || e.email, email: String(e.email || '').toLowerCase().trim(), active: e.is_active !== false, isUser: false }));
+    } catch { /* ignore */ }
+    try {
+      const { data: us } = await supabase.from('users').select('id, email, name, is_active').eq('tenant_id', tenant);
+      const seen = new Set(personnel.map(p => p.email).filter(Boolean));
+      extraUsers = (us || []).filter((u: any) => { const em = String(u.email || '').toLowerCase().trim(); return (u.name || u.email) && (!em || !seen.has(em)); })
+        .map((u: any) => ({ id: u.id, name: u.name || u.email, email: String(u.email || '').toLowerCase().trim(), active: u.is_active !== false, isUser: true }));
+    } catch { /* users sans tenant_id → personnel seul */ }
+    setActiveEmps([...personnel, ...extraUsers].sort((a, b) => a.name.localeCompare(b.name)));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -731,7 +745,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                   const sh = sheets.find(s => String(s.employee_id) === String(emp.id) && s.period_start === weekStart);
                   return (
                     <tr key={emp.id} className="border-t border-gray-100 dark:border-gray-700/50">
-                      <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{emp.name}{!emp.active && <span className="ml-2 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-gray-400 dark:bg-gray-700">{tr('inactif', 'inactive')}</span>}</td>
+                      <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{emp.name}{emp.isUser && <span className="ml-2 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-indigo-500 dark:bg-indigo-500/15 dark:text-indigo-300">{tr('compte', 'account')}</span>}{!emp.active && <span className="ml-2 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-gray-400 dark:bg-gray-700">{tr('inactif', 'inactive')}</span>}</td>
                       <td className="px-3 py-2">{sh ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tsCls(sh.status)}`}>{tsLabel(sh.status)}</span> : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-700">{tr('Aucune feuille', 'No sheet')}</span>}</td>
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => openOrCreateSheet(emp)} disabled={creatingFor === emp.id} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
