@@ -116,6 +116,13 @@ const ACCESS_LEVELS: { value: AccessLevel; tier: number; label_fr: string; label
   { value: 'super_user',     tier: 8, label_fr: 'Super-utilisateur',      label_en: 'Super-user',        emoji: '👑',  desc_fr: 'Accès TOTAL au tenant. Configuration système, migrations, dette.', desc_en: 'TOTAL tenant access. System config, migrations, debt.' },
 ];
 
+// Correspondance niveau d'accès (8 niveaux fins, sur planner_personnel.niveauAcces) → rôle users (3 rôles
+// d'authentification). Le niveau FIN pilote les permissions ; le rôle pilote l'accès brut (/admin, super_admin).
+const NIVEAU_TO_ROLE: Record<AccessLevel, string> = {
+  super_user: 'super_admin', direction: 'client_admin', rh: 'client_admin', admin_paie: 'client_admin',
+  administration: 'client_admin', coordination: 'client_admin', modification: 'user', consultation: 'user',
+};
+
 // Matrice des permissions — clé = niveau, valeur = ce qui est accessible
 const PERMS: Record<AccessLevel, { viewEmployees: boolean; modifyEmployees: boolean; viewSalary: boolean; editSalary: boolean; evaluate: boolean; coordinate: boolean; viewAuth: boolean; managePostes: boolean; manageAll: boolean }> = {
   consultation:   { viewEmployees: false, modifyEmployees: false, viewSalary: false, editSalary: false, evaluate: false, coordinate: false, viewAuth: false, managePostes: false, manageAll: false },
@@ -2877,7 +2884,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
   const [users, setUsers]         = useState<UserAccount[]>([]);
   const [loading, setLoading]     = useState(true);
   const [selected, setSelected]   = useState<Personnel | null>(null);
-  const [form, setForm]           = useState({ email: '', name: '', role: 'user', password: '', site_id: '' });
+  const [form, setForm]           = useState({ email: '', name: '', role: 'user', niveau: 'consultation' as AccessLevel, password: '', site_id: '' });
   const [sites, setSites]         = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy]           = useState(false);
   const [notice, setNotice]       = useState<string | null>(null);
@@ -2913,12 +2920,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
   function pickPersonnel(p: Personnel) {
     if (selected?.id === p.id) return; // déjà sélectionné : ne PAS régénérer le mot de passe
     setSelected(p); setNotice(null); setCopied(false);
-    const niveauToRole: Record<string, string> = {
-      super_user: 'super_admin', direction: 'client_admin',
-      rh: 'client_admin', admin_paie: 'client_admin',
-      administration: 'client_admin', coordination: 'client_admin',
-      modification: 'user', consultation: 'user',
-    };
+    const niveau = (p.niveauAcces as AccessLevel) || 'consultation';
     const existing = users.find(u => (u.email || '').toLowerCase() === (p.email || '').toLowerCase());
     // Garde TOUJOURS le mot de passe stocké (base ou repli local). S'il n'y en a pas et que
     // c'est un nouveau compte, on génère UNE proposition et on la fige aussitôt (repli local)
@@ -2929,7 +2931,8 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
     setForm({
       email:    p.email || suggestEmail(p.name, tenant),
       name:     p.name,
-      role:     niveauToRole[p.niveauAcces || ''] || 'user',
+      niveau,
+      role:     NIVEAU_TO_ROLE[niveau] || 'user',
       password: pwd,
       site_id:  existing?.site_id || '',
     });
@@ -2978,10 +2981,13 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       // sinon le badge « ✓ compte » ne correspond pas (courriel fiche vide ≠ courriel du compte).
       if (selected?.id) {
         await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', tenant,id: selected.id, password: form.password, email: form.email }) });
+        // Enregistre le NIVEAU d'accès fin (8 niveaux) sur la fiche — c'est lui qui pilote les permissions.
+        await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'profile', tenant, id: selected.id, patch: { niveauAcces: form.niveau } }) }).catch(() => {});
         writeLocalPwd(selected.id, form.password);
+        setPersonnel(list => list.map(pp => pp.id === selected.id ? { ...pp, niveauAcces: form.niveau } : pp));
       }
-      setSelected(s => s ? { ...s, access_password: form.password, email: form.email } : s);
-      setNotice(tr('Compte créé ✓ — courriel et mot de passe enregistrés dans la fiche.', 'Account created ✓ — email and password saved to the record.'));
+      setSelected(s => s ? { ...s, access_password: form.password, email: form.email, niveauAcces: form.niveau } : s);
+      setNotice(tr('Compte créé ✓ — niveau d’accès, courriel et mot de passe enregistrés dans la fiche.', 'Account created ✓ — access level, email and password saved to the record.'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
@@ -2993,12 +2999,17 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
     if (!form.password.trim()) { setNotice(tr('Saisissez un mot de passe pour mettre à jour.', 'Enter a password to update.')); return; }
     setBusy(true); setNotice(null);
     try {
-      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password, site_id: form.site_id || null }) });
+      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password, site_id: form.site_id || null, role: NIVEAU_TO_ROLE[form.niveau] || 'user' }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      if (selected?.id) { await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', tenant,id: selected.id, password: form.password, email: form.email }) }); writeLocalPwd(selected.id, form.password); }
-      setSelected(s => s ? { ...s, access_password: form.password, email: form.email } : s);
-      setNotice(tr('Mot de passe mis à jour ✓ — enregistré dans la fiche.', 'Password updated ✓ — saved to the record.'));
+      if (selected?.id) {
+        await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', tenant,id: selected.id, password: form.password, email: form.email }) });
+        await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'profile', tenant, id: selected.id, patch: { niveauAcces: form.niveau } }) }).catch(() => {});
+        writeLocalPwd(selected.id, form.password);
+        setPersonnel(list => list.map(pp => pp.id === selected.id ? { ...pp, niveauAcces: form.niveau } : pp));
+      }
+      setSelected(s => s ? { ...s, access_password: form.password, email: form.email, niveauAcces: form.niveau } : s);
+      setNotice(tr('Accès mis à jour ✓ — niveau et mot de passe enregistrés dans la fiche.', 'Access updated ✓ — level and password saved to the record.'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
@@ -3125,12 +3136,11 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Rôle', 'Role')}</label>
-              <select className={inp2} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                <option value="user">{tr('Utilisateur', 'User')}</option>
-                <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
-                <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Niveau d’accès', 'Access level')}</label>
+              <select className={inp2} value={form.niveau} onChange={e => { const niveau = e.target.value as AccessLevel; setForm(f => ({ ...f, niveau, role: NIVEAU_TO_ROLE[niveau] || 'user' })); }}>
+                {ACCESS_LEVELS.map(l => <option key={l.value} value={l.value}>{l.emoji} {l.tier}. {tr(l.label_fr, l.label_en)}</option>)}
               </select>
+              <p className="mt-1 text-[10px] leading-snug text-gray-400">{tr(ACCESS_LEVELS.find(l => l.value === form.niveau)?.desc_fr || '', ACCESS_LEVELS.find(l => l.value === form.niveau)?.desc_en || '')}</p>
             </div>
 
             {sites.length > 0 && (
