@@ -587,6 +587,7 @@ export default function DgaPage() {
             </div>
             <TransfoView
               tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl} allDossiers={dossiers}
+              fleetSamples={dossiers.flatMap(d => { if (!d.id || d.id === selected_d.id) return []; const lg = lastGasMeasure(measuresByDossier[d.id]) || lastByDossier[d.id]; return lg ? [{ gases: { H2: +(lg.h2 || 0), CH4: +(lg.ch4 || 0), C2H6: +(lg.c2h6 || 0), C2H4: +(lg.c2h4 || 0), C2H2: +(lg.c2h2 || 0), CO: +(lg.co || 0), CO2: +(lg.co2 || 0) } }] : []; })}
               onSave={saveDossierFromView} onNewMeasure={() => { setEditMeasure(null); setView('newMeasure'); }} onEditMeasure={(m: Measure) => { setEditMeasure(m); setView('newMeasure'); }} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
             />
           </>

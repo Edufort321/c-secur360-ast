@@ -22,6 +22,7 @@ import {
 import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
 import { generationRates, computeHealthIndex, overThreshold, transformerType, recommendedRetestDays, addDays as addDaysIso, getSegment, severity2019, tdcgIndicator, STATUS_STYLE, type GasRate } from '@/lib/dga/severity2019';
+import { buildFleetComparison, type FleetGas } from '@/lib/dga/fleet';
 import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
@@ -69,11 +70,12 @@ function compressImage(file: File, maxDim = 1000, quality = 0.7): Promise<string
 export function TransfoView(props: {
   tenant: string; tenantName?: string; siteText?: string; lang: Lang; tr: (fr: string, en: string) => string;
   dossier: Dossier; measures: Measure[]; logoUrl: string | null; allDossiers?: Dossier[];
+  fleetSamples?: { gases: Partial<Record<FleetGas, number>> }[]; // B6 — dernière mesure des AUTRES transfos du parc
   onSave: (d: Dossier) => Promise<void> | void;            // enregistre le dossier (équipement + extra)
   onNewMeasure: () => void; onEditMeasure?: (m: Measure) => void; onDeleteMeasure: (id?: string) => void; onDeleteDossier: () => void;
   setNotice: (s: string | null) => void;
 }) {
-  const { tenant, tenantName, siteText, lang, tr, dossier, measures, logoUrl, allDossiers = [], onSave, onNewMeasure, onEditMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
+  const { tenant, tenantName, siteText, lang, tr, dossier, measures, logoUrl, allDossiers = [], fleetSamples = [], onSave, onNewMeasure, onEditMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
   const extra = dossier.extra || {};
 
   const data = measures; // déjà triées asc par date
@@ -604,6 +606,35 @@ export function TransfoView(props: {
               <h2 className={H2}>{tr('Triangle de Duval 1', 'Duval Triangle 1')}</h2>
               <DuvalTriangle1 samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) }))} />
             </section>
+
+            {/* B6 — COMPARAISON À LA FLOTTE : où se situe ce transfo vs les autres du parc (indicatif) */}
+            {(() => {
+              const fc = buildFleetComparison({ H2: +(cur.h2 || 0), CH4: +(cur.ch4 || 0), C2H6: +(cur.c2h6 || 0), C2H4: +(cur.c2h4 || 0), C2H2: +(cur.c2h2 || 0), CO: +(cur.co || 0), CO2: +(cur.co2 || 0) }, fleetSamples);
+              if (!fc.length) return null;
+              const posStyle: Record<string, string> = { bas: 'bg-emerald-100 text-emerald-700', médian: 'bg-gray-100 text-gray-600', élevé: 'bg-amber-100 text-amber-700', extrême: 'bg-rose-100 text-rose-700' };
+              const posLabel = (p: string) => tr({ bas: 'Bas', médian: 'Médian', élevé: 'Élevé', extrême: 'Extrême' }[p] || p, { bas: 'Low', médian: 'Median', élevé: 'High', extrême: 'Extreme' }[p] || p);
+              return (
+                <section className={CARD}>
+                  <h2 className={H2}>{tr('Comparaison à la flotte', 'Fleet comparison')}</h2>
+                  <p className="mb-2 text-[11px] text-gray-400">{tr(`Position de chaque gaz vs les ${fc[0].count} autre(s) transformateur(s) du parc (dernière mesure de chacun). Indicatif — ne remplace pas le verdict de sévérité.`, `Each gas vs the other ${fc[0].count} transformer(s) in the fleet (latest sample). Indicative — does not replace the severity verdict.`)}</p>
+                  <Tbl>
+                    <thead><tr className="text-left text-[11px] uppercase text-gray-400"><th className="px-2 py-1">{tr('Gaz', 'Gas')}</th><th className="px-2 text-right">{tr('Valeur', 'Value')}</th><th className="px-2 text-right">{tr('Médiane parc', 'Fleet median')}</th><th className="px-2 text-right">{tr('Max parc', 'Fleet max')}</th><th className="px-2 text-right">{tr('Rang', 'Rank')}</th><th className="px-2">{tr('Position', 'Position')}</th></tr></thead>
+                    <tbody>
+                      {fc.map(s => (
+                        <tr key={s.gas} className="border-t border-gray-50 dark:border-gray-700/50">
+                          <td className="px-2 py-1 font-mono text-xs">{s.gas}</td>
+                          <td className="px-2 text-right font-semibold tabular-nums">{s.value.toLocaleString('fr-CA')}</td>
+                          <td className="px-2 text-right tabular-nums text-gray-500">{s.median.toLocaleString('fr-CA')}</td>
+                          <td className="px-2 text-right tabular-nums text-gray-500">{s.max.toLocaleString('fr-CA')}</td>
+                          <td className="px-2 text-right tabular-nums text-gray-500">{s.percentile}<span className="text-[9px]">e</span></td>
+                          <td className="px-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${posStyle[s.position]}`}>{posLabel(s.position)}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Tbl>
+                </section>
+              );
+            })()}
 
             {/* VUE COMPLÉMENTAIRE — autres méthodes d'interprétation (consensus) */}
             <section className={CARD}>
