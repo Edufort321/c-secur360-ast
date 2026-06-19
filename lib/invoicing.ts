@@ -37,6 +37,7 @@ export type Invoice = {
   notes?: string | null; payment_terms?: string | null; paid_date?: string | null; gl_entry_id?: string | null;
   currency?: string; fx_rate?: number;   // multi-devise (#43) — défaut CAD / 1
   revenue_category?: string | null;      // catégorie de revenu (ventilation état financier, migration 231)
+  paid_amount?: number | null;           // cumul encaissé (paiements partiels, migration 246)
 };
 export type CompanySettings = {
   tenant_id?: string; legal_name?: string; address?: string; city?: string; province?: string; postal_code?: string;

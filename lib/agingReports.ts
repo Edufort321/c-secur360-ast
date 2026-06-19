@@ -68,13 +68,19 @@ function buildReport(docs: Array<{ id: string; number: string; party: string; do
 /** Comptes à RECEVOIR : factures clients non payées/non annulées (les brouillons sont exclus — non émises). */
 export async function getArAging(tenant: string, asOf?: string): Promise<AgingReport> {
   const ref = asOf || new Date().toISOString().slice(0, 10);
-  const { data } = await supabase.from('commerce_invoices')
+  // paid_amount (mig 246) lu en best-effort → le solde DÛ (total − encaissé) alimente l'âge. Repli sans la colonne.
+  let data: any[] | null = null;
+  ({ data } = await supabase.from('commerce_invoices')
+    .select('id, invoice_number, client_snapshot, issue_date, due_date, total, status, paid_amount')
+    .eq('tenant_id', tenant).not('status', 'in', '(paid,cancelled,draft)'));
+  if (data == null) ({ data } = await supabase.from('commerce_invoices')
     .select('id, invoice_number, client_snapshot, issue_date, due_date, total, status')
-    .eq('tenant_id', tenant).not('status', 'in', '(paid,cancelled,draft)');
+    .eq('tenant_id', tenant).not('status', 'in', '(paid,cancelled,draft)'));
   const docs = (data || []).map((i: any) => ({
     id: i.id, number: i.invoice_number || '—',
     party: i.client_snapshot?.name || i.client_snapshot?.legal_name || i.client_snapshot?.company || 'Client',
-    doc_date: (i.issue_date || '').slice(0, 10), due_date: (i.due_date || '').slice(0, 10), amount: Number(i.total) || 0,
+    doc_date: (i.issue_date || '').slice(0, 10), due_date: (i.due_date || '').slice(0, 10),
+    amount: r2((Number(i.total) || 0) - (Number(i.paid_amount) || 0)), // solde DÛ
   }));
   return buildReport(docs, ref);
 }
