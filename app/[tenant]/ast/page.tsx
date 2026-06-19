@@ -7,7 +7,7 @@ import { useSite } from '@/contexts/SiteContext';
 import {
   ClipboardList, Plus, Search, MapPin, User, Calendar,
   Clock, CheckCircle, XCircle, Loader2, BarChart3, QrCode, Printer,
-  LayoutGrid, List as ListIcon, Trash2, Gauge, Download, ImageDown,
+  LayoutGrid, List as ListIcon, Trash2, Gauge, Download, ImageDown, ShieldCheck,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -318,12 +318,20 @@ export default function ASTListPage() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/${tenant}/ast/nouveau`}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-teal-700"
-          >
-            <Plus size={18} /> {tr('Nouvel AST', 'New JSA')}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/${tenant}/hse`}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 font-semibold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              <ShieldCheck size={18} /> {tr('Registres & KPI (HSE)', 'Registers & KPIs (HSE)')}
+            </Link>
+            <Link
+              href={`/${tenant}/ast/nouveau`}
+              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-teal-700"
+            >
+              <Plus size={18} /> {tr('Nouvel AST', 'New JSA')}
+            </Link>
+          </div>
         </div>
 
         {/* Stats (selon la période sélectionnée) */}
