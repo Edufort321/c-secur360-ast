@@ -214,17 +214,30 @@ export const GRANULARITY_LABELS: Record<Granularity, string> = {
 // (product_class — snapshot mig 194). Async (réseau) — à appeler depuis un composant.
 export async function revenueByClass(tenant: string, from?: string, to?: string): Promise<{ name: string; value: number }[]> {
   const { supabase } = await import('@/lib/supabase');
-  const sel = (cat: boolean) => `issue_date, status${cat ? ', revenue_category' : ''}, commerce_invoice_items(subtotal, product_class, description)`;
-  const run = (cat: boolean) => { let q = supabase.from('commerce_invoices').select(sel(cat)).eq('tenant_id', tenant).in('status', ['sent', 'paid']); if (from) q = q.gte('issue_date', from); if (to) q = q.lte('issue_date', to); return q; };
-  let { data, error } = await run(true);
-  // Résilient : si revenue_category (migration 231) n'existe pas encore, on réessaie sans.
-  if (error && /revenue_category/i.test(String(error.message || ''))) ({ data, error } = await run(false));
+  // cols 0 = base ; 1 = + revenue_category (mig 231) ; 2 = + revenue_distribution (mig 237). Repli progressif.
+  const sel = (lvl: number) => `issue_date, status${lvl >= 1 ? ', revenue_category' : ''}${lvl >= 2 ? ', revenue_distribution' : ''}, commerce_invoice_items(subtotal, product_class, description)`;
+  const run = (lvl: number) => { let q = supabase.from('commerce_invoices').select(sel(lvl)).eq('tenant_id', tenant).in('status', ['sent', 'paid']); if (from) q = q.gte('issue_date', from); if (to) q = q.lte('issue_date', to); return q; };
+  let { data, error } = await run(2);
+  if (error && /revenue_distribution/i.test(String(error.message || ''))) ({ data, error } = await run(1));
+  if (error && /revenue_category/i.test(String(error.message || ''))) ({ data, error } = await run(0));
   if (error) return [];
   const byClass: Record<string, number> = {};
   for (const inv of (data || []) as any[]) {
-    // Ventilation : classe du PRODUIT (ligne) -> sinon CATÉGORIE de revenu de la facture -> sinon « Non classé ».
     const invCat = (inv.revenue_category || '').trim();
-    for (const l of inv.commerce_invoice_items || []) {
+    const lines = inv.commerce_invoice_items || [];
+    const invTotal = lines.reduce((s: number, l: any) => s + (Number(l.subtotal) || 0), 0);
+    // 1) RÉPARTITION explicite par classe (mig 237) → ventile le total de la facture au prorata des %.
+    const distRows = Array.isArray(inv.revenue_distribution) ? inv.revenue_distribution.filter((d: any) => d && d.class && Number(d.pct) > 0) : [];
+    if (distRows.length && invTotal > 0) {
+      const sumPct = distRows.reduce((s: number, d: any) => s + (Number(d.pct) || 0), 0) || 1;
+      for (const d of distRows) {
+        const cls = String(d.class).trim() || invCat || 'Non classé';
+        byClass[cls] = (byClass[cls] || 0) + invTotal * ((Number(d.pct) || 0) / sumPct);
+      }
+      continue;
+    }
+    // 2) Sinon : classe du PRODUIT (ligne) → catégorie de revenu de la facture → « Non classé ».
+    for (const l of lines) {
       const cls = (l.product_class || '').trim() || invCat || 'Non classé';
       byClass[cls] = (byClass[cls] || 0) + (Number(l.subtotal) || 0);
     }

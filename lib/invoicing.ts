@@ -182,6 +182,7 @@ export async function syncProjectInvoice(tenant: string, opts: {
   id?: string | null; invoice_number: string; issue_date: string; province?: string;
   client_name?: string | null; client_id?: string | null; notes?: string | null; payment_terms?: string | null;
   items: InvoiceItem[]; project_id?: string | null; project_number?: string | null;
+  revenue_distribution?: { class: string; pct: number }[] | null; // répartition par classe (mig 237)
 }): Promise<string> {
   const header: Invoice = {
     id: opts.id || undefined, invoice_number: opts.invoice_number,
@@ -194,6 +195,10 @@ export async function syncProjectInvoice(tenant: string, opts: {
   // Lien projet (best-effort : colonnes ajoutées par la migration 212).
   if (opts.project_id || opts.project_number) {
     try { await supabase.from('commerce_invoices').update({ project_id: opts.project_id ?? null, project_number: opts.project_number ?? null, source: 'project' }).eq('id', id).eq('tenant_id', tenant); } catch { /* colonnes absentes */ }
+  }
+  // Répartition par classe (best-effort : colonne ajoutée par la migration 237).
+  if (opts.revenue_distribution && opts.revenue_distribution.length) {
+    try { await supabase.from('commerce_invoices').update({ revenue_distribution: opts.revenue_distribution }).eq('id', id).eq('tenant_id', tenant); } catch { /* colonne absente */ }
   }
   // Statut « Traité » + constatation auto du revenu au grand livre (idempotent, best-effort).
   await setInvoiceStatus(tenant, id, 'sent');

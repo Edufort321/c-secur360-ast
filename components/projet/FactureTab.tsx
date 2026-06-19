@@ -24,11 +24,13 @@ const TPS = 0.05;
 const TVQ = 0.09975;
 
 interface Extra { id: string; desc: string; amount: number }
+interface DistRow { class: string; pct: number }
 interface FactureData {
   invoice_number: string;
   invoice_date: string;
   mode: 'soumission' | 'temps';
   extras: Extra[];
+  distribution?: DistRow[];        // répartition du montant en classes de revenu (ventilation, mig 237)
   surcharge_km_billable: boolean;  // inclure la surcharge carburant km dans la facture
   expenses_billable: boolean;      // inclure les dépenses refacturables des feuilles de temps
   materiel_billable: boolean;      // inclure le matériel consommé (inventaire) au PRIX VENDANT
@@ -45,6 +47,7 @@ const defaultFacture = (projectType?: string): FactureData => ({
   invoice_date: new Date().toISOString().slice(0, 10),
   mode: projectType === 'forfaitaire' ? 'soumission' : 'temps',
   extras: [],
+  distribution: [],
   surcharge_km_billable: true,
   expenses_billable: true,
   materiel_billable: true,
@@ -91,6 +94,10 @@ export function FactureTab({
   const set = <K extends keyof FactureData>(k: K, v: FactureData[K]) =>
     setFacture(f => ({ ...f, [k]: v }));
 
+  // Classes de revenu existantes (datalist pour la répartition).
+  const [classNames, setClassNames] = useState<string[]>([]);
+  useEffect(() => { supabase.from('revenue_classes').select('name').eq('tenant_id', tenant).eq('active', true).order('sort_order').then(({ data }) => setClassNames((data || []).map((c: any) => c.name).filter(Boolean)), () => {}); }, [tenant]);
+
   // ── Surcharge carburant depuis les actuals (feuille de temps) ──────────
   const kmSurchargeFromActuals = Number(project?.actuals?.totalSurcharge || 0);
   const kmSurchargePct = Number(project?.actuals?.surchargePct || 0);
@@ -130,6 +137,27 @@ export function FactureTab({
   const delExtra = (i: number) =>
     set('extras', facture.extras.filter((_, j) => j !== i));
 
+  // ── Répartition par classe (ventilation du montant) ───────────────────────
+  const dist = facture.distribution || [];
+  const distSum = dist.reduce((s, d) => s + (Number(d.pct) || 0), 0);
+  const addDist = () => set('distribution', [...dist, { class: '', pct: 0 }]);
+  const updDist = (i: number, k: keyof DistRow, v: any) => set('distribution', dist.map((d, j) => j === i ? { ...d, [k]: k === 'pct' ? Number(v) : v } : d));
+  const delDist = (i: number) => set('distribution', dist.filter((_, j) => j !== i));
+  // Auto-répartit le montant à partir des COMPOSANTES facturées (base/surcharge/dépenses/matériel/extras).
+  const autoDistribute = () => {
+    const comps: { class: string; amount: number }[] = [];
+    if (base > 0) comps.push({ class: facture.mode === 'soumission' ? tr('Service', 'Service') : tr('Main-d’œuvre', 'Labour'), amount: base });
+    if (surchargeKmAmount > 0) comps.push({ class: tr('Transport', 'Transport'), amount: surchargeKmAmount });
+    if (expensesBillableAmount > 0) comps.push({ class: tr('Dépenses', 'Expenses'), amount: expensesBillableAmount });
+    if (materielBillableAmount > 0) comps.push({ class: tr('Matériel', 'Material'), amount: materielBillableAmount });
+    const ex = facture.extras.reduce((s, e) => s + Number(e.amount || 0), 0);
+    if (ex > 0) comps.push({ class: tr('Autre', 'Other'), amount: ex });
+    const tot = comps.reduce((s, c) => s + c.amount, 0) || 1;
+    const byClass: Record<string, number> = {};
+    comps.forEach(c => { byClass[c.class] = (byClass[c.class] || 0) + c.amount; });
+    set('distribution', Object.entries(byClass).map(([cls, amt]) => ({ class: cls, pct: Math.round((amt / tot) * 1000) / 10 })));
+  };
+
   // ── Approbation ──────────────────────────────────────────────────────────
   // À l'approbation : (1) n° séquentiel unique généré côté serveur (suit la séquence de la Facturation
   // centrale, plus de N° aléatoire), (2) la facture REMONTE vers « Facturation » au statut « Traité »
@@ -162,6 +190,7 @@ export function FactureTab({
           id: commerceId, invoice_number: invoiceNum, issue_date: facture.invoice_date,
           province: project?.province || 'QC', client_name: project?.client_name || null,
           notes: facture.notes || null, items, project_id: projectId, project_number: project?.project_number || null,
+          revenue_distribution: (dist.length && dist.some(d => d.class.trim() && d.pct > 0)) ? dist.filter(d => d.class.trim() && d.pct > 0) : null,
         });
       }
       const updated: FactureData = { ...facture, invoice_number: invoiceNum, approved: true, approved_at: new Date().toISOString(), commerce_invoice_id: commerceId };
@@ -440,6 +469,43 @@ export function FactureTab({
             <span className="text-xl font-bold tabular-nums text-gray-900 dark:text-white">{money(total)}</span>
           </div>
         </div>
+      </div>
+
+      {/* ── Répartition par classe (ventilation des revenus) ─────────────── */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">{tr('Répartition par classe', 'Revenue distribution by class')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{tr('Divise le montant en classes pour la ventilation de l’état financier (n’affecte pas la facture client).', 'Splits the amount into classes for the financial statement (does not affect the client invoice).')}</p>
+          </div>
+          {!facture.approved && (
+            <button onClick={autoDistribute} className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-300 px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/40 dark:text-indigo-300">
+              {tr('Auto-répartir', 'Auto-split')}
+            </button>
+          )}
+        </div>
+        <datalist id="fac-class-list">{(classNames.length ? classNames : ['Service', 'Main-d’œuvre', 'Matériel', 'Transport', 'Dépenses', 'Autre']).map(n => <option key={n} value={n} />)}</datalist>
+        {dist.length === 0 ? (
+          <p className="text-sm text-gray-400">{tr('Aucune répartition — le revenu ira en « Non classé ». Cliquez « Auto-répartir » ou ajoutez des classes.', 'No distribution — revenue goes to “Unclassified”. Click “Auto-split” or add classes.')}</p>
+        ) : (
+          <div className="space-y-2">
+            {dist.map((d, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input list="fac-class-list" value={d.class} onChange={e => updDist(i, 'class', e.target.value)} disabled={facture.approved} placeholder={tr('Classe', 'Class')} className="flex-1 rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm dark:border-gray-600" />
+                <div className="flex items-center gap-1">
+                  <input type="number" step="0.1" value={d.pct} onChange={e => updDist(i, 'pct', e.target.value)} disabled={facture.approved} className="w-20 rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-right text-sm dark:border-gray-600" />
+                  <span className="text-sm text-gray-400">%</span>
+                </div>
+                <span className="w-28 text-right text-xs text-gray-500 tabular-nums">{money(subtotal * (Number(d.pct) || 0) / 100)}</span>
+                {!facture.approved && <button onClick={() => delDist(i)} className="rounded p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>}
+              </div>
+            ))}
+            <div className="flex items-center justify-between pt-1 text-xs">
+              {!facture.approved && <button onClick={addDist} className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:underline"><Plus size={13} /> {tr('Ajouter une classe', 'Add a class')}</button>}
+              <span className={`ml-auto font-bold ${Math.abs(distSum - 100) < 0.5 ? 'text-emerald-600' : 'text-amber-600'}`}>{tr('Total réparti', 'Allocated')} : {distSum.toFixed(1)} %{Math.abs(distSum - 100) >= 0.5 ? ` (${tr('doit faire 100 %', 'should be 100%')})` : ' ✓'}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Notes ────────────────────────────────────────────────────────── */}
