@@ -1,6 +1,6 @@
 'use client';
 // Module HSE (Santé & sécurité) — registres réglementaires + incidents/échéances + KPI (LTIFR/TRIR).
-// Données : lib/hse/data ; calculs purs : lib/hse/kpi. Bi-juridiction CNESST/RIDDOR, bilingue FR/EN.
+// Données : lib/hse/data ; calculs purs : lib/hse/kpi. Juridictions CANADIENNES (fédéral + provinces/territoires), bilingue FR/EN.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2 } from 'lucide-react';
@@ -83,7 +83,7 @@ export default function HsePage() {
       <PortalHeader tenant={tenant} />
       <div className="mx-auto max-w-6xl px-4 py-5">
         <h1 className="mb-1 text-xl font-bold text-gray-900 dark:text-white">{tr('Santé et sécurité — HSE', 'Health & Safety — HSE')}</h1>
-        <p className="mb-4 text-sm text-gray-500">{tr('Registres réglementaires, échéances (CNESST/RIDDOR) et KPI (LTIFR/TRIR). Indicatif — à valider par une personne qualifiée.', 'Regulatory registers, deadlines (CNESST/RIDDOR) and KPIs (LTIFR/TRIR). Indicative — validate with a qualified person.')}</p>
+        <p className="mb-4 text-sm text-gray-500">{tr('Registres réglementaires, échéances (normes canadiennes — fédéral + provinces/territoires) et KPI (LTIFR/TRIR). Indicatif — à valider par une personne qualifiée.', 'Regulatory registers, deadlines (Canadian standards — federal + provinces/territories) and KPIs (LTIFR/TRIR). Indicative — validate with a qualified person.')}</p>
 
         <div className="mb-4 flex w-fit flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
           {TABS.map(t => { const I = t.icon; return (
@@ -297,8 +297,8 @@ function ConfigTab({ tr, card, tenant, frameworks, regTypes, tenantRegs, setting
   const [busy, setBusy] = useState(false);
   const enabledSet = new Set(tenantRegs.filter((t: any) => t.is_enabled).map((t: any) => t.register_type_id));
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
-  // Déduit la base de normalisation selon la juridiction (UK = 100000, sinon 200000).
-  function onFw(id: string) { setFwId(id); const f = frameworks.find((x: any) => x.id === id); if (f) setRateBase(f.jurisdiction === 'UK' ? 100000 : 200000); }
+  // Juridictions canadiennes : base de normalisation = 200 000 h (100 travailleurs × 2 000 h), standard CSA/CNESST.
+  function onFw(id: string) { setFwId(id); if (frameworks.find((x: any) => x.id === id)) setRateBase(200000); }
   async function save() {
     setBusy(true);
     const { error } = await saveHseSettings(tenant, { framework_id: fwId || null, rate_base_hours: Number(rateBase), default_locale: locale });
@@ -311,7 +311,7 @@ function ConfigTab({ tr, card, tenant, frameworks, regTypes, tenantRegs, setting
         <h3 className="mb-2 text-sm font-bold">{tr('Cadre réglementaire & KPI', 'Regulatory framework & KPIs')}</h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-xs font-semibold text-gray-500">{tr('Cadre', 'Framework')}<select value={fwId} onChange={e => onFw(e.target.value)} className={inp}><option value="">{tr('— Choisir —', '— Pick —')}</option>{frameworks.map((f: any) => <option key={f.id} value={f.id}>{tr(f.name_fr, f.name_en)}</option>)}</select></label>
-          <label className="text-xs font-semibold text-gray-500">{tr('Base de normalisation (h)', 'Rate base (h)')}<select value={rateBase} onChange={e => setRateBase(Number(e.target.value))} className={inp}><option value={200000}>200 000 ({tr('Amérique du Nord', 'North America')})</option><option value={100000}>100 000 (UK)</option><option value={1000000}>1 000 000</option></select></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Base de normalisation (h)', 'Rate base (h)')}<select value={rateBase} onChange={e => setRateBase(Number(e.target.value))} className={inp}><option value={200000}>200 000 ({tr('Canada — 100 trav. × 2 000 h', 'Canada — 100 wkrs × 2,000 h')})</option><option value={1000000}>1 000 000</option></select></label>
           <label className="text-xs font-semibold text-gray-500">{tr('Langue par défaut', 'Default language')}<select value={locale} onChange={e => setLocale(e.target.value)} className={inp}><option value="fr">Français</option><option value="en">English</option></select></label>
         </div>
         <div className="mt-3 flex justify-end"><button onClick={save} disabled={busy} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? '…' : tr('Enregistrer', 'Save')}</button></div>
