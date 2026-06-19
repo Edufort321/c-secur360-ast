@@ -85,10 +85,36 @@ export function buildKioskSlides(d: KioskStatsInput): KioskSlide[] {
   });
   if (d.plan && (d.plan.roster || d.plan.occCount)) out.push({ key: 'planner', big: `${d.plan.occ}%`, title: tr('TAUX D’OCCUPATION', 'OCCUPANCY RATE'), sub: tr(`${d.plan.occCount}/${d.plan.roster} affectés aujourd’hui`, `${d.plan.occCount}/${d.plan.roster} assigned today`), accent: 'text-violet-400' });
   if (d.invCount != null) out.push({ key: 'inventory', big: d.invCount, title: tr('ARTICLES EN INVENTAIRE', 'INVENTORY ITEMS'), accent: 'text-teal-400' });
-  if (d.dgaStats) out.push({ key: 'dga', big: d.dgaStats.all, title: tr('TRANSFORMATEURS SUIVIS', 'MONITORED TRANSFORMERS'), sub: d.dgaStats.critical ? tr(`${d.dgaStats.critical} critiques`, `${d.dgaStats.critical} critical`) : undefined, accent: d.dgaStats.critical ? 'text-rose-400' : 'text-emerald-400' });
-  if (d.inspStats) out.push({ key: 'inspections', big: d.inspStats.total, title: tr('INSPECTIONS', 'INSPECTIONS'), sub: d.inspStats.nonConf ? tr(`${d.inspStats.nonConf} non conformités`, `${d.inspStats.nonConf} non-conformities`) : undefined, accent: d.inspStats.nonConf ? 'text-amber-400' : 'text-emerald-400' });
-  if (d.tsStats) out.push({ key: 'timesheets', big: d.tsStats.pending, title: tr('FEUILLES EN ATTENTE', 'PENDING TIMESHEETS'), accent: d.tsStats.pending ? 'text-amber-400' : 'text-emerald-400' });
-  if (d.maintStats) out.push({ key: 'maintenance', big: d.maintStats.due, title: tr('MAINTENANCES DUES', 'MAINTENANCE DUE'), sub: d.maintStats.alerts ? tr(`${d.maintStats.alerts} alertes`, `${d.maintStats.alerts} alerts`) : undefined, accent: d.maintStats.due ? 'text-amber-400' : 'text-emerald-400' });
+  if (d.dgaStats) out.push({
+    key: 'dga', big: d.dgaStats.all, title: tr('TRANSFORMATEURS (DGA)', 'TRANSFORMERS (DGA)'), accent: d.dgaStats.critical ? 'text-rose-400' : 'text-emerald-400',
+    stats: [
+      { value: d.dgaStats.all, label: tr('Suivis', 'Monitored'), accent: 'text-teal-400' },
+      { value: d.dgaStats.critical ?? 0, label: tr('Critiques', 'Critical'), accent: (d.dgaStats.critical ?? 0) ? 'text-rose-400' : 'text-emerald-400' },
+      { value: d.dgaStats.overdue ?? 0, label: tr('En retard', 'Overdue'), accent: (d.dgaStats.overdue ?? 0) ? 'text-amber-400' : 'text-emerald-400' },
+    ],
+  });
+  if (d.inspStats) out.push({
+    key: 'inspections', big: d.inspStats.total, title: tr('INSPECTIONS', 'INSPECTIONS'), accent: d.inspStats.nonConf ? 'text-amber-400' : 'text-emerald-400',
+    stats: [
+      { value: d.inspStats.total, label: tr('Total', 'Total'), accent: 'text-sky-400' },
+      { value: d.inspStats.nonConf, label: tr('Non conformités', 'Non-conformities'), accent: d.inspStats.nonConf ? 'text-rose-400' : 'text-emerald-400' },
+    ],
+  });
+  if (d.tsStats) out.push({
+    key: 'timesheets', big: d.tsStats.pending, title: tr('FEUILLES DE TEMPS', 'TIMESHEETS'), accent: d.tsStats.pending ? 'text-amber-400' : 'text-emerald-400',
+    stats: [
+      { value: d.tsStats.total, label: tr('Total', 'Total'), accent: 'text-sky-400' },
+      { value: d.tsStats.pending, label: tr('En attente', 'Pending'), accent: d.tsStats.pending ? 'text-amber-400' : 'text-emerald-400' },
+    ],
+  });
+  if (d.maintStats) out.push({
+    key: 'maintenance', big: d.maintStats.due, title: tr('MAINTENANCE', 'MAINTENANCE'), accent: d.maintStats.due ? 'text-amber-400' : 'text-emerald-400',
+    stats: [
+      { value: d.maintStats.sheets, label: tr('Équipements', 'Equipment'), accent: 'text-sky-400' },
+      { value: d.maintStats.due, label: tr('Échéances dues', 'Due'), accent: d.maintStats.due ? 'text-amber-400' : 'text-emerald-400' },
+      { value: d.maintStats.alerts, label: tr('Alertes', 'Alerts'), accent: d.maintStats.alerts ? 'text-rose-400' : 'text-emerald-400' },
+    ],
+  });
   return out;
 }
 
