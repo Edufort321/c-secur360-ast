@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Trash2, Plus, Boxes, Check, Download } from 'lucide-react';
 import { getAssets, saveAsset, deleteAsset, assetsBookValue, annualDepreciation, ASSET_CATEGORIES, type CompanyAsset } from '@/lib/assets';
+import { netBookValue } from '@/lib/depreciation';
 import { downloadCsv, type CsvColumn } from '@/lib/csv';
 import { getAccounts, createEntry } from '@/lib/accounting';
 
@@ -17,12 +18,30 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
   const [edit, setEdit] = useState<CompanyAsset | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [posting, setPosting] = useState<string | null>(null);
+  const [depYear, setDepYear] = useState(new Date().getFullYear());
+  const [accum, setAccum] = useState<Record<string, number>>({}); // amortissement cumulé par bien
+  const [depBusy, setDepBusy] = useState(false);
   const inp = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
 
-  async function load() { setLoading(true); try { setRows(await getAssets(tenant)); } catch (e: any) { setNotice('Erreur (migration 206 ?) : ' + (e?.message || e)); } setLoading(false); }
+  async function loadAccum() { try { const r = await fetch(`/api/accounting/depreciate?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }); const j = await r.json(); if (j?.accumulated) setAccum(j.accumulated); } catch { /* ignore */ } }
+  async function load() { setLoading(true); try { setRows(await getAssets(tenant)); await loadAccum(); } catch (e: any) { setNotice('Erreur (migration 206 ?) : ' + (e?.message || e)); } setLoading(false); }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
+  // Comptabilise la dotation d'amortissement de l'exercice (DR 5600 / CR 1590), idempotent.
+  async function postDepreciation() {
+    if (!confirm(tr(`Comptabiliser l'amortissement de ${depYear} pour tous les biens éligibles (DR 5600 / CR 1590) ?`, `Post ${depYear} depreciation for all eligible assets (DR 5600 / CR 1590)?`))) return;
+    setDepBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/accounting/depreciate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, year: depYear }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error);
+      await loadAccum();
+      setNotice(j.posted ? tr(`Amortissement ${depYear} comptabilisé : ${j.posted} bien(s), ${mny(j.total)} (DR 5600 / CR 1590).`, `${depYear} depreciation posted: ${j.posted} asset(s), ${mny(j.total)}.`) : tr(`Rien à comptabiliser pour ${depYear} (déjà fait ou aucun bien amortissable).`, `Nothing to post for ${depYear}.`));
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); } finally { setDepBusy(false); }
+  }
+
   const bookValue = assetsBookValue(rows);
+  const accumTotal = Object.values(accum).reduce((s, n) => s + (Number(n) || 0), 0);
+  const netValue = rows.filter(a => a.status !== 'disposed').reduce((s, a) => s + netBookValue(a, accum[a.id || ''] || 0), 0);
   const annualDep = rows.filter(a => a.status !== 'disposed').reduce((s, a) => s + annualDepreciation(a), 0);
 
   async function save() {
@@ -69,15 +88,23 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
     <div className="space-y-4">
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20">{notice}</div>}
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20"><div className="text-[11px] font-semibold uppercase text-blue-500">{tr('Valeur des biens', 'Asset value')}</div><div className="text-lg font-extrabold text-blue-700 dark:text-blue-300">{mny(bookValue)}</div></div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20"><div className="text-[11px] font-semibold uppercase text-blue-500">{tr('Valeur brute (coût)', 'Gross value (cost)')}</div><div className="text-lg font-extrabold text-blue-700 dark:text-blue-300">{mny(bookValue)}</div></div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20"><div className="text-[11px] font-semibold uppercase text-amber-500">{tr('Amort. cumulé', 'Accum. deprec.')}</div><div className="text-lg font-extrabold text-amber-700 dark:text-amber-300">{mny(accumTotal)}</div></div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20"><div className="text-[11px] font-semibold uppercase text-emerald-500">{tr('Valeur nette', 'Net book value')}</div><div className="text-lg font-extrabold text-emerald-700 dark:text-emerald-300">{mny(netValue)}</div></div>
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-[11px] font-semibold uppercase text-gray-400">{tr('Amort. annuel', 'Annual deprec.')}</div><div className="text-lg font-extrabold text-gray-800 dark:text-gray-100">{mny(annualDep)}</div></div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-[11px] font-semibold uppercase text-gray-400">{tr('Biens actifs', 'Active assets')}</div><div className="text-lg font-extrabold text-gray-800 dark:text-gray-100">{rows.filter(a => a.status !== 'disposed').length}</div></div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {canEdit && !edit && <button onClick={() => setEdit(blank())} className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Plus size={15} /> {tr('Nouveau bien', 'New asset')}</button>}
         {rows.length > 0 && <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={14} /> {tr('Exporter CSV', 'Export CSV')}</button>}
+        {canEdit && (
+          <div className="ml-auto flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-2 py-1 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">{tr('Amortissement', 'Depreciation')}</span>
+            <select value={depYear} onChange={e => setDepYear(Number(e.target.value))} className={inp}>{[0, 1, 2, 3].map(d => { const y = new Date().getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}</select>
+            <button onClick={postDepreciation} disabled={depBusy} className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50">{depBusy ? <Loader2 size={13} className="animate-spin" /> : null} {tr('Comptabiliser', 'Post')}</button>
+          </div>
+        )}
       </div>
 
       {edit && (
@@ -105,7 +132,7 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="w-full min-w-[760px] text-sm [&_td]:whitespace-nowrap [&_td]:py-2">
-            <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-400 dark:border-gray-700"><th className="px-3 py-2">{tr('Bien', 'Asset')}</th><th>{tr('Catégorie', 'Category')}</th><th>{tr('Acquis', 'Acquired')}</th><th className="text-right">{tr('Coût', 'Cost')}</th><th>{tr('Livre', 'Books')}</th><th></th></tr></thead>
+            <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-400 dark:border-gray-700"><th className="px-3 py-2">{tr('Bien', 'Asset')}</th><th>{tr('Catégorie', 'Category')}</th><th>{tr('Acquis', 'Acquired')}</th><th className="text-right">{tr('Coût', 'Cost')}</th><th className="text-right">{tr('Val. nette', 'Net value')}</th><th>{tr('Livre', 'Books')}</th><th></th></tr></thead>
             <tbody>
               {rows.map(a => (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
@@ -113,6 +140,7 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
                   <td className="text-gray-500">{a.category || '—'}</td>
                   <td className="text-xs text-gray-500">{a.acquisition_date}</td>
                   <td className="text-right font-semibold">{mny(a.cost)}</td>
+                  <td className="text-right text-gray-600 dark:text-gray-300">{mny(netBookValue(a, accum[a.id || ''] || 0))}{(accum[a.id || ''] || 0) > 0 && <span className="ml-1 text-[10px] text-amber-500">−{mny(accum[a.id || ''] || 0)}</span>}</td>
                   <td>{a.gl_entry_id ? <span className="inline-flex items-center gap-1 text-emerald-600"><Check size={13} /> 1500</span> : <span className="text-gray-300">{tr('non', 'no')}</span>}</td>
                   <td className="px-2 text-right">
                     {canEdit && (

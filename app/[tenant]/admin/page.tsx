@@ -8493,6 +8493,7 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
+  const [remitBusy, setRemitBusy] = useState(false);
   async function load() {
     setLoading(true); setMigMissing(false);
     try {
@@ -8502,6 +8503,19 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant, year]);
+  // Comptabilise la REMISE de la période affichée : DR 2100/2110 / CR banque (idempotent par période).
+  async function postRemittance() {
+    const periodStart = freq === 'annuel' ? `${year}-01-01` : period.start;
+    const periodEnd = freq === 'annuel' ? `${year}-12-31` : period.end;
+    if (!confirm(tr(`Comptabiliser la remise TPS/TVQ pour ${freq === 'annuel' ? year : period.label} (DR 2100/2110 / CR banque) ?`, `Post the GST/QST remittance for ${freq === 'annuel' ? year : period.label} (DR 2100/2110 / CR bank)?`))) return;
+    setRemitBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/accounting/tax-remittance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, periodStart, periodEnd, frequency: freq }) });
+      const j = await r.json();
+      if (!r.ok) { setNotice(j.error || tr('Remise non comptabilisée.', 'Remittance not posted.')); return; }
+      setNotice(tr(`Remise comptabilisée ✓ : TPS ${mny(j.gstNet)} + TVQ ${mny(j.qstNet)} = ${mny(j.total)} (DR 2100/2110 / CR banque).`, `Remittance posted ✓: GST ${mny(j.gstNet)} + QST ${mny(j.qstNet)} = ${mny(j.total)}.`));
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); } finally { setRemitBusy(false); }
+  }
 
   // Charge la remise de la période sélectionnée (annuel = année complète).
   useEffect(() => {
@@ -8576,7 +8590,10 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
               <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(taxView.qstNet)}</td></tr>
             </tbody></table>
           </div>
-          <p className="sm:col-span-2 text-xs text-gray-400">{tr('Comptes 2100/2110 (taxe perçue) et 1200/1210 (CTI/RTI) du grand livre, période sélectionnée. Déclaration obligatoire même si le net est 0.', 'Ledger accounts 2100/2110 (collected) and 1200/1210 (ITC/ITR), selected period. A return is required even if net is 0.')}</p>
+          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-gray-400">{tr('Comptes 2100/2110 (taxe perçue) et 1200/1210 (CTI/RTI) du grand livre, période sélectionnée. Déclaration obligatoire même si le net est 0.', 'Ledger accounts 2100/2110 (collected) and 1200/1210 (ITC/ITR), selected period. A return is required even if net is 0.')}</p>
+            <button onClick={postRemittance} disabled={remitBusy} title={tr('Passe l’écriture de remise au grand livre (DR 2100/2110 / CR banque)', 'Posts the remittance entry to the ledger (DR 2100/2110 / CR bank)')} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{remitBusy ? <Loader2 size={14} className="animate-spin" /> : <Banknote size={14} />} {tr('Comptabiliser la remise', 'Post remittance')}</button>
+          </div>
         </div>
       )}
 

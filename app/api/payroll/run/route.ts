@@ -1,7 +1,8 @@
 // Paie réelle (#43) — PERSISTANCE d'un run de paie + écriture comptable optionnelle. Gating = canHr.
 // Reçoit les lignes calculées (cf. /api/payroll/calculate), enregistre payroll_runs + payroll_lines,
 // et (si postGl) passe UNE écriture de paie ÉQUILIBRÉE au grand livre :
-//   DR 5000 Salaires            = brut + cotisations employeur (charge totale)
+//   DR 5000 Salaires            = brut (rémunération employés)
+//   DR 5100 Charges sociales    = cotisations EMPLOYEUR (RRQ/AE/RQAP/FSS/CNESST) — isolées (repli 5000 si absent)
 //   CR 2300 Net à payer         = net versé aux employés
 //   CR 2200 Retenues fédéral    = impôt fédéral + AE (employé+employeur) + impôt additionnel
 //   CR 2210 Retenues Québec     = impôt QC + RRQ + RQAP (employé+employeur) + FSS + CNESST + 1 %
@@ -69,8 +70,10 @@ export async function POST(req: NextRequest) {
         const grossT = sum('gross'), erT = sum('er_total'), netT = sum('net_pay');
         const fedRemit = r2(sum('federal_tax') + sum('ei') + sum('er_ei') + sum('extra_tax'));
         const qcRemit = r2(sum('quebec_tax') + sum('qpp') + sum('qpip') + sum('er_qpp') + sum('er_qpip') + sum('er_fss') + sum('er_cnesst') + sum('er_wsdrf'));
+        const erAcc = m['5100'] || m['5000']; // charges employeur isolées en 5100 (repli 5000 si non seedé)
         const glLines = [
-          { account_id: m['5000'], debit: r2(grossT + erT), credit: 0, description: 'Salaires et charges sociales' },
+          { account_id: m['5000'], debit: r2(grossT), credit: 0, description: 'Salaires bruts' },
+          ...(erT > 0 ? [{ account_id: erAcc, debit: r2(erT), credit: 0, description: 'Charges sociales employeur (RRQ/AE/RQAP/FSS/CNESST)' }] : []),
           { account_id: m['2300'], debit: 0, credit: netT, description: 'Net à payer aux employés' },
           { account_id: m['2200'], debit: 0, credit: fedRemit, description: 'Retenues à la source — fédéral (impôt/AE)' },
           { account_id: m['2210'], debit: 0, credit: qcRemit, description: 'Retenues à la source — Québec (impôt/RRQ/RQAP/FSS/CNESST)' },
