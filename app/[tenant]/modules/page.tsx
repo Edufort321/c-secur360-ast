@@ -286,7 +286,7 @@ export default function ModulesPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-      <KioskBroadcast enabled={kiosk.on} idleSeconds={kiosk.idle} selectedKeys={kiosk.cards} lang={lang === 'en' ? 'en' : 'fr'}
+      <KioskBroadcast enabled={kiosk.on} idleSeconds={kiosk.idle} selectedKeys={kiosk.cards} lang={lang === 'en' ? 'en' : 'fr'} tenant={tenant}
         slides={buildKioskSlides({ lang: lang === 'en' ? 'en' : 'fr', safety, proj, ast, permit, plan, invCount, dgaStats, inspStats, tsStats, maintStats })} />
       <PortalHeader tenant={tenant} />
 

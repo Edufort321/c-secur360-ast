@@ -5,13 +5,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
 import { selectKioskSlides, type KioskSlide } from '@/lib/kioskCards';
+import { supabase } from '@/lib/supabase';
 
-export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides = [], selectedKeys }:
-  { enabled: boolean; idleSeconds?: number; lang?: 'fr' | 'en'; slides?: KioskSlide[]; selectedKeys?: string[] | null }) {
+export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides = [], selectedKeys, tenant }:
+  { enabled: boolean; idleSeconds?: number; lang?: 'fr' | 'en'; slides?: KioskSlide[]; selectedKeys?: string[] | null; tenant?: string }) {
   const tr = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [active, setActive] = useState(false);
   const [idx, setIdx] = useState(0);
   const idleTimer = useRef<any>(null);
+
+  // VRAI logo : celui du tenant (tenants.logo_url) sinon le logo par défaut /logo.png — jamais un placeholder.
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoFailed, setLogoFailed] = useState(false);
+  useEffect(() => {
+    if (!tenant) return;
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
 
   // Diapos à diffuser (filtrées par les cartes cochées). Ref = lecture fraîche dans le minuteur (anti-stale).
   const shown = selectKioskSlides(slides, selectedKeys);
@@ -59,7 +69,9 @@ export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides 
   return (
     <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <button onClick={() => setActive(false)} className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-white/10" title={tr('Fermer', 'Close')}><X size={22} /></button>
-      <ShieldCheck size={40} className="mb-6 text-emerald-500/70" />
+      {logoFailed
+        ? <ShieldCheck size={40} className="mb-6 text-emerald-500/70" />
+        : <img src={logoUrl || '/logo.png'} alt="" className="mb-8 h-24 w-auto object-contain drop-shadow-lg" onError={() => setLogoFailed(true)} />}
       <div className={`font-black leading-none ${s.accent}`} style={{ fontSize: 'clamp(7rem, 30vw, 24rem)' }}>{s.big}</div>
       <div className="mt-4 text-2xl font-semibold uppercase tracking-[0.3em] text-slate-200 sm:text-3xl">{s.title}</div>
       {s.sub && <div className="mt-2 text-slate-400">{s.sub}</div>}
