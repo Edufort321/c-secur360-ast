@@ -84,8 +84,31 @@ export async function POST(req: NextRequest) {
       try { const wb = XLSX.read(Buffer.from(raw, 'base64'), { type: 'buffer' }); csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]] || {}); }
       catch { return NextResponse.json({ error: 'Fichier Excel/CSV illisible.' }, { status: 422 }); }
       if (!csv.trim()) return NextResponse.json({ error: 'Fichier vide.' }, { status: 422 });
-      // CSV bancaire = relevé : même prompt robuste que le PDF (débit=dépense/crédit=revenu, transferts, n° de compte, résumé).
-      data = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_DOC].join('\n'), `Lignes (CSV) d'un relevé à extraire (déduis le compte si présent dans l'en-tête/préambule) :\n${csv.slice(0, 16000)}`, 8192);
+      // DÉCOUPAGE EN LOTS : un gros relevé dépasserait max_tokens et tronquerait le JSON (réponse illisible).
+      // On garde l'en-tête dans chaque lot et on agrège les items ; le 1er résumé déclaré est conservé.
+      const allLines = csv.split(/\r?\n/).filter(l => l.trim().length);
+      const header = allLines[0] || '';
+      const dataLines = allLines.slice(1);
+      const CHUNK = 60;
+      const batches: string[] = dataLines.length <= CHUNK
+        ? [csv.slice(0, 16000)]
+        : Array.from({ length: Math.ceil(dataLines.length / CHUNK) }, (_, i) => [header, ...dataLines.slice(i * CHUNK, i * CHUNK + CHUNK)].join('\n').slice(0, 16000));
+      const items: any[] = [];
+      let summary: any = null, costTotal = 0;
+      for (const batch of batches) {
+        const d = await callAnthropic(apiKey, [ANTI_INJECTION, SYS_DOC].join('\n'), `Lignes (CSV) d'un relevé à extraire (déduis le compte si présent dans l'en-tête/préambule) :\n${batch}`, 8192);
+        try { const c = aiCallCostCents(MODEL, d?.usage); if (c > 0) costTotal += c; } catch { /* best-effort */ }
+        const t = (d?.content || []).map((b: any) => b?.text || '').join('').trim();
+        const o = parseJson(t);
+        if (o) {
+          const its = Array.isArray(o.items) ? o.items : (Array.isArray(o) ? o : (o.vendor || o.total != null ? [o] : []));
+          items.push(...its);
+          if (o.summary && !summary) summary = o.summary;
+        }
+      }
+      if (tenant && costTotal > 0) { try { await recordAiUsage(tenant, 'transactions', costTotal, { feature: 'scan-receipt' }); } catch { /* best-effort */ } }
+      if (!items.length) return NextResponse.json({ error: 'Lecture impossible (réponse illisible).' }, { status: 422 });
+      return NextResponse.json({ extractedList: items, summary: summary || null });
     } else {
       return NextResponse.json({ error: 'Format non supporté (image, PDF, Excel ou CSV).' }, { status: 400 });
     }
