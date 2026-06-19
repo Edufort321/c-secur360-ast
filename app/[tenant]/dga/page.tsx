@@ -46,9 +46,10 @@ export default function DgaPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [{ getReferenceStandards }, { setDgaPercentileOverrides }] = await Promise.all([import('@/lib/referenceStandards'), import('@/lib/dga/severity2019')]);
+        const [{ getReferenceStandards }, { setDgaPercentileOverrides }, { setT4Bounds }] = await Promise.all([import('@/lib/referenceStandards'), import('@/lib/dga/severity2019'), import('@/lib/dga/triangle4')]);
         const rs = await getReferenceStandards(tenant);
         setDgaPercentileOverrides(rs?.dga_percentiles, !!rs?._meta?.validated_at);
+        setT4Bounds(rs?.dga_t4_bounds, !!rs?._meta?.validated_at);
       } catch { /* ignore */ }
     })();
   }, [tenant]);
