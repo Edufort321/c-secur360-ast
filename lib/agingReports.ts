@@ -82,14 +82,22 @@ export async function getArAging(tenant: string, asOf?: string): Promise<AgingRe
 /** Comptes à PAYER : achats fournisseurs « à terme » (on_account) non payés/non annulés (hors revenus). */
 export async function getApAging(tenant: string, asOf?: string): Promise<AgingReport> {
   const ref = asOf || new Date().toISOString().slice(0, 10);
-  const { data } = await supabase.from('commerce_transactions')
+  // due_date / payment_terms (mig 244) lus en best-effort : repli sans ces colonnes si non appliquée.
+  let data: any[] | null = null;
+  ({ data } = await supabase.from('commerce_transactions')
+    .select('id, transaction_number, vendor_name, txn_date, txn_type, payment_method, total, status, due_date, payment_terms')
+    .eq('tenant_id', tenant).eq('payment_method', 'on_account').not('status', 'in', '(paid,cancelled,draft)'));
+  if (data == null) ({ data } = await supabase.from('commerce_transactions')
     .select('id, transaction_number, vendor_name, txn_date, txn_type, payment_method, total, status')
-    .eq('tenant_id', tenant).eq('payment_method', 'on_account').not('status', 'in', '(paid,cancelled,draft)');
+    .eq('tenant_id', tenant).eq('payment_method', 'on_account').not('status', 'in', '(paid,cancelled,draft)'));
+  const addDays = (iso: string, n: number) => { const d = new Date(iso + 'T00:00:00'); if (isNaN(d.getTime())) return ''; d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
   const docs = (data || [])
     .filter((t: any) => (t.txn_type || 'expense') !== 'revenue')
-    .map((t: any) => ({
-      id: t.id, number: t.transaction_number || '—', party: t.vendor_name || 'Fournisseur',
-      doc_date: (t.txn_date || '').slice(0, 10), due_date: '', amount: Number(t.total) || 0,
-    }));
+    .map((t: any) => {
+      const doc_date = (t.txn_date || '').slice(0, 10);
+      // Échéance = date explicite, sinon date d'écriture + conditions de paiement (net N jours), sinon vide.
+      const due_date = t.due_date ? String(t.due_date).slice(0, 10) : (t.payment_terms && doc_date ? addDays(doc_date, Number(t.payment_terms)) : '');
+      return { id: t.id, number: t.transaction_number || '—', party: t.vendor_name || 'Fournisseur', doc_date, due_date, amount: Number(t.total) || 0 };
+    });
   return buildReport(docs, ref);
 }

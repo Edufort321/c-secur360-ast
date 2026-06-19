@@ -27,6 +27,8 @@ export type Transaction = {
   currency?: string;   // devise du document (multi-devise #43, défaut CAD)
   fx_rate?: number;    // taux vers la devise de base au moment de l'opération (défaut 1)
   revenue_category?: string | null; // classe de revenu (ventilation état financier, migration 232) — si txn_type='revenue'
+  due_date?: string | null;         // échéance (dépense à terme) — vieillissement AP (migration 244)
+  payment_terms?: number | null;    // conditions de paiement en jours (ex. net 30) — migration 244
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -81,12 +83,14 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     ...(header.needs_review !== undefined ? { needs_review: header.needs_review } : {}),
     ...(header.currency ? { currency: header.currency, fx_rate: Number(header.fx_rate) || 1 } : {}),
     ...(header.revenue_category ? { revenue_category: header.revenue_category } : {}),
+    ...(header.due_date ? { due_date: header.due_date } : {}),
+    ...(header.payment_terms != null ? { payment_terms: Number(header.payment_terms) } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
   // Si une colonne récente n'existe pas encore (migration 185/187/207/221/232/235), on retire UNIQUEMENT
   // la/les colonne(s) RÉELLEMENT signalée(s) par l'erreur (pas les autres) — sinon on perdait p.ex.
   // revenue_category alors que sa colonne existe, juste parce qu'une autre migration manquait.
-  const OPTIONAL_COLS = ['treasury_account_id', 'needs_review', 'paid_by_person_id', 'settlement_kind', 'currency', 'fx_rate', 'revenue_category'];
+  const OPTIONAL_COLS = ['treasury_account_id', 'needs_review', 'paid_by_person_id', 'settlement_kind', 'currency', 'fx_rate', 'revenue_category', 'due_date', 'payment_terms'];
   const missingCol = (e: any) => OPTIONAL_COLS.some(c => new RegExp(c, 'i').test(String(e?.message || '')));
   const stripFlagged = (p: any, e: any) => { const msg = String(e?.message || ''); const r = { ...p }; for (const c of OPTIONAL_COLS) { if (new RegExp(c, 'i').test(msg)) delete r[c]; } return r; };
   let id = header.id;

@@ -8048,6 +8048,15 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 </div>
               </label>
             )}
+            {/* Échéance fournisseur (dépense à crédit) → vieillissement des comptes à payer (P2-3). */}
+            {!isRevenue && hdr.payment_method === 'on_account' && (
+              <label className="text-xs font-semibold text-gray-500">{tr('Échéance (à payer)', 'Due date (payable)')}
+                <input type="date" value={(hdr as any).due_date || ''} onChange={e => setHdr(h => ({ ...h, due_date: e.target.value || null } as any))} className={`mt-1 w-full ${inputCls}`} />
+                <div className="mt-1 flex gap-1">
+                  {[15, 30, 60].map(n => <button key={n} type="button" onClick={() => setHdr(h => { const base = h.txn_date || today; const d = new Date(base + 'T00:00:00'); d.setDate(d.getDate() + n); return { ...h, due_date: d.toISOString().slice(0, 10), payment_terms: n } as any; })} className="rounded border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-600">{tr('net', 'net')} {n}</button>)}
+                </div>
+              </label>
+            )}
             {/* Dépense engagée par une PERSONNE → remboursement (CR 2300) ou investissement/apport (CR 3100) */}
             {!isRevenue && (
               <label className="text-xs font-semibold text-gray-500">{tr('Réglé par', 'Settled by')}
