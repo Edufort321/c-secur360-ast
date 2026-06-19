@@ -21,7 +21,7 @@ const CONF_EN: Record<string, string> = { 'élevée': 'high', 'moyenne': 'medium
 export function ConsensusView({ gases, duvalTriangle1, lang = 'fr' }: { gases: DGAGases & { O2?: number; N2?: number }; duvalTriangle1?: string | null; lang?: 'fr' | 'en' }) {
   const EN = lang === 'en';
   const tr = (fr: string, en: string) => (EN ? en : fr);
-  const dx = autoDiagnose(gases);
+  const dx = autoDiagnose(gases, lang);
   const famStyle = dx.verdict.family ? FAMILY_STYLE[dx.verdict.family] : null;
   const famLabel = dx.verdict.family ? (EN ? (FAMILY_EN[dx.verdict.family] || dx.verdict.label) : dx.verdict.label) : tr('Indéterminé', 'Undetermined');
   const conf = EN ? (CONF_EN[dx.verdict.confidence] || dx.verdict.confidence) : dx.verdict.confidence;

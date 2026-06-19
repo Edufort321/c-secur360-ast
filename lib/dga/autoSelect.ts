@@ -1,8 +1,8 @@
-// Moteur d'AUTO-SÉLECTION DGA — arbre de décision déterministe (pas de LLM, 100% reproductible).
+// Moteur d'AUTO-SÉLECTION DGA — arbre de décision déterministe (pas de LLM, 100% reproductible). BILINGUE.
 // Choisit la méthode PRIMAIRE par règles fixes selon le type de défaut (Triangle 1), agrège le consensus,
 // expose les désaccords, et rend un verdict ferme + niveau de confiance + mention de validation.
 // Triangle 4/5 et Pentagone sont appelés s'ils existent ; sinon ignorés proprement.
-import { keyGasMethod, doernenburg, rogers, iec60599, co2coRatio, faultFamily, type DGAGases, type MethodResult } from './methods';
+import { keyGasMethod, doernenburg, rogers, iec60599, co2coRatio, faultFamily, type DGAGases, type MethodResult, type Lang } from './methods';
 import { classifyTriangle1 } from './triangle1';
 
 type OptionalClassifier = ((g: DGAGases) => MethodResult) | null;
@@ -19,13 +19,18 @@ export type AutoDiagnosis = {
   optionalMethods: MethodResult[];
 };
 
+const L = (lang: Lang, fr: string, en: string) => (lang === 'en' ? en : fr);
 const IEEE_THRESHOLDS: Record<string, number> = { H2: 100, CH4: 120, C2H6: 65, C2H4: 50, C2H2: 1, CO: 350 };
-const FAMILY_LABEL: Record<string, string> = {
-  arc: 'Arc / décharge à haute énergie', thermique: 'Défaut thermique', pd: 'Décharges partielles',
-  papier: 'Dégradation du papier (cellulose)', normal: 'Aucun défaut significatif', autre: 'Indéterminé',
-};
+const FAMILY_LABEL = (lang: Lang): Record<string, string> => ({
+  arc: L(lang, 'Arc / décharge à haute énergie', 'Arc / high-energy discharge'),
+  thermique: L(lang, 'Défaut thermique', 'Thermal fault'),
+  pd: L(lang, 'Décharges partielles', 'Partial discharges'),
+  papier: L(lang, 'Dégradation du papier (cellulose)', 'Paper degradation (cellulose)'),
+  normal: L(lang, 'Aucun défaut significatif', 'No significant fault'),
+  autre: L(lang, 'Indéterminé', 'Undetermined'),
+});
 
-export function autoDiagnose(g: DGAGases): AutoDiagnosis {
+export function autoDiagnose(g: DGAGases, lang: Lang = 'fr'): AutoDiagnosis {
   const reliable = Object.entries(IEEE_THRESHOLDS).some(([gas, lim]) => ((g as any)[gas] ?? 0) >= lim);
 
   let transformerType: AutoDiagnosis['transformerType'] = 'unknown';
@@ -36,21 +41,21 @@ export function autoDiagnose(g: DGAGases): AutoDiagnosis {
   const t1 = classifyTriangle1(g as any);
   const t1Family = faultFamily(t1?.fault ?? null);
 
-  let primaryMethod = 'Duval Triangle 1';
-  let primaryReason = 'Méthode générale par défaut.';
-  let primaryResult: MethodResult = { method: 'Duval Triangle 1', fault: t1?.fault ?? null, label: t1?.label ?? 'n/a', valid: t1 != null, confidence: 'moyenne' };
+  let primaryMethod = L(lang, 'Duval Triangle 1', 'Duval Triangle 1');
+  let primaryReason = L(lang, 'Méthode générale par défaut.', 'General default method.');
+  let primaryResult: MethodResult = { method: primaryMethod, fault: t1?.fault ?? null, label: t1?.label ?? 'n/a', valid: t1 != null, confidence: 'moyenne' };
 
   if (t1Family === 'arc') {
-    if (classifyPentagon1) { const p = (classifyPentagon1 as any)(g); if (p.valid) { primaryMethod = 'Duval Pentagone 1'; primaryReason = 'Défaut électrique : pentagone 5 gaz plus discriminant.'; primaryResult = p; } }
-    else primaryReason = "Défaut électrique (arc) : Triangle 1 fait foi (Triangles 4/5 ne traitent pas l'arc).";
+    if (classifyPentagon1) { const p = (classifyPentagon1 as any)(g); if (p.valid) { primaryMethod = L(lang, 'Duval Pentagone 1', 'Duval Pentagon 1'); primaryReason = L(lang, 'Défaut électrique : pentagone 5 gaz plus discriminant.', 'Electrical fault: 5-gas pentagon is more discriminating.'); primaryResult = p; } }
+    else primaryReason = L(lang, "Défaut électrique (arc) : Triangle 1 fait foi (Triangles 4/5 ne traitent pas l'arc).", 'Electrical fault (arc): Triangle 1 prevails (Triangles 4/5 do not handle arcing).');
   } else if (t1Family === 'thermique') {
-    if ((t1?.fault === 'T2' || t1?.fault === 'T3') && classifyTriangle5) { const r = (classifyTriangle5 as any)(g); if (r.valid) { primaryMethod = 'Duval Triangle 5'; primaryReason = 'Défaut thermique haute T : Triangle 5 départage huile/papier.'; primaryResult = r; } }
-    else if ((t1?.fault === 'T1' || t1?.fault === 'T2') && classifyTriangle4) { const r = (classifyTriangle4 as any)(g); if (r.valid) { primaryMethod = 'Duval Triangle 4'; primaryReason = 'Défaut thermique basse T : Triangle 4 précise le sous-type.'; primaryResult = r; } }
+    if ((t1?.fault === 'T2' || t1?.fault === 'T3') && classifyTriangle5) { const r = (classifyTriangle5 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 5', 'Duval Triangle 5'); primaryReason = L(lang, 'Défaut thermique haute T : Triangle 5 départage huile/papier.', 'High-T thermal fault: Triangle 5 separates oil/paper.'); primaryResult = r; } }
+    else if ((t1?.fault === 'T1' || t1?.fault === 'T2') && classifyTriangle4) { const r = (classifyTriangle4 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Défaut thermique basse T : Triangle 4 précise le sous-type.', 'Low-T thermal fault: Triangle 4 refines the subtype.'); primaryResult = r; } }
   } else if (t1Family === 'pd') {
-    if (classifyTriangle4) { const r = (classifyTriangle4 as any)(g); if (r.valid) { primaryMethod = 'Duval Triangle 4'; primaryReason = 'Décharges partielles : Triangle 4 précise le sous-type.'; primaryResult = r; } }
+    if (classifyTriangle4) { const r = (classifyTriangle4 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Décharges partielles : Triangle 4 précise le sous-type.', 'Partial discharges: Triangle 4 refines the subtype.'); primaryResult = r; } }
   }
 
-  const all: MethodResult[] = [primaryResult, keyGasMethod(g), doernenburg(g), rogers(g), iec60599(g), co2coRatio(g)];
+  const all: MethodResult[] = [primaryResult, keyGasMethod(g, lang), doernenburg(g, lang), rogers(g, lang), iec60599(g, lang), co2coRatio(g, lang)];
   const seen = new Set<string>();
   const methods = all.filter(m => { if (seen.has(m.method)) return false; seen.add(m.method); return true; });
 
@@ -75,9 +80,9 @@ export function autoDiagnose(g: DGAGases): AutoDiagnosis {
 
   return {
     reliable,
-    warning: reliable ? null : 'Gaz sous les seuils IEEE Table 1 — diagnostic non fiable, re-test recommandé.',
+    warning: reliable ? null : L(lang, 'Gaz sous les seuils IEEE Table 1 — diagnostic non fiable, re-test recommandé.', 'Gases below IEEE Table 1 thresholds — unreliable diagnosis, re-test recommended.'),
     transformerType, primaryMethod, primaryReason,
-    verdict: { fault: verdictFault, family: verdictFamily, label: verdictFamily ? FAMILY_LABEL[verdictFamily] : 'Indéterminé', confidence, needsValidation: true },
+    verdict: { fault: verdictFault, family: verdictFamily, label: verdictFamily ? FAMILY_LABEL(lang)[verdictFamily] : L(lang, 'Indéterminé', 'Undetermined'), confidence, needsValidation: true },
     consensus: { agreement, dominantFamily, methods, disagreement, nonConclusive },
     optionalMethods: methods.filter(m => m.method !== primaryMethod),
   };
