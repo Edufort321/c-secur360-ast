@@ -101,6 +101,16 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   useEffect(() => { revenueByClass(tenant, from || undefined, to || undefined).then(setRevByClass).catch(() => setRevByClass([])); }, [tenant, from, to]);
   const a = useMemo(() => computeFinancialAnalytics(ledger, { granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal }), [ledger, granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal]);
 
+  // Donut RÉCONCILIÉ avec le CA (source unique = grand livre) : la somme des parts = CA de la carte.
+  // Le reliquat « Non classé (grand livre) » = CA du GL − revenus déjà ventilés par classe (factures/transactions).
+  const revByClassRecon = useMemo(() => {
+    const classified = revByClass.reduce((s, x) => s + x.value, 0);
+    const remainder = Math.round((a.revenueTotal - classified) * 100) / 100;
+    const list = revByClass.slice();
+    if (remainder > 1) list.push({ name: 'Non classé (grand livre)', value: remainder });
+    return list;
+  }, [revByClass, a.revenueTotal]);
+
   // Prochaine clôture comptable (selon le mois de début d'exercice) — rappel.
   const nextClose = useMemo(() => {
     const now = new Date();
@@ -142,7 +152,8 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   const kpis = [
     { label: tr('Chiffre d’affaires', 'Revenue'), value: mnyK(a.revenueTotal), icon: DollarSign, color: 'text-blue-600' },
     { label: tr('Charges', 'Expenses'), value: mnyK(a.expenseTotal), icon: TrendingDown, color: 'text-rose-600' },
-    { label: tr('Marge', 'Margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.marginPct.toFixed(1)} %` },
+    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}` },
+    { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.marginPct.toFixed(1)} %` },
     { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}` },
     { label: tr('Croissance', 'Growth'), value: a.growthPct != null ? `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %` : '—', icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: tr('dernière période', 'last period') },
     { label: tr('Trésorerie', 'Cash'), value: mnyK(a.cash), icon: Wallet, color: 'text-slate-900 dark:text-white', sub: `AR ${mnyK(a.arTotal)} · AP ${mnyK(a.apTotal)}` },
@@ -353,20 +364,20 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
       {/* Revenus par classe (produit OU catégorie de revenu) + gestion des classes */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Revenus par classe', 'Revenue by class')}</h3>
-        {revByClass.length > 0 ? (
+        {revByClassRecon.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={revByClass} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2}>
-                  {revByClass.map((_, i) => <Cell key={i} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'][i % 8]} />)}
+                <Pie data={revByClassRecon} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2}>
+                  {revByClassRecon.map((_, i) => <Cell key={i} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'][i % 8]} />)}
                 </Pie>
                 <Tooltip formatter={(v: any) => mny(Number(v))} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="self-center">
-              {revByClass.map((c, i) => {
-                const tot = revByClass.reduce((s, x) => s + x.value, 0) || 1;
+              {revByClassRecon.map((c, i) => {
+                const tot = revByClassRecon.reduce((s, x) => s + x.value, 0) || 1;
                 return (
                   <div key={i} className="flex items-center justify-between border-b border-slate-100 py-1.5 text-sm dark:border-gray-700">
                     <span className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'][i % 8] }} />{c.name}</span>
@@ -379,7 +390,7 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
         ) : (
           <p className="text-sm text-slate-400">{tr('Aucun revenu classé sur la période. Assignez une CLASSE à vos revenus (facture ou transaction) — créez vos classes ci-dessous.', 'No classified revenue in the period. Assign a CLASS to your revenue (invoice or transaction) — create your classes below.')}</p>
         )}
-        <p className="mt-2 text-[11px] text-slate-400">{tr('Source : classe du produit (ligne de facture) → sinon catégorie de revenu (facture/transaction) → sinon « Non classé ».', 'Source: product class (invoice line) → else revenue category (invoice/transaction) → else "Unclassified".')}</p>
+        <p className="mt-2 text-[11px] text-slate-400">{tr('Réconcilié au grand livre : la somme des parts = le CA. Le reliquat non ventilé apparaît en « Non classé (grand livre) ». Classe = produit (ligne de facture) → catégorie de revenu (facture/transaction).', 'Reconciled to the ledger: slices sum to revenue. Unallocated remainder shows as "Unclassified (ledger)".')}</p>
         <RevenueClassManager tenant={tenant} tr={tr} />
       </div>
 

@@ -11,7 +11,12 @@ export type LedgerEntry = {
 };
 
 const n = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
-const PAYROLL_RE = /salaire|paie|payroll|rémunér|remuner|wage|salary|cnesst|avantage social/i;
+const PAYROLL_RE = /salaire|paie|payroll|rémunér|remuner|wage|salary|cnesst|charges sociales|avantage social/i;
+// Classification des CHARGES par CODE de compte (plan comptable migration 085). Mutuellement exclusif :
+// paie (5000/5100) → COGS (5300) → amortissement (5600) → intérêts (5700) → impôts (5800) → sinon opex.
+const PAYROLL_CODES = new Set(['5000', '5100']);
+const COGS_CODES = new Set(['5300']); // Fournitures et matériel = coût des ventes (entreprise de services)
+const COGS_RE = /co[ûu]t des ventes|cogs|sous-traitance|mat[ée]ri(el|aux)|marchandise/i;
 
 // ── Clé/格 de période ─────────────────────────────────────────────────────────
 function pad(n: number) { return String(n).padStart(2, '0'); }
@@ -42,12 +47,15 @@ export function periodKey(dateStr: string, g: Granularity, fiscalStartMonth = 1)
 
 export type FinPeriod = {
   key: string; label: string; revenue: number; expense: number; payroll: number; margin: number; growthPct: number | null;
+  // COGS (coût des ventes) + marge BRUTE = revenue − cogs (≠ marge nette).
+  cogs: number; opex: number; grossMargin: number;
   // Isolation pour EBITDA (comptes 5600/5700/5800) + investissement (CAPEX = ajouts aux immobilisations 1500).
   dna: number; interest: number; tax: number; ebitda: number; capex: number;
 };
 export type FinAnalytics = {
   periods: FinPeriod[];
   revenueTotal: number; expenseTotal: number; payrollTotal: number; marginTotal: number;
+  cogsTotal: number; opexTotal: number; grossMarginTotal: number; grossMarginPct: number; // marge brute = CA − COGS
   marginPct: number; payrollPct: number;   // marge / CA, masse salariale / CA
   growthPct: number | null;                // dernière période vs précédente (CA)
   cash: number;                            // trésorerie courante (comptes d'actif banque/caisse)
@@ -74,7 +82,7 @@ export function computeFinancialAnalytics(
     if (isNaN(t) || t < from || t >= to) continue;
     const { key, label } = periodKey(ds, g, fsm);
     let b = buckets.get(key);
-    if (!b) { b = { key, label, revenue: 0, expense: 0, payroll: 0, margin: 0, growthPct: null, dna: 0, interest: 0, tax: 0, ebitda: 0, capex: 0 }; buckets.set(key, b); }
+    if (!b) { b = { key, label, revenue: 0, expense: 0, payroll: 0, margin: 0, growthPct: null, cogs: 0, opex: 0, grossMargin: 0, dna: 0, interest: 0, tax: 0, ebitda: 0, capex: 0 }; buckets.set(key, b); }
     for (const l of e.gl_lines || []) {
       const type = l.gl_accounts?.type; const name = l.gl_accounts?.name || ''; const code = String(l.gl_accounts?.code || '');
       const d = n(l.debit), c = n(l.credit);
@@ -82,10 +90,13 @@ export function computeFinancialAnalytics(
       else if (type === 'expense') {
         const amt = d - c;                               // charges : débit normal
         b.expense += amt;
-        if (PAYROLL_RE.test(name)) b.payroll += amt;     // masse salariale (best-effort par nom de compte)
-        if (code === '5600') b.dna += amt;               // amortissement
+        // Classement MUTUELLEMENT EXCLUSIF par code (sinon par nom) → sert à EBITDA + marge brute.
+        if (PAYROLL_CODES.has(code) || PAYROLL_RE.test(name)) b.payroll += amt;     // masse salariale
+        else if (COGS_CODES.has(code) || COGS_RE.test(name)) b.cogs += amt;          // coût des ventes
+        else if (code === '5600') b.dna += amt;          // amortissement
         else if (code === '5700') b.interest += amt;     // intérêts et frais financiers
         else if (code === '5800') b.tax += amt;          // impôts sur le résultat
+        else b.opex += amt;                              // autres charges d'exploitation
       } else if (type === 'asset' && code === '1500') {
         b.capex += d - c;                                // CAPEX : ajouts nets aux immobilisations
       }
@@ -95,25 +106,32 @@ export function computeFinancialAnalytics(
   const periods = [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key));
   for (let i = 0; i < periods.length; i++) {
     periods[i].margin = periods[i].revenue - periods[i].expense;
-    // EBITDA = résultat net + amortissement + intérêts + impôts (on les rajoute à la marge nette).
-    periods[i].ebitda = periods[i].margin + periods[i].dna + periods[i].interest + periods[i].tax;
+    periods[i].grossMargin = periods[i].revenue - periods[i].cogs;   // marge BRUTE = CA − coût des ventes
+    // EBITDA = CA − COGS − masse salariale − opex (= marge nette + amortissement + intérêts + impôts).
+    periods[i].ebitda = periods[i].revenue - periods[i].cogs - periods[i].payroll - periods[i].opex;
     const prev = i > 0 ? periods[i - 1].revenue : null;
-    periods[i].growthPct = prev != null && prev !== 0 ? ((periods[i].revenue - prev) / Math.abs(prev)) * 100 : null;
+    // Croissance PLAFONNÉE : base trop faible (< 1000 $) → non significatif (évite les +3192 %).
+    periods[i].growthPct = prev != null && Math.abs(prev) >= 1000 ? ((periods[i].revenue - prev) / Math.abs(prev)) * 100 : null;
   }
 
   const revenueTotal = periods.reduce((s, p) => s + p.revenue, 0);
   const expenseTotal = periods.reduce((s, p) => s + p.expense, 0);
   const payrollTotal = periods.reduce((s, p) => s + p.payroll, 0);
+  const cogsTotal = periods.reduce((s, p) => s + p.cogs, 0);
+  const opexTotal = periods.reduce((s, p) => s + p.opex, 0);
   const marginTotal = revenueTotal - expenseTotal;
+  const grossMarginTotal = revenueTotal - cogsTotal;
   const dnaTotal = periods.reduce((s, p) => s + p.dna, 0);
   const interestTotal = periods.reduce((s, p) => s + p.interest, 0);
   const taxTotal = periods.reduce((s, p) => s + p.tax, 0);
-  const ebitdaTotal = marginTotal + dnaTotal + interestTotal + taxTotal;
+  const ebitdaTotal = revenueTotal - cogsTotal - payrollTotal - opexTotal;
   const capexTotal = periods.reduce((s, p) => s + p.capex, 0);
   const last = periods[periods.length - 1];
 
   return {
     periods, revenueTotal, expenseTotal, payrollTotal, marginTotal,
+    cogsTotal, opexTotal, grossMarginTotal,
+    grossMarginPct: revenueTotal !== 0 ? (grossMarginTotal / revenueTotal) * 100 : 0,
     marginPct: revenueTotal !== 0 ? (marginTotal / revenueTotal) * 100 : 0,
     payrollPct: revenueTotal !== 0 ? (payrollTotal / revenueTotal) * 100 : 0,
     growthPct: last ? last.growthPct : null,
