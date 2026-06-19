@@ -88,6 +88,93 @@ export function generationRates(
   });
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// SÉVÉRITÉ IEEE C57.104-2019 (Option 2) — le STATUT 1/2/3 par gaz pilote le verdict et les couleurs.
+// Calculé UNIQUEMENT par les percentiles 2019 : 90e (statut 1→2, « Table 1 ») et 95e (2→3, « Table 2 »),
+// par SEGMENT = ratio O₂/N₂ (seuil 0,2 : scellé/respirant) × tranche d'âge OFFICIELLE (≤10 / 10-30 / >30 ans).
+// Statut GLOBAL = pire gaz (conservateur). AUCUNE logique « Condition 1-4 ». Le TDCG est isolé (tdcgIndicator).
+//
+// ⚠️⚠️ La table PERCENTILES est une STRUCTURE DE PLACEHOLDER — PAS les valeurs certifiées. Les vraies valeurs
+//     (Table 1 = 90e, Table 2 = 95e, par O₂/N₂ et âge) sont dans la norme PAYANTE et ne sont pas publiques.
+//     À REMPLIR par une personne qualifiée AVANT production. La structure ne bouge pas ; seuls les chiffres changent.
+// Note : CO₂ est volontairement EXCLU du statut (marqueur cellulose bruité, couvert par CO₂/CO). L'ajouter =
+//     étendre SEV_GAS_KEYS + fournir son percentile.
+// ════════════════════════════════════════════════════════════════════════════
+export type SegO2N2 = 'low' | 'high';            // low = O₂/N₂ ≤ 0,2 (scellé) ; high = respirant
+export type SegAge = 'le10' | '10to30' | 'gt30' | 'unknown'; // tranches officielles ≤10 / 10-30 / >30
+export type Segment = { o2n2: SegO2N2; ageBand: SegAge };
+export type Status = 1 | 2 | 3;
+export type SeverityGasKey = 'H2' | 'CH4' | 'C2H6' | 'C2H4' | 'C2H2' | 'CO';
+export type SeverityGases = { H2: number; CH4: number; C2H6: number; C2H4: number; C2H2: number; CO?: number; CO2?: number; O2?: number; N2?: number };
+const SEV_GAS_KEYS: SeverityGasKey[] = ['H2', 'CH4', 'C2H6', 'C2H4', 'C2H2', 'CO'];
+
+export function getSegment(g: SeverityGases, ageYears?: number | null): Segment {
+  const o2n2: SegO2N2 = (g.O2 != null && g.N2 != null && g.N2 > 0 && g.O2 / g.N2 <= 0.2) ? 'low' : 'high';
+  let ageBand: SegAge = 'unknown';
+  if (ageYears != null && isFinite(ageYears)) ageBand = ageYears <= 10 ? 'le10' : ageYears <= 30 ? '10to30' : 'gt30';
+  return { o2n2, ageBand };
+}
+
+type GasLimits = { p90: number; p95: number };
+type SegmentKey = `${SegO2N2}_${SegAge}`;
+// PLACEHOLDERS de structure — à remplacer par les valeurs officielles. _default = repli ; surcharges par segment.
+export const PERCENTILES: Record<SeverityGasKey, Partial<Record<SegmentKey, GasLimits>>> & { _default: Record<SeverityGasKey, GasLimits> } = {
+  _default: {
+    H2: { p90: 80, p95: 200 }, CH4: { p90: 90, p95: 150 }, C2H6: { p90: 90, p95: 175 },
+    C2H4: { p90: 50, p95: 100 }, C2H2: { p90: 1, p95: 2 }, CO: { p90: 900, p95: 1100 },
+  },
+  H2: {}, CH4: {}, C2H6: {}, C2H4: {}, CO: {},
+  // C₂H₂ reste très bas en scellé ; un peu plus permissif en respirant (placeholder).
+  C2H2: { low_le10: { p90: 1, p95: 2 }, low_10to30: { p90: 1, p95: 2 }, low_gt30: { p90: 1, p95: 2 }, high_10to30: { p90: 2, p95: 7 } },
+};
+export const PERCENTILES_ARE_PLACEHOLDER = true; // tant que la Table 1/2 officielle n'est pas saisie
+
+function limitsFor(gas: SeverityGasKey, seg: Segment): GasLimits {
+  const key = `${seg.o2n2}_${seg.ageBand}` as SegmentKey;
+  return (PERCENTILES[gas] as Partial<Record<SegmentKey, GasLimits>>)[key] ?? PERCENTILES._default[gas];
+}
+export function gasStatus(gas: SeverityGasKey, value: number, seg: Segment): Status {
+  const { p90, p95 } = limitsFor(gas, seg);
+  const v = Number(value) || 0;
+  if (v >= p95) return 3;
+  if (v >= p90) return 2;
+  return 1;
+}
+
+export type SeverityResult = {
+  status: Status;
+  perGas: { gas: SeverityGasKey; value: number; status: Status; p90: number; p95: number }[];
+  drivingGases: SeverityGasKey[];
+  segment: Segment;
+  placeholder: boolean;
+};
+export function severity2019(g: SeverityGases, ageYears?: number | null): SeverityResult {
+  const seg = getSegment(g, ageYears);
+  const perGas = SEV_GAS_KEYS.map(gas => {
+    const value = Number((g as any)[gas]) || 0;
+    const { p90, p95 } = limitsFor(gas, seg);
+    return { gas, value, status: gasStatus(gas, value, seg), p90, p95 };
+  });
+  const status = Math.max(...perGas.map(p => p.status)) as Status;
+  return { status, perGas, drivingGases: perGas.filter(p => p.status === status && status > 1).map(p => p.gas), segment: seg, placeholder: PERCENTILES_ARE_PLACEHOLDER };
+}
+
+// TDCG — INDICATEUR de tendance seulement (valeur = somme des gaz combustibles + taux). PAS un verdict.
+export function tdcgIndicator(current: SeverityGases, previous?: { gases: SeverityGases; date: string }, currentDate?: string) {
+  const sum = (x: SeverityGases) => (x.H2 || 0) + (x.CH4 || 0) + (x.C2H6 || 0) + (x.C2H4 || 0) + (x.C2H2 || 0) + (x.CO || 0);
+  const value = Math.round(sum(current));
+  let ratePpmPerDay: number | null = null;
+  if (previous && currentDate) {
+    const days = (new Date(currentDate).getTime() - new Date(previous.date).getTime()) / 86400000;
+    if (days > 0) ratePpmPerDay = Math.round(((value - sum(previous.gases)) / days) * 100) / 100;
+  }
+  return { value, ratePpmPerDay };
+}
+
+export const STATUS_STYLE: Record<Status, { bg: string; fg: string }> = {
+  1: { bg: '#EAF3DE', fg: '#173404' }, 2: { bg: '#FAEEDA', fg: '#633806' }, 3: { bg: '#FCEBEB', fg: '#501313' },
+};
+
 // Interprétation CO₂/CO (IEC 60599) — implication du papier (cellulose).
 export function co2coRatio(co2?: number | null, co?: number | null): number | null {
   const C2 = Number(co2), C = Number(co);

@@ -21,7 +21,7 @@ import {
 } from '@/lib/dga/fields';
 import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
-import { generationRates, computeHealthIndex, overThreshold, transformerType, recommendedRetestDays, addDays as addDaysIso, type GasRate } from '@/lib/dga/severity2019';
+import { generationRates, computeHealthIndex, overThreshold, transformerType, recommendedRetestDays, addDays as addDaysIso, getSegment, severity2019, tdcgIndicator, STATUS_STYLE, type GasRate } from '@/lib/dga/severity2019';
 import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
@@ -194,6 +194,14 @@ export function TransfoView(props: {
     dp: furan?.dp ?? null,
   });
   const [showMethods, setShowMethods] = useState(false);
+
+  // ── SÉVÉRITÉ IEEE C57.104-2019 (statut 1/2/3 par gaz, pire gaz = global) + TDCG isolé en indicateur ──
+  const segAge = (() => { const y = Number((dossier as any).manufacture_year || (extra as any).year || (extra as any).manufacture_year || 0); return y > 1900 ? (new Date().getFullYear() - y) : null; })();
+  const sevGases = { H2: +(cur.h2 || 0), CH4: +(cur.ch4 || 0), C2H6: +(cur.c2h6 || 0), C2H4: +(cur.c2h4 || 0), C2H2: +(cur.c2h2 || 0), CO: +(cur.co || 0), CO2: +(cur.co2 || 0), O2: +((cur as any).o2 || 0), N2: +((cur as any).n2 || 0) };
+  const sev = severity2019(sevGases, segAge);
+  const tdcgInd = tdcgIndicator(sevGases, prev ? { gases: { H2: +(prev.h2 || 0), CH4: +(prev.ch4 || 0), C2H6: +(prev.c2h6 || 0), C2H4: +(prev.c2h4 || 0), C2H2: +(prev.c2h2 || 0), CO: +(prev.co || 0) }, date: prev.sample_date || '' } : undefined, cur.sample_date || undefined);
+  const GAS_LBL: Record<string, string> = { H2: 'H₂', CH4: 'CH₄', C2H6: 'C₂H₆', C2H4: 'C₂H₄', C2H2: 'C₂H₂', CO: 'CO' };
+
   const pcbVerdict = pcbStatus(latestPcb(data), lang);
 
   // QR public du transformateur (lecture seule hors connexion ; édition si connecté).
@@ -438,6 +446,36 @@ export function TransfoView(props: {
             </section>
           );
         })()}
+
+        {/* STATUT DE SÉVÉRITÉ IEEE C57.104-2019 (percentiles par segment) — pilote le verdict */}
+        <section className={CARD} style={{ borderLeft: `6px solid ${STATUS_STYLE[sev.status].fg}` }}>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-xl text-2xl font-black" style={{ background: STATUS_STYLE[sev.status].bg, color: STATUS_STYLE[sev.status].fg }}>{sev.status}</span>
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{tr('STATUT DE SÉVÉRITÉ — IEEE C57.104-2019', 'SEVERITY STATUS — IEEE C57.104-2019')}</div>
+              <div className="text-base font-extrabold" style={{ color: STATUS_STYLE[sev.status].fg }}>{sev.status === 3 ? tr('Statut 3 — élevé', 'Status 3 — high') : sev.status === 2 ? tr('Statut 2 — intermédiaire', 'Status 2 — intermediate') : tr('Statut 1 — normal', 'Status 1 — normal')}</div>
+              <div className="text-[11px] text-gray-400">{sev.segment.o2n2 === 'low' ? tr('Scellé', 'Sealed') : tr('Respirant', 'Free-breathing')} · {tr('âge', 'age')} {sev.segment.ageBand === 'unknown' ? tr('inconnu', 'unknown') : sev.segment.ageBand.replace('le10', '≤10').replace('10to30', '10–30').replace('gt30', '>30')} · {sev.drivingGases.length ? `${tr('porté par', 'driven by')} ${sev.drivingGases.map(g => GAS_LBL[g]).join(', ')}` : tr('pire gaz', 'worst gas')}</div>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {sev.perGas.map(p => (
+              <span key={p.gas} className="rounded-lg px-2 py-1 text-xs font-bold" style={{ background: STATUS_STYLE[p.status].bg, color: STATUS_STYLE[p.status].fg }}>{GAS_LBL[p.gas]} · {p.status}</span>
+            ))}
+          </div>
+          {sev.placeholder && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-[11px] text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">⚠️ {tr('Percentiles PLACEHOLDER — à remplacer par la Table 1 (90e) et Table 2 (95e) officielles IEEE C57.104-2019 avant production (validation par une personne qualifiée).', 'PLACEHOLDER percentiles — replace with the official IEEE C57.104-2019 Table 1 (90th) and Table 2 (95th) before production (qualified-person validation).')}</p>
+          )}
+        </section>
+
+        {/* TDCG — INDICATEUR de tendance seulement (pas un niveau de Condition) */}
+        <section className={CARD}>
+          <h2 className={H2}>{tr('TDCG (indicatif — tendance)', 'TDCG (indicative — trend)')}</h2>
+          <div className="flex flex-wrap items-baseline gap-4">
+            <div><span className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">{tdcgInd.value}</span> <span className="text-xs text-gray-400">ppm</span></div>
+            {tdcgInd.ratePpmPerDay != null && <div><span className="text-lg font-bold text-gray-700 dark:text-gray-200">{tdcgInd.ratePpmPerDay.toFixed(2)}</span> <span className="text-xs text-gray-400">{tr('ppm/jour', 'ppm/day')}</span></div>}
+          </div>
+          <p className="mt-1 text-[11px] text-gray-400">{tr('Fourni à titre indicatif (tendance). Le verdict de sévérité suit les percentiles IEEE C57.104-2019, PAS le TDCG.', 'Provided as an indicative trend marker. The severity verdict follows the IEEE C57.104-2019 percentiles, NOT TDCG.')}</p>
+        </section>
 
         {/* BANNIÈRE TENDANCE */}
         <section className={CARD} style={{ borderLeft: `6px solid ${trendA.lvl === 'crit' ? '#9d0208' : trendA.lvl === 'fair' ? '#f4a261' : trendA.lvl === 'good' ? '#2a9d8f' : '#577590'}` }}>

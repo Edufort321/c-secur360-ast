@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import {
   o2n2Ratio, transformerType, threshold90, overThreshold, generationRatePerDay,
   co2coRatio, co2coInterpretation, canConcludeStabilized, generationRates, computeHealthIndex,
-  recommendedRetestDays, addDays,
+  recommendedRetestDays, addDays, getSegment, severity2019, tdcgIndicator,
 } from './severity2019';
 import { duvalTriangle1 } from './diagnose';
 
@@ -61,6 +61,19 @@ describe('DGA NEW RICHMOND TG1 — Partie C (IEEE C57.104-2019)', () => {
     expect(recommendedRetestDays('a_surveiller')).toBe(30);
     expect(recommendedRetestDays('excellent')).toBe(365);
     expect(addDays('2025-07-08', 7)).toBe('2025-07-15');
+  });
+
+  it('sévérité 2019 segmentée : scellé, âge 10-30, statut 3 porté par C₂H₂ ; TDCG isolé', () => {
+    const g = { H2: s2025.H2, CH4: s2025.CH4, C2H6: s2025.C2H6, C2H4: s2025.C2H4, C2H2: s2025.C2H2, CO: s2025.CO, CO2: s2025.CO2, O2: s2025.O2, N2: s2025.N2 };
+    const seg = getSegment(g, 13);
+    expect(seg.o2n2).toBe('low');       // O₂/N₂ = 0,13 → scellé
+    expect(seg.ageBand).toBe('10to30'); // tranche officielle
+    const sv = severity2019(g, 13);
+    expect(sv.status).toBe(3);          // C₂H₂ 947 ≥ p95 → statut 3
+    expect(sv.drivingGases).toContain('C2H2');
+    expect(sv.placeholder).toBe(true);  // table non remplie avec valeurs officielles
+    const t = tdcgIndicator(g);
+    expect(t.value).toBe(4537);         // somme des combustibles
   });
 
   it('NE PEUT PAS conclure « stabilisé » avec 2 mesures et un saut récent', () => {
