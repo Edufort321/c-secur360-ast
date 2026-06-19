@@ -169,7 +169,9 @@ export function TransfoView(props: {
   const zone = duvalZone(duvalPct({ ch4: +(cur.ch4 || 0), c2h4: +(cur.c2h4 || 0), c2h2: +(cur.c2h2 || 0) }), lang);
   const worst = worstCondition(cur);
   const isOltc = !!dossier.extra?.is_oltc;
-  const { items, reco } = interpret(cur as any, prev as any, zone, worst, lang, isOltc);
+  // Série C₂H₂ (date+valeur) → garde anti-« stabilisé » (≥2 points après le dernier saut).
+  const c2h2Series = data.map(m => ({ date: m.sample_date as string, value: +(m.c2h2 || 0) }));
+  const { items, reco } = interpret(cur as any, prev as any, zone, worst, lang, isOltc, c2h2Series);
   const oilEval = evalOil(cur.oil_quality || {}, dossier.kv, lang);
   // Furanes : saisie en ppb (prototype) → furanInterpret attend des ppm (= ppb/1000).
   const fal2ppb = numOrNull(cur.oil_quality?.f_2fal);

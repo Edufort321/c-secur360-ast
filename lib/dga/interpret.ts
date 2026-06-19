@@ -4,12 +4,17 @@
 // AUCUNE phrase ni seuil modifié.
 // ============================================================================
 
-export interface Cur { c2h2?: number; co?: number; co2?: number; tdcg?: number; oil_quality?: any; }
+import {
+  transformerType, o2n2Ratio, threshold90, overThreshold, co2coRatio, co2coInterpretation,
+  generationRatePerDay, canConcludeStabilized, STANDARD_EDITION, type SampleLite,
+} from './severity2019';
+
+export interface Cur { c2h2?: number; c2h4?: number; co?: number; co2?: number; tdcg?: number; o2?: number; n2?: number; sample_date?: string; oil_quality?: any; }
 export interface Zone { code: string; label: string; }
 export interface InterpItem { lvl: 'crit' | 'warn' | 'info'; txt: string; }
 export interface InterpReco { title: string; steps: string[]; }
 
-export function interpret(cur: Cur, prev: Cur | null, zone: Zone, worst: number, lang: 'fr' | 'en' = 'fr', isOltc = false): { items: InterpItem[]; reco: InterpReco } {
+export function interpret(cur: Cur, prev: Cur | null, zone: Zone, worst: number, lang: 'fr' | 'en' = 'fr', isOltc = false, samples?: SampleLite[]): { items: InterpItem[]; reco: InterpReco } {
   const items: InterpItem[] = [];
   const EN = lang === 'en';
   const C2H2 = Number(cur.c2h2) || 0, CO = Number(cur.co) || 0, CO2 = Number(cur.co2) || 0, TDCG = Number(cur.tdcg) || 0;
@@ -46,7 +51,17 @@ export function interpret(cur: Cur, prev: Cur | null, zone: Zone, worst: number,
     return { items, reco: oltcReco };
   }
 
-  if (C2H2 > 35) items.push({ lvl: 'crit', txt: EN ? `Acetylene at ${C2H2} ppm — beyond the IEEE critical limit (35 ppm). Signature of a high-energy fault (electrical arc). Dominant anomaly.` : `Acétylène à ${C2H2} ppm — au-delà du seuil critique IEEE (35 ppm). Signature d'un défaut à haute énergie (arc électrique). Anomalie dominante.` });
+  // ── Type de transfo (scellé/respirant) via O₂/N₂ → choix des SEUILS 2019 (étape AVANT l'évaluation).
+  const ttype = transformerType(cur.o2, cur.n2);
+  const ratioON = o2n2Ratio(cur.o2, cur.n2);
+  if (ratioON != null) items.push({ lvl: 'info', txt: EN
+    ? `Transformer type: ${ttype === 'sealed' ? 'sealed' : 'free-breathing'} (O₂/N₂ ≈ ${ratioON.toFixed(2)}). Severity thresholds per ${STANDARD_EDITION}.`
+    : `Type : ${ttype === 'sealed' ? 'scellé' : 'respirant'} (O₂/N₂ ≈ ${ratioON.toFixed(2)}). Seuils de sévérité selon ${STANDARD_EDITION}.` });
+  const c2h2Over = overThreshold(C2H2, 'c2h2', ttype);
+  const c2h2Thr = threshold90('c2h2', ttype);
+  if (c2h2Over != null && c2h2Over > 1) items.push({ lvl: c2h2Over >= 10 ? 'crit' : 'warn', txt: EN
+    ? `Acetylene ${C2H2} ppm = ${Math.round(c2h2Over)}× the 90th-percentile threshold (${c2h2Thr} ppm, ${ttype}). High-energy fault (arc) signature.`
+    : `Acétylène ${C2H2} ppm = ${Math.round(c2h2Over)}× le seuil 90e percentile (${c2h2Thr} ppm, ${ttype === 'sealed' ? 'scellé' : 'respirant'}). Signature d'un défaut à haute énergie (arc).` });
   else if (C2H2 > 9) items.push({ lvl: 'warn', txt: EN ? `Acetylene at ${C2H2} ppm: discharges present. Monitor.` : `Acétylène à ${C2H2} ppm : présence de décharges. À surveiller.` });
   if (['D1', 'D2', 'DT'].includes(zone.code)) items.push({ lvl: 'crit', txt: EN ? `Duval Triangle: zone ${zone.code} (${zone.label}). Consistent with an active or recurring internal arc.` : `Triangle de Duval : zone ${zone.code} (${zone.label}). Cohérent avec un arc interne actif ou récurrent.` });
   else if (['T2', 'T3'].includes(zone.code)) items.push({ lvl: 'warn', txt: EN ? `Duval: thermal fault (${zone.label}) — hot spot likely.` : `Duval : défaut thermique (${zone.label}) — point chaud probable.` });
@@ -54,10 +69,29 @@ export function interpret(cur: Cur, prev: Cur | null, zone: Zone, worst: number,
   else if (zone.code === 'PD') items.push({ lvl: 'warn', txt: EN ? `Duval: ${zone.label}. Check insulation.` : `Duval : ${zone.label}. Vérifier l'isolation.` });
   if (prev) {
     const pC2H2 = Number(prev.c2h2) || 0; const dC = C2H2 - pC2H2;
-    if (Math.abs(dC) < 30 && C2H2 > 100) items.push({ lvl: 'info', txt: EN ? `Acetylene stable (${pC2H2} → ${C2H2} ppm): fault likely stabilized/extinguished, high residual gas.` : `Acétylène stable (${pC2H2} → ${C2H2} ppm) : défaut probablement stabilisé/éteint, gaz résiduel élevé.` });
-    else if (dC > 50) items.push({ lvl: 'crit', txt: EN ? `Acetylene rising (+${dC.toFixed(0)} ppm) — fault STILL ACTIVE. Priority intervention.` : `Acétylène en hausse (+${dC.toFixed(0)} ppm) — défaut TOUJOURS ACTIF. Intervention prioritaire.` });
+    // Taux de génération C₂H₂ (ppm/jour) — distingue défaut ACTIF d'un défaut historique.
+    const rate = (cur.sample_date && prev.sample_date) ? generationRatePerDay(pC2H2, prev.sample_date, C2H2, cur.sample_date) : null;
+    const rateTxt = rate != null ? (EN ? ` — ${rate.toFixed(1)} ppm/day` : ` — ${rate.toFixed(1)} ppm/jour`) : '';
+    if (dC > 50) {
+      // Hausse marquée : on NE conclut PAS « stabilisé ». Ré-échantillonnage requis (pas de point après le saut).
+      items.push({ lvl: 'crit', txt: EN
+        ? `Acetylene rising (+${dC.toFixed(0)} ppm${rateTxt}) — high-energy fault signature. With no measurement AFTER the jump, the recent trend cannot be established: immediate re-sampling required. Do NOT conclude stabilized.`
+        : `Acétylène en hausse (+${dC.toFixed(0)} ppm${rateTxt}) — signature d'un défaut à haute énergie. Sans mesure APRÈS le saut, la tendance récente ne peut être établie : ré-échantillonnage immédiat requis. NE PAS conclure à une stabilisation.` });
+    } else if (Math.abs(dC) < 30 && C2H2 > 100) {
+      // « Stabilisé » UNIQUEMENT avec ≥ 2 points après le dernier saut (sinon non concluant → ré-échantillonner).
+      if (samples && canConcludeStabilized(samples, 50)) {
+        items.push({ lvl: 'info', txt: EN ? `Acetylene stable (${pC2H2} → ${C2H2} ppm) over ≥2 post-jump points: fault likely stabilized, high residual gas.` : `Acétylène stable (${pC2H2} → ${C2H2} ppm) sur ≥2 points après le saut : défaut probablement stabilisé, gaz résiduel élevé.` });
+      } else {
+        items.push({ lvl: 'warn', txt: EN ? `Acetylene high and flat (${pC2H2} → ${C2H2} ppm) but too few points after the jump to confirm stabilization — re-sample to confirm.` : `Acétylène élevé et plat (${pC2H2} → ${C2H2} ppm) mais trop peu de points après le saut pour confirmer une stabilisation — ré-échantillonner.` });
+      }
+    }
   }
-  if (CO > 570 || CO2 > 4000) items.push({ lvl: 'warn', txt: EN ? `CO (${CO}) / CO₂ (${CO2}) high: possible cellulose degradation. CO₂/CO ≈ ${CO ? (CO2 / CO).toFixed(1) : '—'}.` : `CO (${CO}) / CO₂ (${CO2}) élevés : dégradation possible de la cellulose. Ratio CO₂/CO ≈ ${CO ? (CO2 / CO).toFixed(1) : '—'}.` });
+  // CO₂/CO — implication du PAPIER (cellulose) selon le ratio (IEC 60599).
+  const coR = co2coRatio(CO2, CO);
+  if (coR != null && (CO > 570 || CO2 > 4000 || coR < 3 || coR > 11)) {
+    const interp = co2coInterpretation(coR, lang);
+    items.push({ lvl: (coR < 3 || coR > 11) ? 'warn' : 'info', txt: `CO₂/CO ≈ ${coR.toFixed(2)} — ${interp}.` });
+  }
   if (TDCG > 4630) items.push({ lvl: 'crit', txt: EN ? `TDCG at ${TDCG} ppm: Condition 4. Risk of imminent failure.` : `TDCG à ${TDCG} ppm : Condition 4. Risque de défaillance imminente.` });
   else if (TDCG > 1920) items.push({ lvl: 'warn', txt: EN ? `TDCG at ${TDCG} ppm: Condition 3. Abnormal gas generation.` : `TDCG à ${TDCG} ppm : Condition 3. Génération de gaz anormale.` });
   if (items.length === 0) items.push({ lvl: 'info', txt: EN ? 'No significant DGA anomaly detected.' : 'Aucune anomalie DGA significative détectée.' });
