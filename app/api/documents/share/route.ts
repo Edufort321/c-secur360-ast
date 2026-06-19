@@ -17,7 +17,9 @@ function newToken() {
   const u = () => (globalThis.crypto?.randomUUID?.() || '').replace(/-/g, '');
   return (u() + u()).slice(0, 48) || Math.random().toString(36).slice(2);
 }
-const DOC_TYPES = ['soumission', 'invoice', 'timesheet'] as const;
+// Une feuille de temps NE se partage PAS à un client (donnée de paie, Loi 25). L'approbation = superviseur
+// via Admin › Opérations › Feuille de temps. Seuls soumission/facture sont des livrables client.
+const DOC_TYPES = ['soumission', 'invoice'] as const;
 const isExpired = (s: any) => s.revoked || (s.expires_at && new Date(s.expires_at).getTime() < Date.now());
 // Tenant EFFECTIF : un super_admin agit sur le tenant de la PAGE (param `tenant`), tout autre rôle est
 // FORCÉ à son tenant de session. Corrige le « Document introuvable » (404) quand Eric (super_admin)
