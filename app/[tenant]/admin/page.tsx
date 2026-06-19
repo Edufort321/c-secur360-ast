@@ -48,6 +48,7 @@ import { getArAging, getApAging, AGING_BUCKETS, AGING_LABELS, type AgingReport }
 import { exportJournalCsv as exportAcctJournalCsv, exportTrialBalanceCsv as exportAcctTrialBalanceCsv } from '@/lib/accountantExport';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, setTransactionReviewed, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getTreasuryAccounts, createTreasuryAccount, setTreasuryActive, TREASURY_KIND_LABELS, type TreasuryAccount, type TreasuryKind } from '@/lib/treasuryAccounts';
+import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 import { getAttachments, addAttachment, deleteAttachment, type TxnAttachment } from '@/lib/transactionAttachments';
 import { downloadCsv as downloadCsvCols, type CsvColumn } from '@/lib/csv';
 import { getCurrencyConfig, rateToBase, currencyMeta, formatMoney, type CurrencyConfig } from '@/lib/currency';
@@ -7377,6 +7378,11 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [fAccount, setFAccount] = useState<string>('all'); // filtre par compte de trésorerie ('all' | id | 'none')
   const [fDoc, setFDoc] = useState(false);                 // afficher uniquement les dépenses SANS pièce jointe
   const [importAccount, setImportAccount] = useState<string>(''); // compte cible des imports (lot IA / relevé)
+  // Réconciliation INVERSE (#35) : depuis un REVENU, lier un abonnement → met son statut à jour à l'enregistrement.
+  const [subs, setSubs] = useState<{ id: string; client_name: string; plan_name: string; amount: number }[]>([]);
+  const [linkSub, setLinkSub] = useState<{ id: string; label: string } | null>(null);
+  const [subQuery, setSubQuery] = useState('');
+  useEffect(() => { supabase.from('recurring_subscriptions').select('id, client_name, plan_name, amount').eq('tenant_id', tenant).eq('status', 'active').then(({ data }) => setSubs((data as any[]) || []), () => {}); }, [tenant]);
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const isRevenue = hdr.txn_type === 'revenue';
@@ -7501,10 +7507,17 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       // avec un retour CLAIR (succès vs raison de l'échec — fini le silence).
       await setTransactionStatus(tenant, id, 'posted').catch(() => {});
       const pr = await postTransactionNow(tenant, id);
+      // Réconciliation INVERSE : un revenu lié à un abonnement met l'abonnement à jour (historique + échéance).
+      let linkMsg = '';
+      if (hdr.txn_type === 'revenue' && linkSub?.id) {
+        try { const r = await fetch('/api/recurring/link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, subscriptionId: linkSub.id, transactionId: id }) }); if (r.ok) linkMsg = ' ' + tr('Abonnement mis à jour ✓', 'Subscription updated ✓'); }
+        catch { /* ignore */ }
+      }
+      setLinkSub(null); setSubQuery('');
       clearDraft(txnDraftKey); clearDraft(`txn.${tenant}.new`); // brouillon comptabilisé → purge
-      setNotice(pr.ok
+      setNotice((pr.ok
         ? tr('Transaction enregistrée et comptabilisée au grand livre.', 'Transaction saved and posted to the ledger.')
-        : `${tr('Transaction enregistrée, mais NON comptabilisée :', 'Saved, but NOT posted:')} ${pr.reason}`);
+        : `${tr('Transaction enregistrée, mais NON comptabilisée :', 'Saved, but NOT posted:')} ${pr.reason}`) + linkMsg);
       await load(); setView('list');
     }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
@@ -7923,6 +7936,17 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <input list="txn-rev-cat-list" value={(hdr as any).revenue_category || ''} onChange={e => setHdr(h => ({ ...h, revenue_category: e.target.value } as any))} placeholder={tr('Choisir / créer une classe (ventilation)', 'Pick / create a class (breakdown)')} className={`mt-1 w-full ${inputCls}`} />
               <datalist id="txn-rev-cat-list">{(revClassNames.length ? revClassNames : ['Service', 'Projet', 'Maintenance', 'Produit', 'Location']).map(n => <option key={n} value={n} />)}</datalist>
             </label>}
+            {/* Lier un ABONNEMENT (recherche dynamique) — met l'abonnement à jour à l'enregistrement. */}
+            {isRevenue && subs.length > 0 && (
+              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Lier un abonnement (optionnel)', 'Link a subscription (optional)')}
+                <div className="mt-1"><EntitySearch value={linkSub ? linkSub.label : subQuery} placeholder={tr('Rechercher un abonnement…', 'Search a subscription…')}
+                  options={subs.map(s => ({ id: s.id, label: `${s.client_name} — ${s.plan_name}`, sub: `${(Number(s.amount) || 0).toLocaleString('fr-CA')} $` } as EntityOption))}
+                  onText={v => { setSubQuery(v); setLinkSub(null); }}
+                  onPick={(o: EntityOption) => { setLinkSub({ id: o.id, label: o.label }); setSubQuery(o.label); }}
+                  className={`w-full ${inputCls}`} /></div>
+                {linkSub && <span className="mt-1 inline-block text-[11px] font-semibold text-emerald-600">{tr('Au enregistrement : paiement ajouté à l’historique + échéance avancée.', 'On save: payment added to history + due date advanced.')}</span>}
+              </label>
+            )}
             {hdr.payment_method === 'cash' && (
               <label className="text-xs font-semibold text-gray-500">{tr('Compte', 'Account')}
                 <div className="mt-1 flex items-center gap-1">
