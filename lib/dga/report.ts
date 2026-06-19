@@ -181,7 +181,9 @@ export async function generateDgaReport(opts: { dossier: Dossier; measures: Meas
   }
   renderDossier(doc, W, Hp, M, fr, opts.reportType || 'full', opts.dossier, opts.measures, opts.ai, logo, style);
   applyFooters(doc, W, Hp, M);
-  doc.save(`rapport-dga-${(opts.dossier.ident || 'transfo').replace(/\s+/g, '_')}.pdf`);
+  // Nom de fichier = DGA-{n° série} (sinon ident) — même convention que le bouton d'export.
+  const base = String((opts.dossier as any).serie || opts.dossier.ident || 'transfo').trim().replace(/[^\w.-]+/g, '_');
+  doc.save(`DGA-${base}.pdf`);
 }
 
 // Rapport MULTI-TRANSFORMATEURS pour un même client : page de présentation + table des matières
