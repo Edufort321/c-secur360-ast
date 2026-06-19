@@ -15,7 +15,11 @@
 -- 1) Désactiver le référentiel britannique (ne PAS le supprimer : préserve l'historique des incidents liés)
 update public.hse_regulatory_framework set is_active = false where code = 'RIDDOR_UK';
 
--- 2) Retirer les types de registres propres au R.-U.
+-- 2) Retirer les types de registres propres au R.-U. (FK-safe : retirer d'abord les registres tenant
+--    qui les référencent — les entrées en cascade via hse_register_entry.tenant_register_id).
+delete from public.hse_tenant_register tr
+ using public.hse_register_type rt
+ where tr.register_type_id = rt.id and rt.code in ('COSHH', 'LOLER', 'PUWER', 'FIRE_RISK');
 delete from public.hse_register_type where code in ('COSHH', 'LOLER', 'PUWER', 'FIRE_RISK');
 
 -- 3) Ajouter les juridictions canadiennes (QC existe déjà)
