@@ -99,7 +99,11 @@ Le cœur double-entrée est verrouillé au niveau base (triggers d'équilibre + 
 | P2-2 | **Paiements partiels** (historique + AR aging par solde dû) | §3 | ✅ mig 246 (`invoice_payments` + `paid_amount` ; markPaid partiel ; aging sur solde dû) |
 | P2-5 | **Avantage automobile** (T4 case 34) | §5 | ✅ **T4/RL-1 déjà intégré** (`getT4RL1Base` ajoute `vehicleBenefit`). ⚠️ Écriture GL d'un avantage NON monétaire = **décision fiscale à valider par une personne qualifiée** (coûts véhicule déjà en 5200) — délibérément NON auto-comptabilisée. |
 | P2-6 | **XML T4/RL-1** pour télétransmission ARC/RQ | §6 | ⏳ L |
-| P2-7 | **DPA / demi-année** (amortissement fiscal distinct du comptable) | §7 | ⏳ M |
+| P2-7 | **DPA / demi-année** (amortissement fiscal distinct du comptable) | §7 | ✅ mig 247 (`lib/cca` déclinant + demi-année, estimation prudente sans incitatif accéléré ; catégorie ACP par bien ; à valider) |
+| P2-6 | **XML T4/RL-1** (télétransmission ARC/RQ) | §6 | ⛔ **DIFFÉRÉ — décision** : la norme T619 (2025/2026) exige un compte de transmetteur ARC + Rep ID + **certification du logiciel** + XSD officiel par année. Générer un XML non validé = faux sentiment de conformité. **La donnée T4/RL-1 est déjà exportée (CSV/PDF)** pour un logiciel certifié / le comptable. À ne faire qu'avec la certification ARC. |
+
+### Bilan du programme d'audit (2026-06-19)
+**P1 (3/3) ✅ · P2 (6/7 livrés, P2-6 différé avec rationale) · P2-5 confirmé déjà intégré.** Tous les écarts qui *faussaient les états financiers* et les contrôles attendus d'un auditeur sont corrigés. Migrations **242→247** appliquées. **Tout correctif fiscal/comptable reste à valider par une personne qualifiée** avant la 1re clôture/déclaration réelle.
 
 ### P3 — Renforcement / nice-to-have
 | # | Écart | Section |
