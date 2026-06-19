@@ -10,6 +10,7 @@ import {
 import { getLedger, getAccounts, getTrialBalance } from '@/lib/accounting';
 import RevenueClassManager from '@/components/finance/RevenueClassManager';
 import WipReport from '@/components/finance/WipReport';
+import SaasAndForecast from '@/components/finance/SaasAndForecast';
 import {
   computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
 } from '@/lib/financialAnalytics';
@@ -396,6 +397,14 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
 
       {/* Travaux en cours (WIP) — chantiers actifs : coût chargé, facturé, marge, sur/sous-facturation */}
       <WipReport tenant={tenant} tr={tr} />
+
+      {/* BLOC B : métriques SaaS + échéancier AR + prévision trésorerie 13 semaines */}
+      {(() => {
+        const pc = a.periods.length || 1;
+        const monthlyEbitda = a.ebitdaTotal / pc;          // EBITDA moyen par période (mensuel si granularité mois)
+        const weeklyOutflow = (a.expenseTotal / pc) / 4.33; // run-rate de charges hebdomadaire
+        return <SaasAndForecast tenant={tenant} tr={tr} cash={a.cash} monthlyEbitda={monthlyEbitda} weeklyOutflow={weeklyOutflow} />;
+      })()}
 
       {/* Analyse IA */}
       <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/10">
