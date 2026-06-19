@@ -32,23 +32,32 @@ const GAS_KEYS = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'];
 const hasGas = (m: Measure) => GAS_KEYS.some(k => { const v = (m as any)[k]; return v != null && v !== '' && !isNaN(Number(v)); });
 const gasVal = (m: Measure, k: keyof Measure) => hasGas(m) ? num((m as any)[k]) : null;
 // Paramètres tracés (gaz : seulement si le relevé a des gaz ; qualité d'huile : si présente).
-const TREND_PARAMS: { label: string; get: (m: Measure) => number | null }[] = [
-  { label: 'TDCG (ppm)', get: m => hasGas(m) ? num(m.tdcg) : null }, { label: 'H2 (ppm)', get: m => gasVal(m, 'h2') }, { label: 'CH4 (ppm)', get: m => gasVal(m, 'ch4') },
-  { label: 'C2H6 (ppm)', get: m => gasVal(m, 'c2h6') }, { label: 'C2H4 (ppm)', get: m => gasVal(m, 'c2h4') }, { label: 'C2H2 (ppm)', get: m => gasVal(m, 'c2h2') },
-  { label: 'CO (ppm)', get: m => gasVal(m, 'co') }, { label: 'CO2 (ppm)', get: m => gasVal(m, 'co2') },
-  { label: 'Humidite (ppm)', get: m => num(m.oil_quality?.moisture) }, { label: 'Rigidite D1816 (kV)', get: m => num(m.oil_quality?.dielectric) },
-  { label: 'IFT (mN/m)', get: m => num(m.oil_quality?.ift) }, { label: 'Acidite (mgKOH/g)', get: m => num(m.oil_quality?.acid) },
-  { label: 'Couleur (ASTM)', get: m => num(m.oil_quality?.color) }, { label: 'PF 25C (%)', get: m => num(m.oil_quality?.pf25) },
+// Étiquettes de tendance bilingues (les gaz sont neutres ; la qualité d'huile est traduite).
+const TREND_PARAMS: { label: { fr: string; en: string }; get: (m: Measure) => number | null }[] = [
+  { label: { fr: 'TDCG (ppm)', en: 'TDCG (ppm)' }, get: m => hasGas(m) ? num(m.tdcg) : null }, { label: { fr: 'H2 (ppm)', en: 'H2 (ppm)' }, get: m => gasVal(m, 'h2') }, { label: { fr: 'CH4 (ppm)', en: 'CH4 (ppm)' }, get: m => gasVal(m, 'ch4') },
+  { label: { fr: 'C2H6 (ppm)', en: 'C2H6 (ppm)' }, get: m => gasVal(m, 'c2h6') }, { label: { fr: 'C2H4 (ppm)', en: 'C2H4 (ppm)' }, get: m => gasVal(m, 'c2h4') }, { label: { fr: 'C2H2 (ppm)', en: 'C2H2 (ppm)' }, get: m => gasVal(m, 'c2h2') },
+  { label: { fr: 'CO (ppm)', en: 'CO (ppm)' }, get: m => gasVal(m, 'co') }, { label: { fr: 'CO2 (ppm)', en: 'CO2 (ppm)' }, get: m => gasVal(m, 'co2') },
+  { label: { fr: 'Humidité (ppm)', en: 'Moisture (ppm)' }, get: m => num(m.oil_quality?.moisture) }, { label: { fr: 'Rigidité D1816 (kV)', en: 'Dielectric D1816 (kV)' }, get: m => num(m.oil_quality?.dielectric) },
+  { label: { fr: 'IFT (mN/m)', en: 'IFT (mN/m)' }, get: m => num(m.oil_quality?.ift) }, { label: { fr: 'Acidité (mgKOH/g)', en: 'Acidity (mgKOH/g)' }, get: m => num(m.oil_quality?.acid) },
+  { label: { fr: 'Couleur (ASTM)', en: 'Color (ASTM)' }, get: m => num(m.oil_quality?.color) }, { label: { fr: 'PF 25C (%)', en: 'PF 25C (%)' }, get: m => num(m.oil_quality?.pf25) },
 ];
 const insufficient = (m: Measure) => (Number(m.ch4 || 0) + Number(m.c2h2 || 0) + Number(m.c2h4 || 0)) < 1;
 const gi = (m: Measure) => ({ h2: +(m.h2 || 0), ch4: +(m.ch4 || 0), c2h6: +(m.c2h6 || 0), c2h4: +(m.c2h4 || 0), c2h2: +(m.c2h2 || 0), co: +(m.co || 0), co2: +(m.co2 || 0) });
 
-const INTERVAL = ['Annuel', 'Annuel', 'Trimestriel', 'Mensuel', 'Hebdomadaire'];
-const PROC: Record<number, string> = {
-  1: 'Continuer les operations normales.',
-  2: 'Faire preuve de prudence. Analyser les gaz individuels pour trouver la cause; surveiller la tendance.',
-  3: 'Anomalie elevee. Echantillonnage rapproche; planifier une inspection.',
-  4: 'Echantillonnage immediat; envisager le retrait de service; expertise.',
+const INTERVAL = { fr: ['Annuel', 'Annuel', 'Trimestriel', 'Mensuel', 'Hebdomadaire'], en: ['Annual', 'Annual', 'Quarterly', 'Monthly', 'Weekly'] };
+const PROC: { fr: Record<number, string>; en: Record<number, string> } = {
+  fr: {
+    1: 'Continuer les operations normales.',
+    2: 'Faire preuve de prudence. Analyser les gaz individuels pour trouver la cause; surveiller la tendance.',
+    3: 'Anomalie elevee. Echantillonnage rapproche; planifier une inspection.',
+    4: 'Echantillonnage immediat; envisager le retrait de service; expertise.',
+  },
+  en: {
+    1: 'Continue normal operations.',
+    2: 'Exercise caution. Analyse individual gases to find the cause; monitor the trend.',
+    3: 'High abnormality. Increased sampling frequency; plan an inspection.',
+    4: 'Immediate sampling; consider removal from service; expert assessment.',
+  },
 };
 
 async function loadLogo(url?: string | null): Promise<string | null> {
@@ -79,9 +88,9 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
   const header = () => {
     if (logo) { try { doc.addImage(logo, 'PNG', M, 22, 0, 24); } catch { /* ignore */ } }
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
-    doc.text(`Equipement: ${d.ident || '—'}   No de serie: ${d.serie || '—'}   No d'equip.: ${d.equip_no || '—'}`, W - M, 30, { align: 'right' });
+    doc.text(`${fr ? 'Equipement' : 'Equipment'}: ${d.ident || '—'}   ${fr ? 'No de serie' : 'Serial No.'}: ${d.serie || '—'}   ${fr ? "No d'equip." : 'Equip. No.'}: ${d.equip_no || '—'}`, W - M, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal');
-    doc.text(`Sous-station/Client: ${d.client || '—'}   Type: ${d.description || d.apparatus || '—'}`, W - M, 42, { align: 'right' });
+    doc.text(`${fr ? 'Sous-station/Client' : 'Substation/Client'}: ${d.client || '—'}   Type: ${d.description || d.apparatus || '—'}`, W - M, 42, { align: 'right' });
     // Filet sous l'en-tête : accent du module 'dga' (Modèles PDF) si réglé, sinon gris discret historique.
     if (style?.accent) { doc.setDrawColor(...style.accent); doc.setLineWidth(style.ruleWidth || 0.6); } else { doc.setDrawColor(210); doc.setLineWidth(0.6); }
     doc.line(M, 50, W - M, 50);
@@ -97,14 +106,14 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
   doc.setFontSize(11); doc.text(fr ? "Evaluation de l'etat AGD" : 'DGA state evaluation', M, y); y += 6;
   doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(80); y += 10;
   const cols = [M, M + 80, M + 230, M + 380];
-  doc.text('Date', cols[0], y); doc.text('Ratios Rogers', cols[1], y); doc.text('Ratios IEC 60599', cols[2], y); doc.text('Gaz cles', cols[3], y); y += 4;
+  doc.text('Date', cols[0], y); doc.text(fr ? 'Ratios Rogers' : 'Rogers ratios', cols[1], y); doc.text(fr ? 'Ratios IEC 60599' : 'IEC 60599 ratios', cols[2], y); doc.text(fr ? 'Gaz cles' : 'Key gas', cols[3], y); y += 4;
   doc.setDrawColor(225); doc.line(M, y, W - M, y); y += 10;
   doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
   for (const m of ms) {
     ensure(14); const g = gi(m); const ins = insufficient(m);
     doc.text(String(m.sample_date || '—'), cols[0], y);
-    doc.text(ins ? 'Quantite de gaz insuffisante' : (fr ? rogers(g).fault.fr : rogers(g).fault.en), cols[1], y, { maxWidth: 145 } as any);
-    doc.text(ins ? 'Quantite de gaz insuffisante' : (fr ? iec60599(g).fault.fr : iec60599(g).fault.en), cols[2], y, { maxWidth: 145 } as any);
+    doc.text(ins ? (fr ? 'Quantite de gaz insuffisante' : 'Insufficient gas quantity') : (fr ? rogers(g).fault.fr : rogers(g).fault.en), cols[1], y, { maxWidth: 145 } as any);
+    doc.text(ins ? (fr ? 'Quantite de gaz insuffisante' : 'Insufficient gas quantity') : (fr ? iec60599(g).fault.fr : iec60599(g).fault.en), cols[2], y, { maxWidth: 145 } as any);
     doc.text(fr ? keyGas(g).fault.fr : keyGas(g).fault.en, cols[3], y, { maxWidth: 150 } as any); y += 15;
   }
   y += 8;
@@ -115,7 +124,7 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
   doc.text(fr ? "Etat selon les gaz cles — IEEE C57.104" : 'Key-gas state — IEEE C57.104', M, y); y += 12;
   doc.setFontSize(7.5); doc.setTextColor(80);
   const c2 = [M, M + 70, M + 110, M + 165, M + 230, M + 300];
-  doc.text('Date', c2[0], y); doc.text('Cond.', c2[1], y); doc.text('TDCG', c2[2], y); doc.text('Taux/j', c2[3], y); doc.text('Intervalle', c2[4], y); doc.text('Procedure', c2[5], y); y += 4;
+  doc.text('Date', c2[0], y); doc.text('Cond.', c2[1], y); doc.text('TDCG', c2[2], y); doc.text(fr ? 'Taux/j' : 'Rate/d', c2[3], y); doc.text(fr ? 'Intervalle' : 'Interval', c2[4], y); doc.text(fr ? 'Procedure' : 'Procedure', c2[5], y); y += 4;
   doc.setDrawColor(225); doc.line(M, y, W - M, y); y += 10;
   doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
   for (let i = 0; i < ms.length; i++) {
@@ -124,7 +133,7 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
     if (i > 0 && ms[i - 1].sample_date && m.sample_date) { const days = (new Date(m.sample_date).getTime() - new Date(ms[i - 1].sample_date as string).getTime()) / 86400000; if (days > 0) rate = (((m.tdcg || dg.tdcg) - (ms[i - 1].tdcg || 0)) / days).toFixed(3); }
     doc.text(String(m.sample_date || '—'), c2[0], y); doc.text(String(cond), c2[1], y);
     doc.text(String(Math.round(m.tdcg || dg.tdcg)), c2[2], y); doc.text(rate, c2[3], y);
-    doc.text(INTERVAL[cond] || 'Annuel', c2[4], y); doc.text(PROC[cond] || '', c2[5], y, { maxWidth: W - M - c2[5] } as any); y += 16;
+    doc.text((fr ? INTERVAL.fr : INTERVAL.en)[cond] || (fr ? 'Annuel' : 'Annual'), c2[4], y); doc.text((fr ? PROC.fr : PROC.en)[cond] || '', c2[5], y, { maxWidth: W - M - c2[5] } as any); y += 16;
   }
   y += 6;
 
@@ -153,12 +162,12 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
   const series = TREND_PARAMS.map(p => ({ p, pts: dated.map(m => ({ d: String(m.sample_date), v: p.get(m) })).filter(x => x.v != null) as { d: string; v: number }[] })).filter(s => s.pts.length >= 2);
   if (series.length) {
     doc.addPage(); header(); y = 60;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(20); doc.text('TENDANCES', M, y); y += 14;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(20); doc.text(fr ? 'TENDANCES' : 'TRENDS', M, y); y += 14;
     const cw = (W - 2 * M - 16) / 2, ch = 90; let col = 0;
     for (const s of series) {
-      if (y + ch > Hp - 50) { doc.addPage(); header(); y = 60; doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('TENDANCES', M, y); y += 14; col = 0; }
+      if (y + ch > Hp - 50) { doc.addPage(); header(); y = 60; doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(fr ? 'TENDANCES' : 'TRENDS', M, y); y += 14; col = 0; }
       const x0 = M + col * (cw + 16);
-      drawChart(doc, x0, y, cw, ch, s.p.label, s.pts);
+      drawChart(doc, x0, y, cw, ch, fr ? s.p.label.fr : s.p.label.en, s.pts);
       col++; if (col === 2) { col = 0; y += ch + 14; }
     }
   }
