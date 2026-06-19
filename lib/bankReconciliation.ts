@@ -95,7 +95,13 @@ export function parseBankCsv(text: string): BankLine[] {
     descCols = findAll(/desc|libell|détail|detail|narration|opération|operation|tiers|payee|memo|note/);   // combine Description 1 + 2…
     iDr = head.findIndex(h => /débit|debit|retrait|withdraw|sortie/.test(h));
     iCr = head.findIndex(h => /crédit|credit|dépôt|depot|deposit|entrée/.test(h));
-    amtCols = findAll(/\bcad\b|\busd\b|montant|amount|^total/);   // RBC : colonne « CAD »
+    // Colonnes de MONTANT. On EXCLUT les composantes de taxe / sous-total (HT, TPS, TVQ, taxe, sous-total)
+    // pour ne pas importer le montant AVANT taxes, et on PRIORISE le montant net de l'opération
+    // (« signé » / « net » > « total » > montant brut / devise). RBC : colonne « CAD ».
+    const isTaxCol = (h: string) => /\bht\b|hors[\s-]?tax|\btps\b|\btvq\b|\bgst\b|\bqst\b|\btaxes?\b|sous[\s-]?total|subtotal/.test(h);
+    const amtFound = head.map((h, k) => ({ h, k })).filter(x => /\bcad\b|\busd\b|montant|amount|^total|total\b|signé|signed|\bnet\b/.test(x.h) && !isTaxCol(x.h));
+    const amtPrio = (h: string) => (/signé|signed|\bnet\b/.test(h) ? 0 : /^total|total\b/.test(h) ? 1 : 2);
+    amtCols = amtFound.sort((a, b) => amtPrio(a.h) - amtPrio(b.h)).map(x => x.k);
     // Exclut des descriptions les colonnes date/montant/débit/crédit (ex. « Date de l'opération » matche « opération »).
     descCols = descCols.filter(k => k !== iDate && k !== iDr && k !== iCr && !amtCols.includes(k));
     start = headerIdx + 1;

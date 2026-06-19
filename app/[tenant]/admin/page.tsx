@@ -7870,22 +7870,35 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   async function doBankAI() {
     const lines = bankLines.filter(b => !b.reconciled && !b.matched_transaction_id);
     if (!lines.length) { setNotice(tr('Aucune ligne non rapprochée.', 'No unreconciled line.')); return; }
-    setBankBusy(true); setNotice(tr('L’IA catégorise les lignes bancaires…', 'AI categorizing bank lines…'));
+    setBankBusy(true); setNotice(tr('Création des transactions depuis le relevé…', 'Creating transactions from the statement…'));
+    // Dédoublonnage : une ligne qui correspond à une transaction DÉJÀ saisie (même avec pièce jointe) n'est PAS recréée.
+    const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
+    // Repli SANS IA : on a déjà date/montant/description ; le SIGNE donne dépense (−) ou revenu (+).
+    const lineToX = (b: BankLine) => { const a = Math.abs(Number(b.amount) || 0); return { vendor: String(b.description || '').slice(0, 80), date: b.stmt_date, type: (Number(b.amount) || 0) < 0 ? 'expense' : 'revenue', subtotal: a, gst: 0, qst: 0, pst: 0, total: a, description: String(b.description || ''), is_transfer: false }; };
+    let created = 0, dups = 0, transfers = 0, fbBatches = 0;
+    const CHUNK = 40; // borne la réponse IA pour éviter une troncature (JSON illisible → 422)
     try {
-      const csv = 'date,description,montant\n' + lines.map(b => `${b.stmt_date},"${String(b.description || '').replace(/"/g, '""')}",${b.amount}`).join('\n');
-      const b64 = typeof window !== 'undefined' ? window.btoa(unescape(encodeURIComponent(csv))) : '';
-      const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ fileBase64: b64, media_type: 'text/csv', file_name: 'releve.csv' }) });
-      const j = await resp.json();
-      if (!resp.ok) { setNotice(j?.error || tr('IA indisponible.', 'AI unavailable.')); setBankBusy(false); return; }
-      const itemsX: any[] = Array.isArray(j.extractedList) ? j.extractedList : [];
-      // Dédoublonnage : une ligne qui correspond à une transaction DÉJÀ saisie (même avec pièce jointe) n'est PAS recréée.
-      const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
-      let created = 0, dups = 0;
-      for (const x of itemsX) { try { const r = await createTxnFromExtracted(x, null, seen, importAccount || undefined); if (r === 'created') created++; else if (r === 'duplicate') dups++; } catch { /* skip */ } }
+      for (let i = 0; i < lines.length; i += CHUNK) {
+        const batch = lines.slice(i, i + CHUNK);
+        let items: any[] | null = null;
+        try {
+          const csv = 'date,description,montant\n' + batch.map(b => `${b.stmt_date},"${String(b.description || '').replace(/"/g, '""')}",${b.amount}`).join('\n');
+          const b64 = typeof window !== 'undefined' ? window.btoa(unescape(encodeURIComponent(csv))) : '';
+          const resp = await fetch('/api/transactions/scan-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ fileBase64: b64, media_type: 'text/csv', file_name: 'releve.csv' }) });
+          const j = await resp.json();
+          if (resp.ok && Array.isArray(j.extractedList) && j.extractedList.length) items = j.extractedList; // l'IA a catégorisé (vendeur, taxes, transferts)
+        } catch { /* l'IA a échoué → repli ci-dessous */ }
+        // Repli si l'IA n'a rien rendu pour ce lot : on crée quand même depuis les lignes du relevé.
+        const src = items || batch.map(lineToX);
+        if (!items) fbBatches++;
+        for (const x of src) { try { const r = await createTxnFromExtracted(x, null, seen, importAccount || undefined); if (r === 'created') created++; else if (r === 'duplicate') dups++; else if (r === 'transfer') transfers++; } catch { /* skip */ } }
+      }
       // Marque les lignes traitées comme rapprochées (créées OU déjà existantes — on ne re-vérifie pas).
       for (const b of lines) { try { await updateBankLine(tenant, b.id!, { reconciled: true }); } catch { /* noop */ } }
       setBankLines(await getBankLines(tenant));
-      setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} déjà existante(s) (rapprochée(s) sans doublon)` : ''} depuis le relevé — ⏳ À VÉRIFIER.`, `${created} transaction(s) created${dups ? `, ${dups} already existing (matched, no duplicate)` : ''} from the statement — ⏳ TO REVIEW.`));
+      setNotice(tr(
+        `${created} transaction(s) créée(s)${dups ? `, ${dups} déjà existante(s)` : ''}${transfers ? `, ${transfers} transfert(s) ignoré(s)` : ''}${fbBatches ? ` · ${fbBatches} lot(s) créé(s) sans IA (à catégoriser)` : ''} — ⏳ À VÉRIFIER.`,
+        `${created} transaction(s) created${dups ? `, ${dups} already existing` : ''}${transfers ? `, ${transfers} transfer(s) skipped` : ''}${fbBatches ? ` · ${fbBatches} batch(es) created without AI (to categorize)` : ''} — ⏳ TO REVIEW.`));
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
   }
@@ -8216,7 +8229,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
                 {tr('Choisir un fichier (CSV/OFX/QFX)', 'Pick a file (CSV/OFX/QFX)')}
-                <input type="file" accept=".csv,.ofx,.qfx,text/csv,text/plain,application/x-ofx" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await readBankFile(f)); }} />
+                <input type="file" accept=".csv,.tsv,.txt,.ofx,.qfx,text/csv,text/plain,application/x-ofx" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) { try { const txt = await readBankFile(f); setImportText(txt); const n = parseStatement(txt).lines.length; setNotice(n ? tr(`${n} opération(s) détectée(s) dans « ${f.name} » — cliquez « Importer ».`, `${n} transaction(s) detected in “${f.name}” — click “Import”.`) : tr(`Aucune opération détectée dans « ${f.name} » (format non reconnu).`, `No transaction detected in “${f.name}” (unrecognized format).`)); } catch { setNotice(tr('Lecture du fichier impossible.', 'Could not read the file.')); } } e.target.value = ''; }} />
               </label>
               <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
               {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
