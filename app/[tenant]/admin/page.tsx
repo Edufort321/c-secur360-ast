@@ -5821,14 +5821,15 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 // ============================================================
 
 function PayeConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  const [subTab, setSubTab] = useState<'profils' | 'avantages' | 'primes'>('profils');
+  // Avantages ET primes horaires REGROUPÉS sur un seul écran : on crée l'un ou l'autre au même endroit,
+  // tous deux ciblés (tâches/contextes/employés) avec leur montant ; la feuille de temps les déclenche.
+  const [subTab, setSubTab] = useState<'profils' | 'avantages'>('profils');
   return (
     <div className="space-y-4">
       <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
         {[
           { k: 'profils',   label: tr('Profils employés', 'Employee profiles'), icon: UserCog },
-          { k: 'avantages', label: tr('Avantages',         'Allowances'),        icon: Gift },
-          { k: 'primes',    label: tr('Primes horaires',   'Hour bonuses'),      icon: Timer },
+          { k: 'avantages', label: tr('Avantages & primes', 'Allowances & bonuses'), icon: Gift },
         ].map(x => {
           const Icon = x.icon as any;
           return (
@@ -5839,9 +5840,17 @@ function PayeConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           );
         })}
       </div>
-      {subTab === 'profils'   && <EmployeeProfiles tenant={tenant} tr={tr} />}
-      {subTab === 'avantages' && <AllowancesConfig tenant={tenant} tr={tr} />}
-      {subTab === 'primes'    && <HourBonusesConfig tenant={tenant} tr={tr} />}
+      {subTab === 'profils' && <EmployeeProfiles tenant={tenant} tr={tr} />}
+      {subTab === 'avantages' && (
+        <div className="space-y-6">
+          <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            {tr('Créez ici vos rémunérations déclenchées par la feuille de temps : avantages/allocations (par tâche, contexte ou employé) ET primes par plage d’heures. Chacun se déclenche sur les codes/employés ciblés, au montant voulu.', 'Create here the pay items triggered by the timesheet: allowances/benefits (by task, context or employee) AND hour-threshold bonuses. Each triggers on the targeted codes/employees, at the chosen amount.')}
+          </p>
+          <AllowancesConfig tenant={tenant} tr={tr} />
+          <div className="border-t border-gray-200 pt-2 dark:border-gray-700" />
+          <HourBonusesConfig tenant={tenant} tr={tr} />
+        </div>
+      )}
     </div>
   );
 }
