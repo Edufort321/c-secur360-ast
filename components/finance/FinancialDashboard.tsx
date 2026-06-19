@@ -114,6 +114,18 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   useEffect(() => { revenueByClass(tenant, from || undefined, to || undefined).then(setRevByClass).catch(() => setRevByClass([])); }, [tenant, from, to]);
   const a = useMemo(() => computeFinancialAnalytics(ledger, { granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal }), [ledger, granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal]);
 
+  // Auto-diagnostic : signale une donnée INCOMPLÈTE qui rend les marges non significatives (ex. démo sans
+  // côté coûts). Évite que le dashboard paraisse « cassé » : il EXPLIQUE qu'il manque des écritures.
+  const dataGaps = useMemo(() => {
+    const g: string[] = [];
+    if (a.revenueTotal > 0) {
+      if (a.payrollTotal === 0) g.push(tr('aucune masse salariale comptabilisée', 'no payroll booked'));
+      if (a.expenseTotal < a.revenueTotal * 0.05) g.push(tr('charges quasi nulles (< 5 % du CA)', 'expenses near zero (< 5% of revenue)'));
+      if (a.cogsTotal === 0) g.push(tr('aucun coût des ventes (COGS)', 'no cost of goods (COGS)'));
+    }
+    return g;
+  }, [a]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Donut RÉCONCILIÉ avec le CA (source unique = grand livre) : la somme des parts = CA de la carte.
   // Le reliquat « Non classé (grand livre) » = CA du GL − revenus déjà ventilés par classe (factures/transactions).
   const revByClassRecon = useMemo(() => {
@@ -182,7 +194,7 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
     { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}`, cat: 'cogs' as DrillCategory, spark: a.periods.map(p => p.grossMargin) },
     { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.marginPct.toFixed(1)} %`, spark: a.periods.map(p => p.margin) },
     { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, cat: 'payroll' as DrillCategory, spark: a.periods.map(p => p.payroll) },
-    { label: tr('Croissance', 'Growth'), value: a.growthPct != null ? `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %` : '—', icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: tr('dernière période', 'last period') },
+    { label: tr('Croissance', 'Growth'), value: a.growthPct == null ? '—' : Math.abs(a.growthPct) > 500 ? tr('nouvelle activité', 'new activity') : `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %`, icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: a.growthPct != null && Math.abs(a.growthPct) > 500 ? tr('base de départ faible', 'low starting base') : tr('dernière période', 'last period') },
     { label: tr('Trésorerie', 'Cash'), value: mnyK(a.cash), icon: Wallet, color: 'text-slate-900 dark:text-white', sub: `AR ${mnyK(a.arTotal)} · AP ${mnyK(a.apTotal)}` },
     { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: `${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, spark: a.periods.map(p => p.ebitda) },
     { label: 'CAPEX', value: mnyK(a.capexTotal), icon: TrendingDown, color: 'text-amber-600', sub: tr('investissements', 'investments'), cat: 'capex' as DrillCategory, spark: a.periods.map(p => p.capex) },
@@ -224,6 +236,16 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
         </div>
       </div>
       </div>
+
+      {/* Bandeau auto-diagnostic : données incomplètes (côté coûts non comptabilisé) */}
+      {dataGaps.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          <AlertTriangle size={16} className="shrink-0" />
+          <span className="font-semibold">{tr('Données incomplètes — marges non significatives :', 'Incomplete data — margins not meaningful:')}</span>
+          <span>{dataGaps.join(' · ')}.</span>
+          <span className="opacity-90">{tr('Comptabilisez vos dépenses/paies (Admin › Compta › « Synchroniser tout ») pour des marges fiables.', 'Book your expenses/payroll (Admin › Accounting › “Sync all”) for reliable margins.')}</span>
+        </div>
+      )}
 
       {/* KPI cards (cliquables → drill-down du grand livre, sparkline 12 points) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
