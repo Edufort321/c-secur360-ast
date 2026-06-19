@@ -23,6 +23,7 @@ import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
 import { generationRates, computeHealthIndex, overThreshold, transformerType, recommendedRetestDays, addDays as addDaysIso, getSegment, severity2019, tdcgIndicator, STATUS_STYLE, type GasRate } from '@/lib/dga/severity2019';
 import { buildFleetComparison, type FleetGas } from '@/lib/dga/fleet';
+import { DuvalPentagon } from '@/components/dga/DuvalPentagon';
 import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
@@ -605,6 +606,12 @@ export function TransfoView(props: {
             <section className={CARD}>
               <h2 className={H2}>{tr('Triangle de Duval 1', 'Duval Triangle 1')}</h2>
               <DuvalTriangle1 samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) }))} />
+            </section>
+
+            {/* B1 — Pentagone de Duval : sommets publics + point du centroïde (zones préliminaires) */}
+            <section className={CARD}>
+              <h2 className={H2}>{tr('Pentagone de Duval', 'Duval Pentagon')}</h2>
+              <DuvalPentagon lang={lang} samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, gases: { H2: +(m.h2 || 0), C2H6: +(m.c2h6 || 0), CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) } }))} />
             </section>
 
             {/* B6 — COMPARAISON À LA FLOTTE : où se situe ce transfo vs les autres du parc (indicatif) */}
