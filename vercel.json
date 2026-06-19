@@ -46,6 +46,10 @@
     {
       "path": "/api/cron/bank-sync",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/hse-mark-overdue",
+      "schedule": "0 6 * * *"
     }
   ],
   
