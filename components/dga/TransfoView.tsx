@@ -21,7 +21,7 @@ import {
 } from '@/lib/dga/fields';
 import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
-import { generationRates, computeHealthIndex, overThreshold, transformerType, type GasRate } from '@/lib/dga/severity2019';
+import { generationRates, computeHealthIndex, overThreshold, transformerType, recommendedRetestDays, addDays as addDaysIso, type GasRate } from '@/lib/dga/severity2019';
 import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
@@ -407,6 +407,10 @@ export function TransfoView(props: {
         {(() => {
           const col = health.band === 'excellent' ? '#2a9d8f' : health.band === 'bon' ? '#5a9e3f' : health.band === 'a_surveiller' ? '#c0651a' : '#9d0208';
           const label = health.band === 'excellent' ? tr('Excellent', 'Excellent') : health.band === 'bon' ? tr('Bon', 'Good') : health.band === 'a_surveiller' ? tr('À surveiller', 'Watch') : tr('Critique', 'Critical');
+          const hasCrit = genRates.some(r => r.level === 'crit');
+          const retestDays = recommendedRetestDays(health.band, hasCrit);
+          const retestTarget = addDaysIso(new Date().toISOString().slice(0, 10), retestDays);
+          const urgent = retestDays <= 7;
           return (
             <section className={CARD} style={{ borderLeft: `6px solid ${col}` }}>
               <div className="flex flex-wrap items-center gap-4">
@@ -420,6 +424,11 @@ export function TransfoView(props: {
                   <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                     <div className="h-full rounded-full" style={{ width: `${health.score}%`, background: col }} />
                   </div>
+                </div>
+                <div className="rounded-xl px-3 py-2 text-center" style={{ background: urgent ? '#fdecef' : '#f1f5f9', color: urgent ? '#9d0208' : '#475569' }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wide">{tr('Re-test recommandé', 'Recommended re-test')}</div>
+                  <div className="text-lg font-extrabold">{tr(`sous ${retestDays} j`, `within ${retestDays} d`)}</div>
+                  <div className="text-[11px] opacity-80">{tr('cible', 'target')} : {retestTarget}</div>
                 </div>
               </div>
               <p className="mt-2 text-[11px] text-gray-400">{tr('Agrège gaz combustibles, taux de génération, qualité d’huile et papier (DP). Indicatif — à valider par une personne qualifiée.', 'Aggregates combustible gases, generation rate, oil quality and paper (DP). Indicative — to be validated by a qualified person.')}</p>

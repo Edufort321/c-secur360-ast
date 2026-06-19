@@ -134,6 +134,20 @@ export function computeHealthIndex(inp: HealthInput): { score: number; band: Hea
   return { score, band: healthBand(score) };
 }
 
+// Intervalle de RE-TEST recommandé (jours) selon la bande de santé + présence d'un taux critique.
+// Actionnable et chiffré (ex. « re-test sous 7 jours »). La date cible se calcule avec addDays().
+export function recommendedRetestDays(band: HealthBand, hasCritRate = false): number {
+  if (band === 'critique' || hasCritRate) return 7;
+  if (band === 'a_surveiller') return 30;
+  if (band === 'bon') return 180;
+  return 365;
+}
+export function addDays(fromIso: string, days: number): string {
+  const d = new Date(fromIso); if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 // ── Garde anti-« stabilisé » : interdit le verdict de stabilisation s'il n'y a pas ≥ 2 points APRÈS
 //    le dernier SAUT (delta > seuil). Avec 2 mesures et un saut récent, on NE PEUT PAS conclure stabilisé.
 export type SampleLite = { date: string; value: number };

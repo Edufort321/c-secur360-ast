@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import {
   o2n2Ratio, transformerType, threshold90, overThreshold, generationRatePerDay,
   co2coRatio, co2coInterpretation, canConcludeStabilized, generationRates, computeHealthIndex,
+  recommendedRetestDays, addDays,
 } from './severity2019';
 import { duvalTriangle1 } from './diagnose';
 
@@ -53,6 +54,13 @@ describe('DGA NEW RICHMOND TG1 — Partie C (IEEE C57.104-2019)', () => {
     const hi = computeHealthIndex({ c2h2Over: overThreshold(s2025.C2H2, 'c2h2', 'sealed'), worstCondition: 4, genRates: generationRates(prev, cur) });
     expect(hi.score).toBeLessThan(30);
     expect(hi.band).toBe('critique');
+  });
+
+  it('re-test recommandé : critique → 7 jours, date cible calculée', () => {
+    expect(recommendedRetestDays('critique')).toBe(7);
+    expect(recommendedRetestDays('a_surveiller')).toBe(30);
+    expect(recommendedRetestDays('excellent')).toBe(365);
+    expect(addDays('2025-07-08', 7)).toBe('2025-07-15');
   });
 
   it('NE PEUT PAS conclure « stabilisé » avec 2 mesures et un saut récent', () => {
