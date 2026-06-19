@@ -6953,6 +6953,23 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
   const [payFor, setPayFor] = useState<Invoice | null>(null);
   const [payDate, setPayDate] = useState<string>(today);
   const [payBankGl, setPayBankGl] = useState<string>(''); // gl_account_id du compte de trésorerie choisi
+  // Note de crédit (P2-1)
+  const [creditFor, setCreditFor] = useState<Invoice | null>(null);
+  const [cnMode, setCnMode] = useState<'full' | 'partial'>('full');
+  const [cnAmount, setCnAmount] = useState('');
+  const [cnReason, setCnReason] = useState('');
+  const [cnRefund, setCnRefund] = useState(false);
+  const [cnBusy, setCnBusy] = useState(false);
+  async function submitCreditNote() {
+    if (!creditFor?.id) return;
+    setCnBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/accounting/credit-note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, invoiceId: creditFor.id, mode: cnMode, subtotal: cnMode === 'partial' ? Number(cnAmount) || 0 : undefined, reason: cnReason || null, refunded: cnRefund }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error);
+      setNotice(tr(`Note de crédit ${j.number} créée (${(Number(j.total) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $) — contre-écriture comptabilisée${j.refunded ? ' + remboursement' : ''}.`, `Credit note ${j.number} created — reversal posted${j.refunded ? ' + refund' : ''}.`));
+      setCreditFor(null); await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); } finally { setCnBusy(false); }
+  }
   const [treasuries, setTreasuries] = useState<{ id: string; name: string; gl_account_id: string | null }[]>([]);
   useEffect(() => { supabase.from('treasury_accounts').select('id, name, gl_account_id').eq('tenant_id', tenant).then(({ data }) => setTreasuries((data as any[]) || []), () => {}); }, [tenant]);
   useEffect(() => { fetch(`/api/stripe/connect/onboard?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => j && setStripeStatus(j)).catch(() => {}); }, [tenant]);
@@ -7335,6 +7352,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {inv.status !== 'paid' && stripeStatus?.chargesEnabled && <button onClick={() => payInvoice(inv)} disabled={payingId === inv.id} className="font-semibold text-indigo-600 hover:underline disabled:opacity-40">{payingId === inv.id ? <Loader2 size={12} className="inline animate-spin" /> : `💳 ${tr('Payer', 'Pay')}`}</button>}
                       {inv.status !== 'paid' && <button onClick={() => { setPayFor(inv); setPayDate(today); setPayBankGl(''); }} className="ml-auto text-emerald-600 hover:underline">{tr('Encaisser (Payée)', 'Receive (Paid)')}</button>}
+                      {(inv.status === 'sent' || inv.status === 'paid') && inv.id && <button onClick={() => { setCreditFor(inv); setCnMode('full'); setCnAmount(String(inv.subtotal || '')); setCnReason(''); setCnRefund(inv.status === 'paid'); }} className={`${inv.status === 'paid' ? '' : 'ml-auto'} text-rose-600 hover:underline`}>{tr('Note de crédit', 'Credit note')}</button>}
                     </div>
                   )}
                 </div>
@@ -7364,6 +7382,35 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
             <div className="flex justify-end gap-2">
               <button onClick={() => setPayFor(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
               <button onClick={() => markPaid(payFor, { bankGlId: payBankGl || null, date: payDate })} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Confirmer l\'encaissement', 'Confirm payment')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note de crédit (P2-1) : annule tout/partie d'une facture + contre-écriture GL. */}
+      {creditFor && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setCreditFor(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-bold">{tr('Note de crédit', 'Credit note')} — {tr('facture', 'invoice')} {creditFor.invoice_number}</h3>
+            <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{tr('Total facture', 'Invoice total')} : <span className="font-semibold text-gray-800 dark:text-gray-100">{(Number(creditFor.total) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $</span></p>
+            <div className="mb-2 flex gap-1 rounded-lg border border-gray-200 p-1 dark:border-gray-700">
+              <button onClick={() => setCnMode('full')} className={`flex-1 rounded px-2 py-1 text-xs font-semibold ${cnMode === 'full' ? 'bg-rose-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>{tr('Totale', 'Full')}</button>
+              <button onClick={() => setCnMode('partial')} className={`flex-1 rounded px-2 py-1 text-xs font-semibold ${cnMode === 'partial' ? 'bg-rose-600 text-white' : 'text-gray-600 dark:text-gray-300'}`}>{tr('Partielle', 'Partial')}</button>
+            </div>
+            {cnMode === 'partial' && (
+              <label className="mb-2 block text-xs font-semibold text-gray-500">{tr('Montant à créditer (avant taxes)', 'Amount to credit (pre-tax)')}
+                <input type="number" step="0.01" value={cnAmount} onChange={e => setCnAmount(e.target.value)} className={`mt-1 w-full text-right ${inputCls}`} />
+                <span className="text-[10px] text-gray-400">{tr('Les taxes sont recalculées selon la province.', 'Taxes are recomputed by province.')}</span>
+              </label>
+            )}
+            <label className="mb-2 block text-xs font-semibold text-gray-500">{tr('Motif', 'Reason')}
+              <input value={cnReason} onChange={e => setCnReason(e.target.value)} placeholder={tr('Retour, erreur, geste commercial…', 'Return, error, goodwill…')} className={`mt-1 w-full ${inputCls}`} />
+            </label>
+            <label className="mb-3 flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300"><input type="checkbox" checked={cnRefund} onChange={e => setCnRefund(e.target.checked)} /> {tr('Remboursement en argent versé (sortie de banque)', 'Cash refund paid (bank outflow)')}</label>
+            <p className="mb-3 text-[11px] text-gray-400">{tr('Écriture : DR Ventes + DR TPS/TVQ / CR Clients (annule la créance). Remboursement : DR Clients / CR Banque.', 'Entry: DR Sales + DR GST/QST / CR Clients (reverses AR). Refund: DR Clients / CR Bank.')}</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setCreditFor(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={submitCreditNote} disabled={cnBusy} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">{cnBusy ? <Loader2 size={15} className="animate-spin" /> : null} {tr('Créer la note de crédit', 'Create credit note')}</button>
             </div>
           </div>
         </div>
