@@ -95,9 +95,9 @@ Le cœur double-entrée est verrouillé au niveau base (triggers d'équilibre + 
 |---|-------|---------|------|
 | P2-3 | **`due_date` sur transactions** → vieillissement AP par conditions de paiement | §4 | ✅ mig 244 (champ Échéance + net 15/30/60 ; `getApAging` utilise l'échéance) |
 | P2-4 | **Numérotation séquentielle des écritures** (`entry_number` auto) | §2 | ✅ mig 243 (trigger atomique `gl_entry_counters`, sans renuméroter l'historique) |
-| P2-1 | **Notes de crédit / remboursements** (contre-écriture liée à la facture) | §3 | ⏳ M |
-| P2-2 | **Paiements partiels** (historique + statut intermédiaire, AR aging par stade) | §3 | ⏳ M |
-| P2-5 | **Avantage automobile** porté à la paie/au GL (T4 case 34) | §5 | ⏳ S |
+| P2-1 | **Notes de crédit / remboursements** (contre-écriture liée à la facture) | §3 | ✅ mig 245 (`/api/accounting/credit-note`, DR 4000+2100/2110 / CR 1100, totale/partielle + remboursement) |
+| P2-2 | **Paiements partiels** (historique + AR aging par solde dû) | §3 | ✅ mig 246 (`invoice_payments` + `paid_amount` ; markPaid partiel ; aging sur solde dû) |
+| P2-5 | **Avantage automobile** (T4 case 34) | §5 | ✅ **T4/RL-1 déjà intégré** (`getT4RL1Base` ajoute `vehicleBenefit`). ⚠️ Écriture GL d'un avantage NON monétaire = **décision fiscale à valider par une personne qualifiée** (coûts véhicule déjà en 5200) — délibérément NON auto-comptabilisée. |
 | P2-6 | **XML T4/RL-1** pour télétransmission ARC/RQ | §6 | ⏳ L |
 | P2-7 | **DPA / demi-année** (amortissement fiscal distinct du comptable) | §7 | ⏳ M |
 
