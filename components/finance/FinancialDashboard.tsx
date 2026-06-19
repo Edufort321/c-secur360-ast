@@ -12,8 +12,10 @@ import RevenueClassManager from '@/components/finance/RevenueClassManager';
 import WipReport from '@/components/finance/WipReport';
 import SaasAndForecast from '@/components/finance/SaasAndForecast';
 import {
-  computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry,
+  computeFinancialAnalytics, cashAndReceivables, revenueByClass, GRANULARITY_LABELS, type Granularity, type LedgerEntry, type DrillCategory,
 } from '@/lib/financialAnalytics';
+import LedgerDrilldown from '@/components/finance/LedgerDrilldown';
+import { downloadCsv } from '@/lib/csv';
 import { getInventoryValuation, getBookedStockValue, postInventoryToBalance, type InventoryValuation } from '@/lib/inventory';
 
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
@@ -21,6 +23,15 @@ const mnyK = (n: number) => { const v = Number(n) || 0; return Math.abs(v) >= 10
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 type AiAnalysis = { health?: string; summary?: string; insights?: { severity: string; title: string; detail: string }[]; recommendations?: string[] };
+
+// Mini-courbe (sparkline) 12 points dans une carte KPI.
+function Sparkline({ values }: { values: number[] }) {
+  const w = 100, h = 22;
+  const min = Math.min(...values), max = Math.max(...values); const range = (max - min) || 1;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / range) * h}`).join(' ');
+  const up = values[values.length - 1] >= values[0];
+  return <svg viewBox={`0 0 ${w} ${h}`} height={22} preserveAspectRatio="none" className="mt-1.5 w-full"><polyline points={pts} fill="none" stroke={up ? '#10b981' : '#ef4444'} strokeWidth={2} vectorEffect="non-scaling-stroke" /></svg>;
+}
 
 // Méga-dashboard « État financier » : CA, charges, marge, masse salariale, croissance, trésorerie.
 // Filtres : granularité (quotidien→annuel), plage de dates, mois de début d'exercice (rappels de clôture).
@@ -61,6 +72,7 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   const [aiBusy, setAiBusy] = useState(false);
   const [ai, setAi] = useState<AiAnalysis | null>(null);
   const [aiErr, setAiErr] = useState<string | null>(null);
+  const [drill, setDrill] = useState<{ category: DrillCategory; title: string } | null>(null);
 
   // Stocks / inventaire (#42) : valeur calculée (live) + solde comptabilisé 1300 + optimisation.
   const [stock, setStock] = useState<InventoryValuation | null>(null);
@@ -137,6 +149,20 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
     finally { setAiBusy(false); }
   }
 
+  function exportPnl() {
+    downloadCsv('etat-financier.csv', a.periods, [
+      { key: 'label', label: tr('Période', 'Period') },
+      { key: 'revenue', label: tr('CA', 'Revenue'), type: 'money' },
+      { key: 'cogs', label: 'COGS', type: 'money' },
+      { key: 'grossMargin', label: tr('Marge brute', 'Gross margin'), type: 'money' },
+      { key: 'payroll', label: tr('Masse salariale', 'Payroll'), type: 'money' },
+      { key: 'opex', label: 'Opex', type: 'money' },
+      { key: 'ebitda', label: 'EBITDA', type: 'money' },
+      { key: 'expense', label: tr('Charges', 'Expenses'), type: 'money' },
+      { key: 'margin', label: tr('Marge nette', 'Net margin'), type: 'money' },
+    ]);
+  }
+
   const chartData = a.periods.map(p => ({ name: p.label, CA: Math.round(p.revenue), Charges: Math.round(p.expense), Marge: Math.round(p.margin), Paie: Math.round(p.payroll) }));
   const healthCls: Record<string, string> = {
     excellent: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -151,15 +177,15 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   };
 
   const kpis = [
-    { label: tr('Chiffre d’affaires', 'Revenue'), value: mnyK(a.revenueTotal), icon: DollarSign, color: 'text-blue-600' },
-    { label: tr('Charges', 'Expenses'), value: mnyK(a.expenseTotal), icon: TrendingDown, color: 'text-rose-600' },
-    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}` },
-    { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.marginPct.toFixed(1)} %` },
-    { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}` },
+    { label: tr('Chiffre d’affaires', 'Revenue'), value: mnyK(a.revenueTotal), icon: DollarSign, color: 'text-blue-600', cat: 'revenue' as DrillCategory, spark: a.periods.map(p => p.revenue) },
+    { label: tr('Charges', 'Expenses'), value: mnyK(a.expenseTotal), icon: TrendingDown, color: 'text-rose-600', cat: 'expense' as DrillCategory, spark: a.periods.map(p => p.expense) },
+    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}`, cat: 'cogs' as DrillCategory, spark: a.periods.map(p => p.grossMargin) },
+    { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.marginPct.toFixed(1)} %`, spark: a.periods.map(p => p.margin) },
+    { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, cat: 'payroll' as DrillCategory, spark: a.periods.map(p => p.payroll) },
     { label: tr('Croissance', 'Growth'), value: a.growthPct != null ? `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %` : '—', icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: tr('dernière période', 'last period') },
     { label: tr('Trésorerie', 'Cash'), value: mnyK(a.cash), icon: Wallet, color: 'text-slate-900 dark:text-white', sub: `AR ${mnyK(a.arTotal)} · AP ${mnyK(a.apTotal)}` },
-    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: `${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}` },
-    { label: 'CAPEX', value: mnyK(a.capexTotal), icon: TrendingDown, color: 'text-amber-600', sub: tr('investissements', 'investments') },
+    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: `${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, spark: a.periods.map(p => p.ebitda) },
+    { label: 'CAPEX', value: mnyK(a.capexTotal), icon: TrendingDown, color: 'text-amber-600', sub: tr('investissements', 'investments'), cat: 'capex' as DrillCategory, spark: a.periods.map(p => p.capex) },
   ];
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -192,24 +218,29 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
           </select>
         </label>
         {(from || to) && <button onClick={() => { setFrom(''); setTo(''); setPreset(''); }} className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-600">{tr('Effacer dates', 'Clear dates')}</button>}
-        <div className="ml-auto flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
+        <button onClick={exportPnl} className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300"><BookOpen size={13} /> {tr('Export Excel (état)', 'Export Excel (P&L)')}</button>
+        <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
           <CalendarClock size={14} /> {tr('Fin d’exercice', 'Fiscal year-end')} : {nextClose.fyEnd} ({nextClose.fyDays} {tr('j', 'd')})
         </div>
       </div>
       </div>
 
-      {/* KPI cards */}
+      {/* KPI cards (cliquables → drill-down du grand livre, sparkline 12 points) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {kpis.map(k => {
           const Icon = k.icon;
+          const cat = (k as any).cat as DrillCategory | undefined;
+          const spark = ((k as any).spark as number[] | undefined) || [];
           return (
-            <div key={k.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div key={k.label} onClick={cat ? () => setDrill({ category: cat, title: k.label }) : undefined}
+              className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 ${cat ? 'cursor-pointer transition hover:border-indigo-300 hover:shadow-md' : ''}`}>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{k.label}</span>
                 <Icon size={15} className="text-slate-300" />
               </div>
               <div className={`text-xl font-extrabold ${k.color}`}>{k.value}</div>
               {k.sub && <div className="mt-0.5 text-[10px] text-slate-400">{k.sub}</div>}
+              {spark.length > 1 && <Sparkline values={spark} />}
             </div>
           );
         })}
@@ -444,7 +475,10 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
         )}
       </div>
 
-      <p className="text-[11px] text-slate-400">{tr('Source : grand livre (transactions, paie et factures comptabilisées). Masse salariale détectée par les comptes de charges « salaire/paie ».', 'Source: general ledger (posted transactions, payroll and invoices). Payroll detected from "salary/payroll" expense accounts.')}</p>
+      <p className="text-[11px] text-slate-400">{tr('Source : grand livre (transactions, paie et factures comptabilisées). Cliquez une carte pour le détail des écritures.', 'Source: general ledger (posted transactions, payroll and invoices). Click a card to drill down to the entries.')}</p>
+
+      {/* Drill-down : écritures du grand livre composant une carte KPI */}
+      {drill && <LedgerDrilldown ledger={ledger} category={drill.category} title={drill.title} from={from || undefined} to={to || undefined} tr={tr} onClose={() => setDrill(null)} />}
     </div>
   );
 }

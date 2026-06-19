@@ -160,6 +160,47 @@ export function cashAndReceivables(
   return { cash, arTotal, apTotal };
 }
 
+// ── Drill-down : lignes du grand livre composant une CATÉGORIE de KPI, sur une fenêtre de dates.
+export type DrillCategory = 'revenue' | 'expense' | 'payroll' | 'cogs' | 'opex' | 'capex';
+export type LedgerLine = { date: string; code: string; account: string; amount: number; description: string };
+
+function lineCategory(type: string | undefined, code: string, name: string): DrillCategory | null {
+  if (type === 'revenue') return 'revenue';
+  if (type === 'asset' && code === '1500') return 'capex';
+  if (type === 'expense') {
+    if (PAYROLL_CODES.has(code) || PAYROLL_RE.test(name)) return 'payroll';
+    if (COGS_CODES.has(code) || COGS_RE.test(name)) return 'cogs';
+    if (code === '5600' || code === '5700' || code === '5800') return 'opex'; // amort/int/impôt regroupés ici pour le détail
+    return 'opex';
+  }
+  return null;
+}
+
+export function extractLedgerLines(entries: LedgerEntry[], opts: { category: DrillCategory; from?: string; to?: string }): { lines: LedgerLine[]; total: number } {
+  const from = opts.from ? new Date(opts.from).getTime() : -Infinity;
+  const to = opts.to ? new Date(opts.to).getTime() + 86400000 : Infinity;
+  const out: LedgerLine[] = [];
+  for (const e of entries || []) {
+    if (e.posted === false) continue;
+    const ds = e.entry_date || ''; const t = new Date(ds).getTime();
+    if (isNaN(t) || t < from || t >= to) continue;
+    for (const l of e.gl_lines || []) {
+      const type = l.gl_accounts?.type; const code = String(l.gl_accounts?.code || ''); const name = l.gl_accounts?.name || '';
+      const cat = lineCategory(type, code, name);
+      // « expense » = toutes charges (paie+cogs+opex) ; sinon catégorie précise.
+      const match = opts.category === 'expense' ? (type === 'expense') : cat === opts.category;
+      if (!match) continue;
+      const d = n(l.debit), c = n(l.credit);
+      const amount = type === 'revenue' ? c - d : d - c; // produit = crédit ; charge/actif = débit
+      if (amount === 0) continue;
+      out.push({ date: ds.slice(0, 10), code, account: name, amount, description: (e as any).description || '' });
+    }
+  }
+  out.sort((a, b) => (a.date < b.date ? 1 : -1));
+  const total = out.reduce((s, l) => s + l.amount, 0);
+  return { lines: out, total: Math.round(total * 100) / 100 };
+}
+
 export const GRANULARITY_LABELS: Record<Granularity, string> = {
   day: 'Quotidien', week: 'Hebdomadaire', month: 'Mensuel', quarter: 'Trimestriel', year: 'Annuel',
 };
