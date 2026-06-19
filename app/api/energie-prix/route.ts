@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 
+// Route DYNAMIQUE : ne JAMAIS pré-générer au build (l'appel externe NRCan pendait → timeout de build Vercel).
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * Récupère le prix courant du carburant ordinaire (sans plomb) au Québec
  * depuis Ressources naturelles Canada (données ouvertes, mise à jour hebdomadaire).
@@ -12,10 +16,17 @@ export async function GET() {
       'https://www2.nrcan.gc.ca/eneene/sources/pripri/prices_bycity_e.cfm' +
       '?productID=1&locationID=66&freq=D&priceType=retail&currency=cdn';
 
-    const res = await fetch(url, {
-      next: { revalidate: 3600 },   // cache côté serveur 1h
-      headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0' },
-    });
+    // Garde-fou : on coupe l'appel après 8 s (sinon la requête peut pendre indéfiniment).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        cache: 'no-store',
+        signal: ctrl.signal,
+        headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0' },
+      });
+    } finally { clearTimeout(timer); }
 
     if (!res.ok) throw new Error(`NRCan HTTP ${res.status}`);
 
