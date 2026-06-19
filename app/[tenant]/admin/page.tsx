@@ -611,20 +611,40 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
 
   const rowMap = useMemo(() => Object.fromEntries(rows.map(r => [r.id, r])), [rows]);
   const employees = useMemo(() => [...new Set(sheets.map((s: any) => s.employee_name))].sort(), [sheets]);
+  // Années sélectionnables : l'année courante + 2 précédentes, fusionnées avec celles qui ont des données.
   const years = useMemo(() => {
-    const ys = [...new Set(sheets.map((s: any) => isoYearOf(s.period_start)))].sort((a: any, b: any) => b - a) as number[];
-    return ys.length ? ys : [new Date().getFullYear()];
+    const cy = new Date().getFullYear();
+    const set = new Set<number>([cy, cy - 1, cy - 2]);
+    sheets.forEach((s: any) => set.add(isoYearOf(s.period_start)));
+    return [...set].sort((a, b) => b - a);
   }, [sheets]);
 
-  // Regroupement : ANNÉE (filtre) → SEMAINE → équipe (triée par nom). Semaines récentes en premier.
+  // Regroupement : ANNÉE (filtre) → SEMAINE → équipe. On génère TOUTES les semaines ISO de l'année
+  // (jusqu'à la semaine COURANTE pour l'année en cours ; année complète pour une année passée), puis on
+  // y attache les feuilles existantes. Ainsi l'admin VOIT et peut ouvrir chaque semaine, même sans donnée.
   const weeks = useMemo(() => {
-    const inYear = sheets.filter((s: any) => isoYearOf(s.period_start) === yearFilter && (!empFilter || s.employee_name === empFilter));
-    const by: Record<string, { key: string; week: number; start: string; end: string; sheets: any[] }> = {};
-    inYear.forEach((s: any) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const isoStr = (x: Date) => `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+    const mondayOf = (d: Date) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); return x; };
+    const todayMon = mondayOf(new Date());
+    const curIsoYear = isoYearOf(isoStr(todayMon));
+    const skel: Record<string, { key: string; week: number; start: string; end: string; sheets: any[] }> = {};
+    let cur = mondayOf(new Date(yearFilter, 0, 4)); // lundi de la semaine ISO n° 1 (celle contenant le 4 janvier)
+    for (let i = 0; i < 54; i++) {
+      const startStr = isoStr(cur);
+      const wkYear = isoYearOf(startStr);
+      if (wkYear > yearFilter) break;
+      if (wkYear === yearFilter && !(yearFilter === curIsoYear && cur > todayMon)) {
+        const end = new Date(cur); end.setDate(end.getDate() + 6);
+        skel[startStr] = { key: startStr, week: isoWeekNum(startStr), start: startStr, end: isoStr(end), sheets: [] };
+      }
+      cur = new Date(cur); cur.setDate(cur.getDate() + 7);
+    }
+    sheets.filter((s: any) => isoYearOf(s.period_start) === yearFilter && (!empFilter || s.employee_name === empFilter)).forEach((s: any) => {
       const k = String(s.period_start);
-      (by[k] ||= { key: k, week: isoWeekNum(s.period_start), start: s.period_start, end: s.period_end, sheets: [] }).sheets.push(s);
+      (skel[k] ||= { key: k, week: isoWeekNum(s.period_start), start: s.period_start, end: s.period_end, sheets: [] }).sheets.push(s);
     });
-    return Object.values(by).map(w => ({ ...w, sheets: w.sheets.sort((a, b) => String(a.employee_name).localeCompare(String(b.employee_name))) })).sort((a, b) => b.start.localeCompare(a.start));
+    return Object.values(skel).map(w => ({ ...w, sheets: w.sheets.sort((a, b) => String(a.employee_name).localeCompare(String(b.employee_name))) })).sort((a, b) => b.start.localeCompare(a.start));
   }, [sheets, yearFilter, empFilter]);
 
   // Mise à jour de statut résiliente (colonnes d'ajustement absentes avant migration 214 -> on retire).
@@ -701,7 +721,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
       if (j.missing?.length) alert(tr(`⚠️ Coordonnées bancaires manquantes (exclus du fichier) : ${j.missing.join(', ')}.`, `⚠️ Missing bank info (excluded): ${j.missing.join(', ')}.`));
       if (j.count > 0) {
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([j.content], { type: 'text/plain;charset=us-ascii' }));
-        a.download = `desjardins_cpa005_${periodLabel.replace(/[^\w]+/g, '_')}_${j.fileCreationNumber}.txt`; a.click();
+        a.download = `depot_cpa005_${periodLabel.replace(/[^\w]+/g, '_')}_${j.fileCreationNumber}.txt`; a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       } else if (!j.missing?.length) alert(tr('Aucun dépôt à générer.', 'No deposit to generate.'));
     } catch { alert(tr('Erreur réseau.', 'Network error.')); }
@@ -779,17 +799,18 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
             </div>
             <p className="mb-3 text-xs text-gray-500">{tr('Donnée très sensible (Loi 25) : chiffrée côté serveur, masquée ici. Institution 3 ch. · Transit 5 ch. · Compte 7–12 ch.', 'Highly sensitive (Law 25): server-side, masked here. Institution 3 digits · Transit 5 · Account 7–12.')}</p>
 
-            {/* Paramètres CPA-005 Desjardins (expéditeur) — requis pour l'export « Desjardins » */}
+            {/* Paramètres CPA-005 (norme 005 de l'ACP) — expéditeur. Accepté par les banques supportant
+                le « Standard 005 » (Desjardins, RBC…). Les valeurs viennent de l'enrôlement dépôt direct. */}
             <details className="mb-3 rounded-xl border border-green-300 bg-green-50/50 p-3 dark:border-green-500/30 dark:bg-green-500/10">
-              <summary className="cursor-pointer text-sm font-bold text-green-800 dark:text-green-300">{tr('Paramètres dépôt direct Desjardins (CPA-005)', 'Desjardins direct deposit settings (CPA-005)')}</summary>
-              <p className="mt-2 text-[11px] text-green-800/80 dark:text-green-300/80">{tr('Valeurs fournies par votre enrôlement AccèsD Affaires. ⚠️ Validez le format avec un fichier test avant la 1re transmission réelle.', 'Values from your AccèsD Affaires enrolment. ⚠️ Validate with a test file before the first real transmission.')}</p>
+              <summary className="cursor-pointer text-sm font-bold text-green-800 dark:text-green-300">{tr('Paramètres dépôt direct (CPA-005 / norme 005)', 'Direct deposit settings (CPA-005 / Standard 005)')}</summary>
+              <p className="mt-2 text-[11px] text-green-800/80 dark:text-green-300/80">{tr('Norme canadienne « 005 » acceptée par plusieurs banques (Desjardins AccèsD, RBC Express…). Valeurs fournies par votre enrôlement au dépôt direct de VOTRE institution. ⚠️ Validez avec un fichier test avant la 1re transmission.', 'Canadian “005” standard accepted by several banks (Desjardins AccèsD, RBC Express…). Values come from YOUR bank’s direct-deposit enrolment. ⚠️ Validate with a test file before the first transmission.')}</p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {([
                   ['cpa_originator_id', tr('N° d’expéditeur / client (10)', 'Originator/client no. (10)')],
                   ['cpa_data_centre', tr('Centre de données (5)', 'Data centre (5)')],
                   ['cpa_short_name', tr('Nom court (≤15)', 'Short name (≤15)')],
                   ['cpa_long_name', tr('Nom long (≤30)', 'Long name (≤30)')],
-                  ['cpa_return_institution', tr('Institution de retour (3) — 815', 'Return institution (3) — 815')],
+                  ['cpa_return_institution', tr('Institution de retour (3) — ex. Desjardins 815, RBC 003', 'Return institution (3) — e.g. Desjardins 815, RBC 003')],
                   ['cpa_return_transit', tr('Transit de retour (5)', 'Return transit (5)')],
                   ['cpa_return_account', tr('Compte de retour', 'Return account')],
                   ['cpa_transaction_type', tr('Type d’opération (défaut 200)', 'Transaction type (default 200)')],
@@ -799,7 +820,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                   </label>
                 ))}
               </div>
-              <div className="mt-2 flex justify-end"><button onClick={saveCpa} disabled={cpaBusy} className="rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-50">{cpaBusy ? '…' : tr('Enregistrer les paramètres Desjardins', 'Save Desjardins settings')}</button></div>
+              <div className="mt-2 flex justify-end"><button onClick={saveCpa} disabled={cpaBusy} className="rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-50">{cpaBusy ? '…' : tr('Enregistrer les paramètres de dépôt', 'Save deposit settings')}</button></div>
             </details>
             {bankEmployees.length === 0 ? <div className="py-6 text-center text-sm text-gray-400">{tr('Aucun employé payé (générez d’abord des feuilles de temps).', 'No paid employee yet.')}</div> : (
               <div className="space-y-2">
@@ -832,7 +853,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
           <button onClick={() => exportCsvFor(selArr, 'selection')} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700"><Download size={13} /> CSV</button>
           <button onClick={() => exportPdfFor(selArr, tr('Sélection', 'Selection'))} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700"><FileText size={13} /> PDF</button>
           <button onClick={() => exportDepositCsv(selArr, tr('Sélection', 'Selection'))} title={tr('Fichier de dépôt direct (CSV générique)', 'Direct deposit file (generic CSV)')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"><Download size={13} /> {tr('Dépôt', 'Deposit')}</button>
-          <button onClick={() => exportDepositCpa005(selArr, tr('Sélection', 'Selection'))} title={tr('Fichier CPA-005 Desjardins (AccèsD Affaires)', 'Desjardins CPA-005 file (AccèsD Affaires)')} className="inline-flex items-center gap-1 rounded-lg bg-green-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-800"><Download size={13} /> {tr('Desjardins', 'Desjardins')}</button>
+          <button onClick={() => exportDepositCpa005(selArr, tr('Sélection', 'Selection'))} title={tr('Fichier dépôt direct CPA-005 / norme 005 (Desjardins, RBC…)', 'CPA-005 / Standard 005 direct deposit file (Desjardins, RBC…)')} className="inline-flex items-center gap-1 rounded-lg bg-green-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-800"><Download size={13} /> {tr('Dépôt 005', '005 deposit')}</button>
           <button onClick={() => setSel(new Set())} className="ml-auto text-xs font-semibold text-blue-600 hover:underline">{tr('Effacer', 'Clear')}</button>
         </div>
       )}
@@ -861,10 +882,11 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                 {Object.entries(counts).map(([st, c]) => <span key={st} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tsCls(st)}`}>{tsLabel(st)} {c as number}</span>)}
               </div>
               <div className="ml-auto flex items-center gap-1.5">
+                <button onClick={() => { setWeekStart(w.start); setEmpView(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} title={tr('Voir/saisir tous les employés pour cette semaine', 'View/enter all employees for this week')} className="inline-flex items-center gap-1 rounded-lg border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Users size={12} /> {tr('Équipe', 'Team')}</button>
                 <button onClick={() => exportCsvFor(w.sheets.map(s => s.id), `S${w.week}_${yearFilter}`)} className="inline-flex items-center gap-1 rounded-lg border border-violet-300 px-2 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50"><Download size={12} /> CSV</button>
                 <button onClick={() => exportPdfFor(w.sheets.map(s => s.id), pend)} className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"><FileText size={12} /> PDF</button>
                 <button onClick={() => exportDepositCsv(w.sheets.map(s => s.id), pend)} title={tr('Fichier de dépôt direct (CSV générique)', 'Direct deposit file (generic CSV)')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Download size={12} /> {tr('Dépôt', 'Deposit')}</button>
-                <button onClick={() => exportDepositCpa005(w.sheets.map(s => s.id), pend)} title={tr('Fichier CPA-005 Desjardins (AccèsD Affaires)', 'Desjardins CPA-005 file')} className="inline-flex items-center gap-1 rounded-lg border border-green-400 px-2 py-1 text-xs font-semibold text-green-800 hover:bg-green-50"><Download size={12} /> {tr('Desjardins', 'Desjardins')}</button>
+                <button onClick={() => exportDepositCpa005(w.sheets.map(s => s.id), pend)} title={tr('Fichier dépôt direct CPA-005 / norme 005 (Desjardins, RBC…)', 'CPA-005 / Standard 005 direct deposit file (Desjardins, RBC…)')} className="inline-flex items-center gap-1 rounded-lg border border-green-400 px-2 py-1 text-xs font-semibold text-green-800 hover:bg-green-50"><Download size={12} /> {tr('Dépôt 005', '005 deposit')}</button>
               </div>
             </div>
             {isOpen && (
