@@ -583,6 +583,12 @@ export function TransfoView(props: {
                 </div>
               </section>
             )}
+            {!furan && (
+              <section className={CARD}>
+                <h2 className={H2}>{tr("État de l'isolation papier", 'Paper insulation condition')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{tr('Furanes non disponibles (2-FAL non mesuré sur ce relevé) — le degré de polymérisation (DP) du papier ne peut être estimé. Demander une analyse de furanes pour évaluer le vieillissement du papier.', 'Furans not available (2-FAL not measured) — paper DP cannot be estimated. Request a furan analysis to assess paper aging.')}</p>
+              </section>
+            )}
 
             {/* INTERPRÉTATION DGA */}
             <section className={CARD} style={{ borderTop: '4px solid #9d0208' }}>
@@ -592,6 +598,7 @@ export function TransfoView(props: {
                 <div className="text-xs font-bold text-gray-800 dark:text-gray-100">{reco.title}</div>
                 <ol className="mt-1 list-decimal pl-5 text-xs text-gray-600 dark:text-gray-300">{reco.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
               </div>
+              <p className="mt-2 text-[10px] italic text-gray-400">{tr('Évalué selon IEEE C57.104-2019 (référentiel d’interprétation). Interprétation assistée par ordinateur — à valider par une personne qualifiée. Les seuils doivent être confirmés contre la norme officielle.', 'Evaluated per IEEE C57.104-2019. Computer-assisted interpretation — to be validated by a qualified person. Thresholds must be confirmed against the official standard.')}</p>
             </section>
 
             {/* INTERPRÉTATION HUILE */}
