@@ -8,6 +8,7 @@ import {
   recommendedRetestDays, addDays, getSegment, severity2019, tdcgIndicator,
 } from './severity2019';
 import { duvalTriangle1 } from './diagnose';
+import { classifyTriangle1 } from './triangle1';
 
 // Échantillons NEW RICHMOND TG1 (grounding transformer, huile minérale, 34,5 kV).
 const s2024 = { date: '2024-07-09', H2: 40, CH4: 77, C2H6: 29, C2H4: 134, C2H2: 0.5, CO: 458, CO2: 1744, N2: 81806, O2: 11517, TDCG: 739 };
@@ -26,6 +27,10 @@ describe('DGA NEW RICHMOND TG1 — Partie C (IEEE C57.104-2019)', () => {
 
   it('Triangle de Duval = D2 (décharges forte énergie / arc)', () => {
     expect(duvalTriangle1(s2025.CH4, s2025.C2H2, s2025.C2H4)).toBe('D2');
+  });
+
+  it('Triangle de Duval 1 (règles officielles, version grille) = D2', () => {
+    expect(classifyTriangle1({ CH4: s2025.CH4, C2H4: s2025.C2H4, C2H2: s2025.C2H2 })?.fault).toBe('D2');
   });
 
   it('CO₂/CO ≈ 1,89 → implication thermique du papier', () => {
