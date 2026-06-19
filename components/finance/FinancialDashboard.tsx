@@ -17,6 +17,7 @@ import {
 import LedgerDrilldown from '@/components/finance/LedgerDrilldown';
 import { downloadCsv } from '@/lib/csv';
 import { assessDataQuality } from '@/lib/finance/dataQuality';
+import { getBudgets } from '@/lib/budget';
 import { getInventoryValuation, getBookedStockValue, postInventoryToBalance, type InventoryValuation } from '@/lib/inventory';
 
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
@@ -113,6 +114,9 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   const { cash, arTotal, apTotal } = useMemo(() => cashAndReceivables(accounts, balances), [accounts, balances]);
   const [revByClass, setRevByClass] = useState<{ name: string; value: number }[]>([]);
   useEffect(() => { revenueByClass(tenant, from || undefined, to || undefined).then(setRevByClass).catch(() => setRevByClass([])); }, [tenant, from, to]);
+  // Budget annuel par compte (vue Réel vs budget). Vide = « budget non défini » (jamais de série inventée).
+  const [budgets, setBudgets] = useState<Record<string, number>>({});
+  useEffect(() => { getBudgets(tenant, new Date().getFullYear()).then(setBudgets, () => setBudgets({})); }, [tenant]);
   const a = useMemo(() => computeFinancialAnalytics(ledger, { granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal }), [ledger, granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal]);
 
   // Auto-diagnostic de COMPLÉTUDE : marges/EBITDA non représentatifs tant que le côté coûts n'est pas saisi.
@@ -123,6 +127,14 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   ), [a]); // eslint-disable-line react-hooks/exhaustive-deps
   // Sous-titre de pourcentage : grisé « non représentatif » si la donnée est incomplète, sinon le vrai %.
   const pctSub = (real: string) => quality.isReliable ? real : tr('% non représentatif', '% not representative');
+  // Variation MoM (dernière période vs précédente). null si < 2 périodes ou variation extrême (démarrage).
+  const momOf = (series: number[]): number | null => {
+    if (series.length < 2) return null;
+    const prev = series[series.length - 2], cur = series[series.length - 1];
+    if (!prev) return null;
+    const g = ((cur - prev) / Math.abs(prev)) * 100;
+    return Math.abs(g) > 500 ? null : g;
+  };
 
   // Donut RÉCONCILIÉ avec le CA (source unique = grand livre) : la somme des parts = CA de la carte.
   // Le reliquat « Non classé (grand livre) » = CA du GL − revenus déjà ventilés par classe (factures/transactions).
@@ -173,7 +185,16 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
     ]);
   }
 
-  const chartData = a.periods.map(p => ({ name: p.label, CA: Math.round(p.revenue), Charges: Math.round(p.expense), Marge: Math.round(p.margin), Paie: Math.round(p.payroll) }));
+  // Budget de REVENU annuel (somme des comptes de produits budgétés) → réparti par mois pour la vue Réel vs budget.
+  const annualRevBudget = accounts.filter((x: any) => x.type === 'revenue').reduce((s: number, x: any) => s + (Number(budgets[x.code]) || 0), 0);
+  const hasBudget = annualRevBudget > 0;
+  const monthlyRevBudget = hasBudget ? annualRevBudget / 12 : 0;
+  const chartData = a.periods.map(p => ({
+    name: p.label, CA: Math.round(p.revenue), Charges: Math.round(p.expense), Marge: Math.round(p.margin), Paie: Math.round(p.payroll),
+    // Budget affiché SEULEMENT en granularité mensuelle ET si un budget existe (sinon undefined = pas de barre).
+    CAbudget: (granularity === 'month' && hasBudget) ? Math.round(monthlyRevBudget) : undefined,
+    MargePct: p.revenue > 0 ? Math.round((p.margin / p.revenue) * 1000) / 10 : 0,
+  }));
   const healthCls: Record<string, string> = {
     excellent: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     bon: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
@@ -187,14 +208,14 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   };
 
   const kpis = [
-    { label: tr('Chiffre d’affaires', 'Revenue'), value: mnyK(a.revenueTotal), icon: DollarSign, color: 'text-blue-600', cat: 'revenue' as DrillCategory, spark: a.periods.map(p => p.revenue) },
-    { label: tr('Charges', 'Expenses'), value: mnyK(a.expenseTotal), icon: TrendingDown, color: 'text-rose-600', cat: 'expense' as DrillCategory, spark: a.periods.map(p => p.expense) },
-    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: pctSub(`${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}`), subDim: !quality.isReliable, cat: 'cogs' as DrillCategory, spark: a.periods.map(p => p.grossMargin) },
+    { label: tr('Chiffre d’affaires', 'Revenue'), value: mnyK(a.revenueTotal), icon: DollarSign, color: 'text-blue-600', cat: 'revenue' as DrillCategory, spark: a.periods.map(p => p.revenue), mom: momOf(a.periods.map(p => p.revenue)), goodUp: true },
+    { label: tr('Charges', 'Expenses'), value: mnyK(a.expenseTotal), icon: TrendingDown, color: 'text-rose-600', cat: 'expense' as DrillCategory, spark: a.periods.map(p => p.expense), mom: momOf(a.periods.map(p => p.expense)), goodUp: false },
+    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: pctSub(`${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}`), subDim: !quality.isReliable, cat: 'cogs' as DrillCategory, spark: a.periods.map(p => p.grossMargin), mom: momOf(a.periods.map(p => p.grossMargin)), goodUp: true },
     { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: pctSub(`${a.marginPct.toFixed(1)} %`), subDim: !quality.isReliable, spark: a.periods.map(p => p.margin) },
     { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, cat: 'payroll' as DrillCategory, spark: a.periods.map(p => p.payroll) },
     { label: tr('Croissance', 'Growth'), value: a.growthPct == null ? '—' : `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %`, icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: a.growthPct == null ? tr('démarrage — non significatif', 'start-up — not significant') : tr('dernière période', 'last period'), subDim: a.growthPct == null },
     { label: tr('Trésorerie', 'Cash'), value: mnyK(a.cash), icon: Wallet, color: 'text-slate-900 dark:text-white', sub: `AR ${mnyK(a.arTotal)} · AP ${mnyK(a.apTotal)}` },
-    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: pctSub(`${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`), subDim: !quality.isReliable, spark: a.periods.map(p => p.ebitda) },
+    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: pctSub(`${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`), subDim: !quality.isReliable, spark: a.periods.map(p => p.ebitda), mom: momOf(a.periods.map(p => p.ebitda)), goodUp: true },
     { label: 'CAPEX', value: mnyK(a.capexTotal), icon: TrendingDown, color: 'text-amber-600', sub: tr('investissements', 'investments'), cat: 'capex' as DrillCategory, spark: a.periods.map(p => p.capex) },
   ];
 
@@ -263,7 +284,11 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
               className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 ${cat ? 'cursor-pointer transition hover:border-indigo-300 hover:shadow-md' : ''}`}>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{k.label}</span>
-                <Icon size={15} className="text-slate-300" />
+                {(() => { const mom = (k as any).mom as number | null | undefined; const goodUp = (k as any).goodUp as boolean | undefined;
+                  if (mom == null) return <Icon size={15} className="text-slate-300" />;
+                  const up = mom >= 0; const good = goodUp ? up : !up; const Ar = up ? TrendingUp : TrendingDown;
+                  return <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold ${good ? 'text-emerald-600' : 'text-rose-600'}`}><Ar size={12} />{mom >= 0 ? '+' : ''}{mom.toFixed(0)}%</span>;
+                })()}
               </div>
               <div className={`text-xl font-extrabold ${k.color}`}>{k.value}</div>
               {k.sub && <div className={`mt-0.5 text-[10px] ${(k as any).subDim ? 'italic text-amber-500/80' : 'text-slate-400'}`}>{k.sub}</div>}
@@ -334,9 +359,13 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
         </div>
       )}
 
-      {/* Timeline croissance : CA / charges / marge */}
+      {/* Réel vs budget : CA réel + CA budget côte à côte + courbe Marge % (axe secondaire) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Évolution — CA, charges, marge', 'Trend — revenue, expenses, margin')}</h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{tr('Réel vs budget — CA, charges, marge %', 'Actual vs budget — revenue, expenses, margin %')}</h3>
+          {!hasBudget && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:bg-gray-700">{tr('budget non défini', 'budget not set')}</span>}
+          {hasBudget && granularity !== 'month' && <span className="text-[10px] text-slate-400">{tr('budget visible en granularité mensuelle', 'budget shown in monthly granularity')}</span>}
+        </div>
         {chartData.length === 0 ? (
           <p className="grid h-[260px] place-items-center text-center text-xs text-slate-400">{tr('Aucune écriture comptabilisée sur la période. Les transactions/paie/factures alimentent ce tableau via le grand livre.', 'No posted entries for the period. Transactions/payroll/invoices feed this via the ledger.')}</p>
         ) : (
@@ -344,12 +373,14 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
             <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: any) => mnyK(v)} />
-              <Tooltip formatter={(v: any) => mny(Number(v))} />
+              <YAxis yAxisId="left" tick={{ fontSize: 10 }} tickFormatter={(v: any) => mnyK(v)} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} tickFormatter={(v: any) => `${v}%`} />
+              <Tooltip formatter={(v: any, n: any) => n === 'Marge %' ? `${Number(v).toFixed(1)} %` : mny(Number(v))} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="CA" fill="#3b82f6" radius={[3, 3, 0, 0]} barSize={18} />
-              <Bar dataKey="Charges" fill="#fb7185" radius={[3, 3, 0, 0]} barSize={18} />
-              <Line type="monotone" dataKey="Marge" stroke="#10b981" strokeWidth={2.5} dot={{ r: 2 }} />
+              <Bar yAxisId="left" dataKey="CA" name={tr('CA réel', 'Revenue')} fill="#3b82f6" radius={[3, 3, 0, 0]} barSize={16} />
+              {granularity === 'month' && hasBudget && <Bar yAxisId="left" dataKey="CAbudget" name={tr('CA budget', 'Revenue budget')} fill="#93c5fd" radius={[3, 3, 0, 0]} barSize={16} />}
+              <Bar yAxisId="left" dataKey="Charges" fill="#fb7185" radius={[3, 3, 0, 0]} barSize={16} />
+              <Line yAxisId="right" type="monotone" dataKey="MargePct" name="Marge %" stroke="#10b981" strokeWidth={2.5} dot={{ r: 2 }} />
             </ComposedChart>
           </ResponsiveContainer>
         )}
