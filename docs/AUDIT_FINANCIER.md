@@ -81,12 +81,14 @@ Le cœur double-entrée est verrouillé au niveau base (triggers d'équilibre + 
 
 ## Gap analysis priorisée
 
-### P1 — Justesse des états financiers & conformité (à corriger avant audit externe)
-| # | Écart | Section | Effort |
-|---|-------|---------|--------|
-| P1-1 | **Charges sociales employeur non comptabilisées** (5100 + passifs 2320–2360) | §5 | M |
-| P1-2 | **Amortissement non comptabilisé** + comptes d'amortissement cumulé manquants (bilan faussé) | §7 | M |
-| P1-3 | **Suivi & écriture des remises TPS/TVQ** (échéances, statut, DR 2100/2110 / CR banque) | §6 | M |
+### P1 — Justesse des états financiers & conformité — ✅ CORRIGÉ (2026-06-19)
+| # | Écart | Section | État |
+|---|-------|---------|------|
+| P1-1 | **Charges sociales employeur** | §5 | ✅ Le run de paie (`/api/payroll/run`) ISOLE les cotisations employeur en **5100** (DR 5000 brut + DR 5100). *Nuance vérifiée : le run les comptabilisait déjà mais AGRÉGÉES dans 5000 ; désormais isolées. Le chemin legacy `postTimesheetPayroll` reste côté employé seulement.* |
+| P1-2 | **Amortissement** | §7 | ✅ DR 5600 / CR 1590 par bien et exercice (`lib/depreciation` pur+testé, `financeP1Server.postDepreciationForYear`, `/api/accounting/depreciate`, bouton + valeur nette + cumul dans Immobilisations ; table `asset_depreciation` mig 242). |
+| P1-3 | **Remises TPS/TVQ** | §6 | ✅ DR 2100/2110 / CR banque par période + suivi (`computeRemittance` depuis le GL, `/api/accounting/tax-remittance`, bouton « Comptabiliser la remise » dans Fiscalité ; table `tax_remittances` mig 242). |
+
+> Comptes 1590/5600 créés à la volée. Tout idempotent. **À valider par une personne qualifiée** avant la 1re clôture réelle. Migration **242** à appliquer.
 
 ### P2 — Contrôles & complétude
 | # | Écart | Section | Effort |
