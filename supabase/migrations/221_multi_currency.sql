@@ -7,8 +7,16 @@ alter table company_settings add column if not exists currency_config jsonb not 
 alter table commerce_invoices add column if not exists currency text not null default 'CAD';
 alter table commerce_invoices add column if not exists fx_rate numeric not null default 1;
 
-alter table transactions add column if not exists currency text not null default 'CAD';
-alter table transactions add column if not exists fx_rate numeric not null default 1;
+-- Table réelle = commerce_transactions. La legacy `transactions` n'existe pas partout → IF EXISTS (anti 42P01).
+alter table commerce_transactions add column if not exists currency text not null default 'CAD';
+alter table commerce_transactions add column if not exists fx_rate numeric not null default 1;
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'transactions') then
+    alter table public.transactions add column if not exists currency text not null default 'CAD';
+    alter table public.transactions add column if not exists fx_rate numeric not null default 1;
+  end if;
+end $$;
 
 alter table soumissions add column if not exists currency text not null default 'CAD';
 alter table soumissions add column if not exists fx_rate numeric not null default 1;
