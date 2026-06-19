@@ -46,9 +46,11 @@ export function duvalZone(p: DuvalPct | null, lang: 'fr' | 'en' = 'fr'): { code:
   return { code: 'DT', label: L.DT };
 }
 
-// triCoords(p,size,pad) — A=CH4 (haut), B=C2H4 (bas-gauche), C=C2H2 (bas-droite). Identique au prototype.
+// triCoords(p,size,pad) — convention STANDARD Duval 1 (IEC 60599 / IEEE C57.104-2019) :
+// A=CH4 (haut), B=C2H2 (bas-GAUCHE), C=C2H4 (bas-DROITE). Avec C2H2 dominant, le point est tiré
+// vers le sommet acétylène (bas-gauche). NB : la DÉTECTION de zone (duvalZone) est indépendante du dessin.
 export function triCoords(p: DuvalPct, size: number, pad: number) {
   const A = { x: pad + size / 2, y: pad }, B = { x: pad, y: pad + size * 0.866 }, C = { x: pad + size, y: pad + size * 0.866 };
-  const a = p.pCH4 / 100, b = p.pC2H4 / 100, c = p.pC2H2 / 100;
-  return { x: a * A.x + b * B.x + c * C.x, y: a * A.y + b * B.y + c * C.y };
+  const a = p.pCH4 / 100, c2h2 = p.pC2H2 / 100, c2h4 = p.pC2H4 / 100;
+  return { x: a * A.x + c2h2 * B.x + c2h4 * C.x, y: a * A.y + c2h2 * B.y + c2h4 * C.y };
 }

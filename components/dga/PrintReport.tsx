@@ -86,7 +86,7 @@ function PrintEvolutionChart({ data, lang }: { data: Measure[]; lang: Lang }) {
       {data.map((d, i) => <text key={'x' + i} x={x(i)} y={H - padB + 16} textAnchor="middle" fontSize="8.5" fill="#666">{d.sample_date}</text>)}
       {series.map(g => { const pts = data.map((d, i) => { const v = parseFloat(String((d as any)[g.key])); return isNaN(v) ? null : `${x(i)},${y(v)}`; }).filter(Boolean); if (pts.length < 2) return null; return <polyline key={g.u} points={pts.join(' ')} fill="none" stroke={g.color} strokeWidth="2" />; })}
       {series.map(g => data.map((d, i) => { const v = parseFloat(String((d as any)[g.key])); if (isNaN(v)) return null; return <circle key={g.u + i} cx={x(i)} cy={y(v)} r="2.5" fill="#fff" stroke={g.color} strokeWidth="1.5" />; }))}
-      {series.map((g, i) => { const lx = padL + (i % 3) * ((W - padL - padR) / 3); return (<g key={'lg' + g.u} transform={`translate(${lx}, ${H - 8})`}><line x1="0" y1="-3" x2="14" y2="-3" stroke={g.color} strokeWidth="2" /><circle cx="7" cy="-3" r="2.5" fill="#fff" stroke={g.color} strokeWidth="1.5" /><text x="18" y="0" fontSize="8.5" fill="#444">{gl(g.u, lang)}</text></g>); })}
+      {series.map((g, i) => { const col = i % 3, row = Math.floor(i / 3); const lx = padL + col * ((W - padL - padR) / 3); const ly = (H - 20) + row * 11; return (<g key={'lg' + g.u} transform={`translate(${lx}, ${ly})`}><line x1="0" y1="-3" x2="14" y2="-3" stroke={g.color} strokeWidth="2" /><circle cx="7" cy="-3" r="2.5" fill="#fff" stroke={g.color} strokeWidth="1.5" /><text x="18" y="0" fontSize="8.5" fill="#444">{gl(g.u, lang)}</text></g>); })}
     </svg>
   );
 }

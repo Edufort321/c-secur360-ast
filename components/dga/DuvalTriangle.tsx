@@ -1,7 +1,7 @@
 'use client';
 
-// Triangle de Duval 1 — rendu repris À L'IDENTIQUE du prototype (DuvalTriangle ~l.619 de dga-oil-app.jsx) :
-// CH4 en haut, C2H4 bas-gauche, C2H2 bas-droite ; trajectoire temporelle pointillée, points numérotés
+// Triangle de Duval 1 — convention STANDARD (IEC 60599 / IEEE C57.104-2019) :
+// CH4 en haut, C2H2 bas-GAUCHE, C2H4 bas-DROITE ; trajectoire temporelle pointillée, points numérotés
 // colorés par zone, point courant mis en évidence. Logique de zones dans lib/dga/duval.ts (frontières exactes).
 import React from 'react';
 import { duvalPct, duvalZone, triCoords, ZONE_COLORS } from '@/lib/dga/duval';
@@ -26,8 +26,8 @@ export function DuvalTriangle({ ch4, c2h2, c2h4, points, selIdx, lang = 'fr' }: 
         <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}`} fill="#fdf6ec" stroke="#3a2e25" strokeWidth="2" />
         {[20, 40, 60, 80].map(tk => { const f = tk / 100; return <line key={tk} x1={A.x + (B.x - A.x) * f} y1={A.y + (B.y - A.y) * f} x2={A.x + (C.x - A.x) * f} y2={A.y + (C.y - A.y) * f} stroke="#d8c3a5" strokeWidth="0.5" />; })}
         <text x={A.x} y={A.y - 10} textAnchor="middle" fontSize="13" fontWeight="700" fill="#3a2e25">CH₄</text>
-        <text x={B.x - 6} y={B.y + 18} textAnchor="middle" fontSize="13" fontWeight="700" fill="#3a2e25">C₂H₄</text>
-        <text x={C.x + 6} y={C.y + 18} textAnchor="middle" fontSize="13" fontWeight="700" fill="#3a2e25">C₂H₂</text>
+        <text x={B.x - 6} y={B.y + 18} textAnchor="middle" fontSize="13" fontWeight="700" fill="#3a2e25">C₂H₂</text>
+        <text x={C.x + 6} y={C.y + 18} textAnchor="middle" fontSize="13" fontWeight="700" fill="#3a2e25">C₂H₄</text>
         {pts.length > 1 && <polyline points={path} fill="none" stroke="#9d0208" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.6" />}
         {pts.map((p, i) => (
           <g key={i}>
