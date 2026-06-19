@@ -29,10 +29,26 @@ export type PdfStyleKnobs = {
 };
 export type PdfStyles = {
   brand_color?: string;   // couleur du HEADER principal du site
+  kiosk_bg?: string;      // couleur de FOND de la diffusion en veille (kiosque) — défaut = dégradé ardoise
   unified?: boolean;      // true = tous les modules suivent le style « default »
   default?: PdfStyleKnobs;
   modules?: Partial<Record<PdfModuleKey, PdfStyleKnobs>>;
 };
+
+/** Fond du kiosque (hex valide) ou null = laisser le dégradé par défaut. */
+export async function getKioskBg(tenant: string): Promise<string | null> {
+  try { const v = (await getPdfStyles(tenant)).kiosk_bg; return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v! : null; } catch { return null; }
+}
+
+/** « Unifier toutes les couleurs d'accent » : applique UNE couleur maîtresse partout — header du site,
+ *  accent par défaut des PDF ET de chaque module — et active le mode unifié. Ne touche pas la mise en
+ *  page (filets/tailles) ni le fond du kiosque (réglés séparément). */
+export function unifyAccents(styles: PdfStyles, hex: string): PdfStyles {
+  const accent = /^#[0-9a-f]{6}$/i.test(hex) ? hex : DEFAULT_ACCENT;
+  const modules: any = { ...(styles.modules || {}) };
+  for (const m of PDF_MODULES) modules[m.key] = { ...(modules[m.key] || {}), accent };
+  return { ...styles, brand_color: accent, unified: true, default: { ...(styles.default || {}), accent }, modules };
+}
 
 // Valeurs du socle DGA (si rien n'est réglé).
 export const BASE_KNOBS: Required<PdfStyleKnobs> = { accent: DEFAULT_ACCENT, accent2: '#787878', ruleWidth: 0.6, titleSize: 14, subtitleSize: 11, showRule: true };

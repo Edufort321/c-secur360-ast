@@ -4,8 +4,8 @@
 // filets/séparateurs, taille des titres, affichage du filet. Mode « Unifié » = tous les modules suivent
 // le défaut. Couleur du header du site aussi réglable. Lu par les exporteurs via pdfStyleFor.
 import React, { useEffect, useState } from 'react';
-import { Loader2, Save, FileText } from 'lucide-react';
-import { PDF_MODULES, BASE_KNOBS, getPdfStyles, savePdfStyles, type PdfStyles, type PdfStyleKnobs } from '@/lib/pdfStyle';
+import { Loader2, Save, FileText, Wand2, MonitorPlay } from 'lucide-react';
+import { PDF_MODULES, BASE_KNOBS, getPdfStyles, savePdfStyles, unifyAccents, type PdfStyles, type PdfStyleKnobs } from '@/lib/pdfStyle';
 
 type Tr = (fr: string, en: string) => string;
 
@@ -14,6 +14,7 @@ export function PdfStylesManager({ tenant, tr, canEdit }: { tenant: string; tr: 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [master, setMaster] = useState('#2563eb'); // couleur maîtresse pour l'unification des accents
 
   useEffect(() => { getPdfStyles(tenant).then(s => { setStyles(s); setLoading(false); }, () => setLoading(false)); }, [tenant]);
 
@@ -67,6 +68,37 @@ export function PdfStylesManager({ tenant, tr, canEdit }: { tenant: string; tr: 
           </div>
         </div>
         <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-white" style={{ backgroundColor: col(styles.brand_color, '#111827') }}><span className="text-[11px] font-bold">LOGO</span><span className="text-[10px] opacity-70">{tr('Aperçu du header', 'Header preview')}</span></div>
+      </div>
+
+      {/* UNIFICATION — une seule couleur d'accent appliquée PARTOUT (header + tous les PDF) */}
+      <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3 dark:border-violet-500/30 dark:bg-violet-500/10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-800 dark:text-violet-200"><Wand2 size={15} /> {tr('Unifier toutes les couleurs d’accent', 'Unify all accent colors')}</div>
+            <div className="text-xs text-violet-600 dark:text-violet-300/80">{tr('Applique UNE couleur maîtresse partout : header du site + accent de tous les exports PDF (active le mode unifié).', 'Applies ONE master color everywhere: site header + accent of every PDF export (enables unified mode).')}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="color" value={col(master, '#2563eb')} disabled={!canEdit} onChange={e => setMaster(e.target.value)} className="h-8 w-12 cursor-pointer rounded border border-violet-300 dark:border-violet-500/40" />
+            <button onClick={() => { setStyles(s => unifyAccents(s, master)); setNotice(tr('Couleurs d’accent unifiées (pensez à Enregistrer).', 'Accent colors unified (remember to Save).')); }} disabled={!canEdit}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"><Wand2 size={14} /> {tr('Tout unifier', 'Unify all')}</button>
+          </div>
+        </div>
+      </div>
+
+      {/* FOND de la DIFFUSION KIOSQUE */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><div className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-800 dark:text-gray-100"><MonitorPlay size={15} className="text-emerald-600" /> {tr('Couleur de fond — diffusion kiosque', 'Background color — kiosk broadcast')}</div><div className="text-xs text-gray-500">{tr('Fond du plein écran en veille (écran d’atelier/chantier). Vide = dégradé ardoise par défaut.', 'Idle full-screen background (shop/site display). Empty = default slate gradient.')}</div></div>
+          <div className="flex items-center gap-2">
+            <input type="color" value={col(styles.kiosk_bg, '#0f172a')} disabled={!canEdit} onChange={e => setStyles(s => ({ ...s, kiosk_bg: e.target.value }))} className="h-8 w-12 cursor-pointer rounded border border-gray-300 dark:border-gray-600" />
+            {styles.kiosk_bg && canEdit && <button onClick={() => setStyles(s => { const { kiosk_bg, ...rest } = s; return rest; })} className="text-xs font-semibold text-gray-400 hover:text-gray-600">{tr('Réinit.', 'Reset')}</button>}
+          </div>
+        </div>
+        <div className="mt-2 grid place-items-center rounded-lg py-5 text-white" style={styles.kiosk_bg ? { backgroundColor: col(styles.kiosk_bg, '#0f172a') } : undefined}>
+          <div className={styles.kiosk_bg ? '' : 'w-full rounded-lg bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-5 text-center'}>
+            <span className="text-2xl font-black">365</span><div className="text-[10px] uppercase tracking-[0.25em] text-slate-300">{tr('jours sans accident', 'days without accident')}</div>
+          </div>
+        </div>
       </div>
 
       {/* STYLE PAR DÉFAUT (mise en page) */}

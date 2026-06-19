@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
 import { selectKioskSlides, type KioskSlide } from '@/lib/kioskCards';
 import { supabase } from '@/lib/supabase';
+import { getKioskBg } from '@/lib/pdfStyle';
 
 export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides = [], selectedKeys, tenant }:
   { enabled: boolean; idleSeconds?: number; lang?: 'fr' | 'en'; slides?: KioskSlide[]; selectedKeys?: string[] | null; tenant?: string }) {
@@ -17,10 +18,13 @@ export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides 
   // VRAI logo : celui du tenant (tenants.logo_url) sinon le logo par défaut /logo.png — jamais un placeholder.
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
+  // Couleur de fond réglable (Admin › Système › Modèles PDF) ; null = dégradé ardoise par défaut.
+  const [bg, setBg] = useState<string | null>(null);
   useEffect(() => {
     if (!tenant) return;
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+    getKioskBg(tenant).then(setBg, () => {});
   }, [tenant]);
 
   // Diapos à diffuser (filtrées par les cartes cochées). Ref = lecture fraîche dans le minuteur (anti-stale).
@@ -67,7 +71,7 @@ export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides 
   if (!enabled || !active || !shown.length) return null;
   const s = shown[Math.min(idx, shown.length - 1)];
   return (
-    <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className={`fixed inset-0 z-[10000] flex flex-col items-center justify-center text-white ${bg ? '' : 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'}`} style={bg ? { backgroundColor: bg } : undefined}>
       <button onClick={() => setActive(false)} className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-white/10" title={tr('Fermer', 'Close')}><X size={22} /></button>
       {logoFailed
         ? <ShieldCheck size={40} className="mb-6 text-emerald-500/70" />
