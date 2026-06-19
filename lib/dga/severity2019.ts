@@ -4,7 +4,7 @@
 // taux de génération (ppm/jour), interprétation CO₂/CO, et garde anti-verdict « stabilisé ».
 //
 // ⚠️ Les valeurs de percentiles (90e) ci-dessous proviennent de sources publiques IEEE C57.104-2019 et
-//    DOIVENT être validées contre la norme officielle par une personne qualifiée (Eric / IPS) avant
+//    DOIVENT être validées contre la norme officielle par une personne qualifiée avant
 //    usage en production. Ce module est une aide à l'ingénierie, pas un avis certifié.
 // ============================================================================
 

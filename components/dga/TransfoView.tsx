@@ -29,6 +29,8 @@ import {
 import { EntitySearch } from '@/components/ui/EntitySearch';
 import { getEquipmentList, saveMaintAction } from '@/lib/maintenance';
 import { DuvalTriangle1 } from '@/components/dga/DuvalTriangle1';
+import { ConsensusView } from '@/components/dga/ConsensusView';
+import { classifyTriangle1 } from '@/lib/dga/triangle1';
 import { AnomalySection } from '@/components/dga/AnomalySection';
 import { InspectionSection } from '@/components/dga/InspectionSection';
 import { DocsSection } from '@/components/dga/DocsSection';
@@ -191,6 +193,7 @@ export function TransfoView(props: {
     oilFair: oilEval.filter(o => o.status === 'fair').length,
     dp: furan?.dp ?? null,
   });
+  const [showMethods, setShowMethods] = useState(false);
   const pcbVerdict = pcbStatus(latestPcb(data), lang);
 
   // QR public du transformateur (lecture seule hors connexion ; édition si connecté).
@@ -563,6 +566,24 @@ export function TransfoView(props: {
             <section className={CARD}>
               <h2 className={H2}>{tr('Triangle de Duval 1', 'Duval Triangle 1')}</h2>
               <DuvalTriangle1 samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) }))} />
+            </section>
+
+            {/* VUE COMPLÉMENTAIRE — autres méthodes d'interprétation (consensus) */}
+            <section className={CARD}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className={H2}>{tr('Vue complémentaire — autres méthodes', 'Complementary view — other methods')}</h2>
+                <button onClick={() => setShowMethods(v => !v)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">
+                  {showMethods ? tr('Masquer', 'Hide') : tr('Afficher (Gaz clés, Doernenburg, Rogers, IEC, CO₂/CO + consensus)', 'Show (Key gas, Doernenburg, Rogers, IEC, CO₂/CO + consensus)')}
+                </button>
+              </div>
+              {showMethods && (
+                <div className="mt-3">
+                  <ConsensusView lang={lang}
+                    gases={{ H2: +(cur.h2 || 0), CH4: +(cur.ch4 || 0), C2H6: +(cur.c2h6 || 0), C2H4: +(cur.c2h4 || 0), C2H2: +(cur.c2h2 || 0), CO: +(cur.co || 0), CO2: +(cur.co2 || 0), O2: +((cur as any).o2 || 0), N2: +((cur as any).n2 || 0) }}
+                    duvalTriangle1={classifyTriangle1({ CH4: +(cur.ch4 || 0), C2H4: +(cur.c2h4 || 0), C2H2: +(cur.c2h2 || 0) })?.fault ?? null}
+                  />
+                </div>
+              )}
             </section>
 
             <section className={CARD}>

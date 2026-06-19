@@ -1,7 +1,7 @@
 // ============================================================================
 // INSPECTION DE ROUTINE — transformateur à l'huile.
 // Checklist standard par catégories (Conforme / Anomalie / N/A par point), avec champs de
-// mesure (températures, Ω, kg) et sélecteurs (options). Repris de la liste fournie par Eric.
+// mesure (températures, Ω, kg) et sélecteurs (options).
 // ============================================================================
 
 export type InspStatus = 'conforme' | 'anomalie' | 'na' | '';
