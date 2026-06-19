@@ -28,7 +28,7 @@ import {
 } from '@/lib/dga/catalog';
 import { EntitySearch } from '@/components/ui/EntitySearch';
 import { getEquipmentList, saveMaintAction } from '@/lib/maintenance';
-import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
+import { DuvalTriangle1 } from '@/components/dga/DuvalTriangle1';
 import { AnomalySection } from '@/components/dga/AnomalySection';
 import { InspectionSection } from '@/components/dga/InspectionSection';
 import { DocsSection } from '@/components/dga/DocsSection';
@@ -475,6 +475,29 @@ export function TransfoView(props: {
           </section>
         )}
 
+        {/* TENDANCES PAR GAZ — petits multiples (un graphe par gaz combustible), comme à l'export */}
+        {data.length > 1 && (
+          <section className={CARD}>
+            <h2 className={H2}>{tr('Tendances par gaz', 'Per-gas trends')}</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {GAS_FIELDS.filter(g => COMBUSTIBLE.includes(g.key)).map(g => (
+                <div key={g.u} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                  <div className="mb-1 text-xs font-bold" style={{ color: g.color }}>{gl(g.u, lang)}</div>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                      <XAxis dataKey="date" tick={{ fontSize: 8 }} hide />
+                      <YAxis tick={{ fontSize: 8 }} width={34} />
+                      <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                      <Line type="monotone" dataKey={g.key as string} stroke={g.color} strokeWidth={2} dot={{ r: 2 }} name={gl(g.u, lang)} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* CARTES ANALYTIQUES — flux multi-colonnes équilibré : remplit l'espace sur desktop
             (1 col mobile · 2 col ≥lg · 3 col ≥xl), au lieu de 2 colonnes fixes déséquilibrées. */}
         <div className="gap-4 [column-fill:balance] columns-1 lg:columns-2 xl:columns-3 [&>section]:mb-4 [&>section]:break-inside-avoid">
@@ -539,7 +562,7 @@ export function TransfoView(props: {
 
             <section className={CARD}>
               <h2 className={H2}>{tr('Triangle de Duval 1', 'Duval Triangle 1')}</h2>
-              <DuvalTriangle points={data.map(m => ({ ch4: +(m.ch4 || 0), c2h2: +(m.c2h2 || 0), c2h4: +(m.c2h4 || 0), date: m.sample_date || undefined }))} selIdx={selIdx} lang={lang} />
+              <DuvalTriangle1 samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) }))} />
             </section>
 
             <section className={CARD}>

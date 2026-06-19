@@ -13,7 +13,7 @@ import { GAS_FIELDS, COMBUSTIBLE, OIL_FIELDS, FURAN_FIELDS, IEEE_LIMITS, gl, fl,
 import { INSPECTION_CHECKLIST, il } from '@/lib/dga/inspection';
 import { ZONE_COLORS } from '@/lib/dga/duval';
 import { voltageClass } from '@/lib/dga/oil';
-import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
+import { DuvalTriangle1 } from '@/components/dga/DuvalTriangle1';
 
 const SP: Record<string, React.CSSProperties> = {
   wrap: { fontFamily: 'Arial, Helvetica, sans-serif', color: '#1a1a1a' },
@@ -300,7 +300,7 @@ export function PrintReport(props: {
             <div style={{ flex: 1 }}>
               <div style={SP.h3}>{L('Triangle de Duval 1', 'Duval Triangle 1')}</div>
               <div style={{ maxWidth: 240, margin: '0 auto 8px' }}>
-                <DuvalTriangle points={data.map(m => ({ ch4: +(m.ch4 || 0), c2h2: +(m.c2h2 || 0), c2h4: +(m.c2h4 || 0), date: m.sample_date || undefined }))} selIdx={data.indexOf(cur)} lang={lang} />
+                <DuvalTriangle1 samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) }))} />
               </div>
               {oilEval.length > 0 && (<><div style={SP.h3}>🛢️ {L('Interprétation qualité huile', 'Oil quality interpretation')}{dossier.kv ? ` (${voltageClass(dossier.kv, lang).label})` : ''}</div>
                 {oilEval.map((it, i) => <div key={i} style={{ ...SP.interp, ...oilStyle(it.status) }}>{it.txt}</div>)}</>)}
