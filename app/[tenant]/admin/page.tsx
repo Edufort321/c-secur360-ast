@@ -7466,6 +7466,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [importText, setImportText] = useState('');
   const [bankBusy, setBankBusy] = useState(false);
   const [bankSel, setBankSel] = useState<Set<string>>(new Set()); // sélection pour suppression en lot
+  const [showReconciledBank, setShowReconciledBank] = useState(false); // masquer les lignes rapprochées (transférées)
   const [accounts, setAccounts] = useState<GLAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
@@ -7500,6 +7501,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [subs, setSubs] = useState<{ id: string; client_name: string; plan_name: string; amount: number }[]>([]);
   const [linkSub, setLinkSub] = useState<{ id: string; label: string } | null>(null);
   const [subQuery, setSubQuery] = useState('');
+  const lastTxnSeq = React.useRef<Record<string, number>>({}); // dernier n° séquentiel attribué par préfixe (import de masse, anti-collision)
   useEffect(() => { supabase.from('recurring_subscriptions').select('id, client_name, plan_name, amount').eq('tenant_id', tenant).eq('status', 'active').then(({ data }) => setSubs((data as any[]) || []), () => {}); }, [tenant]);
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
@@ -7715,13 +7717,23 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     if (seen?.has(key)) return 'duplicate';
     const taxed = gst > 0 || qst > 0;
     const isRev = x.type === 'revenue';
-    const num = await nextTransactionNumber(tenant, isRev ? 'V' : 'A');
-    // Compte assigné au lot d'import → classé sur ce compte ; sinon « à vérifier » (needs_review).
-    const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', treasury_account_id: accountId || null, status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: receiptUrl };
+    const prefix = isRev ? 'V' : 'A';
     const its: TransactionItem[] = [{ description: x.description || x.category_hint || tr('Achat', 'Purchase'), account_code: isRev ? '4000' : '5300', amount: Math.round(sub * 100) / 100, taxable: taxed, tax_category: taxed ? 'standard' : 'exempt' }];
-    await saveTransaction(tenant, header, its);
-    seen?.add(key);
-    return 'created';
+    // Numéro séquentiel résilient : en import de MASSE, la lecture du max peut être en RETARD (réplica) →
+    // numéro dupliqué → 409. On garde un compteur LOCAL par préfixe (anti-collision, O(n)) et on incrémente
+    // sur conflit au lieu de boucler indéfiniment.
+    const baseNum = await nextTransactionNumber(tenant, prefix);
+    const mm = baseNum.match(/(\d+)\s*$/); const padLen = mm ? mm[1].length : 3;
+    const head = baseNum.replace(/\d+\s*$/, '');
+    let seq = Math.max(mm ? parseInt(mm[1], 10) : 1, (lastTxnSeq.current[prefix] || 0) + 1);
+    const isConflict = (e: any) => { const s = String(e?.message || e?.code || ''); return /duplicate|conflict|409|23505|transaction_number/i.test(s); };
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const num = `${head}${String(seq).padStart(padLen, '0')}`;
+      const header: Transaction = { transaction_number: num, vendor_name: x.vendor || '', txn_type: isRev ? 'revenue' : 'expense', txn_date: x.date || today, province: 'QC', payment_method: 'cash', treasury_account_id: accountId || null, status: 'draft', needs_review: true, subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, receipt_url: receiptUrl };
+      try { await saveTransaction(tenant, header, its); lastTxnSeq.current[prefix] = seq; seen?.add(key); return 'created'; }
+      catch (e: any) { if (isConflict(e) && attempt < 49) { seq++; continue; } throw e; }
+    }
+    return 'empty';
   }
   async function batchScanCreate(files: File[]) {
     if (!files.length) return;
@@ -7966,7 +7978,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   }
   // Suppression EN LOT : sélection (cases) ou tout le rapprochement.
   function toggleBankSel(id: string) { setBankSel(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
-  function toggleBankSelAll() { setBankSel(prev => (prev.size === bankLines.length && bankLines.length ? new Set() : new Set(bankLines.map(b => b.id!).filter(Boolean)))); }
+  function toggleBankSelAll() { const vis = bankLines.filter(b => showReconciledBank || !b.reconciled); setBankSel(prev => (prev.size >= vis.length && vis.length ? new Set() : new Set(vis.map(b => b.id!).filter(Boolean)))); }
   async function deleteSelectedBank() {
     const ids = bankLines.map(b => b.id!).filter(id => id && bankSel.has(id));
     if (!ids.length) return;
@@ -8398,15 +8410,22 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-amber-600">{bankLines.filter(b => !b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('À rapprocher', 'To reconcile')}</div></div>
             </div>
           )}
+          {/* Les lignes RAPPROCHÉES/transférées (devenues des transactions) sont MASQUÉES par défaut. */}
+          {bankLines.some(b => b.reconciled) && (
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <input type="checkbox" checked={showReconciledBank} onChange={e => setShowReconciledBank(e.target.checked)} />
+              {tr(`Afficher les lignes rapprochées (${bankLines.filter(b => b.reconciled).length})`, `Show reconciled lines (${bankLines.filter(b => b.reconciled).length})`)}
+            </label>
+          )}
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <table className="mobile-cards w-full text-sm">
               <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-                <th className="px-3 py-2"><input type="checkbox" checked={bankSel.size === bankLines.length && bankLines.length > 0} ref={el => { if (el) el.indeterminate = bankSel.size > 0 && bankSel.size < bankLines.length; }} onChange={toggleBankSelAll} title={tr('Tout sélectionner', 'Select all')} /></th>
+                <th className="px-3 py-2"><input type="checkbox" checked={bankSel.size > 0 && bankSel.size === bankLines.filter(b => showReconciledBank || !b.reconciled).length} ref={el => { if (el) el.indeterminate = bankSel.size > 0 && bankSel.size < bankLines.filter(b => showReconciledBank || !b.reconciled).length; }} onChange={toggleBankSelAll} title={tr('Tout sélectionner', 'Select all')} /></th>
                 <th className="px-4 py-2">{tr('Date', 'Date')}</th><th className="px-4">{tr('Description', 'Description')}</th>
                 <th className="px-4 text-right">{tr('Montant', 'Amount')}</th><th className="px-4">{tr('Transaction rapprochée', 'Matched transaction')}</th><th className="px-4">{tr('Rappr.', 'Recon.')}</th><th className="px-4"></th>
               </tr></thead>
               <tbody>
-                {bankLines.map(b => (
+                {bankLines.filter(b => showReconciledBank || !b.reconciled).map(b => (
                   <tr key={b.id} className={`border-t border-gray-50 dark:border-gray-700/50 ${bankSel.has(b.id!) ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
                     <td className="px-3 py-2" data-label={tr('Sél.', 'Sel.')}><input type="checkbox" checked={bankSel.has(b.id!)} onChange={() => toggleBankSel(b.id!)} /></td>
                     <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{b.stmt_date}</td>
@@ -8427,7 +8446,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                     </td>
                   </tr>
                 ))}
-                {bankLines.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{bankBusy ? '…' : tr('Aucune ligne bancaire importée.', 'No bank line imported.')}</td></tr>}
+                {bankLines.filter(b => showReconciledBank || !b.reconciled).length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{bankBusy ? '…' : bankLines.length ? tr('Toutes les lignes sont rapprochées/transférées. ✓', 'All lines reconciled/transferred. ✓') : tr('Aucune ligne bancaire importée.', 'No bank line imported.')}</td></tr>}
               </tbody>
             </table>
           </div>

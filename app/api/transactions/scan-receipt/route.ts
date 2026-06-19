@@ -90,9 +90,14 @@ export async function POST(req: NextRequest) {
       const header = allLines[0] || '';
       const dataLines = allLines.slice(1);
       const CHUNK = 60;
-      const batches: string[] = dataLines.length <= CHUNK
+      // Borne le NOMBRE d'appels IA par requête pour ne pas dépasser le délai serveur (504). Au-delà,
+      // l'appelant (relevé→transactions) découpe déjà côté client par lots, et un repli crée sans IA.
+      const MAX_BATCHES = 3;
+      const allBatches: string[] = dataLines.length <= CHUNK
         ? [csv.slice(0, 16000)]
         : Array.from({ length: Math.ceil(dataLines.length / CHUNK) }, (_, i) => [header, ...dataLines.slice(i * CHUNK, i * CHUNK + CHUNK)].join('\n').slice(0, 16000));
+      const batches = allBatches.slice(0, MAX_BATCHES);
+      const truncated = allBatches.length > MAX_BATCHES;
       const items: any[] = [];
       let summary: any = null, costTotal = 0;
       for (const batch of batches) {
@@ -108,7 +113,7 @@ export async function POST(req: NextRequest) {
       }
       if (tenant && costTotal > 0) { try { await recordAiUsage(tenant, 'transactions', costTotal, { feature: 'scan-receipt' }); } catch { /* best-effort */ } }
       if (!items.length) return NextResponse.json({ error: 'Lecture impossible (réponse illisible).' }, { status: 422 });
-      return NextResponse.json({ extractedList: items, summary: summary || null });
+      return NextResponse.json({ extractedList: items, summary: summary || null, truncated, processedRows: Math.min(dataLines.length, MAX_BATCHES * CHUNK) });
     } else {
       return NextResponse.json({ error: 'Format non supporté (image, PDF, Excel ou CSV).' }, { status: 400 });
     }
