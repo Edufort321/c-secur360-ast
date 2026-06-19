@@ -224,15 +224,31 @@ export async function revenueByClass(tenant: string, from?: string, to?: string)
       byClass[cls] = (byClass[cls] || 0) + (Number(l.subtotal) || 0);
     }
   }
-  // + REVENUS saisis comme TRANSACTIONS (txn_type='revenue'), ventilés par revenue_category (migration 232/235).
-  // Table = commerce_transactions (et non `transactions` legacy) — c'est là que l'app enregistre.
+  // + REVENUS saisis comme TRANSACTIONS (txn_type='revenue'), ventilés par classe PAR LIGNE
+  // (commerce_transaction_items.revenue_category, mig 236) → sinon classe d'entête → sinon « Non classé ».
+  // Table = commerce_transactions (et non `transactions` legacy).
   try {
-    const runTx = (cat: boolean) => { let t = supabase.from('commerce_transactions').select(`txn_date, txn_type, subtotal${cat ? ', revenue_category' : ''}`).eq('tenant_id', tenant).eq('txn_type', 'revenue'); if (from) t = t.gte('txn_date', from); if (to) t = t.lte('txn_date', to); return t; };
-    let { data: txs, error: te } = await runTx(true);
-    if (te && /revenue_category/i.test(String(te.message || ''))) ({ data: txs } = await runTx(false));
+    // sel(full) = avec classes par ligne + entête ; repli progressif si une colonne n'existe pas encore.
+    const sel = (lineCat: boolean, headCat: boolean) => `txn_date, txn_type${headCat ? ', revenue_category' : ''}, commerce_transaction_items(amount${lineCat ? ', revenue_category' : ''})`;
+    const run = (lineCat: boolean, headCat: boolean) => { let t = supabase.from('commerce_transactions').select(sel(lineCat, headCat)).eq('tenant_id', tenant).eq('txn_type', 'revenue'); if (from) t = t.gte('txn_date', from); if (to) t = t.lte('txn_date', to); return t; };
+    let { data: txs, error: te } = await run(true, true);
+    if (te && /revenue_category/i.test(String(te.message || ''))) {
+      // réessaie sans la classe de ligne, puis sans la classe d'entête.
+      ({ data: txs, error: te } = await run(false, true));
+      if (te && /revenue_category/i.test(String(te.message || ''))) ({ data: txs } = await run(false, false));
+    }
     for (const t of (txs || []) as any[]) {
-      const cls = (t.revenue_category || '').trim() || 'Non classé';
-      byClass[cls] = (byClass[cls] || 0) + (Number(t.subtotal) || 0);
+      const head = (t.revenue_category || '').trim();
+      const lines = t.commerce_transaction_items || [];
+      if (lines.length) {
+        for (const l of lines) {
+          const cls = (l.revenue_category || '').trim() || head || 'Non classé';
+          byClass[cls] = (byClass[cls] || 0) + (Number(l.amount) || 0);
+        }
+      } else {
+        const cls = head || 'Non classé';
+        byClass[cls] = (byClass[cls] || 0); // pas de lignes → rien à ventiler
+      }
     }
   } catch { /* transactions optionnelles */ }
   return Object.entries(byClass).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);

@@ -6,6 +6,7 @@ import { TAX_BY_PROVINCE, lineIsTaxed, type TaxCategory } from '@/lib/invoicing'
 
 export type TransactionItem = {
   id?: string; description: string; account_code: string; amount: number; taxable: boolean; tax_category?: TaxCategory; sort_order?: number;
+  revenue_category?: string | null; // classe PAR LIGNE (ventilation des coûts/revenus par classe, migration 236)
 };
 export type Transaction = {
   id?: string; transaction_number: string; vendor_id?: string | null; vendor_name?: string | null;
@@ -104,11 +105,15 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     tenant_id: tenant, transaction_id: id, description: it.description, account_code: it.account_code || '5300',
     amount: r2(Number(it.amount) || 0), taxable: lineIsTaxed(it),
     tax_category: it.tax_category || (it.taxable === false ? 'exempt' : 'standard'), sort_order: i,
+    ...(it.revenue_category ? { revenue_category: it.revenue_category } : {}),
   }));
   if (rows.length) {
     let { error } = await supabase.from('commerce_transaction_items').insert(rows);
-    if (error && /tax_category/i.test(String(error.message || ''))) { // colonne absente (migration 182)
-      const rows2 = rows.map(({ tax_category, ...r }) => r);
+    // Colonnes potentiellement absentes : tax_category (mig 182), revenue_category (mig 236) → on retire la/les
+    // colonne(s) réellement signalée(s) et on réessaie (zéro perte des autres champs).
+    if (error && /tax_category|revenue_category/i.test(String(error.message || ''))) {
+      const msg = String(error.message || '');
+      const rows2 = rows.map(r => { const x: any = { ...r }; if (/tax_category/i.test(msg)) delete x.tax_category; if (/revenue_category/i.test(msg)) delete x.revenue_category; return x; });
       ({ error } = await supabase.from('commerce_transaction_items').insert(rows2));
     }
     if (error) throw error;

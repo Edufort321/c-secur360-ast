@@ -7939,13 +7939,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <div className="mt-4 space-y-2">
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-12 items-center gap-2">
-                <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-4 ${inputCls}`} />
+                <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-3 ${inputCls}`} />
                 {/* Classe fiscale GUIDÉE : choisit le compte GL + la catégorie de taxe. Pour un règlement BILAN
                     (avance d'investisseur / paiement en actions), pas de classe fiscale : étiquette fixe + hors taxe. */}
                 {balanceSheetSettlement ? (
-                  <div className={`col-span-4 ${inputCls} flex items-center text-xs text-gray-500 dark:text-gray-400`} title={settlementLabel}>{settlementLabel}</div>
+                  <div className={`col-span-3 ${inputCls} flex items-center text-xs text-gray-500 dark:text-gray-400`} title={settlementLabel}>{settlementLabel}</div>
                 ) : (
-                  <select value={fiscalByCode(it.account_code)?.key || ''} onChange={e => { const c = FISCAL_CATEGORIES.find(x => x.key === e.target.value); if (c) setItems(p => p.map((x, j) => j === i ? { ...x, account_code: c.glCode, tax_category: c.tax, taxable: c.tax === 'standard' } : x)); }} className={`col-span-4 ${inputCls}`} title={tr('Catégorie (classe fiscale)', 'Category (fiscal class)')}>
+                  <select value={fiscalByCode(it.account_code)?.key || ''} onChange={e => { const c = FISCAL_CATEGORIES.find(x => x.key === e.target.value); if (c) setItems(p => p.map((x, j) => j === i ? { ...x, account_code: c.glCode, tax_category: c.tax, taxable: c.tax === 'standard' } : x)); }} className={`col-span-3 ${inputCls}`} title={tr('Catégorie (classe fiscale)', 'Category (fiscal class)')}>
                     <option value="">{it.account_code ? `${it.account_code}${lineAccounts.find(a => a.code === it.account_code)?.name ? ' · ' + lineAccounts.find(a => a.code === it.account_code)!.name : ''}` : tr('— Catégorie —', '— Category —')}</option>
                     {Array.from(new Set(FISCAL_CATEGORIES.filter(c => lineKinds.includes(c.kind)).map(c => c.group))).map(g => (
                       <optgroup key={g} label={g}>
@@ -7954,6 +7954,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                     ))}
                   </select>
                 )}
+                {/* Classe de revenu/coût PAR LIGNE (ventilation état financier) */}
+                <input list="txn-rev-cat-list" value={(it as any).revenue_category || ''} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, revenue_category: e.target.value } as any : x))} placeholder={tr('Classe', 'Class')} title={tr('Classe (ventilation)', 'Class (breakdown)')} className={`col-span-2 ${inputCls}`} />
                 <input type="number" placeholder={tr('Montant', 'Amount')} value={it.amount} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
                 {balanceSheetSettlement ? (
                   <div className="col-span-1 px-1 py-1.5 text-center text-xs text-gray-400" title={tr('Hors taxe (mouvement de bilan)', 'No tax (balance-sheet movement)')}>{tr('Exonéré', 'Exempt')}</div>
