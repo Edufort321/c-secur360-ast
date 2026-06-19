@@ -6078,32 +6078,39 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
 }
 
 function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  type Row = { id?: string; name: string; trigger_hours: string; bonus_amount: string; is_taxable: boolean; active: boolean; sort_order: number };
+  type Row = { id?: string; name: string; trigger_hours: string; bonus_amount: string; is_taxable: boolean; active: boolean; sort_order: number; recurring_task_ids: string[] };
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<{ id: string; name: string }[]>([]);
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const PROJECT_TOKEN = '__project__';
 
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('timesheet_hour_bonuses').select('*').eq('tenant_id', tenant).order('sort_order').order('trigger_hours');
-    setRows((data || []).map((r: any) => ({ ...r, trigger_hours: String(r.trigger_hours || ''), bonus_amount: String(r.bonus_amount || '') })));
+    setRows((data || []).map((r: any) => ({ ...r, trigger_hours: String(r.trigger_hours || ''), bonus_amount: String(r.bonus_amount || ''), recurring_task_ids: Array.isArray(r.recurring_task_ids) ? r.recurring_task_ids : [] })));
+    try { setTasks((await listRecurringTasks(tenant)).map((t: any) => ({ id: t.id, name: t.name }))); } catch { /* ignore */ }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
-  const add = () => setRows(p => [...p, { name: '', trigger_hours: '', bonus_amount: '', is_taxable: true, active: true, sort_order: p.length }]);
+  const add = () => setRows(p => [...p, { name: '', trigger_hours: '', bonus_amount: '', is_taxable: true, active: true, sort_order: p.length, recurring_task_ids: [] }]);
+  const toggleTask = (i: number, id: string) => setRows(p => p.map((r, j) => j === i ? { ...r, recurring_task_ids: r.recurring_task_ids.includes(id) ? r.recurring_task_ids.filter(x => x !== id) : [...r.recurring_task_ids, id] } : r));
 
   async function save() {
     setSaving(true); setNotice(null);
     try {
       for (const r of rows) {
         if (!r.name?.trim() || !r.trigger_hours) continue;
-        const payload = { tenant_id: tenant, name: r.name.trim(), trigger_hours: parseFloat(r.trigger_hours) || 0, bonus_amount: parseFloat(r.bonus_amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order };
-        if (r.id) await supabase.from('timesheet_hour_bonuses').update(payload).eq('id', r.id);
-        else await supabase.from('timesheet_hour_bonuses').insert(payload);
+        const payload: any = { tenant_id: tenant, name: r.name.trim(), trigger_hours: parseFloat(r.trigger_hours) || 0, bonus_amount: parseFloat(r.bonus_amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order, recurring_task_ids: r.recurring_task_ids };
+        // Repli si la colonne recurring_task_ids (mig 238) n'existe pas encore.
+        const tryWrite = async (p: any) => r.id ? supabase.from('timesheet_hour_bonuses').update(p).eq('id', r.id) : supabase.from('timesheet_hour_bonuses').insert(p);
+        let { error } = await tryWrite(payload);
+        if (error && /recurring_task_ids|personnel_ids/i.test(String(error.message || ''))) { const { recurring_task_ids, ...legacy } = payload; ({ error } = await tryWrite(legacy)); }
+        if (error) throw error;
       }
       setNotice(tr('Primes enregistrées ✓', 'Bonuses saved ✓')); load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
@@ -6120,7 +6127,7 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-        {tr("Primes déclenchées quand les heures totales d'une journée atteignent le seuil. Ex: « Prime 5h = 25$ » → versé si ≥ 5h dans la journée.", "Bonuses triggered when daily total hours reach the threshold. E.g., \"5h bonus = $25\" → paid if ≥ 5h in the day.")}
+        {tr("Primes déclenchées quand les heures du JOUR atteignent le seuil. Ex: « Prime 5h = 25$ » → versé si ≥ 5h. « Codes ciblés » = ne compter que les heures de certaines tâches (vide = tous les codes). « Imposable » = versée comme avantage.", "Bonuses triggered when the DAY's hours reach the threshold. E.g., \"5h bonus = $25\". \"Targeted codes\" = only count hours of selected tasks (empty = all codes). \"Taxable\" = paid as a benefit.")}
       </div>
       {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{notice}</div>}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -6139,6 +6146,7 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
               <th className="px-2 py-1.5">{tr('Nom prime', 'Bonus name')}</th>
               <th className="px-2">{tr('Seuil h/jour', 'Daily h threshold')}</th>
               <th className="px-2">{tr('Montant $', 'Amount $')}</th>
+              <th className="px-2">{tr('Codes ciblés', 'Targeted codes')}</th>
               <th className="px-2">{tr('Imposable', 'Taxable')}</th>
               <th className="px-2">{tr('Ordre', 'Order')}</th>
               <th className="px-2">{tr('Actif', 'Active')}</th>
@@ -6162,13 +6170,23 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
                       <span className="text-xs text-gray-400">$</span>
                     </div>
                   </td>
+                  <td className="px-2" data-label={tr('Codes ciblés', 'Targeted codes')}>
+                    <details className="text-xs">
+                      <summary className="cursor-pointer rounded-lg border border-gray-300 px-2 py-1.5 dark:border-gray-600">{r.recurring_task_ids.length === 0 ? tr('Tous les codes', 'All codes') : `${r.recurring_task_ids.length} ${tr('code(s)', 'code(s)')}`}</summary>
+                      <div className="mt-1 max-h-40 w-56 overflow-auto rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+                        <label className="flex items-center gap-1.5 py-0.5"><input type="checkbox" checked={r.recurring_task_ids.includes(PROJECT_TOKEN)} onChange={() => toggleTask(i, PROJECT_TOKEN)} /> {tr('Lignes de projet', 'Project lines')}</label>
+                        {tasks.map(t => <label key={t.id} className="flex items-center gap-1.5 py-0.5"><input type="checkbox" checked={r.recurring_task_ids.includes(t.id)} onChange={() => toggleTask(i, t.id)} /> {t.name}</label>)}
+                        {tasks.length === 0 && <p className="text-gray-400">{tr('Aucune tâche récurrente (catalogue).', 'No recurring task (catalogue).')}</p>}
+                      </div>
+                    </details>
+                  </td>
                   <td className="px-2 text-center" data-label={tr('Imposable', 'Taxable')}><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
                   <td className="px-2" data-label={tr('Ordre', 'Order')}><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
                   <td className="px-2 text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
                   <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucune prime configurée.', 'No bonus configured.')}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucune prime configurée.', 'No bonus configured.')}</td></tr>}
             </tbody>
           </table>
         </div>

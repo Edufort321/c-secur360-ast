@@ -29,7 +29,7 @@ type Rate     = { code: string; rate_regular: number; rate_overtime: number; rat
 type Vehicle  = { id: string; name: string; make: string; model: string; type: string };
 type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string; total_commissions?: number; commission_details?: any[]; adjustment_note?: string | null; rejection_note?: string | null; adjustment_flag?: boolean };
 type Allowance = { id: string; name: string; amount: number; is_taxable: boolean; personnel_ids?: string[]; recurring_task_ids?: string[] };
-type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number };
+type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number; recurring_task_ids?: string[] };
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
 type AssignedVehicle = { id: string; name: string; make: string; model: string; regime?: string; km_rate_override?: number | null; is_sales_employee?: boolean };
 type LogEntry = { id?: string; odometer_start: number; odometer_end: number; km_personal: number };
@@ -242,7 +242,7 @@ export default function TimesheetDetailPage() {
         const [{ data: prof }, { data: allws }, { data: bonuses }] = await Promise.all([
           supabase.from('employee_profiles').select('hourly_rate,ot_multiplier,dt_multiplier').eq('tenant_id', tenant).eq('employee_id', sh.employee_id).maybeSingle(),
           supabase.from('timesheet_allowances').select('*').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
-          supabase.from('timesheet_hour_bonuses').select('id,name,trigger_hours,bonus_amount').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
+          supabase.from('timesheet_hour_bonuses').select('*').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
         ]);
         if (prof) setProfile(prof as EmployeeProfile);
         setHourBonuses(bonuses || []);
@@ -480,15 +480,26 @@ export default function TimesheetDetailPage() {
     return byDate;
   }, [entries]);
 
-  // Bonuses triggered per day
+  // Heures d'un JOUR comptant pour une prime : si la prime cible des codes (recurring_task_ids), on ne
+  // somme QUE les heures des entrées de ces tâches (ou des lignes de projet via le jeton '__project__') ;
+  // sinon (liste vide) on prend toutes les heures du jour. → permet « prime appliquée au code voulu ».
+  const bonusHoursForDay = (date: string, b: HourBonus): number => {
+    const ids = b.recurring_task_ids || [];
+    return entries.filter(e => e.date === date).filter(e => {
+      if (!ids.length) return true;
+      if (e.category === 'project') return ids.includes('__project__');
+      return e.recurring_task_id ? ids.includes(String(e.recurring_task_id)) : false;
+    }).reduce((s, e) => s + Number(e.hrs_regular) + Number(e.hrs_overtime) + Number(e.hrs_premium), 0);
+  };
+  // Bonuses triggered per day (seuil évalué sur les heures des CODES ciblés)
   const triggeredBonuses = useMemo(() => {
     const result: { date: string; bonuses: HourBonus[] }[] = [];
-    Object.entries(dailyHours).forEach(([date, hrs]) => {
-      const triggered = hourBonuses.filter(b => hrs >= b.trigger_hours);
+    Object.keys(dailyHours).forEach(date => {
+      const triggered = hourBonuses.filter(b => bonusHoursForDay(date, b) >= b.trigger_hours);
       if (triggered.length > 0) result.push({ date, bonuses: triggered });
     });
     return result.sort((a, b) => a.date.localeCompare(b.date));
-  }, [dailyHours, hourBonuses]);
+  }, [dailyHours, hourBonuses, entries]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalBonuses = useMemo(() =>
     triggeredBonuses.reduce((s, { bonuses }) => s + bonuses.reduce((bs, b) => bs + b.bonus_amount, 0), 0),
@@ -1098,12 +1109,12 @@ export default function TimesheetDetailPage() {
                   </div>
                 )}
 
-                {/* Indication primes du jour (une seule fois par journée) */}
+                {/* Indication primes du jour (une seule fois par journée) — seuil évalué par CODE ciblé */}
                 {idx === 0 && hourBonuses.length > 0 && dayHrs > 0 && (
                   <div className="mt-2 text-xs text-slate-400">
                     {dayHrs.toFixed(1)}h ce jour
-                    {hourBonuses.filter(b => dayHrs >= b.trigger_hours).map(b => (
-                      <span key={b.id} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 font-semibold">
+                    {hourBonuses.filter(b => bonusHoursForDay(e.date, b) >= b.trigger_hours).map(b => (
+                      <span key={b.id} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 font-semibold" title={(b.recurring_task_ids && b.recurring_task_ids.length) ? `Sur ${bonusHoursForDay(e.date, b).toFixed(1)}h des codes ciblés` : undefined}>
                         <Timer size={10} className="inline mr-0.5" />{b.name}{canSeeMoney ? ` +${money(b.bonus_amount)}` : ''}
                       </span>
                     ))}
