@@ -110,8 +110,13 @@ export function computeFinancialAnalytics(
     // EBITDA = CA − COGS − masse salariale − opex (= marge nette + amortissement + intérêts + impôts).
     periods[i].ebitda = periods[i].revenue - periods[i].cogs - periods[i].payroll - periods[i].opex;
     const prev = i > 0 ? periods[i - 1].revenue : null;
-    // Croissance PLAFONNÉE : base trop faible (< 1000 $) → non significatif (évite les +3192 %).
-    periods[i].growthPct = prev != null && Math.abs(prev) >= 1000 ? ((periods[i].revenue - prev) / Math.abs(prev)) * 100 : null;
+    // Croissance PLAFONNÉE : base trop faible (< 10 000 $) OU variation extrême (> 500 %) = démarrage,
+    // non significatif (évite les « +2278 % »). On affiche alors « — » / « démarrage » côté UI.
+    if (prev == null || Math.abs(prev) < 10000) periods[i].growthPct = null;
+    else {
+      const gp = ((periods[i].revenue - prev) / Math.abs(prev)) * 100;
+      periods[i].growthPct = Math.abs(gp) > 500 ? null : gp;
+    }
   }
 
   const revenueTotal = periods.reduce((s, p) => s + p.revenue, 0);

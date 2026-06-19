@@ -16,6 +16,7 @@ import {
 } from '@/lib/financialAnalytics';
 import LedgerDrilldown from '@/components/finance/LedgerDrilldown';
 import { downloadCsv } from '@/lib/csv';
+import { assessDataQuality } from '@/lib/finance/dataQuality';
 import { getInventoryValuation, getBookedStockValue, postInventoryToBalance, type InventoryValuation } from '@/lib/inventory';
 
 const mny = (n: number) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} $`;
@@ -114,17 +115,14 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   useEffect(() => { revenueByClass(tenant, from || undefined, to || undefined).then(setRevByClass).catch(() => setRevByClass([])); }, [tenant, from, to]);
   const a = useMemo(() => computeFinancialAnalytics(ledger, { granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal }), [ledger, granularity, from, to, fiscalStartMonth, cash, arTotal, apTotal]);
 
-  // Auto-diagnostic : signale une donnée INCOMPLÈTE qui rend les marges non significatives (ex. démo sans
-  // côté coûts). Évite que le dashboard paraisse « cassé » : il EXPLIQUE qu'il manque des écritures.
-  const dataGaps = useMemo(() => {
-    const g: string[] = [];
-    if (a.revenueTotal > 0) {
-      if (a.payrollTotal === 0) g.push(tr('aucune masse salariale comptabilisée', 'no payroll booked'));
-      if (a.expenseTotal < a.revenueTotal * 0.05) g.push(tr('charges quasi nulles (< 5 % du CA)', 'expenses near zero (< 5% of revenue)'));
-      if (a.cogsTotal === 0) g.push(tr('aucun coût des ventes (COGS)', 'no cost of goods (COGS)'));
-    }
-    return g;
-  }, [a]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Auto-diagnostic de COMPLÉTUDE : marges/EBITDA non représentatifs tant que le côté coûts n'est pas saisi.
+  // Le moteur reste exact ; on ne fait qu'AVERTIR (bannière + % grisé + checklist), jamais bloquer.
+  const quality = useMemo(() => assessDataQuality(
+    { revenue: a.revenueTotal, cogs: a.cogsTotal, payroll: a.payrollTotal, opex: a.opexTotal, depreciation: a.dnaTotal },
+    (tr('fr', 'en') as 'fr' | 'en'),
+  ), [a]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sous-titre de pourcentage : grisé « non représentatif » si la donnée est incomplète, sinon le vrai %.
+  const pctSub = (real: string) => quality.isReliable ? real : tr('% non représentatif', '% not representative');
 
   // Donut RÉCONCILIÉ avec le CA (source unique = grand livre) : la somme des parts = CA de la carte.
   // Le reliquat « Non classé (grand livre) » = CA du GL − revenus déjà ventilés par classe (factures/transactions).
@@ -191,12 +189,12 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
   const kpis = [
     { label: tr('Chiffre d’affaires', 'Revenue'), value: mnyK(a.revenueTotal), icon: DollarSign, color: 'text-blue-600', cat: 'revenue' as DrillCategory, spark: a.periods.map(p => p.revenue) },
     { label: tr('Charges', 'Expenses'), value: mnyK(a.expenseTotal), icon: TrendingDown, color: 'text-rose-600', cat: 'expense' as DrillCategory, spark: a.periods.map(p => p.expense) },
-    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}`, cat: 'cogs' as DrillCategory, spark: a.periods.map(p => p.grossMargin) },
-    { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${a.marginPct.toFixed(1)} %`, spark: a.periods.map(p => p.margin) },
+    { label: tr('Marge brute', 'Gross margin'), value: mnyK(a.grossMarginTotal), icon: Activity, color: a.grossMarginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: pctSub(`${a.grossMarginPct.toFixed(1)} % · COGS ${mnyK(a.cogsTotal)}`), subDim: !quality.isReliable, cat: 'cogs' as DrillCategory, spark: a.periods.map(p => p.grossMargin) },
+    { label: tr('Marge nette', 'Net margin'), value: mnyK(a.marginTotal), icon: Activity, color: a.marginTotal >= 0 ? 'text-emerald-600' : 'text-red-600', sub: pctSub(`${a.marginPct.toFixed(1)} %`), subDim: !quality.isReliable, spark: a.periods.map(p => p.margin) },
     { label: tr('Masse salariale', 'Payroll'), value: mnyK(a.payrollTotal), icon: Users, color: 'text-violet-600', sub: `${a.payrollPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, cat: 'payroll' as DrillCategory, spark: a.periods.map(p => p.payroll) },
-    { label: tr('Croissance', 'Growth'), value: a.growthPct == null ? '—' : Math.abs(a.growthPct) > 500 ? tr('nouvelle activité', 'new activity') : `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %`, icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: a.growthPct != null && Math.abs(a.growthPct) > 500 ? tr('base de départ faible', 'low starting base') : tr('dernière période', 'last period') },
+    { label: tr('Croissance', 'Growth'), value: a.growthPct == null ? '—' : `${a.growthPct >= 0 ? '+' : ''}${a.growthPct.toFixed(1)} %`, icon: TrendingUp, color: (a.growthPct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600', sub: a.growthPct == null ? tr('démarrage — non significatif', 'start-up — not significant') : tr('dernière période', 'last period'), subDim: a.growthPct == null },
     { label: tr('Trésorerie', 'Cash'), value: mnyK(a.cash), icon: Wallet, color: 'text-slate-900 dark:text-white', sub: `AR ${mnyK(a.arTotal)} · AP ${mnyK(a.apTotal)}` },
-    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: `${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`, spark: a.periods.map(p => p.ebitda) },
+    { label: 'EBITDA', value: mnyK(a.ebitdaTotal), icon: Activity, color: a.ebitdaTotal >= 0 ? 'text-teal-600' : 'text-red-600', sub: pctSub(`${a.ebitdaPct.toFixed(1)} % ${tr('du CA', 'of rev.')}`), subDim: !quality.isReliable, spark: a.periods.map(p => p.ebitda) },
     { label: 'CAPEX', value: mnyK(a.capexTotal), icon: TrendingDown, color: 'text-amber-600', sub: tr('investissements', 'investments'), cat: 'capex' as DrillCategory, spark: a.periods.map(p => p.capex) },
   ];
 
@@ -237,13 +235,20 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
       </div>
       </div>
 
-      {/* Bandeau auto-diagnostic : données incomplètes (côté coûts non comptabilisé) */}
-      {dataGaps.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-          <AlertTriangle size={16} className="shrink-0" />
-          <span className="font-semibold">{tr('Données incomplètes — marges non significatives :', 'Incomplete data — margins not meaningful:')}</span>
-          <span>{dataGaps.join(' · ')}.</span>
-          <span className="opacity-90">{tr('Comptabilisez vos dépenses/paies (Admin › Compta › « Synchroniser tout ») pour des marges fiables.', 'Book your expenses/payroll (Admin › Accounting › “Sync all”) for reliable margins.')}</span>
+      {/* Bandeau auto-diagnostic + checklist d'onboarding comptable (non bloquant) */}
+      {!quality.isReliable && quality.warning && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>{quality.warning}</span>
+          </div>
+          {quality.missing.length > 0 && (
+            <details className="mt-2 pl-6 text-[13px]">
+              <summary className="cursor-pointer font-semibold">{tr(`Compléter la comptabilité (${quality.missing.length} élément(s) manquant(s))`, `Complete the accounting (${quality.missing.length} item(s) missing)`)}</summary>
+              <ul className="mt-1 list-disc pl-5 opacity-90">{quality.missing.map((mz, i) => <li key={i}>{mz}</li>)}</ul>
+              <p className="mt-1 opacity-80">{tr('Paie : approuver les feuilles de temps puis « Synchroniser tout » (Admin › Compta). Coûts de revient : comptabiliser les dépenses sur le compte 5300 (COGS).', 'Payroll: approve timesheets then “Sync all” (Admin › Accounting). Cost of goods: book expenses to account 5300 (COGS).')}</p>
+            </details>
+          )}
         </div>
       )}
 
@@ -261,7 +266,7 @@ export function FinancialDashboard({ tenant, tr }: { tenant: string; tr: (f: str
                 <Icon size={15} className="text-slate-300" />
               </div>
               <div className={`text-xl font-extrabold ${k.color}`}>{k.value}</div>
-              {k.sub && <div className="mt-0.5 text-[10px] text-slate-400">{k.sub}</div>}
+              {k.sub && <div className={`mt-0.5 text-[10px] ${(k as any).subDim ? 'italic text-amber-500/80' : 'text-slate-400'}`}>{k.sub}</div>}
               {spark.length > 1 && <Sparkline values={spark} />}
             </div>
           );
