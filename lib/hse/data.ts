@@ -121,3 +121,24 @@ export async function getRegistersDue(tenant: string): Promise<any[]> {
   const { data } = await supabase.from('hse_v_register_due').select('*').eq('tenant_id', tenant).order('review_due_at');
   return data || [];
 }
+
+// ── Indicateurs proactifs (leading) ──────────────────────────────────────────────────────────────────
+export type HseProactive = { id?: string; tenant_id?: string; project_id?: string | null; period_start: string; metric_code: string; count_value: number };
+export async function getProactiveMetrics(tenant: string): Promise<HseProactive[]> {
+  const { data } = await supabase.from('hse_proactive_metric').select('*').eq('tenant_id', tenant).order('period_start', { ascending: false });
+  return (data || []) as HseProactive[];
+}
+export async function saveProactiveMetric(tenant: string, p: HseProactive): Promise<{ error?: string }> {
+  const { error } = await supabase.from('hse_proactive_metric').upsert({
+    tenant_id: tenant, project_id: p.project_id || null, period_start: p.period_start, metric_code: p.metric_code, count_value: Number(p.count_value) || 0,
+  }, { onConflict: 'tenant_id,project_id,period_start,metric_code' });
+  return { error: error?.message };
+}
+
+// ── Interconnexions (contexte d'exposition — best-effort, jamais bloquant) ────────────────────────────
+export type HseInterconnect = { astCount: number; permitCount: number; plannedHours: number };
+export async function getInterconnectStats(tenant: string, plannedHours: number): Promise<HseInterconnect> {
+  const safeCount = async (table: string) => { try { const { count } = await supabase.from(table).select('*', { count: 'exact', head: true }).eq('tenant_id', tenant); return count || 0; } catch { return 0; } };
+  const [astCount, permitCount] = await Promise.all([safeCount('ast_forms'), safeCount('work_permits')]);
+  return { astCount, permitCount, plannedHours };
+}

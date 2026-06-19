@@ -10,9 +10,12 @@ import {
   getFrameworks, getRegisterTypes, getHseSettings, saveHseSettings, getTenantRegisters, toggleTenantRegister,
   getRegisterEntries, saveRegisterEntry, deleteRegisterEntry, computeReviewDue, getIncidents, saveIncident,
   getOpenDeadlines, getDeadlinesForIncident, completeDeadline, getHoursWorked, saveHoursWorked, getRegistersDue,
-  type HseFramework, type HseRegisterType, type HseSettings, type HseTenantRegister, type HseIncident, type HseDeadline, type HseHours,
+  getProactiveMetrics, getInterconnectStats,
+  type HseFramework, type HseRegisterType, type HseSettings, type HseTenantRegister, type HseIncident, type HseDeadline, type HseHours, type HseProactive, type HseInterconnect,
 } from '@/lib/hse/data';
 import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/lib/hse/kpi';
+import { resolveKpiHours, type HoursBreakdown } from '@/lib/hse/hoursSource';
+import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 
 type Tab = 'kpi' | 'incidents' | 'registers' | 'config';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -48,25 +51,34 @@ export default function HsePage() {
   const [tenantRegs, setTenantRegs] = useState<HseTenantRegister[]>([]);
   const [incidents, setIncidents] = useState<HseIncident[]>([]);
   const [deadlines, setDeadlines] = useState<HseDeadline[]>([]);
-  const [hours, setHours] = useState<HseHours[]>([]);
+  const [hours, setHours] = useState<HseHours[]>([]);          // saisies manuelles (hse_hours_worked)
+  const [autoHours, setAutoHours] = useState<HseHours[]>([]);  // dénominateur résolu (feuilles de temps + manuel)
+  const [breakdown, setBreakdown] = useState<HoursBreakdown | null>(null);
+  const [proactive, setProactive] = useState<HseProactive[]>([]);
+  const [interconnect, setInterconnect] = useState<HseInterconnect | null>(null);
   const [registersDue, setRegistersDue] = useState<any[]>([]);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [s, fw, rt, treg, inc, dl, hr, rd] = await Promise.all([
+      const [s, fw, rt, treg, inc, dl, hr, rd, pro] = await Promise.all([
         getHseSettings(tenant), getFrameworks(), getRegisterTypes(), getTenantRegisters(tenant),
         getIncidents(tenant), getOpenDeadlines(tenant), getHoursWorked(tenant), getRegistersDue(tenant),
+        getProactiveMetrics(tenant),
       ]);
       setSettings(s); setFrameworks(fw); setRegTypes(rt); setTenantRegs(treg);
-      setIncidents(inc); setDeadlines(dl); setHours(hr); setRegistersDue(rd);
+      setIncidents(inc); setDeadlines(dl); setHours(hr); setRegistersDue(rd); setProactive(pro);
+      // Dénominateur AUTO : feuilles de temps (réel) priorisées, manuel comble les semaines non couvertes.
+      const resolved = await resolveKpiHours(tenant, hr);
+      setAutoHours(resolved.hours); setBreakdown(resolved.breakdown);
+      setInterconnect(await getInterconnectStats(tenant, resolved.breakdown.plannedHours));
     } catch (e: any) { setNotice(tr('Module non initialisé — appliquez les migrations 248/249.', 'Module not initialized — apply migrations 248/249.')); }
     setLoading(false);
   }
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [tenant]);
 
   const rateBase = settings?.rate_base_hours || 200000;
-  const kpiRows = useMemo(() => computeMonthlyKpi(incidents as any, hours as any, rateBase), [incidents, hours, rateBase]);
+  const kpiRows = useMemo(() => computeMonthlyKpi(incidents as any, autoHours as any, rateBase), [incidents, autoHours, rateBase]);
   const agg = useMemo(() => computeAggregateKpi(kpiRows, rateBase), [kpiRows, rateBase]);
   const mny = (n: number) => (Number(n) || 0).toLocaleString(EN ? 'en-CA' : 'fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -94,7 +106,7 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} tenant={tenant} onHours={async (h: HseHours) => { await saveHoursWorked(tenant, h); setHours(await getHoursWorked(tenant)); }} settings={settings} />}
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={incidents} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
             {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id); setDeadlines(await getOpenDeadlines(tenant)); }} />}
             {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
@@ -106,9 +118,23 @@ export default function HsePage() {
 }
 
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, tenant, onHours, settings }: any) {
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, proactive, breakdown, interconnect, tenant, onHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
+
+  // Jours sans accident avec arrêt (indicateur d'affichage chantier).
+  const lastLti = (incidents || []).filter((i: any) => i.is_lost_time).map((i: any) => new Date(i.occurred_at).getTime()).sort((a: number, b: number) => b - a)[0];
+  const daysSinceLti = lastLti ? Math.floor((Date.now() - lastLti) / 86400000) : null;
+
+  // Qualité de données : mois avec incidents mais 0 heure (taux faussés).
+  const monthsNoHours = (kpiRows || []).filter((r: any) => r.hours <= 0 && (r.recordableCount > 0 || r.nearMissCount > 0 || r.ltiCount > 0)).map((r: any) => r.month);
+
+  const srcLabel: Record<string, string> = {
+    timesheets: tr('Feuilles de temps (auto)', 'Timesheets (auto)'),
+    manual: tr('Saisie manuelle', 'Manual entry'),
+    mixed: tr('Feuilles de temps + manuel', 'Timesheets + manual'),
+    none: tr('Aucune source', 'No source'),
+  };
   async function exportPdf() {
     const { exportHseScorecard } = await import('@/lib/hse/scorecardPdf');
     await exportHseScorecard({ tenant, lang: EN ? 'en' : 'fr', agg, rows: kpiRows, rateBase }).catch(() => {});
@@ -116,6 +142,18 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
   return (
     <div className="space-y-4">
       {!settings?.framework_id && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10">{tr('Configurez d’abord le cadre réglementaire (onglet Configuration).', 'Configure the regulatory framework first (Configuration tab).')}</div>}
+
+      {/* Compteur jours sans accident avec arrêt (affichage chantier) */}
+      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
+        <div className="flex items-end justify-between">
+          <div><div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident avec arrêt', 'Days without a lost-time injury')}</div>
+            <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{daysSinceLti == null ? '—' : daysSinceLti}</div></div>
+          <div className="text-right text-[11px] text-gray-400">{daysSinceLti == null ? tr('Aucun accident avec arrêt enregistré.', 'No lost-time injury on record.') : tr('Depuis le dernier LTI.', 'Since the last LTI.')}</div>
+        </div>
+      </div>
+
+      {monthsNoHours.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">⚠️ {tr('Qualité des données : mois avec incidents mais 0 heure travaillée (taux faussés)', 'Data quality: month(s) with incidents but 0 hours (rates skewed)')} — {monthsNoHours.join(', ')}.</div>}
+
       <div className="flex items-center justify-between"><h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">{tr('KPI cumulés', 'Aggregate KPIs')} <span className="text-xs font-normal text-gray-400">({tr('base', 'base')} {rateBase.toLocaleString()} h)</span></h2>
         {kpiRows.length > 0 && <button onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"><Download size={14} /> {tr('Scorecard PDF', 'Scorecard PDF')}</button>}
       </div>
@@ -132,6 +170,23 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         <Stat l={tr('Jours perdus', 'Lost days')} v={agg.lostDays} c="text-orange-600" />
       </div>
 
+      {/* Graphiques KPI (meilleures pratiques : tendances + pyramide Heinrich + leading/lagging) */}
+      <HseKpiCharts rows={kpiRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} />
+
+      {/* Interconnexions (contexte d'exposition issu des autres modules) */}
+      {interconnect && (
+        <div className={card}>
+          <h3 className="mb-2 text-sm font-bold">{tr('Interconnexions (exposition)', 'Interconnections (exposure)')}</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-center">
+            <div><div className="text-xl font-extrabold text-gray-700 dark:text-gray-200">{(breakdown?.timesheetHours || 0).toLocaleString()}</div><div className="text-[11px] text-gray-400">{tr('Heures réelles (feuilles de temps)', 'Real hours (timesheets)')}</div></div>
+            <div><div className="text-xl font-extrabold text-indigo-600">{(interconnect.plannedHours || 0).toLocaleString()}</div><div className="text-[11px] text-gray-400">{tr('Heures-homme planifiées (planner)', 'Planned man-hours (planner)')}</div></div>
+            <div><div className="text-xl font-extrabold text-sky-600">{interconnect.astCount}</div><div className="text-[11px] text-gray-400">{tr('AST (Santé et sécurité)', 'JSA forms')}</div></div>
+            <div><div className="text-xl font-extrabold text-amber-600">{interconnect.permitCount}</div><div className="text-[11px] text-gray-400">{tr('Permis de travail', 'Work permits')}</div></div>
+          </div>
+          <p className="mt-2 text-[11px] text-gray-400">{tr('Le dénominateur des taux utilise les heures RÉELLES (feuilles de temps). Le planifié et les compteurs AST/permis sont indicatifs (jamais additionnés au réel).', 'Rate denominator uses REAL hours (timesheets). Planned and AST/permit counts are indicative (never added to actuals).')}</p>
+        </div>
+      )}
+
       {kpiRows.length > 0 && (
         <div className={`${card} overflow-x-auto`}>
           <h3 className="mb-2 text-sm font-bold">{tr('Évolution mensuelle', 'Monthly trend')}</h3>
@@ -141,9 +196,13 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         </div>
       )}
 
-      {/* Heures travaillées (dénominateur) */}
+      {/* Heures travaillées (dénominateur) — AUTO depuis les feuilles de temps */}
       <div className={card}>
-        <h3 className="mb-2 text-sm font-bold">{tr('Heures travaillées (dénominateur des taux)', 'Hours worked (rate denominator)')}</h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-bold">{tr('Heures travaillées (dénominateur des taux)', 'Hours worked (rate denominator)')}</h3>
+          {breakdown && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{tr('Source', 'Source')} : {srcLabel[breakdown.source]} · {breakdown.weeks} {tr('semaine(s)', 'week(s)')}</span>}
+        </div>
+        <p className="mb-2 text-[11px] text-gray-500">{tr('Généré automatiquement depuis les feuilles de temps (cumul paie hebdo). La saisie ci-dessous est un complément manuel pour les semaines NON couvertes par les feuilles de temps.', 'Auto-generated from timesheets (weekly payroll roll-up). The entry below is a manual top-up for weeks NOT covered by timesheets.')}</p>
         <div className="mb-2 flex flex-wrap items-end gap-2">
           <label className="text-xs font-semibold text-gray-500">{tr('Semaine du', 'Week of')}<input type="date" value={h.period_start} onChange={e => setH({ ...h, period_start: e.target.value, period_end: e.target.value })} className="mt-1 block rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
           <label className="text-xs font-semibold text-gray-500">{tr('Heures', 'Hours')}<input type="number" value={h.hours} onChange={e => setH({ ...h, hours: e.target.value })} className="mt-1 block w-28 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
@@ -295,6 +354,8 @@ function ConfigTab({ tr, card, tenant, frameworks, regTypes, tenantRegs, setting
   const [rateBase, setRateBase] = useState(settings?.rate_base_hours || 200000);
   const [locale, setLocale] = useState(settings?.default_locale || 'fr');
   const [busy, setBusy] = useState(false);
+  // §0 — le <select> Cadre DOIT refléter la valeur sauvegardée même si settings arrive après le montage.
+  useEffect(() => { setFwId(settings?.framework_id || ''); setRateBase(settings?.rate_base_hours || 200000); setLocale(settings?.default_locale || 'fr'); }, [settings]);
   const enabledSet = new Set(tenantRegs.filter((t: any) => t.is_enabled).map((t: any) => t.register_type_id));
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
   // Juridictions canadiennes : base de normalisation = 200 000 h (100 travailleurs × 2 000 h), standard CSA/CNESST.
