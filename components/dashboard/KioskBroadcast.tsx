@@ -75,10 +75,26 @@ export function KioskBroadcast({ enabled, idleSeconds = 60, lang = 'fr', slides 
       <button onClick={() => setActive(false)} className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-white/10" title={tr('Fermer', 'Close')}><X size={22} /></button>
       {logoFailed
         ? <ShieldCheck size={40} className="mb-6 text-emerald-500/70" />
-        : <img src={logoUrl || '/logo.png'} alt="" className="mb-8 h-24 w-auto object-contain drop-shadow-lg" onError={() => setLogoFailed(true)} />}
-      <div className={`font-black leading-none ${s.accent}`} style={{ fontSize: 'clamp(7rem, 30vw, 24rem)' }}>{s.big}</div>
-      <div className="mt-4 text-2xl font-semibold uppercase tracking-[0.3em] text-slate-200 sm:text-3xl">{s.title}</div>
-      {s.sub && <div className="mt-2 text-slate-400">{s.sub}</div>}
+        : <img src={logoUrl || '/logo.png'} alt="" className="mb-6 h-20 w-auto object-contain drop-shadow-lg" onError={() => setLogoFailed(true)} />}
+      {s.stats && s.stats.length > 1 ? (
+        <>
+          <div className="mb-6 text-2xl font-semibold uppercase tracking-[0.3em] text-slate-200 sm:text-3xl">{s.title}</div>
+          <div className={`grid w-full max-w-5xl gap-x-10 gap-y-8 px-6 ${s.stats.length >= 4 ? 'grid-cols-2' : s.stats.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {s.stats.map((st, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className={`font-black leading-none ${st.accent || 'text-white'}`} style={{ fontSize: 'clamp(3.5rem, 12vw, 9rem)' }}>{st.value}</div>
+                <div className="mt-2 text-center text-base font-semibold uppercase tracking-[0.2em] text-slate-300 sm:text-lg">{st.label}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className={`font-black leading-none ${s.accent}`} style={{ fontSize: 'clamp(7rem, 30vw, 24rem)' }}>{s.big}</div>
+          <div className="mt-4 text-2xl font-semibold uppercase tracking-[0.3em] text-slate-200 sm:text-3xl">{s.title}</div>
+          {s.sub && <div className="mt-2 text-slate-400">{s.sub}</div>}
+        </>
+      )}
       <div className="mt-10 flex gap-2">
         {shown.map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i === idx ? 'bg-white' : 'bg-white/30'}`} />)}
       </div>

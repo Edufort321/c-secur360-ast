@@ -3,15 +3,15 @@
 // RÉELLES (mêmes chiffres que les widgets) et le plein écran les fait défiler une après l'autre.
 // Clé stable par carte = persistée dans company_settings.kiosk_cards (jsonb : string[]).
 
-export type KioskSlide = { key: string; big: string | number; title: string; sub?: string; accent: string };
+// Une diapo = UNE carte de module. `stats` (jusqu'à 4) = les chiffres affichés ensemble sur la MÊME fiche
+// (comme la carte du dashboard). `big`/`title` = repli mono-stat (rétrocompat).
+export type KioskStat = { value: string | number; label: string; accent?: string };
+export type KioskSlide = { key: string; big: string | number; title: string; sub?: string; accent: string; stats?: KioskStat[] };
 export type KioskCardDef = { key: string; fr: string; en: string };
 
-// Ordre = ordre d'affichage par défaut dans la rotation et dans les réglages.
+// Ordre = ordre d'affichage par défaut dans la rotation et dans les réglages. UNE carte par module.
 export const KIOSK_CARDS: KioskCardDef[] = [
-  { key: 'days_no_accident', fr: 'Jours sans accident', en: 'Days without accident' },
-  { key: 'days_no_nearmiss', fr: 'Jours sans passé proche', en: 'Days without near-miss' },
-  { key: 'accidents_ytd', fr: 'Accidents (année courante)', en: 'Accidents (current year)' },
-  { key: 'nearmiss_ytd', fr: 'Passés proches (année courante)', en: 'Near-misses (current year)' },
+  { key: 'safety', fr: 'Sécurité (4 stats)', en: 'Safety (4 stats)' },
   { key: 'projects', fr: 'Projets en cours', en: 'Active projects' },
   { key: 'ast', fr: 'AST / analyses de risque', en: 'JSA / risk analyses' },
   { key: 'permits', fr: 'Permis actifs', en: 'Active permits' },
@@ -45,16 +45,36 @@ export function buildKioskSlides(d: KioskStatsInput): KioskSlide[] {
   const EN = d.lang === 'en';
   const tr = (fr: string, en: string) => (EN ? en : fr);
   const out: KioskSlide[] = [];
+  const money = (n: number) => `${Math.round((Number(n) || 0) / (Math.abs(n) >= 1000 ? 1000 : 1))}${Math.abs(n) >= 1000 ? ' k$' : ' $'}`;
   const s = d.safety;
   if (s) {
-    out.push({ key: 'days_no_accident', big: s.daysSinceAccident ?? 0, title: tr('JOURS SANS ACCIDENT', 'DAYS WITHOUT ACCIDENT'), sub: tr('Sécurité d’abord', 'Safety first'), accent: 'text-emerald-400' });
-    out.push({ key: 'days_no_nearmiss', big: s.daysSinceNearMiss ?? 0, title: tr('JOURS SANS PASSÉ PROCHE', 'DAYS WITHOUT NEAR-MISS'), accent: 'text-sky-400' });
-    out.push({ key: 'accidents_ytd', big: s.accidentsYTD ?? 0, title: tr(`ACCIDENTS EN ${s.year}`, `ACCIDENTS IN ${s.year}`), accent: s.accidentsYTD ? 'text-rose-400' : 'text-emerald-400' });
-    out.push({ key: 'nearmiss_ytd', big: s.nearMissYTD ?? 0, title: tr(`PASSÉS PROCHES EN ${s.year}`, `NEAR-MISSES IN ${s.year}`), accent: s.nearMissYTD ? 'text-amber-400' : 'text-emerald-400' });
+    out.push({
+      key: 'safety', big: s.daysSinceAccident ?? 0, title: tr('SÉCURITÉ', 'SAFETY'), accent: 'text-emerald-400',
+      stats: [
+        { value: s.daysSinceAccident ?? 0, label: tr('Jours sans accident', 'Days w/o accident'), accent: 'text-emerald-400' },
+        { value: s.daysSinceNearMiss ?? 0, label: tr('Jours sans passé proche', 'Days w/o near-miss'), accent: 'text-sky-400' },
+        { value: s.accidentsYTD ?? 0, label: tr(`Accidents ${s.year}`, `Accidents ${s.year}`), accent: s.accidentsYTD ? 'text-rose-400' : 'text-emerald-400' },
+        { value: s.nearMissYTD ?? 0, label: tr(`Passés proches ${s.year}`, `Near-misses ${s.year}`), accent: s.nearMissYTD ? 'text-amber-400' : 'text-emerald-400' },
+      ],
+    });
   }
-  if (d.proj) out.push({ key: 'projects', big: d.proj.encours, title: tr('PROJETS EN COURS', 'ACTIVE PROJECTS'), sub: tr(`${d.proj.facture} facturés`, `${d.proj.facture} invoiced`), accent: 'text-indigo-400' });
+  if (d.proj) out.push({
+    key: 'projects', big: d.proj.encours, title: tr('PROJETS', 'PROJECTS'), accent: 'text-indigo-400',
+    stats: [
+      { value: d.proj.encours, label: tr('En cours', 'Active'), accent: 'text-indigo-400' },
+      { value: d.proj.soumission, label: tr('En soumission', 'In quote'), accent: 'text-sky-400' },
+      { value: d.proj.facture, label: tr('Facturés', 'Invoiced'), accent: 'text-emerald-400' },
+      { value: money(d.proj.amount), label: tr('Valeur contrats', 'Contract value'), accent: 'text-violet-400' },
+    ],
+  });
   if (d.ast) out.push({ key: 'ast', big: d.ast.total, title: tr('ANALYSES DE RISQUE (AST)', 'RISK ANALYSES (JSA)'), accent: 'text-cyan-400' });
-  if (d.permit) out.push({ key: 'permits', big: d.permit.active, title: tr('PERMIS ACTIFS', 'ACTIVE PERMITS'), sub: tr(`${d.permit.total} au total`, `${d.permit.total} total`), accent: 'text-orange-400' });
+  if (d.permit) out.push({
+    key: 'permits', big: d.permit.active, title: tr('PERMIS DE TRAVAIL', 'WORK PERMITS'), accent: 'text-orange-400',
+    stats: [
+      { value: d.permit.total, label: tr('Total', 'Total'), accent: 'text-gray-300' },
+      { value: d.permit.active, label: tr('Actifs', 'Active'), accent: 'text-orange-400' },
+    ],
+  });
   if (d.plan && (d.plan.roster || d.plan.occCount)) out.push({ key: 'planner', big: `${d.plan.occ}%`, title: tr('TAUX D’OCCUPATION', 'OCCUPANCY RATE'), sub: tr(`${d.plan.occCount}/${d.plan.roster} affectés aujourd’hui`, `${d.plan.occCount}/${d.plan.roster} assigned today`), accent: 'text-violet-400' });
   if (d.invCount != null) out.push({ key: 'inventory', big: d.invCount, title: tr('ARTICLES EN INVENTAIRE', 'INVENTORY ITEMS'), accent: 'text-teal-400' });
   if (d.dgaStats) out.push({ key: 'dga', big: d.dgaStats.all, title: tr('TRANSFORMATEURS SUIVIS', 'MONITORED TRANSFORMERS'), sub: d.dgaStats.critical ? tr(`${d.dgaStats.critical} critiques`, `${d.dgaStats.critical} critical`) : undefined, accent: d.dgaStats.critical ? 'text-rose-400' : 'text-emerald-400' });
@@ -69,6 +89,8 @@ export function selectKioskSlides(all: KioskSlide[], selected?: string[] | null)
   const order = KIOSK_CARDS.map(c => c.key);
   const sorted = [...all].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
   if (!selected || !selected.length) return sorted;
+  // Rétrocompat : anciennes clés sécurité (4 cartes séparées) → carte unique « safety ».
   const set = new Set(selected);
+  if (['days_no_accident', 'days_no_nearmiss', 'accidents_ytd', 'nearmiss_ytd'].some(k => set.has(k))) set.add('safety');
   return sorted.filter(s => set.has(s.key));
 }
