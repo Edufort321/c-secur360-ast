@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Trash2, Plus, Boxes, Check, Download } from 'lucide-react';
 import { getAssets, saveAsset, deleteAsset, assetsBookValue, annualDepreciation, ASSET_CATEGORIES, type CompanyAsset } from '@/lib/assets';
 import { netBookValue } from '@/lib/depreciation';
+import { CCA_CLASSES, suggestCcaClass, ccaForAssetYear, ccaScheduleTotal } from '@/lib/cca';
 import { downloadCsv, type CsvColumn } from '@/lib/csv';
 import { getAccounts, createEntry } from '@/lib/accounting';
 
@@ -103,6 +104,7 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
             <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">{tr('Amortissement', 'Depreciation')}</span>
             <select value={depYear} onChange={e => setDepYear(Number(e.target.value))} className={inp}>{[0, 1, 2, 3].map(d => { const y = new Date().getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}</select>
             <button onClick={postDepreciation} disabled={depBusy} className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50">{depBusy ? <Loader2 size={13} className="animate-spin" /> : null} {tr('Comptabiliser', 'Post')}</button>
+            <span className="text-[10px] text-amber-700/70 dark:text-amber-300/70" title={tr('Déduction pour amortissement — déclinant + demi-année, sans incitatif accéléré. Estimation à valider.', 'CCA — declining balance + half-year, no accelerated incentive. Estimate to validate.')}>{tr('DPA fiscale est.', 'Est. CCA')} {depYear} : {mny(ccaScheduleTotal(rows, depYear))}</span>
           </div>
         )}
       </div>
@@ -118,6 +120,12 @@ export function AssetsModule({ tenant, tr, canEdit }: { tenant: string; tr: Tr; 
             <label className="text-xs font-semibold text-gray-500">{tr('N° de série', 'Serial #')}<input value={edit.serial_number || ''} onChange={e => setEdit({ ...edit, serial_number: e.target.value })} className={`mt-1 w-full ${inp}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Durée de vie (ans)', 'Useful life (yrs)')}<input type="number" step="0.5" value={edit.useful_life_years ?? ''} onChange={e => setEdit({ ...edit, useful_life_years: e.target.value === '' ? null : Number(e.target.value) })} placeholder={tr('ex. 5', 'e.g. 5')} className={`mt-1 w-full text-right ${inp}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Valeur résiduelle ($)', 'Salvage value ($)')}<input type="number" step="0.01" value={edit.salvage_value || 0} onChange={e => setEdit({ ...edit, salvage_value: Number(e.target.value) || 0 })} className={`mt-1 w-full text-right ${inp}`} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Catégorie DPA (fiscal)', 'CCA class (tax)')}
+              <select value={edit.cca_class || suggestCcaClass(edit.category)} onChange={e => setEdit({ ...edit, cca_class: e.target.value })} className={`mt-1 w-full ${inp}`}>
+                {CCA_CLASSES.map(c => <option key={c.code} value={c.code}>{tr(c.fr, c.en)} — {Math.round(c.rate * 100)}%</option>)}
+              </select>
+              <span className="text-[10px] text-gray-400">{tr('Amortissement fiscal (T2 annexe 8), distinct du comptable.', 'Tax depreciation (T2 sch. 8), separate from book.')}</span>
+            </label>
             <label className="text-xs font-semibold text-gray-500">{tr('Statut', 'Status')}<select value={edit.status} onChange={e => setEdit({ ...edit, status: e.target.value as any })} className={`mt-1 w-full ${inp}`}><option value="active">{tr('Actif', 'Active')}</option><option value="disposed">{tr('Cédé / disposé', 'Disposed')}</option></select></label>
           </div>
           <div className="mt-3 flex justify-end gap-2">

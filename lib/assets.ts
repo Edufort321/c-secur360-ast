@@ -7,6 +7,7 @@ export type CompanyAsset = {
   cost: number; supplier?: string | null; serial_number?: string | null; useful_life_years?: number | null;
   salvage_value?: number; status?: 'active' | 'disposed'; disposal_date?: string | null;
   gl_entry_id?: string | null; notes?: string | null;
+  cca_class?: string | null;   // catégorie DPA (ARC) pour l'amortissement fiscal (migration 247)
 };
 
 export const ASSET_CATEGORIES = ['Informatique', 'Mobilier de bureau', 'Véhicule', 'Équipement', 'Outillage', 'Bâtiment', 'Autre'];
@@ -24,11 +25,18 @@ export async function saveAsset(tenant: string, a: CompanyAsset): Promise<string
     useful_life_years: a.useful_life_years != null && a.useful_life_years !== ('' as any) ? Number(a.useful_life_years) : null,
     salvage_value: Number(a.salvage_value) || 0, status: a.status || 'active', disposal_date: a.disposal_date || null,
     gl_entry_id: a.gl_entry_id ?? null, notes: a.notes || null, updated_at: new Date().toISOString(),
+    cca_class: a.cca_class || null,
   };
-  if (a.id) { const { error } = await supabase.from('company_assets').update(row).eq('id', a.id).eq('tenant_id', tenant); if (error) throw error; return a.id; }
-  const { data, error } = await supabase.from('company_assets').insert(row).select('id').single();
-  if (error) throw error;
-  return (data as any).id as string;
+  const stripCca = (e: any) => /cca_class|column|schema/i.test(String(e?.message || '')); // repli mig 247 absente
+  if (a.id) {
+    let { error } = await supabase.from('company_assets').update(row).eq('id', a.id).eq('tenant_id', tenant);
+    if (error && stripCca(error)) { const { cca_class, ...r2 } = row; ({ error } = await supabase.from('company_assets').update(r2).eq('id', a.id).eq('tenant_id', tenant)); }
+    if (error) throw error; return a.id;
+  }
+  let res = await supabase.from('company_assets').insert(row).select('id').single();
+  if (res.error && stripCca(res.error)) { const { cca_class, ...r2 } = row; res = await supabase.from('company_assets').insert(r2).select('id').single(); }
+  if (res.error) throw res.error;
+  return (res.data as any).id as string;
 }
 
 export async function deleteAsset(tenant: string, id: string): Promise<void> {
