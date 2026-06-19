@@ -57,6 +57,37 @@ export function generationRatePerDay(prevVal: number, prevDateIso: string, curVa
   return ((Number(curVal) || 0) - (Number(prevVal) || 0)) / days;
 }
 
+// 90e percentile du TAUX de génération (ppm/AN) par gaz — IEEE C57.104-2019 Table 3/4 (À VALIDER).
+// Le taux distingue un défaut ACTIF d'un défaut historique : c'est LE paramètre central de l'édition 2019.
+export const RATE_PCT90_PER_YEAR: Record<string, number> = {
+  h2: 100, ch4: 90, c2h6: 70, c2h4: 70, c2h2: 4, co: 500, co2: 5000,
+};
+export type RateLevel = 'ok' | 'warn' | 'crit';
+export type GasRate = { gas: string; perDay: number | null; perYear: number | null; threshold: number | null; level: RateLevel };
+
+// Niveau d'un taux vs le seuil 90e pct : ok ≤ seuil, warn ≤ 3× seuil, crit au-delà.
+export function rateLevel(perYear: number | null, threshold: number | null): RateLevel {
+  if (perYear == null || threshold == null || threshold <= 0) return 'ok';
+  if (perYear <= threshold) return 'ok';
+  if (perYear <= threshold * 3) return 'warn';
+  return 'crit';
+}
+
+// Taux de génération de TOUS les gaz entre deux échantillons (ppm/jour + ppm/an + niveau).
+const RATE_GASES = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2'] as const;
+export function generationRates(
+  prev: Record<string, any> & { sample_date?: string; date?: string },
+  cur: Record<string, any> & { sample_date?: string; date?: string },
+): GasRate[] {
+  const pd = prev.sample_date || prev.date || ''; const cd = cur.sample_date || cur.date || '';
+  return RATE_GASES.map(g => {
+    const perDay = generationRatePerDay(Number(prev[g]) || 0, pd, Number(cur[g]) || 0, cd);
+    const perYear = perDay == null ? null : perDay * 365;
+    const threshold = RATE_PCT90_PER_YEAR[g] ?? null;
+    return { gas: g, perDay, perYear, threshold, level: rateLevel(perYear, threshold) };
+  });
+}
+
 // Interprétation CO₂/CO (IEC 60599) — implication du papier (cellulose).
 export function co2coRatio(co2?: number | null, co?: number | null): number | null {
   const C2 = Number(co2), C = Number(co);

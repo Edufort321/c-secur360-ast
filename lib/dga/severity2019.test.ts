@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   o2n2Ratio, transformerType, threshold90, overThreshold, generationRatePerDay,
-  co2coRatio, co2coInterpretation, canConcludeStabilized,
+  co2coRatio, co2coInterpretation, canConcludeStabilized, generationRates,
 } from './severity2019';
 import { duvalTriangle1 } from './diagnose';
 
@@ -36,6 +36,15 @@ describe('DGA NEW RICHMOND TG1 — Partie C (IEEE C57.104-2019)', () => {
   it('taux de génération C₂H₂ ≈ 2,6 ppm/jour', () => {
     const rate = generationRatePerDay(s2024.C2H2, s2024.date, s2025.C2H2, s2025.date)!;
     expect(rate).toBeCloseTo(2.6, 1);
+  });
+
+  it('taux de génération par gaz : C₂H₂ critique (≫ seuil 90e pct)', () => {
+    const prev = { ...s2024, sample_date: s2024.date, h2: s2024.H2, ch4: s2024.CH4, c2h6: s2024.C2H6, c2h4: s2024.C2H4, c2h2: s2024.C2H2, co: s2024.CO, co2: s2024.CO2 };
+    const cur = { ...s2025, sample_date: s2025.date, h2: s2025.H2, ch4: s2025.CH4, c2h6: s2025.C2H6, c2h4: s2025.C2H4, c2h2: s2025.C2H2, co: s2025.CO, co2: s2025.CO2 };
+    const rates = generationRates(prev, cur);
+    const c2h2 = rates.find(r => r.gas === 'c2h2')!;
+    expect(c2h2.perDay!).toBeCloseTo(2.6, 1);
+    expect(c2h2.level).toBe('crit'); // ~950 ppm/an ≫ seuil 4 ppm/an
   });
 
   it('NE PEUT PAS conclure « stabilisé » avec 2 mesures et un saut récent', () => {

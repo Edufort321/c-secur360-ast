@@ -21,6 +21,7 @@ import {
 } from '@/lib/dga/fields';
 import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
+import { generationRates, type GasRate } from '@/lib/dga/severity2019';
 import { interpret, globalAnalysis } from '@/lib/dga/interpret';
 import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, addDays, autoNextDate, dueStatusByDate,
@@ -180,6 +181,8 @@ export function TransfoView(props: {
   const trendA = trendAnalysis(data.map(m => ({ date: m.sample_date, c2h2: +(m.c2h2 || 0), tdcg: +(m.tdcg || 0) })), lang);
   const gAna = globalAnalysis(cur as any, oilEval, furan, worst, lang);
   const rogers = rogersRatios(cur);
+  // Taux de génération par gaz (ppm/jour) — défaut actif vs historique (IEEE C57.104-2019).
+  const genRates: GasRate[] = prev ? generationRates(prev as any, cur as any) : [];
   const pcbVerdict = pcbStatus(latestPcb(data), lang);
 
   // QR public du transformateur (lecture seule hors connexion ; édition si connecté).
@@ -509,6 +512,25 @@ export function TransfoView(props: {
                 ))}
               </div>
             </section>
+
+            {genRates.length > 0 && genRates.some(r => r.perDay != null) && (
+              <section className={CARD}>
+                <h2 className={H2}>{tr('Taux de génération (ppm/jour)', 'Generation rate (ppm/day)')}</h2>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                  {genRates.map(r => {
+                    const lbl = ({ h2: 'H₂', ch4: 'CH₄', c2h6: 'C₂H₆', c2h4: 'C₂H₄', c2h2: 'C₂H₂', co: 'CO', co2: 'CO₂' } as Record<string, string>)[r.gas] || r.gas;
+                    const col = r.level === 'crit' ? '#9d0208' : r.level === 'warn' ? '#c0651a' : '#2a9d8f';
+                    return (
+                      <div key={r.gas} className="rounded-lg border border-gray-200 p-2 text-center dark:border-gray-700" style={{ borderLeft: `4px solid ${col}` }}>
+                        <div className="text-base font-extrabold" style={{ color: col }}>{r.perDay == null ? '—' : r.perDay.toFixed(r.perDay >= 10 ? 0 : 2)}</div>
+                        <div className="text-[10px] text-gray-500">{lbl}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[11px] text-gray-400">{tr('Vert sous le seuil 90e pct (ppm/an), ambre ≤ 3×, rouge au-delà — IEEE C57.104-2019 (à valider). Le taux distingue un défaut actif d’un défaut historique.', 'Green below 90th-pct rate, amber ≤ 3×, red beyond — IEEE C57.104-2019 (to validate).')}</p>
+              </section>
+            )}
 
             {furan && (
               <section className={CARD}>
