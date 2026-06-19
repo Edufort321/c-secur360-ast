@@ -103,6 +103,37 @@ export function co2coInterpretation(ratio: number | null, lang: 'fr' | 'en' = 'f
   return EN ? 'intermediate zone — correlate with the electrical fault' : 'zone intermédiaire — à corréler avec le défaut électrique';
 }
 
+// ── Indice de santé global (Health Index 0–100) — agrège gaz combustibles, taux de génération, qualité
+//    huile et papier (DP). Lecture immédiate pour le client. INDICATIF (à valider par personne qualifiée).
+export type HealthBand = 'excellent' | 'bon' | 'a_surveiller' | 'critique';
+export type HealthInput = {
+  c2h2Over?: number | null;     // multiple du seuil 90e pct C₂H₂
+  worstCondition?: number;      // 1–4 (IEEE C57.104 conditions, legacy)
+  genRates?: GasRate[];         // taux de génération par gaz
+  oilPoor?: number; oilFair?: number; // nb de paramètres d'huile mauvais / moyens
+  dp?: number | null;           // degré de polymérisation du papier (furanes)
+};
+export function healthBand(score: number): HealthBand {
+  if (score >= 80) return 'excellent';
+  if (score >= 60) return 'bon';
+  if (score >= 40) return 'a_surveiller';
+  return 'critique';
+}
+export function computeHealthIndex(inp: HealthInput): { score: number; band: HealthBand } {
+  let s = 100;
+  const cond = inp.worstCondition || 1;
+  s -= cond === 4 ? 45 : cond === 3 ? 25 : cond === 2 ? 10 : 0;
+  const over = inp.c2h2Over ?? 0;
+  s -= over > 100 ? 40 : over > 10 ? 25 : over > 1 ? 10 : 0;
+  const crit = (inp.genRates || []).filter(r => r.level === 'crit').length;
+  const warn = (inp.genRates || []).filter(r => r.level === 'warn').length;
+  s -= Math.min(36, crit * 12 + warn * 5);
+  s -= Math.min(24, (inp.oilPoor || 0) * 8 + (inp.oilFair || 0) * 3);
+  if (inp.dp != null) s -= inp.dp < 250 ? 25 : inp.dp < 450 ? 12 : inp.dp < 700 ? 4 : 0;
+  const score = Math.max(0, Math.min(100, Math.round(s)));
+  return { score, band: healthBand(score) };
+}
+
 // ── Garde anti-« stabilisé » : interdit le verdict de stabilisation s'il n'y a pas ≥ 2 points APRÈS
 //    le dernier SAUT (delta > seuil). Avec 2 mesures et un saut récent, on NE PEUT PAS conclure stabilisé.
 export type SampleLite = { date: string; value: number };
