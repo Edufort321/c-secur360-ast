@@ -522,9 +522,9 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   const [open, setOpen] = useState<Set<string>>(new Set()); // semaines dépliées (clé = period_start)
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [tenantName, setTenantName] = useState<string>(tenant);
-  // Vue « tous les employés actifs par semaine » (l'admin crée/édite la feuille au nom de l'employé).
-  const [empView, setEmpView] = useState(false);
-  const [activeEmps, setActiveEmps] = useState<{ id: string; name: string }[]>([]);
+  // Vue « tous les employés enregistrés par semaine » (l'admin ouvre/vérifie la feuille de chacun, même sans donnée).
+  const [empView, setEmpView] = useState(true);
+  const [activeEmps, setActiveEmps] = useState<{ id: string; name: string; active: boolean }[]>([]);
   const [weekStart, setWeekStart] = useState(() => { const x = new Date(); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); });
   const [creatingFor, setCreatingFor] = useState<string | null>(null);
   const weekEndOf = (s: string) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10); };
@@ -576,7 +576,8 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const list = data || [];
     setSheets(list);
     try { setRows(await buildPayrollRows(tenant, list)); } catch { setRows([]); }
-    try { const { data: emps } = await supabase.from('planner_personnel').select('id, name, is_active').eq('tenant_id', tenant).order('name'); setActiveEmps((emps || []).filter((e: any) => e.is_active !== false && e.name).map((e: any) => ({ id: e.id, name: e.name }))); } catch { /* ignore */ }
+    // TOUS les employés enregistrés (actifs ET inactifs) — pour les voir même sans aucune feuille/donnée.
+    try { const { data: emps } = await supabase.from('planner_personnel').select('id, name, is_active').eq('tenant_id', tenant).order('name'); setActiveEmps((emps || []).filter((e: any) => e.name).map((e: any) => ({ id: e.id, name: e.name, active: e.is_active !== false }))); } catch { /* ignore */ }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -716,24 +717,25 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
       {empView && (
         <div className="rounded-2xl border border-blue-200 bg-white p-4 dark:border-blue-500/30 dark:bg-gray-800">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Feuilles de la semaine — tous les employés actifs', 'Week sheets — all active employees')}</span>
+            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{tr('Feuilles de la semaine — tous les employés enregistrés', 'Week sheets — all registered employees')}</span>
             <input type="date" value={weekStart} onChange={e => setWeekStart(snapMonday(e.target.value))} className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900" />
-            <span className="text-xs text-gray-400">{tr('Semaine du', 'Week of')} {weekStart} → {weekEndOf(weekStart)}</span>
+            <span className="text-xs text-gray-400">{tr('Semaine du', 'Week of')} {weekStart} → {weekEndOf(weekStart)} · {activeEmps.length} {tr('employé(s)', 'employee(s)')}</span>
           </div>
+          <p className="mb-2 text-[11px] text-gray-400">{tr('Tous les employés apparaissent, même sans feuille. Cliquez « Ouvrir » pour vérifier la semaine (heures par jour, détails et dépenses).', 'All employees appear, even with no sheet. Click “Open” to verify the week (daily hours, details and expenses).')}</p>
           <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr><th className="px-3 py-2">{tr('Employé', 'Employee')}</th><th className="px-3 py-2">{tr('Statut', 'Status')}</th><th className="px-3 py-2 text-right"></th></tr></thead>
               <tbody>
-                {activeEmps.length === 0 && <tr><td colSpan={3} className="px-3 py-6 text-center text-gray-400">{tr('Aucun employé actif.', 'No active employee.')}</td></tr>}
+                {activeEmps.length === 0 && <tr><td colSpan={3} className="px-3 py-6 text-center text-gray-400">{tr('Aucun employé enregistré (ajoutez-les dans Employés).', 'No registered employee (add them in Employees).')}</td></tr>}
                 {activeEmps.map(emp => {
                   const sh = sheets.find(s => String(s.employee_id) === String(emp.id) && s.period_start === weekStart);
                   return (
                     <tr key={emp.id} className="border-t border-gray-100 dark:border-gray-700/50">
-                      <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{emp.name}</td>
+                      <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">{emp.name}{!emp.active && <span className="ml-2 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-gray-400 dark:bg-gray-700">{tr('inactif', 'inactive')}</span>}</td>
                       <td className="px-3 py-2">{sh ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tsCls(sh.status)}`}>{tsLabel(sh.status)}</span> : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-700">{tr('Aucune feuille', 'No sheet')}</span>}</td>
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => openOrCreateSheet(emp)} disabled={creatingFor === emp.id} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-                          {creatingFor === emp.id ? <Loader2 size={12} className="animate-spin" /> : null} {sh ? tr('Éditer', 'Edit') : tr('Créer + éditer', 'Create + edit')}
+                          {creatingFor === emp.id ? <Loader2 size={12} className="animate-spin" /> : null} {sh ? tr('Ouvrir / vérifier', 'Open / verify') : tr('Ouvrir (créer)', 'Open (create)')}
                         </button>
                       </td>
                     </tr>
