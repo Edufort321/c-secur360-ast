@@ -36,6 +36,8 @@ interface FactureData {
   materiel_billable: boolean;      // inclure le matériel consommé (inventaire) au PRIX VENDANT
   tps: boolean;
   tvq: boolean;
+  round_manual?: boolean;          // arrondi manuel (manuscrit) du total
+  round_total?: number | null;     // total final saisi à la main (remplace le total calculé)
   notes: string;
   approved: boolean;
   approved_at: string | null;
@@ -125,7 +127,12 @@ export function FactureTab({
   const subtotal = base + extrasTotal + surchargeKmAmount + expensesBillableAmount + materielBillableAmount;
   const tpsMnt = facture.tps ? subtotal * TPS : 0;
   const tvqMnt = facture.tvq ? subtotal * TVQ : 0;
-  const total = subtotal + tpsMnt + tvqMnt;
+  const computedTotal = subtotal + tpsMnt + tvqMnt;
+  // Arrondi MANUEL (manuscrit) : si activé et un total est saisi, il REMPLACE le total calculé ;
+  // l'écart (positif ou négatif) est porté en ligne « Arrondi » (hors taxe) sur la facture.
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const roundingAdj = facture.round_manual && facture.round_total != null ? round2(Number(facture.round_total) - computedTotal) : 0;
+  const total = round2(computedTotal + roundingAdj);
 
   const isForfaitaire = project?.project_type === 'forfaitaire';
 
@@ -182,6 +189,8 @@ export function FactureTab({
         ...(expensesBillableAmount > 0 ? [mkItem(tr('Dépenses refacturables', 'Billable expenses'), expensesBillableAmount)] : []),
         ...(materielBillableAmount > 0 ? [mkItem(tr('Matériel (inventaire)', 'Material (inventory)'), materielBillableAmount)] : []),
         ...facture.extras.filter(e => Number(e.amount) !== 0).map(e => mkItem(e.desc || 'Extra', Number(e.amount) || 0)),
+        // Arrondi manuel : ligne HORS TAXE pour que le grand total de la facture corresponde au total saisi.
+        ...(roundingAdj !== 0 ? [{ description: tr('Arrondi', 'Rounding'), quantity: 1, unit_price: roundingAdj, subtotal: roundingAdj, taxable: false, tax_category: 'exempt' as const }] : []),
       ].filter(it => it.unit_price !== 0);
 
       let commerceId = facture.commerce_invoice_id || null;
@@ -462,6 +471,26 @@ export function FactureTab({
               <span>TVQ (9,975%)</span><span className="tabular-nums">{money(tvqMnt)}</span>
             </div>
           )}
+
+          {/* Arrondi manuel (manuscrit) */}
+          <div className="border-t border-gray-100 py-2.5 dark:border-gray-700">
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <input type="checkbox" checked={!!facture.round_manual} onChange={e => set('round_manual', e.target.checked)} className="accent-emerald-600" />
+              {tr('Arrondi manuel du total', 'Manual total rounding')}
+            </label>
+            {facture.round_manual && (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{tr('Total facturé (saisi à la main)', 'Invoiced total (typed)')}</span>
+                  <input type="number" step="0.01" value={facture.round_total ?? ''} placeholder={String(round2(computedTotal))}
+                    onChange={e => set('round_total', e.target.value === '' ? null : Number(e.target.value))}
+                    className="w-32 rounded-lg border border-gray-200 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-gray-700 dark:bg-gray-800" />
+                  <button type="button" onClick={() => set('round_total', Math.round(computedTotal))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-700">{tr('Au $ près', 'To nearest $')}</button>
+                </div>
+                {roundingAdj !== 0 && <span className={`text-xs font-semibold tabular-nums ${roundingAdj < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{tr('Ajustement', 'Adjustment')} : {roundingAdj > 0 ? '+' : ''}{money(roundingAdj)}</span>}
+              </div>
+            )}
+          </div>
 
           {/* Total */}
           <div className="flex items-center justify-between py-3">
