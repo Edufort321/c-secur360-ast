@@ -117,17 +117,22 @@ export function getSegment(g: SeverityGases, ageYears?: number | null): Segment 
 
 type GasLimits = { p90: number; p95: number };
 type SegmentKey = `${SegO2N2}_${SegAge}`;
-// PLACEHOLDERS de structure — à remplacer par les valeurs officielles. _default = repli ; surcharges par segment.
+// _default = seuils GLOBAUX PUBLIÉS de la version simplifiée d'IEEE C57.104-2019 (Table 1 = 90ᵉ, Table 2 = 95ᵉ,
+// toutes catégories confondues ; valeurs reproduites dans des sources publiques attribuées à M. Duval).
+// ⚠️ La GRILLE FINE par O₂/N₂ × âge (≤10 / 10-30 / >30) reste à saisir depuis la norme officielle (payante) via
+// les SURCHARGES de segment ci-dessous (ou l'admin « Normes de référence »). Validation finale = personne qualifiée.
 export const PERCENTILES: Record<SeverityGasKey, Partial<Record<SegmentKey, GasLimits>>> & { _default: Record<SeverityGasKey, GasLimits> } = {
   _default: {
-    H2: { p90: 80, p95: 200 }, CH4: { p90: 90, p95: 150 }, C2H6: { p90: 90, p95: 175 },
-    C2H4: { p90: 50, p95: 100 }, C2H2: { p90: 1, p95: 2 }, CO: { p90: 900, p95: 1100 },
+    H2: { p90: 100, p95: 1800 }, CH4: { p90: 120, p95: 1000 }, C2H6: { p90: 65, p95: 150 },
+    C2H4: { p90: 50, p95: 200 }, C2H2: { p90: 1, p95: 35 }, CO: { p90: 350, p95: 1400 },
   },
   H2: {}, CH4: {}, C2H6: {}, C2H4: {}, CO: {},
-  // C₂H₂ reste très bas en scellé ; un peu plus permissif en respirant (placeholder).
+  // C₂H₂ : en transfo SCELLÉ, tout acétylène est anormal → seuil très bas (segment officiel à confirmer).
   C2H2: { low_le10: { p90: 1, p95: 2 }, low_10to30: { p90: 1, p95: 2 }, low_gt30: { p90: 1, p95: 2 }, high_10to30: { p90: 2, p95: 7 } },
 };
-export const PERCENTILES_ARE_PLACEHOLDER = true; // tant que la Table 1/2 officielle n'est pas saisie
+// _default = valeurs publiées (le moteur donne un verdict utilisable) ; la grille fine par segment reste
+// à compléter/valider → on garde l'avertissement « à valider par une personne qualifiée ».
+export const PERCENTILES_ARE_PLACEHOLDER = true; // grille fine officielle (par segment) + validation finale en attente
 
 function limitsFor(gas: SeverityGasKey, seg: Segment): GasLimits {
   const key = `${seg.o2n2}_${seg.ageBand}` as SegmentKey;
