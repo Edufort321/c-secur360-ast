@@ -4,9 +4,24 @@
 // Triangle 4/5 et Pentagone sont appelés s'ils existent ; sinon ignorés proprement.
 import { keyGasMethod, doernenburg, rogers, iec60599, co2coRatio, faultFamily, type DGAGases, type MethodResult, type Lang } from './methods';
 import { classifyTriangle1 } from './triangle1';
+import { classifyTriangle4 as rawT4, type Fault4 } from './triangle4';
 
-type OptionalClassifier = ((g: DGAGases) => MethodResult) | null;
-const classifyTriangle4: OptionalClassifier = null;
+type OptionalClassifier = ((g: DGAGases, lang: Lang) => MethodResult) | null;
+
+// Triangle 4 (basse-T / PD) : on mappe le sous-type vers un code « famille » pour le consensus.
+//   PD → pd · O (surchauffe) → thermique · C (carbonisation papier) → papier · S (gazage parasite) → bénin.
+const T4_PROXY: Record<Fault4, string> = { PD: 'PD', O: 'T1', C: 'PAP', S: 'N' };
+const classifyTriangle4: OptionalClassifier = (g, lang = 'fr') => {
+  const r = rawT4(g as any);
+  const method = 'Duval Triangle 4';
+  if (!r) return { method, fault: null, label: 'n/a', valid: false };
+  const validSuffix = r.placeholder ? (lang === 'en' ? ' (boundaries to validate)' : ' (frontières à valider)') : '';
+  return {
+    method, fault: T4_PROXY[r.fault], valid: true, confidence: 'moyenne',
+    label: (lang === 'en' ? r.labelEn : r.label) + validSuffix,
+    note: r.fault === 'S' ? (lang === 'en' ? 'Stray gassing of oil — not a true fault.' : "Gazage parasite de l'huile — pas un vrai défaut.") : undefined,
+  };
+};
 const classifyTriangle5: OptionalClassifier = null;
 const classifyPentagon1: OptionalClassifier = null;
 
@@ -50,9 +65,9 @@ export function autoDiagnose(g: DGAGases, lang: Lang = 'fr'): AutoDiagnosis {
     else primaryReason = L(lang, "Défaut électrique (arc) : Triangle 1 fait foi (Triangles 4/5 ne traitent pas l'arc).", 'Electrical fault (arc): Triangle 1 prevails (Triangles 4/5 do not handle arcing).');
   } else if (t1Family === 'thermique') {
     if ((t1?.fault === 'T2' || t1?.fault === 'T3') && classifyTriangle5) { const r = (classifyTriangle5 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 5', 'Duval Triangle 5'); primaryReason = L(lang, 'Défaut thermique haute T : Triangle 5 départage huile/papier.', 'High-T thermal fault: Triangle 5 separates oil/paper.'); primaryResult = r; } }
-    else if ((t1?.fault === 'T1' || t1?.fault === 'T2') && classifyTriangle4) { const r = (classifyTriangle4 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Défaut thermique basse T : Triangle 4 précise le sous-type.', 'Low-T thermal fault: Triangle 4 refines the subtype.'); primaryResult = r; } }
+    else if ((t1?.fault === 'T1' || t1?.fault === 'T2') && classifyTriangle4) { const r = classifyTriangle4(g, lang); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Défaut thermique basse T : Triangle 4 précise le sous-type.', 'Low-T thermal fault: Triangle 4 refines the subtype.'); primaryResult = r; } }
   } else if (t1Family === 'pd') {
-    if (classifyTriangle4) { const r = (classifyTriangle4 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Décharges partielles : Triangle 4 précise le sous-type.', 'Partial discharges: Triangle 4 refines the subtype.'); primaryResult = r; } }
+    if (classifyTriangle4) { const r = classifyTriangle4(g, lang); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Décharges partielles : Triangle 4 précise le sous-type.', 'Partial discharges: Triangle 4 refines the subtype.'); primaryResult = r; } }
   }
 
   const all: MethodResult[] = [primaryResult, keyGasMethod(g, lang), doernenburg(g, lang), rogers(g, lang), iec60599(g, lang), co2coRatio(g, lang)];
