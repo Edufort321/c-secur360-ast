@@ -421,7 +421,11 @@ export default function ModulesPage() {
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
                     <div className="w-40 shrink-0 font-semibold">{c.title}</div>
                     <div className="w-14 shrink-0 text-2xl font-bold">{c.big}</div>
-                    <div className="flex-1 truncate text-sm text-gray-500 dark:text-gray-400">{c.key === 'events' && safety ? safetyDots(safety).map(d => `${d.v} ${d.l}`).join(' · ') : c.sub}</div>
+                    <div className="flex flex-1 flex-wrap items-center gap-1.5">
+                      {(c.key === 'events' && safety ? safetyDots(safety).map(d => `${d.v} ${d.l}`) : String(c.sub || '').split('·').map(s => s.trim()).filter(Boolean)).map((part, j) => (
+                        <span key={j} className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{part}</span>
+                      ))}
+                    </div>
                     {c.href && <ArrowRight size={16} className="text-gray-400" />}
                   </div>
                 );
