@@ -99,6 +99,7 @@ export function TransfoView(props: {
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState<Dossier>(dossier);
   const [mounted, setMounted] = useState(false);
+  const [showMethods, setShowMethods] = useState(false); // vue complémentaire (hook AVANT tout return anticipé)
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => { setSelIdx(Math.max(0, data.length - 1)); }, [data.length]);
@@ -193,8 +194,6 @@ export function TransfoView(props: {
     oilFair: oilEval.filter(o => o.status === 'fair').length,
     dp: furan?.dp ?? null,
   });
-  const [showMethods, setShowMethods] = useState(false);
-
   // ── SÉVÉRITÉ IEEE C57.104-2019 (statut 1/2/3 par gaz, pire gaz = global) + TDCG isolé en indicateur ──
   const segAge = (() => { const y = Number((dossier as any).manufacture_year || (extra as any).year || (extra as any).manufacture_year || 0); return y > 1900 ? (new Date().getFullYear() - y) : null; })();
   const sevGases = { H2: +(cur.h2 || 0), CH4: +(cur.ch4 || 0), C2H6: +(cur.c2h6 || 0), C2H4: +(cur.c2h4 || 0), C2H2: +(cur.c2h2 || 0), CO: +(cur.co || 0), CO2: +(cur.co2 || 0), O2: +((cur as any).o2 || 0), N2: +((cur as any).n2 || 0) };

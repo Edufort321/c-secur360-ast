@@ -82,18 +82,21 @@ export async function saveTransaction(tenant: string, header: Transaction, items
     ...(header.revenue_category ? { revenue_category: header.revenue_category } : {}),
     ...totals, updated_at: new Date().toISOString(),
   };
-  // Si une colonne récente n'existe pas encore (migration 185/187/207/221/232), on la retire et on réessaie.
-  const isMissingTreasury = (e: any) => /treasury_account_id|needs_review|paid_by_person_id|settlement_kind|currency|fx_rate|revenue_category/i.test(String(e?.message || ''));
-  const strip = (p: any) => { const { treasury_account_id, needs_review, paid_by_person_id, settlement_kind, currency, fx_rate, revenue_category, ...rest } = p; return rest; };
+  // Si une colonne récente n'existe pas encore (migration 185/187/207/221/232/235), on retire UNIQUEMENT
+  // la/les colonne(s) RÉELLEMENT signalée(s) par l'erreur (pas les autres) — sinon on perdait p.ex.
+  // revenue_category alors que sa colonne existe, juste parce qu'une autre migration manquait.
+  const OPTIONAL_COLS = ['treasury_account_id', 'needs_review', 'paid_by_person_id', 'settlement_kind', 'currency', 'fx_rate', 'revenue_category'];
+  const missingCol = (e: any) => OPTIONAL_COLS.some(c => new RegExp(c, 'i').test(String(e?.message || '')));
+  const stripFlagged = (p: any, e: any) => { const msg = String(e?.message || ''); const r = { ...p }; for (const c of OPTIONAL_COLS) { if (new RegExp(c, 'i').test(msg)) delete r[c]; } return r; };
   let id = header.id;
   if (id) {
     let { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
-    if (error && isMissingTreasury(error)) { ({ error } = await supabase.from('commerce_transactions').update(strip(payload)).eq('id', id)); }
+    if (error && missingCol(error)) { ({ error } = await supabase.from('commerce_transactions').update(stripFlagged(payload, error)).eq('id', id)); }
     if (error) throw error;
     await supabase.from('commerce_transaction_items').delete().eq('tenant_id', tenant).eq('transaction_id', id);
   } else {
     let { data, error } = await supabase.from('commerce_transactions').insert(payload).select('id').single();
-    if (error && isMissingTreasury(error)) { ({ data, error } = await supabase.from('commerce_transactions').insert(strip(payload)).select('id').single()); }
+    if (error && missingCol(error)) { ({ data, error } = await supabase.from('commerce_transactions').insert(stripFlagged(payload, error)).select('id').single()); }
     if (error) throw error;
     id = data?.id;
   }
