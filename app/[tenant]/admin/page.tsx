@@ -33,6 +33,7 @@ const OnboardingWizard = dynamic(() => import('@/components/admin/OnboardingWiza
 const BudgetModule = dynamic(() => import('@/components/admin/BudgetModule').then(m => m.BudgetModule), { ssr: false, loading: dynLoading });
 const ReconciliationPanel = dynamic(() => import('@/components/admin/ReconciliationPanel').then(m => m.ReconciliationPanel), { ssr: false, loading: dynLoading });
 const PdfStylesManager = dynamic(() => import('@/components/admin/PdfStylesManager').then(m => m.PdfStylesManager), { ssr: false, loading: dynLoading });
+const ReferenceStandardsManager = dynamic(() => import('@/components/admin/ReferenceStandardsManager').then(m => m.ReferenceStandardsManager), { ssr: false, loading: dynLoading });
 const SuppliersManager = dynamic(() => import('@/components/admin/SuppliersManager').then(m => m.SuppliersManager), { ssr: false, loading: dynLoading });
 const ProductsCatalog = dynamic(() => import('@/components/admin/ProductsCatalog').then(m => m.ProductsCatalog), { ssr: false, loading: dynLoading });
 const PermissionsMatrix = dynamic(() => import('@/components/admin/PermissionsMatrix').then(m => m.PermissionsMatrix), { ssr: false, loading: dynLoading });
@@ -273,8 +274,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || ''; // ISOLATION : jamais de repli 'cerdia' (contamination)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'controle' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'pdf-styles' | 'kiosque' | 'devises' | 'integrations';
-  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'controle', 'actionnaires', 'alertes', 'audit', 'pdf-styles', 'kiosque', 'devises', 'integrations'];
+  type TabKey = 'demarrage' | 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'fournisseurs' | 'produits' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'etat-financier' | 'budget' | 'controle' | 'actionnaires' | 'recurrents' | 'immobilisations' | 'alertes' | 'audit' | 'pdf-styles' | 'kiosque' | 'normes' | 'devises' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['demarrage', 'sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'fournisseurs', 'produits', 'feuilles', 'paie', 'rh', 'abonnement', 'factures', 'recurrents', 'soumissions', 'bons-commande', 'transactions', 'immobilisations', 'comptabilite', 'fiscal', 'etat-financier', 'budget', 'controle', 'actionnaires', 'alertes', 'audit', 'pdf-styles', 'kiosque', 'normes', 'devises', 'integrations'];
   const [tab, setTabState] = useState<TabKey>('sitesdepts');
   // Mémorise le dernier onglet ouvert (par tenant) — évite de « repartir » sur Sites/Dépts à chaque retour.
   const setTab = (k: TabKey) => {
@@ -337,6 +338,7 @@ export default function AdminPage() {
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, group: 'systeme', need: p => p.manageAll },
     { k: 'pdf-styles',  label: tr('Modèles PDF', 'PDF templates'),           icon: FileText, group: 'systeme', need: p => p.manageAll },
     { k: 'kiosque',     label: tr('Diffusion / Kiosque', 'Broadcast / Kiosk'), icon: Monitor, group: 'systeme', need: p => p.manageAll },
+    { k: 'normes',      label: tr('Normes de référence', 'Reference standards'), icon: BookOpen, group: 'systeme', need: p => p.manageAll },
     { k: 'devises',     label: tr('Devises', 'Currencies'),                  icon: DollarSign, group: 'systeme', need: p => p.manageAll },
     { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink, group: 'systeme', need: p => p.manageAll },
   ];
@@ -477,6 +479,7 @@ export default function AdminPage() {
         {tab === 'controle' && <ReconciliationPanel tenant={tenant} tr={tr} canExport={!!perms.manageAll} />}
         {tab === 'pdf-styles' && <PdfStylesManager tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'kiosque' && <KioskSettings tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
+        {tab === 'normes' && <ReferenceStandardsManager tenant={tenant} tr={tr} canEdit={!!perms.manageAll} userEmail={userEmail} />}
         {tab === 'devises' && <CurrencySettings tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'actionnaires' && <ShareholdersModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}
         {tab === 'alertes' && <AlertsModule tenant={tenant} tr={tr} canEdit={!!perms.manageAll} />}

@@ -42,6 +42,17 @@ export default function DgaPage() {
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   const access = useModuleEnabled(tenant, 'dga', false);
 
+  // Normes de référence (admin) : surcharges de percentiles DGA validées → le moteur les utilise partout.
+  useEffect(() => {
+    (async () => {
+      try {
+        const [{ getReferenceStandards }, { setDgaPercentileOverrides }] = await Promise.all([import('@/lib/referenceStandards'), import('@/lib/dga/severity2019')]);
+        const rs = await getReferenceStandards(tenant);
+        setDgaPercentileOverrides(rs?.dga_percentiles, !!rs?._meta?.validated_at);
+      } catch { /* ignore */ }
+    })();
+  }, [tenant]);
+
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [allMeasures, setAllMeasures] = useState<Measure[]>([]);
   const [measures, setMeasures] = useState<Measure[]>([]);

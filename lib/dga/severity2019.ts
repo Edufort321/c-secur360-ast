@@ -134,8 +134,21 @@ export const PERCENTILES: Record<SeverityGasKey, Partial<Record<SegmentKey, GasL
 // à compléter/valider → on garde l'avertissement « à valider par une personne qualifiée ».
 export const PERCENTILES_ARE_PLACEHOLDER = true; // grille fine officielle (par segment) + validation finale en attente
 
+// SURCHARGES « Normes de référence » (admin) : valeurs officielles validées saisies en arrière-plan
+// (company_settings.reference_standards.dga_percentiles), lues ici → remplacent les valeurs par défaut.
+// Quand des surcharges validées sont actives, le verdict n'est plus « placeholder ».
+let DGA_OVERRIDES: Record<string, Record<string, GasLimits>> | null = null;
+let DGA_OVERRIDES_VALIDATED = false;
+export function setDgaPercentileOverrides(o?: Record<string, Record<string, GasLimits>> | null, validated = true): void {
+  DGA_OVERRIDES = o && Object.keys(o).length ? o : null;
+  DGA_OVERRIDES_VALIDATED = !!DGA_OVERRIDES && validated;
+}
+export function dgaPercentilesValidated(): boolean { return DGA_OVERRIDES_VALIDATED; }
+
 function limitsFor(gas: SeverityGasKey, seg: Segment): GasLimits {
   const key = `${seg.o2n2}_${seg.ageBand}` as SegmentKey;
+  const ov = DGA_OVERRIDES?.[gas];
+  if (ov) { if (ov[key]) return ov[key]; if (ov._default) return ov._default; }
   return (PERCENTILES[gas] as Partial<Record<SegmentKey, GasLimits>>)[key] ?? PERCENTILES._default[gas];
 }
 export function gasStatus(gas: SeverityGasKey, value: number, seg: Segment): Status {
@@ -161,7 +174,7 @@ export function severity2019(g: SeverityGases, ageYears?: number | null): Severi
     return { gas, value, status: gasStatus(gas, value, seg), p90, p95 };
   });
   const status = Math.max(...perGas.map(p => p.status)) as Status;
-  return { status, perGas, drivingGases: perGas.filter(p => p.status === status && status > 1).map(p => p.gas), segment: seg, placeholder: PERCENTILES_ARE_PLACEHOLDER };
+  return { status, perGas, drivingGases: perGas.filter(p => p.status === status && status > 1).map(p => p.gas), segment: seg, placeholder: PERCENTILES_ARE_PLACEHOLDER && !DGA_OVERRIDES_VALIDATED };
 }
 
 // TDCG — INDICATEUR de tendance seulement (valeur = somme des gaz combustibles + taux). PAS un verdict.
