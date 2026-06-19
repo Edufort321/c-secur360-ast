@@ -61,10 +61,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
     },
     {
       id: 'ast',
-      label: { fr: 'Analyses AST', en: 'JSA Analysis' },
+      label: { fr: 'Santé et sécurité', en: 'Health & Safety' },
       href: `/${tenant}/ast`,
       icon: FileText,
-      description: { fr: 'Gestion des analyses sécuritaires', en: 'Safety analysis management' },
+      description: { fr: 'AST/JSA, registres SST, échéances réglementaires, KPI', en: 'JSA, HSE registers, regulatory deadlines, KPIs' },
       children: [
         {
           id: 'ast-new',

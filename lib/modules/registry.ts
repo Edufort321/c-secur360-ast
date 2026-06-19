@@ -44,9 +44,9 @@ export const MODULES: ModuleDef[] = [
   },
   {
     key: 'ast',
-    labelFr: 'AST / Sécurité', labelEn: 'JSA / Safety',
-    descFr: 'Analyses sécuritaires de tâches, permis, registre travailleurs, LOTO.',
-    descEn: 'Job safety analyses, permits, worker registry, LOTO.',
+    labelFr: 'Santé et sécurité', labelEn: 'Health & Safety',
+    descFr: 'AST/JSA, registres SST (HSE), échéances réglementaires, KPI (LTIFR/TRIR), permis, LOTO.',
+    descEn: 'JSA, HSE registers, regulatory deadlines, KPIs (LTIFR/TRIR), permits, LOTO.',
     icon: Shield, basePath: 'ast', color: 'text-emerald-600', accent: 'bg-emerald-600', status: 'available',
   },
   {
