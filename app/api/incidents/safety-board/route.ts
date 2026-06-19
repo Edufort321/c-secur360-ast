@@ -19,18 +19,19 @@ export async function GET(req: NextRequest) {
   const todayIso = new Date().toISOString().slice(0, 10);
   const year = new Date().getFullYear();
 
-  // Jour 0 = début de l'abonnement (création du tenant) ; les réinitialisations sont PAR TYPE.
-  // Création du tenant : par sous-domaine (le tenant applicatif EST le sous-domaine ; éviter id.eq qui
-  // plante en castant un sous-domaine vers un UUID). Repli : 1re ouverture de compte du tenant.
+  // Jour 0 = début de l'abonnement du tenant ; les réinitialisations sont PAR TYPE.
+  // SOURCE CANONIQUE : tenant_subscriptions.start_date (sinon .created_at) — c'est le « jour 0 » de
+  // l'abonnement. Repli : tenants.createdAt (⚠️ camelCase dans cette base ; il n'y a PAS de created_at
+  // ni sur tenants ni sur users — ne pas les interroger, ça plantait et retombait sur aujourd'hui = 0).
   let tenantStart: string | null = null;
   try {
-    const { data: t } = await supabaseAdmin.from('tenants').select('created_at').eq('subdomain', tenant).maybeSingle();
-    tenantStart = dOnly((t as any)?.created_at);
+    const { data: sub } = await supabaseAdmin.from('tenant_subscriptions').select('start_date, created_at').eq('tenant_id', tenant).maybeSingle();
+    tenantStart = dOnly((sub as any)?.start_date) || dOnly((sub as any)?.created_at);
   } catch { /* ignore */ }
   if (!tenantStart) {
     try {
-      const { data: us } = await supabaseAdmin.from('users').select('created_at').eq('tenant_id', tenant).order('created_at', { ascending: true }).limit(1).maybeSingle();
-      tenantStart = dOnly((us as any)?.created_at);
+      const { data: t } = await supabaseAdmin.from('tenants').select('createdAt').eq('id', tenant).maybeSingle();
+      tenantStart = dOnly((t as any)?.createdAt);
     } catch { /* ignore */ }
   }
   if (!tenantStart) tenantStart = todayIso; // inconnu → 0 jour (jamais une valeur factice)
