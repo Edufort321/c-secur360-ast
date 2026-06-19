@@ -18,6 +18,14 @@ create policy revenue_classes_all on public.revenue_classes for all using (true)
 create index if not exists idx_revenue_classes_tenant on public.revenue_classes (tenant_id, sort_order);
 
 -- Catégorie de revenu sur la transaction (revenu saisi directement, sans facture).
-alter table transactions add column if not exists revenue_category text;
+-- La table réelle de l'app est `commerce_transactions`. On l'ajoute là. (La table legacy `transactions`
+-- n'existe pas partout → on la traite seulement SI elle existe, pour ne jamais faire échouer la migration.)
+alter table commerce_transactions add column if not exists revenue_category text;
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'transactions') then
+    alter table public.transactions add column if not exists revenue_category text;
+  end if;
+end $$;
 
 insert into schema_migrations (version) values ('232') on conflict (version) do nothing;
