@@ -54,7 +54,7 @@ import { downloadCsv as downloadCsvCols, type CsvColumn } from '@/lib/csv';
 import { getCurrencyConfig, rateToBase, currencyMeta, formatMoney, type CurrencyConfig } from '@/lib/currency';
 import { useRevenueClasses } from '@/lib/revenueClasses';
 import { FISCAL_CATEGORIES, fiscalByCode, ensureFiscalAccounts } from '@/lib/fiscalCategories';
-import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
+import { parseBankCsv, parseStatement, getBankLines, insertBankLines, updateBankLine, deleteBankLine, deleteBankLinesByIds, deleteAllBankLines, autoMatchBankLines, type BankLine } from '@/lib/bankReconciliation';
 import { useRealtime } from '@/lib/useRealtime';
 import { readDraft, writeDraft, clearDraft, useAutoDraft } from '@/lib/useDraft';
 import { getTenantPermissions, canViewAdminTab, type PermMap } from '@/lib/permissions';
@@ -7358,6 +7358,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [bankLines, setBankLines] = useState<BankLine[]>([]);
   const [importText, setImportText] = useState('');
   const [bankBusy, setBankBusy] = useState(false);
+  const [bankSel, setBankSel] = useState<Set<string>>(new Set()); // sélection pour suppression en lot
   const [accounts, setAccounts] = useState<GLAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
@@ -7852,8 +7853,27 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     try { await updateBankLine(tenant, id, { reconciled }); } catch (e: any) { setNotice(e?.message); }
   }
   async function removeBankLine(id: string) {
+    setBankSel(prev => { const n = new Set(prev); n.delete(id); return n; });
     setBankLines(prev => prev.filter(b => b.id !== id));
     try { await deleteBankLine(tenant, id); } catch (e: any) { setNotice(e?.message); }
+  }
+  // Suppression EN LOT : sélection (cases) ou tout le rapprochement.
+  function toggleBankSel(id: string) { setBankSel(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleBankSelAll() { setBankSel(prev => (prev.size === bankLines.length && bankLines.length ? new Set() : new Set(bankLines.map(b => b.id!).filter(Boolean)))); }
+  async function deleteSelectedBank() {
+    const ids = bankLines.map(b => b.id!).filter(id => id && bankSel.has(id));
+    if (!ids.length) return;
+    if (!confirm(tr(`Supprimer ${ids.length} ligne(s) bancaire(s) sélectionnée(s) ?`, `Delete ${ids.length} selected bank line(s)?`))) return;
+    setBankBusy(true); setNotice(null);
+    try { await deleteBankLinesByIds(tenant, ids); setBankSel(new Set()); setBankLines(await getBankLines(tenant)); setNotice(tr(`${ids.length} ligne(s) supprimée(s).`, `${ids.length} line(s) deleted.`)); }
+    catch (e: any) { setNotice(e?.message); } finally { setBankBusy(false); }
+  }
+  async function deleteAllBank() {
+    if (!bankLines.length) return;
+    if (!confirm(tr(`Vider TOUT le rapprochement (${bankLines.length} ligne(s)) ? Action irréversible.`, `Clear the ENTIRE reconciliation (${bankLines.length} line(s))? This cannot be undone.`))) return;
+    setBankBusy(true); setNotice(null);
+    try { await deleteAllBankLines(tenant); setBankSel(new Set()); setBankLines([]); setNotice(tr('Rapprochement vidé.', 'Reconciliation cleared.')); }
+    catch (e: any) { setNotice(e?.message); } finally { setBankBusy(false); }
   }
   async function doAutoMatch() {
     setBankBusy(true); setNotice(null);
@@ -7861,7 +7881,9 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       const r = await autoMatchBankLines(tenant, { apply: true });
       setBankLines(await getBankLines(tenant));
       const amb = r.suggestions.length;
-      setNotice(`${r.applied} ${tr('ligne(s) rapprochée(s) automatiquement', 'line(s) auto-reconciled')}${amb ? ` · ${amb} ${tr('ambiguë(s) à valider manuellement', 'ambiguous to confirm manually')}` : ''}.`);
+      setNotice(r.applied === 0 && amb === 0
+        ? tr('Aucune transaction existante ne correspond à ces lignes. Utilisez « → Transaction » sur une ligne (ou « Transactions du relevé (IA) ») pour les créer.', 'No existing transaction matches these lines. Use “→ Transaction” on a line (or “Statement → transactions (AI)”) to create them.')
+        : `${r.applied} ${tr('ligne(s) rapprochée(s) automatiquement', 'line(s) auto-reconciled')}${amb ? ` · ${amb} ${tr('ambiguë(s) à valider manuellement', 'ambiguous to confirm manually')}` : ''}.`);
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
   }
@@ -7901,6 +7923,20 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         `${created} transaction(s) created${dups ? `, ${dups} already existing` : ''}${transfers ? `, ${transfers} transfer(s) skipped` : ''}${fbBatches ? ` · ${fbBatches} batch(es) created without AI (to categorize)` : ''} — ⏳ TO REVIEW.`));
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
+  }
+
+  // Transforme UNE ligne bancaire en transaction (sans IA : date/montant/description connus ; signe → type).
+  async function bankLineToTxn(b: BankLine) {
+    setBankBusy(true); setNotice(null);
+    try {
+      const seen = new Set<string>(txns.map(t => txnDupKey(t.vendor_name || '', t.txn_date || '', Number(t.total) || 0)));
+      const a = Math.abs(Number(b.amount) || 0);
+      const x = { vendor: String(b.description || '').slice(0, 80), date: b.stmt_date, type: (Number(b.amount) || 0) < 0 ? 'expense' : 'revenue', subtotal: a, gst: 0, qst: 0, pst: 0, total: a, description: String(b.description || ''), is_transfer: false };
+      const r = await createTxnFromExtracted(x, null, seen, importAccount || undefined);
+      await updateBankLine(tenant, b.id!, { reconciled: true });
+      setBankLines(await getBankLines(tenant));
+      setNotice(r === 'duplicate' ? tr('Transaction déjà existante — ligne rapprochée.', 'Transaction already exists — line reconciled.') : tr('Transaction créée depuis la ligne — ⏳ à vérifier (taxes à compléter).', 'Transaction created from the line — ⏳ to review (add taxes).'));
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); } finally { setBankBusy(false); }
   }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -8235,6 +8271,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
               {bankLines.some(b => !b.reconciled && !b.matched_transaction_id) && <button onClick={doBankAI} disabled={bankBusy} className="rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA crée des transactions « à vérifier » à partir des lignes non rapprochées', 'AI creates “to review” transactions from unmatched lines')}>📷 {tr('Transactions du relevé (IA)', 'Statement → transactions (AI)')}</button>}
               {importText.trim() && <span className="text-xs text-gray-400">{parseStatement(importText).lines.length} {tr('opération(s) détectée(s)', 'transaction(s) detected')}{/<OFX>|OFXHEADER|<STMTTRN>/i.test(importText) ? ' · OFX/QFX' : ' · CSV'}</span>}
+              {bankSel.size > 0 && <button onClick={deleteSelectedBank} disabled={bankBusy} className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-40 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">🗑 {tr('Supprimer la sélection', 'Delete selection')} ({bankSel.size})</button>}
+              {bankLines.length > 0 && <button onClick={deleteAllBank} disabled={bankBusy} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-600 dark:text-gray-300">{tr('Tout vider', 'Clear all')}</button>}
             </div>
           </div>
           {bankLines.length > 0 && (
@@ -8247,12 +8285,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <table className="mobile-cards w-full text-sm">
               <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+                <th className="px-3 py-2"><input type="checkbox" checked={bankSel.size === bankLines.length && bankLines.length > 0} ref={el => { if (el) el.indeterminate = bankSel.size > 0 && bankSel.size < bankLines.length; }} onChange={toggleBankSelAll} title={tr('Tout sélectionner', 'Select all')} /></th>
                 <th className="px-4 py-2">{tr('Date', 'Date')}</th><th className="px-4">{tr('Description', 'Description')}</th>
                 <th className="px-4 text-right">{tr('Montant', 'Amount')}</th><th className="px-4">{tr('Transaction rapprochée', 'Matched transaction')}</th><th className="px-4">{tr('Rappr.', 'Recon.')}</th><th className="px-4"></th>
               </tr></thead>
               <tbody>
                 {bankLines.map(b => (
-                  <tr key={b.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <tr key={b.id} className={`border-t border-gray-50 dark:border-gray-700/50 ${bankSel.has(b.id!) ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
+                    <td className="px-3 py-2" data-label={tr('Sél.', 'Sel.')}><input type="checkbox" checked={bankSel.has(b.id!)} onChange={() => toggleBankSel(b.id!)} /></td>
                     <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{b.stmt_date}</td>
                     <td className="px-4 py-2" data-label={tr('Description', 'Description')}>{b.description}</td>
                     <td className={`px-4 py-2 text-right font-medium ${b.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`} data-label={tr('Montant', 'Amount')}>{mny(b.amount)}</td>
@@ -8263,10 +8303,15 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                       </select>
                     </td>
                     <td className="px-4 py-2" data-label={tr('Rappr.', 'Recon.')}><input type="checkbox" checked={!!b.reconciled} onChange={e => toggleReconciled(b.id!, e.target.checked)} /></td>
-                    <td className="px-4 py-2 text-right" data-label=""><button onClick={() => removeBankLine(b.id!)} className="text-xs text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button></td>
+                    <td className="px-4 py-2 text-right" data-label="">
+                      <span className="flex items-center justify-end gap-2">
+                        {!b.matched_transaction_id && <button onClick={() => bankLineToTxn(b)} disabled={bankBusy} title={tr('Créer une transaction depuis cette ligne (à vérifier)', 'Create a transaction from this line (to review)')} className="text-xs font-semibold text-violet-600 hover:underline disabled:opacity-40">→ {tr('Transaction', 'Transaction')}</button>}
+                        <button onClick={() => removeBankLine(b.id!)} className="text-xs text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
+                      </span>
+                    </td>
                   </tr>
                 ))}
-                {bankLines.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">{bankBusy ? '…' : tr('Aucune ligne bancaire importée.', 'No bank line imported.')}</td></tr>}
+                {bankLines.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{bankBusy ? '…' : tr('Aucune ligne bancaire importée.', 'No bank line imported.')}</td></tr>}
               </tbody>
             </table>
           </div>

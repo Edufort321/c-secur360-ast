@@ -216,6 +216,19 @@ export async function deleteBankLine(tenant: string, id: string): Promise<void> 
   if (error) throw error;
 }
 
+/** Supprime plusieurs lignes bancaires (sélection). */
+export async function deleteBankLinesByIds(tenant: string, ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const { error } = await supabase.from('bank_statement_lines').delete().eq('tenant_id', tenant).in('id', ids);
+  if (error) throw error;
+}
+
+/** Supprime TOUTES les lignes bancaires du tenant (vider le rapprochement). */
+export async function deleteAllBankLines(tenant: string): Promise<void> {
+  const { error } = await supabase.from('bank_statement_lines').delete().eq('tenant_id', tenant);
+  if (error) throw error;
+}
+
 // ── AUTO-RAPPROCHEMENT (exception-driven) ────────────────────────────────────────────────────────
 // Apparie automatiquement chaque ligne bancaire NON rapprochée à une transaction par MONTANT (± tol.)
 // et DATE (fenêtre ± jours). Le SIGNE doit concorder : sortie bancaire (montant -) ↔ dépense ; entrée
