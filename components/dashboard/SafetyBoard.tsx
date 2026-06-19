@@ -15,15 +15,22 @@ export function SafetyBoard({ lang = 'fr', variant = 'card', pinned = false, onT
   lang?: 'fr' | 'en'; variant?: 'card' | 'strip'; pinned?: boolean; onTogglePin?: () => void;
 }) {
   const [b, setB] = useState<Board | null>(null);
+  const [resetting, setResetting] = useState<string | null>(null);
   const tr = (fr: string, en: string) => (lang === 'en' ? en : fr);
-  useEffect(() => {
-    let active = true;
+  function load() {
     fetch('/api/incidents/safety-board', { credentials: 'include' })
       .then(r => (r.ok ? r.json() : null))
-      .then(j => { if (active && j?.ok) setB(j); })
+      .then(j => { if (j?.ok) setB(j); })
       .catch(() => {});
-    return () => { active = false; };
-  }, []);
+  }
+  useEffect(() => { load(); }, []);
+  async function reset(type: 'accident' | 'near_miss') {
+    const label = type === 'accident' ? tr('« jours sans accident »', '“days without accident”') : tr('« jours sans passé proche »', '“days without near-miss”');
+    if (!window.confirm(tr(`Êtes-vous certain de réinitialiser le compteur ${label} à 0 aujourd’hui ? (ce type seulement)`, `Are you sure you want to reset the ${label} counter to 0 today? (this type only)`))) return;
+    setResetting(type);
+    try { await fetch('/api/incidents/safety-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type }) }); load(); }
+    catch { /* ignore */ } finally { setResetting(null); }
+  }
   if (!b) return null;
 
   const fmt = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-CA' : 'fr-CA') : tr('aucun', 'none'));
@@ -74,6 +81,12 @@ export function SafetyBoard({ lang = 'fr', variant = 'card', pinned = false, onT
             </div>
           </div>
         ))}
+      </div>
+      {/* Réinitialisation PAR TYPE (avec confirmation) — remet « jours sans … » à 0 aujourd'hui */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+        <span className="text-[11px] text-gray-400">{tr('Réinitialiser le compteur :', 'Reset counter:')}</span>
+        <button onClick={() => reset('accident')} disabled={resetting === 'accident'} className="rounded-lg border border-rose-300 px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-300">{tr('Accidents → 0', 'Accidents → 0')}</button>
+        <button onClick={() => reset('near_miss')} disabled={resetting === 'near_miss'} className="rounded-lg border border-amber-300 px-2.5 py-1 text-[11px] font-semibold text-amber-600 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-500/40 dark:text-amber-300">{tr('Passés proches → 0', 'Near-misses → 0')}</button>
       </div>
     </div>
   );
