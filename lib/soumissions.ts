@@ -64,6 +64,9 @@ export type Soumission = {
   approved_by?: string | null; approved_at?: string | null; approval_note?: string | null;
   // Multi-devise (#43, migration 221) — défaut CAD / 1.
   currency?: string; fx_rate?: number;
+  // Augmentation annuelle EN % appliquée quand la soumission est rattachée à un projet pluriannuel
+  // (escalade du montant année après année). Migration 241. Null = aucune indexation.
+  annual_increase_pct?: number | null;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -333,6 +336,39 @@ export async function deleteSoumissionTemplate(tenant: string, id: string): Prom
   return { error };
 }
 
+// ── Rattachement à un projet + indexation annuelle (interconnexion Projets↔Soumissions) ─────────────
+export type SoumissionLite = { id: string; numero: string; status: string; total: number; client_id: string | null; project_id: string | null; annual_increase_pct?: number | null };
+
+/** Soumissions du tenant (liste légère) pour rattacher à un projet (recherche dynamique). */
+export async function listSoumissionsLite(tenant: string): Promise<SoumissionLite[]> {
+  try {
+    const { data, error } = await supabase.from('soumissions').select('id, numero, status, total, client_id, project_id, annual_increase_pct').eq('tenant_id', tenant).order('created_at', { ascending: false });
+    if (error) { const { data: d2 } = await supabase.from('soumissions').select('id, numero, status, total, client_id, project_id').eq('tenant_id', tenant).order('created_at', { ascending: false }); return (d2 || []) as any; }
+    return (data || []) as SoumissionLite[];
+  } catch { return []; }
+}
+
+/** Rattache (ou détache si projectId=null) une soumission à un projet. */
+export async function linkSoumissionToProject(tenant: string, soumissionId: string, projectId: string | null): Promise<{ error?: any }> {
+  const { error } = await supabase.from('soumissions').update({ project_id: projectId, updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
+  return { error };
+}
+
+/** Fixe l'augmentation annuelle EN % d'une soumission (indexation pluriannuelle). Résilient si colonne absente (mig 241). */
+export async function setSoumissionAnnualIncrease(tenant: string, soumissionId: string, pct: number | null): Promise<{ error?: any }> {
+  const { error } = await supabase.from('soumissions').update({ annual_increase_pct: pct, updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
+  return { error };
+}
+
+/** Projection pluriannuelle d'un montant indexé : année 1 = base, puis × (1 + pct/100) chaque année. */
+export function projectAnnualAmounts(base: number, pct: number | null | undefined, years = 5): { year: number; amount: number }[] {
+  const p = (Number(pct) || 0) / 100;
+  const out: { year: number; amount: number }[] = [];
+  let amt = Number(base) || 0;
+  for (let y = 1; y <= years; y++) { out.push({ year: y, amount: Math.round(amt * 100) / 100 }); amt *= (1 + p); }
+  return out;
+}
+
 // ── Pièces jointes PDF (bibliothèque réutilisable : soumission_id null) ──────────────
 export type SoumissionAttachment = { id?: string; filename?: string; file_url?: string; soumission_id?: string | null };
 
@@ -461,6 +497,8 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
     approved_by: header.approved_by ?? null, approved_at: header.approved_at ?? null, approval_note: header.approval_note ?? null,
     // Multi-devise (migration 221) — retirés automatiquement si les colonnes manquent.
     currency: header.currency || 'CAD', fx_rate: Number(header.fx_rate) || 1,
+    // Augmentation annuelle % (migration 241) — retiré automatiquement si la colonne manque.
+    annual_increase_pct: header.annual_increase_pct != null && header.annual_increase_pct !== ('' as any) ? Number(header.annual_increase_pct) : null,
   };
   let id = header.id;
   // Upsert résilient : si une colonne de suivi manque (migration 138 non passée), on la retire et on réessaie.

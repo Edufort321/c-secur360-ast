@@ -13,6 +13,7 @@ import { POImportButton } from '@/components/projet/POImportButton';
 import { CoutsTab } from '@/components/projet/CoutsTab';
 import { ProjectPerfStrip, ProjectsAnalytics } from '@/components/projects/ProjectsAnalytics';
 import { FactureTab } from '@/components/projet/FactureTab';
+import { LinkedSoumissions } from '@/components/projet/LinkedSoumissions';
 import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
 import { createBonFromLines } from '@/lib/bonsCommande';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -541,24 +542,8 @@ export default function ProjectDetailPage() {
                   )}
                 </div>}
 
-                {/* Soumissions liées (Projets↔Soumissions, par project_id) */}
-                {linkedSoumissions.length > 0 && (
-                  <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
-                    <h3 className="mb-2 text-sm font-bold">{tr('Soumissions liées', 'Linked quotes')} ({linkedSoumissions.length})</h3>
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {linkedSoumissions.map(s => (
-                        <Link key={s.id} href={`/${tenant}/soumissions?s=${s.id}`}
-                          className="flex items-center justify-between py-2 text-sm hover:text-emerald-600">
-                          <span className="font-medium">{s.numero || s.id}</span>
-                          <span className="flex items-center gap-3 text-xs text-gray-500">
-                            {s.total != null && <span>{Number(s.total).toLocaleString('fr-CA')} $</span>}
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{s.status || 'draft'}</span>
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Soumissions rattachées (Projets↔Soumissions) : rattacher + augmentation annuelle % + projection */}
+                {id && <LinkedSoumissions tenant={tenant} projectId={id} tr={tr} />}
 
                 {/* Temps réel sur le projet (feuilles de temps) — alimente le suivi et la facturation */}
                 {timeRollup && timeRollup.total > 0 && (
