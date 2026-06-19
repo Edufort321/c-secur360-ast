@@ -27,7 +27,7 @@ export type KioskStatsInput = {
   lang?: 'fr' | 'en';
   safety?: any; // { daysSinceAccident, daysSinceNearMiss, accidentsYTD, nearMissYTD, year }
   proj?: { soumission: number; encours: number; facture: number; amount: number };
-  ast?: { total: number };
+  ast?: { total: number; draft?: number; in_progress?: number; completed?: number; approved?: number };
   permit?: { total: number; active: number };
   invCount?: number;
   dgaStats?: { all: number; critical?: number; overdue?: number };
@@ -67,7 +67,15 @@ export function buildKioskSlides(d: KioskStatsInput): KioskSlide[] {
       { value: money(d.proj.amount), label: tr('Valeur contrats', 'Contract value'), accent: 'text-violet-400' },
     ],
   });
-  if (d.ast) out.push({ key: 'ast', big: d.ast.total, title: tr('ANALYSES DE RISQUE (AST)', 'RISK ANALYSES (JSA)'), accent: 'text-cyan-400' });
+  if (d.ast) out.push({
+    key: 'ast', big: d.ast.total, title: tr('ANALYSES DE RISQUE (AST)', 'RISK ANALYSES (JSA)'), accent: 'text-cyan-400',
+    stats: [
+      { value: d.ast.total, label: tr('Total', 'Total'), accent: 'text-cyan-400' },
+      { value: (d.ast.in_progress ?? 0) + (d.ast.approved ?? 0), label: tr('Actifs', 'Active'), accent: 'text-sky-400' },
+      { value: d.ast.draft ?? 0, label: tr('Brouillons', 'Drafts'), accent: 'text-amber-400' },
+      { value: d.ast.completed ?? 0, label: tr('Complétés', 'Completed'), accent: 'text-emerald-400' },
+    ],
+  });
   if (d.permit) out.push({
     key: 'permits', big: d.permit.active, title: tr('PERMIS DE TRAVAIL', 'WORK PERMITS'), accent: 'text-orange-400',
     stats: [
