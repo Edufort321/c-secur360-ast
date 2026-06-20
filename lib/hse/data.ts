@@ -3,7 +3,7 @@
 import { supabase } from '@/lib/supabase';
 
 export type HseFramework = { id: string; code: string; name_fr: string; name_en: string; jurisdiction: string };
-export type HseSettings = { tenant_id?: string; framework_id?: string | null; rate_base_hours: number; default_locale: string; brand_currency?: string };
+export type HseSettings = { tenant_id?: string; framework_id?: string | null; rate_base_hours: number; default_locale: string; brand_currency?: string; reminder_email?: string | null; target_ltifr?: number | null; target_trir?: number | null; target_severity?: number | null };
 export type HseRegisterType = { id: string; code: string; name_fr: string; name_en: string; framework_id?: string | null; default_review_months?: number | null; field_schema: any[]; icon?: string | null };
 export type HseTenantRegister = { id: string; tenant_id?: string; register_type_id: string; is_enabled: boolean; review_months_override?: number | null };
 export type HseRegisterEntry = { id?: string; tenant_id?: string; tenant_register_id: string; reference?: string | null; title: string; data: any; status?: string; last_review_at?: string | null; review_due_at?: string | null; created_by?: string | null };
@@ -33,10 +33,15 @@ export async function getHseSettings(tenant: string): Promise<HseSettings | null
   return (data as any) || null;
 }
 export async function saveHseSettings(tenant: string, s: HseSettings): Promise<{ error?: string }> {
-  const { error } = await supabase.from('hse_tenant_settings').upsert({
+  const row: any = {
     tenant_id: tenant, framework_id: s.framework_id || null, rate_base_hours: Number(s.rate_base_hours) || 200000,
     default_locale: s.default_locale || 'fr', brand_currency: s.brand_currency || 'CAD', updated_at: new Date().toISOString(),
-  }, { onConflict: 'tenant_id' });
+  };
+  if (s.reminder_email !== undefined) row.reminder_email = s.reminder_email || null;
+  if (s.target_ltifr !== undefined) row.target_ltifr = s.target_ltifr ?? null;
+  if (s.target_trir !== undefined) row.target_trir = s.target_trir ?? null;
+  if (s.target_severity !== undefined) row.target_severity = s.target_severity ?? null;
+  const { error } = await supabase.from('hse_tenant_settings').upsert(row, { onConflict: 'tenant_id' });
   return { error: error?.message };
 }
 

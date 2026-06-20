@@ -412,16 +412,19 @@ function ConfigTab({ tr, card, tenant, frameworks, regTypes, tenantRegs, setting
   const [fwId, setFwId] = useState(settings?.framework_id || '');
   const [rateBase, setRateBase] = useState(settings?.rate_base_hours || 200000);
   const [locale, setLocale] = useState(settings?.default_locale || 'fr');
+  const [reminderEmail, setReminderEmail] = useState(settings?.reminder_email || '');
+  const [tgt, setTgt] = useState({ ltifr: settings?.target_ltifr ?? '', trir: settings?.target_trir ?? '', severity: settings?.target_severity ?? '' });
   const [busy, setBusy] = useState(false);
   // §0 — le <select> Cadre DOIT refléter la valeur sauvegardée même si settings arrive après le montage.
-  useEffect(() => { setFwId(settings?.framework_id || ''); setRateBase(settings?.rate_base_hours || 200000); setLocale(settings?.default_locale || 'fr'); }, [settings]);
+  useEffect(() => { setFwId(settings?.framework_id || ''); setRateBase(settings?.rate_base_hours || 200000); setLocale(settings?.default_locale || 'fr'); setReminderEmail(settings?.reminder_email || ''); setTgt({ ltifr: settings?.target_ltifr ?? '', trir: settings?.target_trir ?? '', severity: settings?.target_severity ?? '' }); }, [settings]);
   const enabledSet = new Set(tenantRegs.filter((t: any) => t.is_enabled).map((t: any) => t.register_type_id));
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
   // Juridictions canadiennes : base de normalisation = 200 000 h (100 travailleurs × 2 000 h), standard CSA/CNESST.
   function onFw(id: string) { setFwId(id); if (frameworks.find((x: any) => x.id === id)) setRateBase(200000); }
   async function save() {
     setBusy(true);
-    const { error } = await saveHseSettings(tenant, { framework_id: fwId || null, rate_base_hours: Number(rateBase), default_locale: locale });
+    const num = (v: any) => (v === '' || v == null ? null : Number(v));
+    const { error } = await saveHseSettings(tenant, { framework_id: fwId || null, rate_base_hours: Number(rateBase), default_locale: locale, reminder_email: reminderEmail || null, target_ltifr: num(tgt.ltifr), target_trir: num(tgt.trir), target_severity: num(tgt.severity) });
     setNotice(error ? 'Erreur : ' + error : tr('Configuration enregistrée ✓', 'Configuration saved ✓'));
     setBusy(false); onSaved();
   }
@@ -434,6 +437,13 @@ function ConfigTab({ tr, card, tenant, frameworks, regTypes, tenantRegs, setting
           <label className="text-xs font-semibold text-gray-500">{tr('Base de normalisation (h)', 'Rate base (h)')}<select value={rateBase} onChange={e => setRateBase(Number(e.target.value))} className={inp}><option value={200000}>200 000 ({tr('Canada — 100 trav. × 2 000 h', 'Canada — 100 wkrs × 2,000 h')})</option><option value={1000000}>1 000 000</option></select></label>
           <label className="text-xs font-semibold text-gray-500">{tr('Langue par défaut', 'Default language')}<select value={locale} onChange={e => setLocale(e.target.value)} className={inp}><option value="fr">Français</option><option value="en">English</option></select></label>
         </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-4">
+          <label className="text-xs font-semibold text-gray-500 sm:col-span-1">{tr('Courriel des rappels', 'Reminders email')}<input type="email" value={reminderEmail} onChange={e => setReminderEmail(e.target.value)} placeholder="sst@…" className={inp} /></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Cible LTIFR', 'LTIFR target')}<input type="number" step="0.01" value={tgt.ltifr} onChange={e => setTgt({ ...tgt, ltifr: e.target.value })} className={inp} /></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Cible TRIR', 'TRIR target')}<input type="number" step="0.01" value={tgt.trir} onChange={e => setTgt({ ...tgt, trir: e.target.value })} className={inp} /></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Cible gravité', 'Severity target')}<input type="number" step="0.01" value={tgt.severity} onChange={e => setTgt({ ...tgt, severity: e.target.value })} className={inp} /></label>
+        </div>
+        <p className="mt-1 text-[11px] text-gray-400">{tr('Rappels quotidiens J-7 / J-3 / jour J / en retard (échéances + révisions). Les cibles s’affichent en lignes-repères sur les graphiques.', 'Daily reminders D-7 / D-3 / D-day / overdue (deadlines + reviews). Targets show as reference lines on charts.')}</p>
         <div className="mt-3 flex justify-end"><button onClick={save} disabled={busy} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? '…' : tr('Enregistrer', 'Save')}</button></div>
       </div>
 
