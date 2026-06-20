@@ -310,6 +310,18 @@ export default function ModulesPage() {
   if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.todo ? `⚠ ${dgaStats.todo} ${tr('à traiter', 'to treat')} · ` : ''}${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}${dgaStats.inspDue ? ` · ${dgaStats.inspDue} ${tr('insp. dues', 'insp. due')}` : ''}`, available: true });
   if (has('rapports')) cards.push({ key: 'rapports', title: tr('Rapports terrain', 'Field reports'), href: `/${tenant}/rapports`, big: String(rapStats.total), sub: `${rapStats.in_progress} ${tr('en cours', 'wip')} · ${rapStats.review} ${tr('révision', 'review')} · ${rapStats.approved} ${tr('approuvé', 'appr.')} · ${rapStats.sent} ${tr('envoyé', 'sent')}`, available: true });
 
+  // Ordre LOGIQUE par groupes (choix Eric) : Opération → Santé & sécurité → Technique → Utilisateur/RH → Admin.
+  const CARD_GROUPS: { title: string; keys: string[] }[] = [
+    { title: tr('Opération', 'Operations'), keys: ['projects', 'planner', 'timesheets', 'logbook', 'todo', 'inventory', 'inspections', 'maintenance'] },
+    { title: tr('Santé & sécurité', 'Health & Safety'), keys: ['ast', 'hse', 'permits', 'events'] },
+    { title: tr('Technique', 'Technical'), keys: ['dga', 'rapports'] },
+    { title: tr('Utilisateur / RH', 'User / HR'), keys: ['conges'] },
+    { title: tr('Administration', 'Administration'), keys: ['admin', 'marketing'] },
+  ];
+  const CARD_ORDER = CARD_GROUPS.flatMap(g => g.keys);
+  const groupOf = (k: string) => CARD_GROUPS.find(g => g.keys.includes(k))?.title || '';
+  cards.sort((a, b) => { const ia = CARD_ORDER.indexOf(a.key), ib = CARD_ORDER.indexOf(b.key); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+
   const iconFor = (k: string) => (MODULES.find(m => m.key === k || (k === 'events' && m.key === 'accidents'))?.icon) || LayoutGrid;
 
   return (
@@ -404,8 +416,9 @@ export default function ModulesPage() {
             <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
           ) : view === 'grid' ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {cards.map(c => {
+              {cards.map((c, i) => {
                 const Icon = iconFor(c.key);
+                const newGroup = groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
                 const inner = (
                   <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div className="mb-2 flex items-center justify-between gap-2">
@@ -432,15 +445,17 @@ export default function ModulesPage() {
                     )}
                   </div>
                 );
-                return c.href ? <Link key={c.key} href={c.href} className="block">{inner}</Link> : <div key={c.key}>{inner}</div>;
+                const card = c.href ? <Link href={c.href} className="block">{inner}</Link> : <div>{inner}</div>;
+                return <React.Fragment key={c.key}>{newGroup && <div className="col-span-full mt-3 px-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 first:mt-0">{groupOf(c.key)}</div>}{card}</React.Fragment>;
               })}
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
               {cards.map((c, i) => {
                 const Icon = iconFor(c.key);
+                const newGroup = groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
                 const inner = (
-                  <div className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${i ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
+                  <div className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${i && !newGroup ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
                     {c.key === 'events'
                       ? <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
@@ -457,7 +472,8 @@ export default function ModulesPage() {
                     {c.href && <ArrowRight size={16} className="text-gray-400" />}
                   </div>
                 );
-                return c.href ? <Link key={c.key} href={c.href} className="block">{inner}</Link> : <div key={c.key}>{inner}</div>;
+                const row = c.href ? <Link href={c.href} className="block">{inner}</Link> : <div>{inner}</div>;
+                return <React.Fragment key={c.key}>{newGroup && <div className="bg-gray-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:bg-gray-900/40">{groupOf(c.key)}</div>}{row}</React.Fragment>;
               })}
             </div>
           )}
