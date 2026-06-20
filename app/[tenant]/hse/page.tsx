@@ -17,7 +17,15 @@ import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/l
 import { resolveKpiHours, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseAttachments } from '@/components/hse/HseAttachments';
+import { IncidentWorkflow } from '@/components/hse/IncidentWorkflow';
 import { FEED_BY_CODE, importFeedCandidates } from '@/lib/hse/registerFeeds';
+
+const INCIDENT_STATUS: Record<string, { fr: string; en: string; cls: string }> = {
+  open: { fr: 'Ouvert', en: 'Open', cls: 'bg-rose-100 text-rose-700' },
+  investigation: { fr: 'Enquête', en: 'Investigation', cls: 'bg-amber-100 text-amber-700' },
+  capa: { fr: 'Actions', en: 'Actions', cls: 'bg-blue-100 text-blue-700' },
+  closed: { fr: 'Clôturé', en: 'Closed', cls: 'bg-emerald-100 text-emerald-700' },
+};
 
 type Tab = 'kpi' | 'incidents' | 'registers' | 'config';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -312,8 +320,8 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
           <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date', 'Date')}</th><th>{tr('Type', 'Type')}</th><th>{tr('Lieu', 'Location')}</th><th className="text-right">{tr('Jours perdus', 'Lost days')}</th><th></th></tr></thead>
             <tbody>{incidents.map((i: any) => (
               <React.Fragment key={i.id}>
-                <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1">{new Date(i.occurred_at).toLocaleDateString(tr('fr-CA', 'en-CA'))}</td><td>{tr(EVENT_CODES.find(c => c.code === i.event_code)?.fr || i.event_code, EVENT_CODES.find(c => c.code === i.event_code)?.en || i.event_code)}{i.is_lost_time ? ' · LTI' : ''}</td><td className="text-gray-500">{i.location_text || '—'}</td><td className="text-right tabular-nums">{i.lost_days || 0}</td><td className="text-right"><button onClick={() => setOpenInc(openInc === i.id ? null : i.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-500 hover:underline"><Paperclip size={12} /> {tr('Pièces', 'Files')}</button></td></tr>
-                {openInc === i.id && <tr><td colSpan={5} className="pb-2"><HseAttachments tenant={tenant} entityType="incident" entityId={i.id} canHr={canHr} projectId={i.project_id} tr={tr} /></td></tr>}
+                <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1">{new Date(i.occurred_at).toLocaleDateString(tr('fr-CA', 'en-CA'))}</td><td>{tr(EVENT_CODES.find(c => c.code === i.event_code)?.fr || i.event_code, EVENT_CODES.find(c => c.code === i.event_code)?.en || i.event_code)}{i.is_lost_time ? ' · LTI' : ''} <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${(INCIDENT_STATUS[i.status || 'open'] || INCIDENT_STATUS.open).cls}`}>{tr((INCIDENT_STATUS[i.status || 'open'] || INCIDENT_STATUS.open).fr, (INCIDENT_STATUS[i.status || 'open'] || INCIDENT_STATUS.open).en)}</span></td><td className="text-gray-500">{i.location_text || '—'}</td><td className="text-right tabular-nums">{i.lost_days || 0}</td><td className="text-right"><button onClick={() => setOpenInc(openInc === i.id ? null : i.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-500 hover:underline"><Paperclip size={12} /> {tr('Pièces', 'Files')}</button></td></tr>
+                {openInc === i.id && <tr><td colSpan={5} className="space-y-2 pb-2"><IncidentWorkflow tenant={tenant} incident={i} tr={tr} onChanged={onSaved} /><HseAttachments tenant={tenant} entityType="incident" entityId={i.id} canHr={canHr} projectId={i.project_id} tr={tr} /></td></tr>}
               </React.Fragment>
             ))}</tbody>
           </table>

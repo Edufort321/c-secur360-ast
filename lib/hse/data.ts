@@ -12,6 +12,7 @@ export type HseIncident = {
   event_code: string; severity?: string | null; is_lost_time?: boolean; lost_days?: number;
   body_part?: string | null; injury_type?: string | null; location_text?: string | null; description?: string | null;
   material_damage_amount?: number | null; reported_to_authority?: boolean; authority_reference?: string | null; created_by?: string | null;
+  status?: string; root_cause?: string | null; contributing_factors?: string | null; closed_at?: string | null; closed_by?: string | null;
 };
 export type HseDeadline = { id: string; tenant_id: string; incident_id: string; kind: string; due_at: string; label_fr?: string; label_en?: string; status: string; completed_at?: string | null; event_code?: string; occurred_at?: string };
 export type HseHours = { id?: string; tenant_id?: string; project_id?: string | null; period_start: string; period_end: string; hours: number; headcount?: number | null };
@@ -91,6 +92,35 @@ export async function saveIncident(tenant: string, i: HseIncident): Promise<{ id
   if (error) return { error: error.message };
   return { id: (data as any).id };
 }
+/** Met à jour le workflow d'un incident (statut, causes racines, clôture). */
+export async function updateIncidentWorkflow(tenant: string, id: string, patch: { status?: string; root_cause?: string | null; contributing_factors?: string | null; closed_by?: string | null }): Promise<{ error?: string }> {
+  const row: any = { updated_at: new Date().toISOString() };
+  if (patch.status !== undefined) { row.status = patch.status; if (patch.status === 'closed') { row.closed_at = new Date().toISOString(); row.closed_by = patch.closed_by || null; } }
+  if (patch.root_cause !== undefined) row.root_cause = patch.root_cause;
+  if (patch.contributing_factors !== undefined) row.contributing_factors = patch.contributing_factors;
+  const { error } = await supabase.from('hse_incident').update(row).eq('id', id).eq('tenant_id', tenant);
+  return { error: error?.message };
+}
+
+// ── Actions correctives / préventives (CAPA) ──────────────────────────────────────────────────────────
+export type HseCapa = { id?: string; tenant_id?: string; incident_id: string; kind?: string; description: string; assigned_to?: string | null; due_date?: string | null; status?: string; completed_at?: string | null; completed_by?: string | null; evidence?: string | null; created_by?: string | null };
+export async function getCapa(tenant: string, incidentId: string): Promise<HseCapa[]> {
+  const { data } = await supabase.from('hse_corrective_action').select('*').eq('tenant_id', tenant).eq('incident_id', incidentId).order('created_at');
+  return (data || []) as HseCapa[];
+}
+export async function saveCapa(tenant: string, c: HseCapa): Promise<{ error?: string }> {
+  const row: any = { tenant_id: tenant, incident_id: c.incident_id, kind: c.kind || 'corrective', description: c.description, assigned_to: c.assigned_to || null, due_date: c.due_date || null, status: c.status || 'open', evidence: c.evidence || null, updated_at: new Date().toISOString() };
+  if (c.id) { const { error } = await supabase.from('hse_corrective_action').update(row).eq('id', c.id).eq('tenant_id', tenant); return { error: error?.message }; }
+  const { error } = await supabase.from('hse_corrective_action').insert({ ...row, created_by: c.created_by || null });
+  return { error: error?.message };
+}
+export async function completeCapa(tenant: string, id: string, by?: string, evidence?: string): Promise<void> {
+  await supabase.from('hse_corrective_action').update({ status: 'done', completed_at: new Date().toISOString(), completed_by: by || null, evidence: evidence || null, updated_at: new Date().toISOString() }).eq('id', id).eq('tenant_id', tenant);
+}
+export async function deleteCapa(tenant: string, id: string): Promise<void> {
+  await supabase.from('hse_corrective_action').delete().eq('id', id).eq('tenant_id', tenant);
+}
+
 export async function getOpenDeadlines(tenant: string): Promise<HseDeadline[]> {
   const { data } = await supabase.from('hse_v_open_deadlines').select('*').eq('tenant_id', tenant).order('due_at');
   return (data || []) as HseDeadline[];
