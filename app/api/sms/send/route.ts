@@ -46,10 +46,12 @@ function formatCanadianPhoneNumber(phone: string): string {
 // =================== SUPABASE CONFIG ===================
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// FAIL-SECURE : route serveur → service_role UNIQUEMENT. PAS de repli sur la clé anon (sinon, si la clé
+// service_role manque, on opérerait silencieusement avec des droits réduits/incohérents — interdit).
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Configuration Supabase manquante pour SMS API');
+  console.error('❌ Configuration Supabase manquante pour SMS API (SUPABASE_SERVICE_ROLE_KEY requise)');
 }
 
 const supabase = createClient(supabaseUrl!, supabaseKey!);
