@@ -1146,19 +1146,35 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
           </span>
         </div>
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          {mods.map(m => (
-            <div key={m.key} className="flex items-center gap-3 px-4 py-2.5">
-              <div className={`grid h-6 w-6 place-items-center rounded border ${m.enabled ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'}`}>
-                {m.enabled && <Check size={14} />}
-              </div>
-              <span className={`flex-1 font-medium ${!m.enabled ? 'text-gray-400 dark:text-gray-500' : ''}`}>
-                {lang === 'fr' ? m.name_fr : m.name_en}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {m.monthly_price > 0 ? `${money(m.monthly_price)}/${tr('an', 'yr')}` : tr('Inclus', 'Included')}
-              </span>
-            </div>
-          ))}
+          {(() => {
+            // Regroupement par CLASSE (comme le dashboard client) : Administration → Opération → SST → Technique → Util.
+            const CLASS: { title: string; keys: string[] }[] = [
+              { title: tr('Administration', 'Administration'), keys: ['admin', 'marketing'] },
+              { title: tr('Opération', 'Operations'), keys: ['projects', 'planner', 'timesheets', 'logbook', 'todo', 'inventory', 'inspections', 'maintenance'] },
+              { title: tr('Santé & sécurité', 'Health & Safety'), keys: ['ast', 'hse', 'permits', 'accidents', 'near_miss'] },
+              { title: tr('Technique', 'Technical'), keys: ['dga', 'rapports'] },
+              { title: tr('Utilisateur / RH', 'User / HR'), keys: ['conges'] },
+            ];
+            const order = CLASS.flatMap(g => g.keys);
+            const classOf = (k: string) => CLASS.find(g => g.keys.includes(k))?.title || tr('Autres', 'Other');
+            const sorted = [...mods].sort((a, b) => { const ia = order.indexOf(a.key), ib = order.indexOf(b.key); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+            return sorted.map((m, i) => (
+              <React.Fragment key={m.key}>
+                {classOf(m.key) !== (i ? classOf(sorted[i - 1].key) : '') && <div className="bg-gray-50 px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:bg-gray-900/40">{classOf(m.key)}</div>}
+                <div className="flex items-center gap-3 px-4 py-2.5">
+                  <div className={`grid h-6 w-6 place-items-center rounded border ${m.enabled ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'}`}>
+                    {m.enabled && <Check size={14} />}
+                  </div>
+                  <span className={`flex-1 font-medium ${!m.enabled ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+                    {lang === 'fr' ? m.name_fr : m.name_en}
+                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {m.monthly_price > 0 ? `${money(m.monthly_price)}/${tr('an', 'yr')}` : tr('Inclus', 'Included')}
+                  </span>
+                </div>
+              </React.Fragment>
+            ));
+          })()}
         </div>
       </div>
 
