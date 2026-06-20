@@ -17,6 +17,7 @@ import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/l
 import { resolveKpiHours, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseAttachments } from '@/components/hse/HseAttachments';
+import { FEED_BY_CODE, importFeedCandidates } from '@/lib/hse/registerFeeds';
 
 type Tab = 'kpi' | 'incidents' | 'registers' | 'config';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -331,7 +332,18 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr }: any) {
   const [entries, setEntries] = useState<any[]>([]);
   const [edit, setEdit] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
   useEffect(() => { if (cur) getRegisterEntries(tenant, cur.treg.id).then(setEntries); }, [cur?.treg?.id, tenant]);
+  const feed = cur ? FEED_BY_CODE[cur.type.code] : null;
+  async function runImport() {
+    if (!cur || !feed) return; setBusy(true); setImportMsg(null);
+    const months = cur.treg.review_months_override ?? cur.type.default_review_months;
+    const cands = await feed.fetch(tenant);
+    const n = await importFeedCandidates(tenant, cur.treg.id, months, cands);
+    setEntries(await getRegisterEntries(tenant, cur.treg.id));
+    setImportMsg(tr(`${n} entrée(s) importée(s) · ${cands.length - n} déjà présente(s)`, `${n} entry(ies) imported · ${cands.length - n} already present`));
+    setBusy(false);
+  }
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
   if (!enabledTypes.length) return <div className={card}><p className="text-sm text-gray-400">{tr('Aucun registre activé. Activez-en dans l’onglet Configuration.', 'No register enabled. Enable some in Configuration.')}</p></div>;
   const reviewMonths = cur ? (cur.treg.review_months_override ?? cur.type.default_review_months) : null;
@@ -348,7 +360,9 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr }: any) {
           {enabledTypes.map((x: any) => <option key={x.treg.id} value={x.treg.id}>{tr(x.type.name_fr, x.type.name_en)}</option>)}
         </select>
         <button onClick={() => setEdit({ title: '', data: {}, last_review_at: today() })} className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouvelle entrée', 'New entry')}</button>
+        {feed && <button onClick={runImport} disabled={busy} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {tr(feed.labelFr, feed.labelEn)}</button>}
       </div>
+      {importMsg && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{importMsg} — {tr('aucun doublon (clé = id source).', 'no duplicate (key = source id).')}</div>}
 
       {edit && cur && (
         <div className={card}>
