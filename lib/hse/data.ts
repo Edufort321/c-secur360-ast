@@ -152,6 +152,13 @@ export async function getRegistersDue(tenant: string): Promise<any[]> {
   return data || [];
 }
 
+// ── Journal d'audit HSE (immuable, alimenté par trigger) ─────────────────────────────────────────────
+export type HseAuditRow = { id: number; tenant_id: string; table_name: string; row_id: string | null; operation: string; actor: string | null; summary: any; at: string };
+export async function getAuditLog(tenant: string, limit = 200): Promise<HseAuditRow[]> {
+  const { data } = await supabase.from('hse_audit_log').select('*').eq('tenant_id', tenant).order('at', { ascending: false }).limit(limit);
+  return (data || []) as HseAuditRow[];
+}
+
 // ── Indicateurs proactifs (leading) ──────────────────────────────────────────────────────────────────
 export type HseProactive = { id?: string; tenant_id?: string; project_id?: string | null; period_start: string; metric_code: string; count_value: number };
 export async function getProactiveMetrics(tenant: string): Promise<HseProactive[]> {

@@ -13,7 +13,7 @@ const STATUSES = [
   { v: 'closed', fr: 'Clôturé', en: 'Closed' },
 ];
 
-export function IncidentWorkflow({ tenant, incident, tr, onChanged }: { tenant: string; incident: HseIncident; tr: Tr; onChanged?: () => void }) {
+export function IncidentWorkflow({ tenant, incident, tr, onChanged, userEmail }: { tenant: string; incident: HseIncident; tr: Tr; onChanged?: () => void; userEmail?: string }) {
   const [status, setStatus] = useState(incident.status || 'open');
   const [rootCause, setRootCause] = useState(incident.root_cause || '');
   const [factors, setFactors] = useState(incident.contributing_factors || '');
@@ -27,12 +27,12 @@ export function IncidentWorkflow({ tenant, incident, tr, onChanged }: { tenant: 
 
   async function saveWf() {
     setSavingWf(true);
-    await updateIncidentWorkflow(tenant, incident.id!, { status, root_cause: rootCause, contributing_factors: factors });
+    await updateIncidentWorkflow(tenant, incident.id!, { status, root_cause: rootCause, contributing_factors: factors, closed_by: userEmail });
     setSavingWf(false); onChanged?.();
   }
   async function addCapa() {
     if (!add?.description) return;
-    await saveCapa(tenant, { ...add, incident_id: incident.id! });
+    await saveCapa(tenant, { ...add, incident_id: incident.id!, created_by: userEmail });
     setAdd(null); await loadCapa();
   }
 
@@ -78,7 +78,7 @@ export function IncidentWorkflow({ tenant, incident, tr, onChanged }: { tenant: 
                 <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${c.kind === 'preventive' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>{c.kind === 'preventive' ? tr('Prév.', 'Prev.') : tr('Corr.', 'Corr.')}</span>
                 <span className={`flex-1 ${c.status === 'done' ? 'text-gray-400 line-through' : ''}`}>{c.description}{c.assigned_to ? ` · ${c.assigned_to}` : ''}</span>
                 {c.due_date && <span className={`text-[10px] ${overdue(c) ? 'font-bold text-rose-600' : 'text-gray-400'}`}>{c.due_date}{overdue(c) ? ' ⚠' : ''}</span>}
-                {c.status !== 'done' ? <button onClick={async () => { const ev = prompt(tr('Preuve de réalisation (note / lien) :', 'Completion evidence (note / link):')) || undefined; await completeCapa(tenant, c.id!, undefined, ev); await loadCapa(); }} className="text-emerald-600 hover:underline">{tr('Clore', 'Close')}</button> : <Check size={13} className="text-emerald-500" />}
+                {c.status !== 'done' ? <button onClick={async () => { const ev = prompt(tr('Preuve de réalisation (note / lien) :', 'Completion evidence (note / link):')) || undefined; await completeCapa(tenant, c.id!, userEmail, ev); await loadCapa(); }} className="text-emerald-600 hover:underline">{tr('Clore', 'Close')}</button> : <Check size={13} className="text-emerald-500" />}
                 <button onClick={async () => { await deleteCapa(tenant, c.id!); await loadCapa(); }} className="text-gray-300 hover:text-rose-500"><Trash2 size={12} /></button>
               </div>
             ))}

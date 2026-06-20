@@ -3,14 +3,14 @@
 // Données : lib/hse/data ; calculs purs : lib/hse/kpi. Juridictions CANADIENNES (fédéral + provinces/territoires), bilingue FR/EN.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock, Paperclip } from 'lucide-react';
+import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock, Paperclip, History } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getFrameworks, getRegisterTypes, getHseSettings, saveHseSettings, getTenantRegisters, toggleTenantRegister,
   getRegisterEntries, saveRegisterEntry, deleteRegisterEntry, computeReviewDue, getIncidents, saveIncident,
   getOpenDeadlines, getDeadlinesForIncident, completeDeadline, getHoursWorked, saveHoursWorked, getRegistersDue,
-  getProactiveMetrics, getInterconnectStats,
+  getProactiveMetrics, getInterconnectStats, getAuditLog, type HseAuditRow,
   type HseFramework, type HseRegisterType, type HseSettings, type HseTenantRegister, type HseIncident, type HseDeadline, type HseHours, type HseProactive, type HseInterconnect,
 } from '@/lib/hse/data';
 import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/lib/hse/kpi';
@@ -27,7 +27,7 @@ const INCIDENT_STATUS: Record<string, { fr: string; en: string; cls: string }> =
   closed: { fr: 'Clôturé', en: 'Closed', cls: 'bg-emerald-100 text-emerald-700' },
 };
 
-type Tab = 'kpi' | 'incidents' | 'registers' | 'config';
+type Tab = 'kpi' | 'incidents' | 'registers' | 'config' | 'audit';
 const today = () => new Date().toISOString().slice(0, 10);
 const nowLocal = () => new Date().toISOString().slice(0, 16);
 
@@ -65,6 +65,9 @@ export default function HsePage() {
   }, [tenant]);
   const canView = tier != null && tier >= HSE_VIEW_TIER;
   const canHr = (tier ?? 0) >= HSE_HR_TIER;
+  // Identité courante (estampille « qui » du journal d'audit / complétion des échéances).
+  const [userEmail, setUserEmail] = useState<string>('');
+  useEffect(() => { fetch('/api/auth/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null).then(j => setUserEmail(j?.email || j?.user?.email || '')).catch(() => {}); }, []);
 
   const [settings, setSettings] = useState<HseSettings | null>(null);
   const [frameworks, setFrameworks] = useState<HseFramework[]>([]);
@@ -109,6 +112,7 @@ export default function HsePage() {
     { k: 'incidents', label: tr('Incidents & échéances', 'Incidents & deadlines'), icon: AlertTriangle },
     { k: 'registers', label: tr('Registres', 'Registers'), icon: ClipboardList },
     { k: 'config', label: tr('Configuration', 'Configuration'), icon: Settings },
+    { k: 'audit', label: tr('Journal d’audit', 'Audit log'), icon: History },
   ];
   const card = 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800';
 
@@ -139,9 +143,10 @@ export default function HsePage() {
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
             {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={incidents} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
-            {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id); setDeadlines(await getOpenDeadlines(tenant)); }} />}
-            {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} />}
+            {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} userEmail={userEmail} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id, userEmail); setDeadlines(await getOpenDeadlines(tenant)); }} />}
+            {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} userEmail={userEmail} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
+            {tab === 'audit' && <AuditTab tr={tr} card={card} tenant={tenant} EN={EN} />}
           </>
         )}
       </div>
@@ -270,7 +275,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
 }
 
 // ── INCIDENTS ────────────────────────────────────────────────────────────────────────────────────────
-function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canHr, onSaved, onComplete }: any) {
+function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canHr, userEmail, onSaved, onComplete }: any) {
   const blank = (): HseIncident => ({ occurred_at: nowLocal(), event_code: 'NEAR_MISS', is_lost_time: false, lost_days: 0 });
   const [f, setF] = useState<HseIncident | null>(null);
   const [openInc, setOpenInc] = useState<string | null>(null);
@@ -279,7 +284,7 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
   async function submit() {
     if (!f) return; setBusy(true); setGen(null);
-    const r = await saveIncident(tenant, { ...f, occurred_at: new Date(f.occurred_at).toISOString() });
+    const r = await saveIncident(tenant, { ...f, occurred_at: new Date(f.occurred_at).toISOString(), created_by: userEmail || null });
     if (r.id) { const dl = await getDeadlinesForIncident(tenant, r.id); setGen(dl); await onSaved(); setF(null); }
     setBusy(false);
   }
@@ -321,7 +326,7 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
             <tbody>{incidents.map((i: any) => (
               <React.Fragment key={i.id}>
                 <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1">{new Date(i.occurred_at).toLocaleDateString(tr('fr-CA', 'en-CA'))}</td><td>{tr(EVENT_CODES.find(c => c.code === i.event_code)?.fr || i.event_code, EVENT_CODES.find(c => c.code === i.event_code)?.en || i.event_code)}{i.is_lost_time ? ' · LTI' : ''} <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${(INCIDENT_STATUS[i.status || 'open'] || INCIDENT_STATUS.open).cls}`}>{tr((INCIDENT_STATUS[i.status || 'open'] || INCIDENT_STATUS.open).fr, (INCIDENT_STATUS[i.status || 'open'] || INCIDENT_STATUS.open).en)}</span></td><td className="text-gray-500">{i.location_text || '—'}</td><td className="text-right tabular-nums">{i.lost_days || 0}</td><td className="text-right"><button onClick={() => setOpenInc(openInc === i.id ? null : i.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-500 hover:underline"><Paperclip size={12} /> {tr('Pièces', 'Files')}</button></td></tr>
-                {openInc === i.id && <tr><td colSpan={5} className="space-y-2 pb-2"><IncidentWorkflow tenant={tenant} incident={i} tr={tr} onChanged={onSaved} /><HseAttachments tenant={tenant} entityType="incident" entityId={i.id} canHr={canHr} projectId={i.project_id} tr={tr} /></td></tr>}
+                {openInc === i.id && <tr><td colSpan={5} className="space-y-2 pb-2"><IncidentWorkflow tenant={tenant} incident={i} tr={tr} onChanged={onSaved} userEmail={userEmail} /><HseAttachments tenant={tenant} entityType="incident" entityId={i.id} canHr={canHr} projectId={i.project_id} tr={tr} /></td></tr>}
               </React.Fragment>
             ))}</tbody>
           </table>
@@ -332,7 +337,7 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
 }
 
 // ── REGISTRES (form builder via field_schema) ────────────────────────────────────────────────────────
-function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr }: any) {
+function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr, userEmail }: any) {
   const enabled = tenantRegs.filter((t: any) => t.is_enabled);
   const enabledTypes = enabled.map((t: any) => ({ treg: t, type: regTypes.find((rt: any) => rt.id === t.register_type_id) })).filter((x: any) => x.type);
   const [sel, setSel] = useState<string>('');
@@ -358,7 +363,7 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr }: any) {
   async function save() {
     if (!edit || !cur) return; setBusy(true);
     const review_due_at = computeReviewDue(edit.last_review_at, reviewMonths);
-    await saveRegisterEntry(tenant, { ...edit, tenant_register_id: cur.treg.id, review_due_at });
+    await saveRegisterEntry(tenant, { ...edit, tenant_register_id: cur.treg.id, review_due_at, created_by: userEmail });
     setEntries(await getRegisterEntries(tenant, cur.treg.id)); setEdit(null); setBusy(false);
   }
   return (
@@ -444,6 +449,41 @@ function ConfigTab({ tr, card, tenant, frameworks, regTypes, tenantRegs, setting
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── JOURNAL D'AUDIT (immuable) ───────────────────────────────────────────────────────────────────────
+function AuditTab({ tr, card, tenant, EN }: any) {
+  const [rows, setRows] = useState<HseAuditRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { getAuditLog(tenant).then(r => { setRows(r); setLoading(false); }); }, [tenant]);
+  const TABLE_LBL: Record<string, { fr: string; en: string }> = {
+    hse_incident: { fr: 'Incident', en: 'Incident' }, hse_register_entry: { fr: 'Registre', en: 'Register' },
+    hse_compliance_deadline: { fr: 'Échéance', en: 'Deadline' }, hse_corrective_action: { fr: 'Action (CAPA)', en: 'Action (CAPA)' },
+    hse_attachment: { fr: 'Pièce jointe', en: 'Attachment' },
+  };
+  const OP_LBL: Record<string, { fr: string; en: string; cls: string }> = {
+    INSERT: { fr: 'Création', en: 'Created', cls: 'text-emerald-600' }, UPDATE: { fr: 'Modification', en: 'Updated', cls: 'text-amber-600' }, DELETE: { fr: 'Suppression', en: 'Deleted', cls: 'text-rose-600' },
+  };
+  if (loading) return <div className="grid place-items-center py-16 text-gray-400"><Loader2 className="animate-spin" /></div>;
+  return (
+    <div className={`${card} overflow-x-auto`}>
+      <h3 className="mb-1 text-sm font-bold">{tr('Journal d’audit (immuable)', 'Audit log (immutable)')}</h3>
+      <p className="mb-3 text-[11px] text-gray-400">{tr('Traçabilité SST : qui a créé / modifié / clôturé quoi et quand. Alimenté automatiquement, non modifiable.', 'OHS traceability: who created / modified / closed what and when. Auto-populated, tamper-proof.')}</p>
+      {rows.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune entrée (appliquez la migration 254).', 'No entry (apply migration 254).')}</p> : (
+        <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date/heure', 'Date/time')}</th><th>{tr('Objet', 'Object')}</th><th>{tr('Action', 'Action')}</th><th>{tr('Détail', 'Detail')}</th><th>{tr('Par', 'By')}</th></tr></thead>
+          <tbody>{rows.map(r => { const op = OP_LBL[r.operation] || { fr: r.operation, en: r.operation, cls: '' }; return (
+            <tr key={r.id} className="border-t border-gray-50 dark:border-gray-700/50">
+              <td className="py-1 whitespace-nowrap text-gray-500">{new Date(r.at).toLocaleString(EN ? 'en-CA' : 'fr-CA')}</td>
+              <td>{tr(TABLE_LBL[r.table_name]?.fr || r.table_name, TABLE_LBL[r.table_name]?.en || r.table_name)}</td>
+              <td className={`font-semibold ${op.cls}`}>{tr(op.fr, op.en)}</td>
+              <td className="max-w-[240px] truncate text-gray-500">{r.summary?.label || '—'}{r.summary?.status ? ` · ${r.summary.status}` : ''}</td>
+              <td className="text-gray-500">{r.actor || '—'}</td>
+            </tr>
+          ); })}</tbody>
+        </table>
+      )}
     </div>
   );
 }
