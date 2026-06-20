@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { syncMirror } from '@/lib/hse/incidentMirror';
 
 // CRUD SERVEUR du module Accidents/Incidents (tables fermées à l'anon par la sécurité RLS).
 // Tout est scopé au tenant de SESSION (jamais un paramètre client) — anti-fuite.
@@ -67,10 +68,13 @@ export async function POST(req: NextRequest) {
     if (it.id) {
       const { error } = await supabaseAdmin.from('incident_reports').update(payload).eq('id', it.id).eq('tenant_id', tenant);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      // Synchro miroir HSE (échéances réglementaires + KPI) — best-effort, ne casse pas la sauvegarde.
+      try { await syncMirror(tenant, { id: it.id, incident_type: payload.incident_type, status: payload.status, data: payload.data, created_at: it.created_at || now }); } catch {}
       return NextResponse.json({ ok: true, id: it.id });
     }
     const { data: row, error } = await supabaseAdmin.from('incident_reports').insert({ ...payload, created_at: now }).select('id').single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    try { await syncMirror(tenant, { id: row?.id, incident_type: payload.incident_type, status: payload.status, data: payload.data, created_at: now }); } catch {}
     return NextResponse.json({ ok: true, id: row?.id });
   }
 

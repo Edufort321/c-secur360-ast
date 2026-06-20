@@ -86,10 +86,14 @@ export default function HsePage() {
   const [interconnect, setInterconnect] = useState<HseInterconnect | null>(null);
   const [registersDue, setRegistersDue] = useState<any[]>([]);
   const [accidentFeed, setAccidentFeed] = useState<any[]>([]);  // incidents du module Accidents (KPI auto)
+  const [tenantStart, setTenantStart] = useState<string | null>(null); // plancher du compteur jours-sans-accident
 
   async function loadAll() {
     setLoading(true);
     try {
+      // Synchro miroirs : reflète les rapports du module Accidents (incident_reports) dans hse_incident
+      // (classés en code réglementaire) AVANT de lire les incidents → KPI + échéances + compteur nourris.
+      try { const sm = await fetch(`/api/hse/sync-mirrors?tenant=${encodeURIComponent(tenant)}`, { method: 'POST', credentials: 'include' }); const sj = await sm.json().catch(() => ({})); if (sm.ok) setTenantStart(sj.tenantStart || null); } catch {}
       const [s, fw, rt, treg, inc, dl, hr, rd, pro] = await Promise.all([
         getHseSettings(tenant), getFrameworks(), getRegisterTypes(), getTenantRegisters(tenant),
         getIncidents(tenant), getOpenDeadlines(tenant), getHoursWorked(tenant), getRegistersDue(tenant),
@@ -113,12 +117,13 @@ export default function HsePage() {
 
   const rateBase = settings?.rate_base_hours || 200000;
   // KPI = incidents HSE natifs + incidents importés du module Accidents (anti-ressaisie).
-  // Anti-doublon : un événement saisi À LA FOIS en incident HSE natif ET importé du module Accidents
-  // (même jour + même type) ne doit compter qu'UNE fois. La saisie native fait foi ; on écarte le doublon du feed.
+  // Source unique = hse_incident (miroirs des rapports Accidents + saisies natives). Le feed brut
+  // (incident-feed) ne sert plus que de TRANSITION : on écarte tout rapport déjà reflété par un miroir
+  // (via source_report_id) pour ne JAMAIS compter deux fois. Une fois le backfill fait, le miroir gagne
+  // (classification réglementaire fine vs RECORDABLE générique du feed).
   const kpiIncidents = useMemo(() => {
-    const sig = (i: any) => `${String(i.occurred_at || '').slice(0, 10)}|${i.event_code}`;
-    const native = new Set((incidents || []).map(sig));
-    const feed = (accidentFeed || []).filter((a: any) => !native.has(sig(a)));
+    const mirroredIds = new Set((incidents || []).map((i: any) => i.source_report_id).filter(Boolean));
+    const feed = (accidentFeed || []).filter((a: any) => !mirroredIds.has(a.id));
     return [...incidents, ...feed];
   }, [incidents, accidentFeed]);
   const kpiRows = useMemo(() => computeMonthlyKpi(kpiIncidents as any, autoHours as any, rateBase), [kpiIncidents, autoHours, rateBase]);
@@ -160,7 +165,7 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} onMonthlyHours={async (month: string, val: number) => {
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} onMonthlyHours={async (month: string, val: number) => {
                 // Remplace le total MANUEL du mois : retire les lignes manuelles existantes de ce mois, puis
                 // pose une seule ligne-mois (ou rien si 0). Évite l'accumulation à chaque édition.
                 for (const x of (hours as any[]).filter(x => x.id && String(x.period_start).slice(0, 7) === month)) await deleteHoursWorked(tenant, x.id);
@@ -180,13 +185,17 @@ export default function HsePage() {
 }
 
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, tenantStart, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
-  // Jours sans accident avec arrêt (indicateur d'affichage chantier).
+  // Jours sans accident avec arrêt (affichage chantier). Source = miroirs Accidents (vraies données).
+  // Sans LTI enregistré, on affiche la séquence DEPUIS LE DÉBUT du tenant (plancher), comme le dashboard.
   const lastLti = (incidents || []).filter((i: any) => i.is_lost_time).map((i: any) => new Date(i.occurred_at).getTime()).sort((a: number, b: number) => b - a)[0];
-  const daysSinceLti = lastLti ? Math.floor((Date.now() - lastLti) / 86400000) : null;
+  const startMs = tenantStart ? new Date(tenantStart).getTime() : null;
+  const daysSinceLti = lastLti ? Math.floor((Date.now() - lastLti) / 86400000)
+    : (startMs ? Math.max(0, Math.floor((Date.now() - startMs) / 86400000)) : null);
+  const ltiStreakFromStart = !lastLti && startMs != null;
 
   // Qualité de données : mois avec incidents mais 0 heure (taux faussés).
   const monthsNoHours = (kpiRows || []).filter((r: any) => r.hours <= 0 && (r.recordableCount > 0 || r.nearMissCount > 0 || r.ltiCount > 0)).map((r: any) => r.month);
@@ -226,7 +235,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         <div className="flex items-end justify-between">
           <div><div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident avec arrêt', 'Days without a lost-time injury')}</div>
             <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{daysSinceLti == null ? '—' : daysSinceLti}</div></div>
-          <div className="text-right text-[11px] text-gray-400">{daysSinceLti == null ? tr('Aucun accident avec arrêt enregistré.', 'No lost-time injury on record.') : tr('Depuis le dernier LTI.', 'Since the last LTI.')}</div>
+          <div className="text-right text-[11px] text-gray-400">{daysSinceLti == null ? tr('Aucune donnée.', 'No data.') : ltiStreakFromStart ? tr('Aucun accident avec arrêt — depuis le début.', 'No lost-time injury — since inception.') : tr('Depuis le dernier accident avec arrêt.', 'Since the last lost-time injury.')}</div>
         </div>
       </div>
 
