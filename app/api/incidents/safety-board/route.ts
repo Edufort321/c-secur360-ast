@@ -19,22 +19,24 @@ export async function GET(req: NextRequest) {
   const todayIso = new Date().toISOString().slice(0, 10);
   const year = new Date().getFullYear();
 
-  // Jour 0 = début de l'abonnement du tenant ; les réinitialisations sont PAR TYPE.
-  // SOURCE CANONIQUE : tenant_subscriptions.start_date (sinon .created_at) — c'est le « jour 0 » de
-  // l'abonnement. Repli : tenants.createdAt (⚠️ camelCase dans cette base ; il n'y a PAS de created_at
-  // ni sur tenants ni sur users — ne pas les interroger, ça plantait et retombait sur aujourd'hui = 0).
+  // Jour 0 = CRÉATION du tenant (quand l'exploitation a pu commencer). Le compteur « jours sans … » ne
+  // doit JAMAIS dépasser l'âge réel du tenant. SOURCE PRIMAIRE : tenants.createdAt (⚠️ camelCase ; il n'y a
+  // PAS de created_at sur tenants/users — ne pas les interroger). Repli : tenant_subscriptions.start_date
+  // (qui peut être ANTÉRIEUR à la création réelle si l'abonnement a été pré-amorcé → ne plus le prioriser,
+  // ça surcomptait, ex. 28 j pour un tenant créé il y a < 7 j).
   let tenantStart: string | null = null;
   try {
-    const { data: sub } = await supabaseAdmin.from('tenant_subscriptions').select('start_date, created_at').eq('tenant_id', tenant).maybeSingle();
-    tenantStart = dOnly((sub as any)?.start_date) || dOnly((sub as any)?.created_at);
+    const { data: t } = await supabaseAdmin.from('tenants').select('createdAt').eq('id', tenant).maybeSingle();
+    tenantStart = dOnly((t as any)?.createdAt);
   } catch { /* ignore */ }
   if (!tenantStart) {
     try {
-      const { data: t } = await supabaseAdmin.from('tenants').select('createdAt').eq('id', tenant).maybeSingle();
-      tenantStart = dOnly((t as any)?.createdAt);
+      const { data: sub } = await supabaseAdmin.from('tenant_subscriptions').select('start_date, created_at').eq('tenant_id', tenant).maybeSingle();
+      tenantStart = dOnly((sub as any)?.start_date) || dOnly((sub as any)?.created_at);
     } catch { /* ignore */ }
   }
   if (!tenantStart) tenantStart = todayIso; // inconnu → 0 jour (jamais une valeur factice)
+  if (tenantStart > todayIso) tenantStart = todayIso; // garde-fou : jamais dans le futur
 
   // Réinitialisations PAR TYPE (company_settings.safety_baseline_accident / _nearmiss). Repli legacy =
   // safety_baseline_date (réinit. générale historique), sinon création du tenant.
