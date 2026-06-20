@@ -312,11 +312,11 @@ export default function ModulesPage() {
 
   // Ordre LOGIQUE par groupes (choix Eric) : Opération → Santé & sécurité → Technique → Utilisateur/RH → Admin.
   const CARD_GROUPS: { title: string; keys: string[] }[] = [
+    { title: tr('Administration', 'Administration'), keys: ['admin', 'marketing'] },
     { title: tr('Opération', 'Operations'), keys: ['projects', 'planner', 'timesheets', 'logbook', 'todo', 'inventory', 'inspections', 'maintenance'] },
     { title: tr('Santé & sécurité', 'Health & Safety'), keys: ['ast', 'hse', 'permits', 'events'] },
     { title: tr('Technique', 'Technical'), keys: ['dga', 'rapports'] },
     { title: tr('Utilisateur / RH', 'User / HR'), keys: ['conges'] },
-    { title: tr('Administration', 'Administration'), keys: ['admin', 'marketing'] },
   ];
   const CARD_ORDER = CARD_GROUPS.flatMap(g => g.keys);
   const groupOf = (k: string) => CARD_GROUPS.find(g => g.keys.includes(k))?.title || '';
@@ -415,13 +415,13 @@ export default function ModulesPage() {
           {loading ? (
             <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
           ) : view === 'grid' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {cards.map((c, i) => {
                 const Icon = iconFor(c.key);
                 const newGroup = groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
                 const inner = (
-                  <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
-                    <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex h-[122px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{c.title}</span>
                       <div className="flex items-center gap-1.5">
                         {/* Case « épingler » : seulement sur la carte Accidents/Presque-acc. */}
@@ -431,14 +431,14 @@ export default function ModulesPage() {
                         <div className="grid h-8 w-8 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
                       </div>
                     </div>
-                    <div className="text-3xl font-bold">{c.big}</div>
+                    <div className="text-2xl font-bold leading-tight">{c.big}</div>
                     {/* Carte Accidents : on N'affiche PAS le sous-titre redondant (acc./année) — les pastilles ci-dessous le couvrent. */}
-                    {c.key !== 'events' && <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{c.sub}</div>}
+                    {c.key !== 'events' && <div className="mt-1 line-clamp-2 text-[11px] leading-snug text-gray-500 dark:text-gray-400">{c.sub}</div>}
                     {c.key === 'events' && safety && (
-                      <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-gray-100 pt-2 dark:border-gray-700">
+                      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px]">
                         {safetyDots(safety).map((d, i) => (
-                          <span key={i} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${d.dot}`} /><b className={d.text}>{d.v}</b> <span className="truncate">{d.l}</span>
+                          <span key={i} className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${d.dot}`} /><b className={d.text}>{d.v}</b> <span className="truncate">{d.l}</span>
                           </span>
                         ))}
                       </div>
