@@ -3,7 +3,7 @@
 // Données : lib/hse/data ; calculs purs : lib/hse/kpi. Juridictions CANADIENNES (fédéral + provinces/territoires), bilingue FR/EN.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock } from 'lucide-react';
+import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock, Paperclip } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -16,6 +16,7 @@ import {
 import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/lib/hse/kpi';
 import { resolveKpiHours, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
+import { HseAttachments } from '@/components/hse/HseAttachments';
 
 type Tab = 'kpi' | 'incidents' | 'registers' | 'config';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -260,9 +261,10 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
 }
 
 // ── INCIDENTS ────────────────────────────────────────────────────────────────────────────────────────
-function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, onSaved, onComplete }: any) {
+function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canHr, onSaved, onComplete }: any) {
   const blank = (): HseIncident => ({ occurred_at: nowLocal(), event_code: 'NEAR_MISS', is_lost_time: false, lost_days: 0 });
   const [f, setF] = useState<HseIncident | null>(null);
+  const [openInc, setOpenInc] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [gen, setGen] = useState<HseDeadline[] | null>(null);
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
@@ -306,8 +308,13 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, onSa
       <div className={`${card} overflow-x-auto`}>
         <h3 className="mb-2 text-sm font-bold">{tr('Incidents', 'Incidents')} ({incidents.length})</h3>
         {incidents.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucun incident.', 'No incident.')}</p> : (
-          <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date', 'Date')}</th><th>{tr('Type', 'Type')}</th><th>{tr('Lieu', 'Location')}</th><th className="text-right">{tr('Jours perdus', 'Lost days')}</th></tr></thead>
-            <tbody>{incidents.map((i: any) => <tr key={i.id} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1">{new Date(i.occurred_at).toLocaleDateString(tr('fr-CA', 'en-CA'))}</td><td>{tr(EVENT_CODES.find(c => c.code === i.event_code)?.fr || i.event_code, EVENT_CODES.find(c => c.code === i.event_code)?.en || i.event_code)}{i.is_lost_time ? ' · LTI' : ''}</td><td className="text-gray-500">{i.location_text || '—'}</td><td className="text-right tabular-nums">{i.lost_days || 0}</td></tr>)}</tbody>
+          <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date', 'Date')}</th><th>{tr('Type', 'Type')}</th><th>{tr('Lieu', 'Location')}</th><th className="text-right">{tr('Jours perdus', 'Lost days')}</th><th></th></tr></thead>
+            <tbody>{incidents.map((i: any) => (
+              <React.Fragment key={i.id}>
+                <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1">{new Date(i.occurred_at).toLocaleDateString(tr('fr-CA', 'en-CA'))}</td><td>{tr(EVENT_CODES.find(c => c.code === i.event_code)?.fr || i.event_code, EVENT_CODES.find(c => c.code === i.event_code)?.en || i.event_code)}{i.is_lost_time ? ' · LTI' : ''}</td><td className="text-gray-500">{i.location_text || '—'}</td><td className="text-right tabular-nums">{i.lost_days || 0}</td><td className="text-right"><button onClick={() => setOpenInc(openInc === i.id ? null : i.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-500 hover:underline"><Paperclip size={12} /> {tr('Pièces', 'Files')}</button></td></tr>
+                {openInc === i.id && <tr><td colSpan={5} className="pb-2"><HseAttachments tenant={tenant} entityType="incident" entityId={i.id} canHr={canHr} projectId={i.project_id} tr={tr} /></td></tr>}
+              </React.Fragment>
+            ))}</tbody>
           </table>
         )}
       </div>
@@ -316,7 +323,7 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, onSa
 }
 
 // ── REGISTRES (form builder via field_schema) ────────────────────────────────────────────────────────
-function RegistersTab({ tr, card, tenant, regTypes, tenantRegs }: any) {
+function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr }: any) {
   const enabled = tenantRegs.filter((t: any) => t.is_enabled);
   const enabledTypes = enabled.map((t: any) => ({ treg: t, type: regTypes.find((rt: any) => rt.id === t.register_type_id) })).filter((x: any) => x.type);
   const [sel, setSel] = useState<string>('');
@@ -357,13 +364,15 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs }: any) {
             {reviewMonths ? <div className="pt-5 text-xs text-gray-400">{tr('Prochaine révision', 'Next review')} : {computeReviewDue(edit.last_review_at, reviewMonths) || '—'} ({reviewMonths} {tr('mois', 'months')})</div> : null}
           </div>
           <div className="mt-3 flex justify-end gap-2"><button onClick={() => setEdit(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button><button onClick={save} disabled={busy || !edit.title} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{tr('Enregistrer', 'Save')}</button></div>
+          {edit.id ? <div className="mt-3"><HseAttachments tenant={tenant} entityType="register_entry" entityId={edit.id} canHr={canHr} tr={tr} /></div>
+            : <p className="mt-2 text-[11px] text-gray-400">{tr('Enregistrez l’entrée pour y joindre des documents (FDS, certificat, rapport…).', 'Save the entry to attach documents (SDS, certificate, report…).')}</p>}
         </div>
       )}
 
       <div className={`${card} overflow-x-auto`}>
         {entries.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune entrée.', 'No entry.')}</p> : (
           <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Titre', 'Title')}</th><th>{tr('Référence', 'Reference')}</th><th>{tr('Révision due', 'Review due')}</th><th></th></tr></thead>
-            <tbody>{entries.map((en: any) => <tr key={en.id} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1.5 font-semibold">{en.title}</td><td className="text-gray-500">{en.reference || '—'}</td><td className={en.review_due_at && en.review_due_at <= today() ? 'font-bold text-rose-600' : 'text-gray-500'}>{en.review_due_at || '—'}</td><td className="text-right"><button onClick={async () => { if (confirm(tr('Supprimer ?', 'Delete?'))) { await deleteRegisterEntry(tenant, en.id); setEntries(await getRegisterEntries(tenant, cur.treg.id)); } }} className="text-gray-300 hover:text-rose-500"><Trash2 size={13} /></button></td></tr>)}</tbody>
+            <tbody>{entries.map((en: any) => <tr key={en.id} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1.5 font-semibold">{en.title}</td><td className="text-gray-500">{en.reference || '—'}</td><td className={en.review_due_at && en.review_due_at <= today() ? 'font-bold text-rose-600' : 'text-gray-500'}>{en.review_due_at || '—'}</td><td className="text-right"><div className="inline-flex items-center gap-2"><button onClick={() => setEdit(en)} className="text-blue-500 hover:underline text-xs font-semibold">{tr('Ouvrir / joindre', 'Open / attach')}</button><button onClick={async () => { if (confirm(tr('Supprimer ?', 'Delete?'))) { await deleteRegisterEntry(tenant, en.id); setEntries(await getRegisterEntries(tenant, cur.treg.id)); } }} className="text-gray-300 hover:text-rose-500"><Trash2 size={13} /></button></div></td></tr>)}</tbody>
           </table>
         )}
       </div>
