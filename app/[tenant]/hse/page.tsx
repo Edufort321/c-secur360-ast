@@ -278,7 +278,13 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         <div className="mb-2 flex flex-wrap items-end gap-2">
           <label className="text-xs font-semibold text-gray-500">{tr('Semaine du', 'Week of')}<input type="date" value={h.period_start} onChange={e => setH({ ...h, period_start: e.target.value, period_end: e.target.value })} className="mt-1 block rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
           <label className="text-xs font-semibold text-gray-500">{tr('Heures', 'Hours')}<input type="number" value={h.hours} onChange={e => setH({ ...h, hours: e.target.value })} className="mt-1 block w-28 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
-          <button onClick={async () => { if (!h.period_start || !h.hours) return; await onHours({ period_start: h.period_start, period_end: h.period_end || h.period_start, hours: Number(h.hours) }); setH({ period_start: '', period_end: '', hours: '' }); }} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{tr('Ajouter', 'Add')}</button>
+          <button onClick={async () => {
+            const n = Number(h.hours);
+            if (!h.period_start) return;
+            if (!isFinite(n) || n <= 0) { alert(tr('Heures invalides : saisir un nombre positif.', 'Invalid hours: enter a positive number.')); return; }
+            if (n > 100000) { alert(tr('Valeur aberrante (> 100 000 h pour une semaine).', 'Aberrant value (> 100,000 h for one week).')); return; }
+            await onHours({ period_start: h.period_start, period_end: h.period_end || h.period_start, hours: n }); setH({ period_start: '', period_end: '', hours: '' });
+          }} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{tr('Ajouter', 'Add')}</button>
         </div>
         <p className="text-[11px] text-gray-400">{tr('Total cumulé', 'Cumulative total')} : {hours.reduce((s: number, x: any) => s + (Number(x.hours) || 0), 0).toLocaleString()} h</p>
       </div>
@@ -333,7 +339,14 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
             <label className="text-xs font-semibold text-gray-500">{tr('Date/heure', 'Date/time')}<input type="datetime-local" value={f.occurred_at} onChange={e => setF({ ...f, occurred_at: e.target.value })} className={inp} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Type d’événement', 'Event type')}<select value={f.event_code} onChange={e => setF({ ...f, event_code: e.target.value })} className={inp}>{EVENT_CODES.map(c => <option key={c.code} value={c.code}>{tr(c.fr, c.en)}</option>)}</select></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Lieu', 'Location')}<input value={f.location_text || ''} onChange={e => setF({ ...f, location_text: e.target.value })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Partie du corps', 'Body part')}<input value={f.body_part || ''} onChange={e => setF({ ...f, body_part: e.target.value })} className={inp} /></label>
+            {canHr ? (
+              <>
+                <label className="text-xs font-semibold text-gray-500">{tr('Partie du corps', 'Body part')} <span className="text-amber-600">🛈</span><input value={f.body_part || ''} onChange={e => setF({ ...f, body_part: e.target.value })} className={inp} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Nature de la blessure', 'Injury type')} <span className="text-amber-600">🛈</span><input value={f.injury_type || ''} onChange={e => setF({ ...f, injury_type: e.target.value })} className={inp} /></label>
+              </>
+            ) : (
+              <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">{tr('Renseignements de santé (partie du corps, nature de la blessure) réservés au profil RH (Loi 25).', 'Health details (body part, injury type) are restricted to the HR profile (Quebec Law 25).')}</div>
+            )}
             <label className="flex items-center gap-2 pt-5 text-xs font-semibold text-gray-500"><input type="checkbox" checked={!!f.is_lost_time} onChange={e => setF({ ...f, is_lost_time: e.target.checked })} /> {tr('Avec arrêt de travail (LTI)', 'Lost-time injury (LTI)')}</label>
             <label className="text-xs font-semibold text-gray-500">{tr('Jours perdus', 'Lost days')}<input type="number" value={f.lost_days || 0} onChange={e => setF({ ...f, lost_days: Number(e.target.value) || 0 })} className={inp} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Dommages matériels ($)', 'Material damage ($)')}<input type="number" value={f.material_damage_amount ?? ''} onChange={e => setF({ ...f, material_damage_amount: e.target.value === '' ? null : Number(e.target.value) })} className={inp} /></label>
@@ -386,6 +399,8 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr, userEmail
   const [edit, setEdit] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const shown = entries.filter((e: any) => !search || `${e.title} ${e.reference || ''}`.toLowerCase().includes(search.toLowerCase()));
   useEffect(() => { if (cur) getRegisterEntries(tenant, cur.treg.id).then(setEntries); }, [cur?.treg?.id, tenant]);
   const feed = cur ? FEED_BY_CODE[cur.type.code] : null;
   async function runImport() {
@@ -412,6 +427,7 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr, userEmail
         <select value={cur?.treg.id} onChange={e => { setSel(e.target.value); setEdit(null); }} className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
           {enabledTypes.map((x: any) => <option key={x.treg.id} value={x.treg.id}>{tr(x.type.name_fr, x.type.name_en)}</option>)}
         </select>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('Rechercher…', 'Search…')} className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800" />
         <button onClick={() => setEdit({ title: '', data: {}, last_review_at: today() })} className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouvelle entrée', 'New entry')}</button>
         {feed && <button onClick={runImport} disabled={busy} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {tr(feed.labelFr, feed.labelEn)}</button>}
         {entries.length > 0 && <button onClick={() => downloadCsv(`hse-registre-${cur?.type?.code || ''}-${tenant}`, entries, [{ key: 'title', label: tr('Titre', 'Title') }, { key: 'reference', label: tr('Référence', 'Reference') }, { key: 'last_review_at', label: tr('Dernière révision', 'Last review'), type: 'date' }, { key: 'review_due_at', label: tr('Révision due', 'Review due'), type: 'date' }, { key: 'status', label: tr('Statut', 'Status') }])} className="inline-flex items-center gap-1 rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/40"><Download size={15} /> CSV</button>}
@@ -438,9 +454,9 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr, userEmail
       )}
 
       <div className={`${card} overflow-x-auto`}>
-        {entries.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune entrée.', 'No entry.')}</p> : (
+        {shown.length === 0 ? <p className="text-sm text-gray-400">{entries.length ? tr('Aucun résultat.', 'No result.') : tr('Aucune entrée.', 'No entry.')}</p> : (
           <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Titre', 'Title')}</th><th>{tr('Référence', 'Reference')}</th><th>{tr('Révision due', 'Review due')}</th><th></th></tr></thead>
-            <tbody>{entries.map((en: any) => <tr key={en.id} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1.5 font-semibold">{en.title}</td><td className="text-gray-500">{en.reference || '—'}</td><td className={en.review_due_at && en.review_due_at <= today() ? 'font-bold text-rose-600' : 'text-gray-500'}>{en.review_due_at || '—'}</td><td className="text-right"><div className="inline-flex items-center gap-2"><button onClick={() => setEdit(en)} className="text-blue-500 hover:underline text-xs font-semibold">{tr('Ouvrir / joindre', 'Open / attach')}</button><button onClick={async () => { if (confirm(tr('Supprimer ?', 'Delete?'))) { await deleteRegisterEntry(tenant, en.id); setEntries(await getRegisterEntries(tenant, cur.treg.id)); } }} className="text-gray-300 hover:text-rose-500"><Trash2 size={13} /></button></div></td></tr>)}</tbody>
+            <tbody>{shown.map((en: any) => { const due = en.review_due_at; const over = due && due <= today(); const soon = due && !over && due <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10); return <tr key={en.id} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1.5 font-semibold">{en.title}</td><td className="text-gray-500">{en.reference || '—'}</td><td>{due ? <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${over ? 'bg-rose-100 text-rose-700' : soon ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{due}{over ? ' ⚠' : ''}</span> : <span className="text-gray-400">—</span>}</td><td className="text-right"><div className="inline-flex items-center gap-2"><button onClick={() => setEdit(en)} className="text-blue-500 hover:underline text-xs font-semibold">{tr('Ouvrir / joindre', 'Open / attach')}</button><button onClick={async () => { if (confirm(tr('Supprimer ?', 'Delete?'))) { await deleteRegisterEntry(tenant, en.id); setEntries(await getRegisterEntries(tenant, cur.treg.id)); } }} className="text-gray-300 hover:text-rose-500"><Trash2 size={13} /></button></div></td></tr>; })}</tbody>
           </table>
         )}
       </div>
