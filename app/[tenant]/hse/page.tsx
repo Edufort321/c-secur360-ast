@@ -20,6 +20,7 @@ import { proactiveFeedLive } from '@/lib/hse/proactiveFeed';
 import { getSafetyMeetings, saveSafetyMeeting, deleteSafetyMeeting, type HseSafetyMeeting } from '@/lib/hse/safetyMeetings';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseInjuryDonut } from '@/components/hse/HseInjuryDonut';
+import { HseAiInsights } from '@/components/hse/HseAiInsights';
 import { HseAttachments } from '@/components/hse/HseAttachments';
 import { IncidentWorkflow } from '@/components/hse/IncidentWorkflow';
 import { FEED_BY_CODE, importFeedCandidates, feedSimdut } from '@/lib/hse/registerFeeds';
@@ -306,6 +307,9 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
 
       {/* Graphiques KPI (meilleures pratiques : tendances + pyramide Heinrich + leading/lagging) */}
       <HseKpiCharts rows={viewRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} />
+
+      {/* Analyse IA des tendances (à la demande, agrégats anonymisés — Loi 25). */}
+      <HseAiInsights tenant={tenant} lang={EN ? 'en' : 'fr'} card={card} />
 
       {/* Interconnexions (contexte d'exposition issu des autres modules) */}
       {interconnect && (
