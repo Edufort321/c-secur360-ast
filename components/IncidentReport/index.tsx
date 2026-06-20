@@ -53,6 +53,8 @@ interface InjuredPerson {
   lostTime: boolean;
   lostTimeDays: number;
   returnToWorkDate: string;
+  restricted?: boolean;   // travail restreint / mutation → compte dans le DART rate (réglementaire)
+  fatality?: boolean;     // décès → classification réglementaire FATALITY (avis immédiat)
 }
 
 interface WitnessInfo {
@@ -501,7 +503,7 @@ const TR = {
     p: {
       injured: 'Personnes blessées', add: 'Ajouter', noneNear: 'Aucune blessure (passé proche)', noneInjured: 'Aucune personne blessée enregistrée', injuredN: 'Blessé',
       fullName: 'Nom complet', jobTitle: 'Titre / Poste', employer: 'Employeur', empId: '# Employé', phone: 'Téléphone', injuryType: 'Type de blessure', treatment: 'Traitement médical',
-      injuryDesc: 'Description de la blessure', injuryDescPh: 'Décrire la nature et la localisation de la blessure…', lostTime: 'Perte de temps', daysPh: 'Jours', daysAbsence: "jours d'absence",
+      injuryDesc: 'Description de la blessure', injuryDescPh: 'Décrire la nature et la localisation de la blessure…', lostTime: 'Perte de temps', daysPh: 'Jours', daysAbsence: "jours d'absence", restricted: 'Travail restreint / mutation', fatality: 'Décès',
       witnesses: 'Témoins', noWitness: 'Aucun témoin enregistré', witnessN: 'Témoin', wName: 'Nom', wPost: 'Poste', statement: 'Déclaration', statementPh: 'Déclaration du témoin…',
     },
     b: { title: 'Schéma corporel', none: "Aucune personne blessée — ajoutez une personne dans l'onglet «Blessés» pour localiser les blessures.", clickA: 'Cliquer sur les zones blessées pour ', injuredN: 'Blessé' },
@@ -541,7 +543,7 @@ const TR = {
     p: {
       injured: 'Injured persons', add: 'Add', noneNear: 'No injury (near miss)', noneInjured: 'No injured person recorded', injuredN: 'Injured',
       fullName: 'Full name', jobTitle: 'Title / Position', employer: 'Employer', empId: 'Employee #', phone: 'Phone', injuryType: 'Injury type', treatment: 'Medical treatment',
-      injuryDesc: 'Injury description', injuryDescPh: 'Describe the nature and location of the injury…', lostTime: 'Lost time', daysPh: 'Days', daysAbsence: 'days off',
+      injuryDesc: 'Injury description', injuryDescPh: 'Describe the nature and location of the injury…', lostTime: 'Lost time', daysPh: 'Days', daysAbsence: 'days off', restricted: 'Restricted work / transfer', fatality: 'Fatality',
       witnesses: 'Witnesses', noWitness: 'No witness recorded', witnessN: 'Witness', wName: 'Name', wPost: 'Position', statement: 'Statement', statementPh: 'Witness statement…',
     },
     b: { title: 'Body diagram', none: 'No injured person — add a person in the "Injured" tab to locate injuries.', clickA: 'Click the injured zones for ', injuredN: 'Injured' },
@@ -592,7 +594,7 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
     <div class="card"><div class="card-h">${esc(t.p.injuredN)} #${i + 1} — ${v(p.name)}</div>
       ${row(t.p.jobTitle, p.jobTitle)}${row(t.p.employer, p.company)}${row(t.p.empId, p.employeeId)}${row(t.p.phone, p.phone)}
       ${row(t.p.injuryType, p.injuryType ? tl(lang, p.injuryType) : '')}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
-      ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}
+      ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}${p.restricted ? row(t.p.restricted, '✔') : ''}${p.fatality ? row(t.p.fatality, '✔') : ''}
     </div>`).join('');
 
   // Temoins
@@ -1110,7 +1112,7 @@ function emptyPerson(): InjuredPerson {
     id: crypto.randomUUID(),
     name: '', jobTitle: '', company: '', employeeId: '', phone: '',
     bodyRegions: [], injuryType: '', injuryDescription: '',
-    medicalTreatment: 'none', lostTime: false, lostTimeDays: 0, returnToWorkDate: '',
+    medicalTreatment: 'none', lostTime: false, lostTimeDays: 0, returnToWorkDate: '', restricted: false, fatality: false,
   };
 }
 
@@ -1809,6 +1811,18 @@ function PersonsSection({ report, onChange, readOnly, personnelList }: {
                   />
                 </div>
               )}
+              <Toggle
+                checked={!!person.restricted}
+                onChange={v => updatePerson(person.id, p => ({ ...p, restricted: v }))}
+                label={t.p.restricted}
+                disabled={readOnly}
+              />
+              <Toggle
+                checked={!!person.fatality}
+                onChange={v => updatePerson(person.id, p => ({ ...p, fatality: v }))}
+                label={t.p.fatality}
+                disabled={readOnly}
+              />
             </div>
           </div>
         ))}
