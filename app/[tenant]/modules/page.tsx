@@ -296,12 +296,14 @@ export default function ModulesPage() {
         // Module SST (HSE) — incidents, échéances réglementaires ouvertes, registres à réviser ≤ 30 j.
         const hse = { incidents: 0, deadlines: 0, registersDue: 0 };
         try {
-          const [{ count: inc }, { count: dl }, { count: rd }] = await Promise.all([
-            supabase.from('hse_incident').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
+          // Incidents = données santé (Loi 25) → comptés via la route service_role (anon REVOKE, mig 258).
+          // Échéances/registres = vues non sensibles (definer) → lecture anon OK.
+          const [incRes, { count: dl }, { count: rd }] = await Promise.all([
+            fetch(`/api/hse/incidents?tenant=${encodeURIComponent(tenant)}&count=1`, { credentials: 'include' }).then(r => r.ok ? r.json() : { count: 0 }).catch(() => ({ count: 0 })),
             supabase.from('hse_v_open_deadlines').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
             supabase.from('hse_v_register_due').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
           ]);
-          hse.incidents = inc || 0; hse.deadlines = dl || 0; hse.registersDue = rd || 0;
+          hse.incidents = incRes?.count || 0; hse.deadlines = dl || 0; hse.registersDue = rd || 0;
         } catch { /* migrations 248+ */ }
 
         if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setInvStats({ low: inv.low, value: Math.round(inv.value) }); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); setInspStats(insp); setTsStats(ts); setMaintStats(maint); setHseStats(hse); }

@@ -82,34 +82,33 @@ export async function deleteRegisterEntry(tenant: string, id: string): Promise<v
 }
 
 // ── Incidents + échéances ────────────────────────────────────────────────────────────────────────────
+// Les incidents = renseignements de SANTÉ (Loi 25) → accès via la route serveur service_role
+// `app/api/hse/incidents` (anon REVOKE, migration 258). Champs médicaux masqués si non-RH côté route.
 export async function getIncidents(tenant: string): Promise<HseIncident[]> {
-  const { data } = await supabase.from('hse_incident').select('*').eq('tenant_id', tenant).order('occurred_at', { ascending: false });
-  return (data || []) as HseIncident[];
+  try {
+    const r = await fetch(`/api/hse/incidents?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.items || []) as HseIncident[];
+  } catch { return []; }
 }
 /** Crée l'incident ; le trigger DB génère les échéances. Renvoie l'id pour relire les échéances. */
 export async function saveIncident(tenant: string, i: HseIncident): Promise<{ id?: string; error?: string }> {
-  const row: any = {
-    tenant_id: tenant, project_id: i.project_id || null, occurred_at: i.occurred_at, reported_at: i.reported_at || new Date().toISOString(),
-    event_code: i.event_code, severity: i.severity || null, is_lost_time: !!i.is_lost_time, is_restricted: !!i.is_restricted, lost_days: Number(i.lost_days) || 0,
-    body_part: i.body_part || null, injury_type: i.injury_type || null, location_text: i.location_text || null, description: i.description || null,
-    material_damage_amount: i.material_damage_amount ?? null, created_by: i.created_by || null,
-  };
-  let { data, error } = await supabase.from('hse_incident').insert(row).select('id').single();
-  if (error && /is_restricted/.test(error.message || '')) {   // migration 257 pas encore appliquée → repli
-    delete row.is_restricted;
-    ({ data, error } = await supabase.from('hse_incident').insert(row).select('id').single());
-  }
-  if (error) return { error: error.message };
-  return { id: (data as any).id };
+  try {
+    const r = await fetch('/api/hse/incidents', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, incident: i }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { error: j.error || `Erreur ${r.status}` };
+    return { id: j.id };
+  } catch (e: any) { return { error: e?.message || 'Erreur réseau' }; }
 }
 /** Met à jour le workflow d'un incident (statut, causes racines, clôture). */
 export async function updateIncidentWorkflow(tenant: string, id: string, patch: { status?: string; root_cause?: string | null; contributing_factors?: string | null; closed_by?: string | null }): Promise<{ error?: string }> {
-  const row: any = { updated_at: new Date().toISOString() };
-  if (patch.status !== undefined) { row.status = patch.status; if (patch.status === 'closed') { row.closed_at = new Date().toISOString(); row.closed_by = patch.closed_by || null; } }
-  if (patch.root_cause !== undefined) row.root_cause = patch.root_cause;
-  if (patch.contributing_factors !== undefined) row.contributing_factors = patch.contributing_factors;
-  const { error } = await supabase.from('hse_incident').update(row).eq('id', id).eq('tenant_id', tenant);
-  return { error: error?.message };
+  try {
+    const r = await fetch('/api/hse/incidents', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, id, patch }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { error: j.error || `Erreur ${r.status}` };
+    return {};
+  } catch (e: any) { return { error: e?.message || 'Erreur réseau' }; }
 }
 
 // ── Actions correctives / préventives (CAPA) ──────────────────────────────────────────────────────────
