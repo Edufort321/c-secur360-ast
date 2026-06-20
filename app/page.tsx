@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
 import {
-  Shield, Users, HardHat, Calendar, FileCheck, AlertTriangle,
+  Shield, ShieldCheck, Users, HardHat, Calendar, FileCheck, AlertTriangle,
   Package, ClipboardCheck, Clock, Truck,
   CheckSquare, BarChart3, ChevronLeft, ChevronRight, Lock,
   CheckCircle, Smartphone, Globe, ArrowRight, Phone, Mail,
@@ -56,6 +56,7 @@ const MODULES_FR = [
   { icon: HardHat,        key: 'projets',     name: 'Projets',                desc: 'Suivi des chantiers, clients, contrats et avancements en temps reel.' },
   { icon: Calendar,       key: 'planner',     name: 'Planificateur',          desc: 'Calendrier interactif, affectation du personnel et ressources par journee.' },
   { icon: Shield,         key: 'ast',         name: 'AST / Securite',         desc: 'Analyses de securite de taches, signatures electroniques, conformite CNESST.' },
+  { icon: ShieldCheck,    key: 'hse',         name: 'Registres & KPI (SST)',  desc: 'Registres reglementaires (normes canadiennes), echeances CNESST, KPI LTIFR/TRIR et taux de gravite, incidents + actions correctives (CAPA), journal d\'audit immuable.' },
   { icon: FileCheck,      key: 'permits',     name: 'Permis de travail',      desc: 'Permis d\'espaces confines, travaux en hauteur, hot work et excavation.' },
   { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents et incidents',  desc: 'Tous les incidents : accidents, passes proches, vehicules, materiels et maladies — enquete, actions correctives et suivi reglementaire.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventaire',             desc: 'Gestion du stock, equipements de protection individuelle et consommables.' },
@@ -75,6 +76,7 @@ const MODULES_EN = [
   { icon: HardHat,        key: 'projets',     name: 'Projects',               desc: 'Jobsite tracking, clients, contracts and real-time progress.' },
   { icon: Calendar,       key: 'planner',     name: 'Planner',                desc: 'Interactive calendar, personnel assignment and daily resource management.' },
   { icon: Shield,         key: 'ast',         name: 'JSA / Safety',           desc: 'Job safety analysis, electronic signatures, CNESST & OHS compliance.' },
+  { icon: ShieldCheck,    key: 'hse',         name: 'Registers & KPIs (HSE)', desc: 'Regulatory registers (Canadian standards), CNESST deadlines, LTIFR/TRIR & severity KPIs, incidents + corrective actions (CAPA), tamper-proof audit log.' },
   { icon: FileCheck,      key: 'permits',     name: 'Work Permits',           desc: 'Confined space, working at heights, hot work and excavation permits.' },
   { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents & incidents',   desc: 'All incidents: accidents, near-misses, vehicle, property and illness — investigations, corrective actions and regulatory tracking.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventory',              desc: 'Stock management, personal protective equipment and consumables.' },
@@ -112,6 +114,10 @@ const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }
   ast: {
     fr: { tagline: 'Des analyses sécuritaires de tâches conformes, signées directement sur le terrain.', points: ['AST/JSEA numériques avec signatures électroniques', 'Dangers, mesures de contrôle, isolation/cadenassage et discussion d\'équipe', 'Météo et conditions du lieu pour l\'évaluation des dangers', 'Conforme aux normes provinciales (CNESST, etc.)', 'Accès et création par QR code sur le chantier', 'Conservation et traçabilité complètes'] },
     en: { tagline: 'Compliant job safety analyses, signed right in the field.', points: ['Digital JSA with electronic signatures', 'Hazards, controls, lockout/tagout and team discussion', 'Site weather and conditions for hazard assessment', 'Compliant with provincial standards (CNESST, etc.)', 'QR access and creation on the jobsite', 'Full retention and traceability'] },
+  },
+  hse: {
+    fr: { tagline: 'Le tableau de bord SST de niveau entreprise : registres réglementaires, KPI et conformité, sans ressaisie.', points: ['Registres réglementaires canadiens (fédéral + provinces/territoires)', 'KPI LTIFR / TRIR / taux de gravité — heures puisées automatiquement des feuilles de temps', 'Échéances réglementaires (CNESST) générées et suivies automatiquement', 'Incidents avec enquête, causes racines et actions correctives/préventives (CAPA, ISO 45001)', 'Indicateurs proactifs (AST, permis) et pyramide de sécurité (Heinrich)', 'Journal d\'audit immuable + accès restreint (niveau admin, données santé → RH, Loi 25)'] },
+    en: { tagline: 'Enterprise-grade OHS dashboard: regulatory registers, KPIs and compliance, with no re-entry.', points: ['Canadian regulatory registers (federal + provinces/territories)', 'LTIFR / TRIR / severity KPIs — hours auto-sourced from timesheets', 'Regulatory deadlines (CNESST) auto-generated and tracked', 'Incidents with investigation, root causes and corrective/preventive actions (CAPA, ISO 45001)', 'Leading indicators (JSA, permits) and safety pyramid (Heinrich)', 'Tamper-proof audit log + restricted access (admin level, health data → HR, Law 25)'] },
   },
   permits: {
     fr: { tagline: 'Tous vos permis de travail à risque, sans papier et toujours traçables.', points: ['Espace clos, travaux à chaud, hauteur, excavation, électrique', 'Vérifications préalables obligatoires avant le début', 'Autorisations et signatures électroniques', 'Lien avec l\'AST et le projet', 'Archivage conforme'] },
