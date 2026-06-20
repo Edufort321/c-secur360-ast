@@ -5,7 +5,7 @@
 // valider » et le diagnostic n'est pas exportable. Conserve la trajectoire multi-échantillons existante.
 import {
   PENTAGON_VERTICES, PENTAGON_ORDER, pentagonPoint, ZONE_POLYGONS, classifyDuval, BOUNDARIES_VALIDATED,
-  PENTAGON_BOUNDARY_VERSION, type PentaGasKey, type PentaGases, type ZoneCode,
+  PENTAGON_BOUNDARY_VERSION, PENTAGON_DRAW_SCALE, type PentaGasKey, type PentaGases, type ZoneCode,
 } from '@/lib/dga/pentagon';
 
 type Lang = 'fr' | 'en';
@@ -24,8 +24,10 @@ const ZONE_COLORS: Record<ZoneCode, string> = {
 export function DuvalPentagon({ samples, lang = 'fr', showZones = true }: { samples: { id?: number | string; date?: string; gases: PentaGases }[]; lang?: Lang; showZones?: boolean }) {
   const tr = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const outline = PENTAGON_ORDER.map(k => `${px(PENTAGON_VERTICES[k][0])},${py(PENTAGON_VERTICES[k][1])}`).join(' ');
+  // Le centroïde vit dans le repère « % » (sommets à 100) ; on le ramène au repère de DESSIN (R=40) ×0.4.
+  const sc = (v: number) => v * PENTAGON_DRAW_SCALE;
   const pts = samples.map(s => ({ s, p: pentagonPoint(s.gases) })).filter(x => x.p) as { s: typeof samples[0]; p: { x: number; y: number; hemisphere: string } }[];
-  const path = pts.map((x, i) => `${i === 0 ? 'M' : 'L'} ${px(x.p.x).toFixed(1)} ${py(x.p.y).toFixed(1)}`).join(' ');
+  const path = pts.map((x, i) => `${i === 0 ? 'M' : 'L'} ${px(sc(x.p.x)).toFixed(1)} ${py(sc(x.p.y)).toFixed(1)}`).join(' ');
   const last = pts[pts.length - 1];
   const dx = last ? classifyDuval(last.s.gases) : null;
   const zonePath = (poly: { x: number; y: number }[]) => poly.map((p, i) => `${i === 0 ? 'M' : 'L'} ${px(p.x).toFixed(1)} ${py(p.y).toFixed(1)}`).join(' ') + ' Z';
@@ -56,7 +58,7 @@ export function DuvalPentagon({ samples, lang = 'fr', showZones = true }: { samp
         {/* trajectoire des échantillons */}
         {pts.length > 1 && <path d={path} fill="none" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 2" />}
         {pts.map((x, i) => (
-          <circle key={i} cx={px(x.p.x)} cy={py(x.p.y)} r={i === pts.length - 1 ? 4.5 : 2.5}
+          <circle key={i} cx={px(sc(x.p.x))} cy={py(sc(x.p.y))} r={i === pts.length - 1 ? 4.5 : 2.5}
             fill={i === pts.length - 1 ? '#dc2626' : '#93c5fd'} stroke="#fff" strokeWidth={1.2} />
         ))}
         <circle cx={CX} cy={CY} r={1} fill="#94a3b8" />

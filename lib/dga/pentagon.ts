@@ -16,7 +16,16 @@ export const PENTAGON_VERTICES: Record<PentaGasKey, [number, number]> = {
   H2: [0, 40], C2H6: [-38, 12.4], CH4: [-23.5, -32.4], C2H4: [23.5, -32.4], C2H2: [38, 12.4],
 };
 export const PENTAGON_ORDER: PentaGasKey[] = ['H2', 'C2H6', 'CH4', 'C2H4', 'C2H2'];
-export const PENTAGON_AXIS_MAX = 40; // unité d'axe max (= 100 % d'un gaz)
+export const PENTAGON_AXIS_MAX = 40; // unité d'axe max (= 100 % d'un gaz) — DESSIN seulement
+
+// Angles officiels (Cheim, Duval & Haider, Energies 2020, 13, 2859) — sens ANTIHORAIRE H2→C2H6→CH4→C2H4→C2H2.
+export const GAS_ANGLE_DEG: Record<PentaGasKey, number> = { H2: 90, C2H6: 162, CH4: 234, C2H4: 306, C2H2: 18 };
+// Vecteurs UNITAIRES de chaque axe — pour le CALCUL du centroïde (projection du %, 0..100), PAS le dessin.
+export const GAS_UNIT: Record<PentaGasKey, [number, number]> = PENTAGON_ORDER.reduce((acc, g) => {
+  const a = (GAS_ANGLE_DEG[g] * Math.PI) / 180; acc[g] = [Math.cos(a), Math.sin(a)]; return acc;
+}, {} as Record<PentaGasKey, [number, number]>);
+// Le centroïde officiel vit dans le repère « % » (sommets à distance 100). Le dessin utilise R=40 → ×0.4.
+export const PENTAGON_DRAW_SCALE = PENTAGON_AXIS_MAX / 100; // 0.4
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -35,13 +44,17 @@ export function polygonCentroid(pts: [number, number][]): [number, number] {
 }
 
 /** Point de diagnostic du pentagone : centroïde du polygone des 5 gaz (en % relatif). null si pas de gaz. */
+// Centroïde OFFICIEL (Cheim, Duval & Haider 2020) : chaque gaz projeté à une distance = son POURCENTAGE
+// (0..100) sur son axe UNITAIRE (cos,sin) ; le centroïde du polygone (aire signée) est le point de
+// diagnostic. ⚠️ Repère « % » (sommets à distance 100) — pour le DESSIN, multiplier par PENTAGON_DRAW_SCALE.
+// Validé numériquement contre la Figure 1 du papier : (50,120,30,60,80) → (−7.36, −5.80).
 export function pentagonPoint(g: PentaGases): { x: number; y: number; hemisphere: 'nord' | 'sud' } | null {
   const sum = PENTAGON_ORDER.reduce((s, k) => s + Math.max(0, Number(g[k]) || 0), 0);
   if (sum <= 0) return null;
   const pts: [number, number][] = PENTAGON_ORDER.map(k => {
-    const pct = Math.max(0, Number(g[k]) || 0) / sum;          // fraction 0..1
-    const [vx, vy] = PENTAGON_VERTICES[k];
-    return [vx * pct, vy * pct];
+    const pct = (100 * Math.max(0, Number(g[k]) || 0)) / sum;  // pourcentage 0..100
+    const [ux, uy] = GAS_UNIT[k];
+    return [ux * pct, uy * pct];
   });
   const [x, y] = polygonCentroid(pts);
   // hémisphère NORD (y>0) = tendance électrique (H2/C2H2/C2H6) ; SUD (y<0) = thermique (CH4/C2H4). Indicatif.
@@ -57,7 +70,7 @@ export function pentagonPoint(g: PentaGases): { x: number; y: number; hemisphere
 // ════════════════════════════════════════════════════════════════════════════════════════════════════
 
 export const BOUNDARIES_VALIDATED = false;                    // ← lever à true après validation ingénieur
-export const PENTAGON_BOUNDARY_VERSION = 'cheim-duval-2020-draft-2';
+export const PENTAGON_BOUNDARY_VERSION = 'cheim-duval-2020-draft-3';
 export const BOUNDARY_TOL = 0.8;                              // proximité frontière → prudence (≈2 % de R=40)
 
 export type ZoneCode = 'PD' | 'S' | 'D1' | 'D2' | 'T1-O' | 'T1-C' | 'T2-O' | 'T2-C' | 'T3-C' | 'T3-H';
@@ -121,9 +134,10 @@ export function classifyDuval(g: PentaGases): DuvalResult | null {
   const pt = pentagonPoint(g); if (!pt) return null;
   const sum = PENTAGON_ORDER.reduce((s, k) => s + Math.max(0, Number(g[k]) || 0), 0) || 1;
   const percentages = PENTAGON_ORDER.reduce((acc, k) => { acc[k] = r2((Math.max(0, Number(g[k]) || 0) / sum) * 100); return acc; }, {} as Record<PentaGasKey, number>);
-  const centroid: Pt = { x: pt.x, y: pt.y };
-  let found: ZoneDef | null = ZONE_POLYGONS.find(z => pointInPolygon(centroid, z.polygon)) || null;
-  if (!found) { let bestD = Infinity; for (const z of ZONE_POLYGONS) { const d = distToPolygon(centroid, z.polygon); if (d < bestD) { bestD = d; found = z; } } }
-  const onBoundary = found != null && distToPolygon(centroid, found.polygon) < BOUNDARY_TOL;
+  const centroid: Pt = { x: pt.x, y: pt.y };                    // OFFICIEL (repère %) — affichage + tests
+  const draw: Pt = { x: pt.x * PENTAGON_DRAW_SCALE, y: pt.y * PENTAGON_DRAW_SCALE }; // repère R=40 des zones
+  let found: ZoneDef | null = ZONE_POLYGONS.find(z => pointInPolygon(draw, z.polygon)) || null;
+  if (!found) { let bestD = Infinity; for (const z of ZONE_POLYGONS) { const d = distToPolygon(draw, z.polygon); if (d < bestD) { bestD = d; found = z; } } }
+  const onBoundary = found != null && distToPolygon(draw, found.polygon) < BOUNDARY_TOL;
   return { centroid, zone: found?.code ?? null, labelFr: found?.labelFr ?? null, labelEn: found?.labelEn ?? null, onBoundary, guard: guardGasLevels(g), percentages, validated: BOUNDARIES_VALIDATED, boundaryVersion: PENTAGON_BOUNDARY_VERSION };
 }

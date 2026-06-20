@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { polygonCentroid, pentagonPoint, PENTAGON_VERTICES, classifyDuval, pointInPolygon, guardGasLevels, BOUNDARIES_VALIDATED, ZONE_POLYGONS } from './pentagon';
+import { polygonCentroid, pentagonPoint, PENTAGON_VERTICES, classifyDuval, pointInPolygon, guardGasLevels, BOUNDARIES_VALIDATED, ZONE_POLYGONS, GAS_UNIT } from './pentagon';
+
+// ── Validation OFFICIELLE du centroïde (Cheim, Duval & Haider, Energies 2020, 13, 2859) ──────────────
+// Méthode : projeter le % (0..100) de chaque gaz sur son axe UNITAIRE, centroïde par aire signée.
+// Ces valeurs sont vérifiées numériquement à la main (±0.01). Le moteur de centroïde doit les reproduire.
+describe('Pentagone combiné — centroïde officiel (Energies 2020)', () => {
+  const near = (p: any, x: number, y: number) => { expect(p).not.toBeNull(); expect(p.x).toBeCloseTo(x, 1); expect(p.y).toBeCloseTo(y, 1); };
+  it('axes unitaires : H2 vertical (0,1), C2H4 bas-droite', () => {
+    expect(GAS_UNIT.H2[0]).toBeCloseTo(0, 5); expect(GAS_UNIT.H2[1]).toBeCloseTo(1, 5);
+    expect(GAS_UNIT.C2H4[1]).toBeLessThan(0); expect(GAS_UNIT.C2H4[0]).toBeGreaterThan(0);
+  });
+  it('ancre Figure 1 : (50,120,30,60,80) → (−7.35, −5.79)', () => {
+    near(pentagonPoint({ H2: 50, CH4: 120, C2H2: 30, C2H4: 60, C2H6: 80 }), -7.35, -5.79);
+  });
+  it('cas 1 : H2=29, CH4=204, C2H2=0, C2H4=17, C2H6=264 → (−22.24, −4.26)', () => {
+    near(pentagonPoint({ H2: 29, CH4: 204, C2H2: 0, C2H4: 17, C2H6: 264 }), -22.24, -4.26);
+  });
+});
 
 describe('Pentagone de Duval — sommets + centroïde', () => {
   it('sommets publics exacts (rayon ≈ 40)', () => {
