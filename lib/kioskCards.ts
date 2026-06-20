@@ -28,11 +28,12 @@ export type KioskStatsInput = {
   safety?: any; // { daysSinceAccident, daysSinceNearMiss, accidentsYTD, nearMissYTD, year }
   proj?: { soumission: number; encours: number; facture: number; amount: number };
   ast?: { total: number; draft?: number; in_progress?: number; completed?: number; approved?: number };
-  permit?: { total: number; active: number };
+  permit?: { total: number; active: number; confined?: number; work?: number };
   invCount?: number;
+  invStats?: { low: number; value: number };
   dgaStats?: { all: number; critical?: number; overdue?: number };
   inspStats?: { total: number; nonConf: number };
-  tsStats?: { total: number; pending: number };
+  tsStats?: { total: number; pending: number; approved?: number; paid?: number };
   maintStats?: { sheets: number; due: number; alerts: number };
   plan?: { occ: number; occCount: number; roster: number };
 };
@@ -79,12 +80,21 @@ export function buildKioskSlides(d: KioskStatsInput): KioskSlide[] {
   if (d.permit) out.push({
     key: 'permits', big: d.permit.active, title: tr('PERMIS DE TRAVAIL', 'WORK PERMITS'), accent: 'text-orange-400',
     stats: [
-      { value: d.permit.total, label: tr('Total', 'Total'), accent: 'text-gray-300' },
       { value: d.permit.active, label: tr('Actifs', 'Active'), accent: 'text-orange-400' },
+      { value: d.permit.work ?? 0, label: tr('Travail', 'Work'), accent: 'text-amber-400' },
+      { value: d.permit.confined ?? 0, label: tr('Espace clos', 'Confined'), accent: 'text-sky-400' },
+      { value: d.permit.total, label: tr('Total', 'Total'), accent: 'text-gray-300' },
     ],
   });
   if (d.plan && (d.plan.roster || d.plan.occCount)) out.push({ key: 'planner', big: `${d.plan.occ}%`, title: tr('TAUX D’OCCUPATION', 'OCCUPANCY RATE'), sub: tr(`${d.plan.occCount}/${d.plan.roster} affectés aujourd’hui`, `${d.plan.occCount}/${d.plan.roster} assigned today`), accent: 'text-violet-400' });
-  if (d.invCount != null) out.push({ key: 'inventory', big: d.invCount, title: tr('ARTICLES EN INVENTAIRE', 'INVENTORY ITEMS'), accent: 'text-teal-400' });
+  if (d.invCount != null) out.push({
+    key: 'inventory', big: d.invCount, title: tr('INVENTAIRE', 'INVENTORY'), accent: 'text-teal-400',
+    stats: [
+      { value: d.invCount, label: tr('Articles', 'Items'), accent: 'text-teal-400' },
+      { value: d.invStats?.low ?? 0, label: tr('Stock bas', 'Low stock'), accent: (d.invStats?.low ?? 0) ? 'text-amber-400' : 'text-emerald-400' },
+      { value: money(d.invStats?.value ?? 0), label: tr('Valeur', 'Value'), accent: 'text-violet-400' },
+    ],
+  });
   if (d.dgaStats) out.push({
     key: 'dga', big: d.dgaStats.all, title: tr('TRANSFORMATEURS (DGA)', 'TRANSFORMERS (DGA)'), accent: d.dgaStats.critical ? 'text-rose-400' : 'text-emerald-400',
     stats: [
@@ -98,13 +108,16 @@ export function buildKioskSlides(d: KioskStatsInput): KioskSlide[] {
     stats: [
       { value: d.inspStats.total, label: tr('Total', 'Total'), accent: 'text-sky-400' },
       { value: d.inspStats.nonConf, label: tr('Non conformités', 'Non-conformities'), accent: d.inspStats.nonConf ? 'text-rose-400' : 'text-emerald-400' },
+      { value: Math.max(0, d.inspStats.total - d.inspStats.nonConf), label: tr('Conformes', 'Conform'), accent: 'text-emerald-400' },
     ],
   });
   if (d.tsStats) out.push({
     key: 'timesheets', big: d.tsStats.pending, title: tr('FEUILLES DE TEMPS', 'TIMESHEETS'), accent: d.tsStats.pending ? 'text-amber-400' : 'text-emerald-400',
     stats: [
-      { value: d.tsStats.total, label: tr('Total', 'Total'), accent: 'text-sky-400' },
-      { value: d.tsStats.pending, label: tr('En attente', 'Pending'), accent: d.tsStats.pending ? 'text-amber-400' : 'text-emerald-400' },
+      { value: d.tsStats.pending, label: tr('À approuver', 'To approve'), accent: d.tsStats.pending ? 'text-amber-400' : 'text-emerald-400' },
+      { value: d.tsStats.approved ?? 0, label: tr('Approuvées', 'Approved'), accent: 'text-sky-400' },
+      { value: d.tsStats.paid ?? 0, label: tr('Payées', 'Paid'), accent: 'text-emerald-400' },
+      { value: d.tsStats.total, label: tr('Total', 'Total'), accent: 'text-gray-300' },
     ],
   });
   if (d.maintStats) out.push({

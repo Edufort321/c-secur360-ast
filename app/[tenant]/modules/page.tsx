@@ -65,16 +65,17 @@ export default function ModulesPage() {
 
   const [proj, setProj] = useState({ soumission: 0, encours: 0, facture: 0, amount: 0 });
   const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
-  const [permit, setPermit] = useState({ total: 0, active: 0 });
+  const [permit, setPermit] = useState({ total: 0, active: 0, confined: 0, work: 0 });
   const [evt, setEvt] = useState({ quasi: 0, accident: 0, year: 0, total: 0 });
   const [plan, setPlan] = useState({ actifs: 0, aVenir: 0, occ: 0, occCount: 0, roster: 0 });
   const [invCount, setInvCount] = useState(0);
+  const [invStats, setInvStats] = useState({ low: 0, value: 0 });
   const [userCount, setUserCount] = useState(0);
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
   const [logbookStats, setLogbookStats] = useState({ vehicles: 0, kmWeek: 0, kmYear: 0 });
   const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0, todo: 0 });
   const [inspStats, setInspStats] = useState({ total: 0, nonConf: 0 });
-  const [tsStats, setTsStats] = useState({ total: 0, pending: 0 });
+  const [tsStats, setTsStats] = useState({ total: 0, pending: 0, approved: 0, paid: 0 });
   const [maintStats, setMaintStats] = useState({ sheets: 0, due: 0, alerts: 0 });
   // Rapports terrain : cache localStorage NAMESPACÉ par tenant ({tenant}::rpt_reports_v1) —
   // compté côté client. Doit rester aligné avec __rptNS() de RapportsApp.jsx (anti-fuite inter-tenant).
@@ -129,9 +130,13 @@ export default function ModulesPage() {
         const a = { total: 0, draft: 0, active: 0, completed: 0, cancelled: 0 } as any;
         (asts || []).forEach((x: any) => { a.total += 1; const s = x.data?.status || 'draft'; if (a[s] !== undefined) a[s] += 1; });
 
-        const { data: permits } = await supabase.from('confined_space_permits').select('status').eq('tenant_id', tenant);
-        const pm = { total: 0, active: 0 };
-        (permits || []).forEach((x: any) => { pm.total += 1; if (x.status === 'active') pm.active += 1; });
+        const [{ data: permits }, { count: workCount }] = await Promise.all([
+          supabase.from('confined_space_permits').select('status').eq('tenant_id', tenant),
+          supabase.from('work_permits').select('permit_number', { count: 'exact', head: true }).eq('tenant_id', tenant),
+        ]);
+        const pm = { total: 0, active: 0, confined: 0, work: workCount || 0 };
+        (permits || []).forEach((x: any) => { pm.confined += 1; if (x.status === 'active') pm.active += 1; });
+        pm.total = pm.confined + pm.work;
 
         // near_miss_events fermée à l'anon -> route serveur scopée à la session.
         const events: any[] = await fetch('/api/incidents/summary?kind=nearmiss', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).then((j: any) => (j?.nearMiss || [])).catch(() => []);
@@ -183,10 +188,19 @@ export default function ModulesPage() {
 
         // Inventaire : la source de vérité du module est le snapshot inventory_state (jsonb),
         // pas l'ancienne table inv_items. Repli sur la table items si le snapshot est absent.
-        let ic = 0;
+        let ic = 0; const inv = { low: 0, value: 0 };
         const { data: invState } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
-        if (Array.isArray(invState?.data?.items)) ic = invState!.data.items.length;
-        else { const { count: itemsCount } = await supabase.from('items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant); ic = itemsCount ?? 0; }
+        if (Array.isArray(invState?.data?.items)) {
+          const items = invState!.data.items;
+          ic = items.length;
+          for (const it of items as any[]) {
+            const qty = Number(it.qty ?? it.quantity ?? it.quantite ?? it.stock ?? 0) || 0;
+            const min = Number(it.min ?? it.seuil ?? it.minQty ?? it.reorder ?? it.minimum ?? 0) || 0;
+            const price = Number(it.price ?? it.prix ?? it.unitPrice ?? it.unit_price ?? it.cost ?? it.cout ?? 0) || 0;
+            if (min > 0 && qty <= min) inv.low += 1;
+            inv.value += qty * price;
+          }
+        } else { const { count: itemsCount } = await supabase.from('items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant); ic = itemsCount ?? 0; }
         // « Utilisateurs » = effectif réel (roster planner_personnel). Déjà chargé plus haut (rosterCount) -> on réutilise (perf : 1 requête en moins).
         const uc = rosterCount;
 
@@ -240,10 +254,10 @@ export default function ModulesPage() {
         } catch { /* table absente */ }
 
         // Feuilles de temps — table timesheets ; 'submitted' = en attente d'approbation.
-        const ts = { total: 0, pending: 0 };
+        const ts = { total: 0, pending: 0, approved: 0, paid: 0 };
         try {
           const { data: tsData } = await supabase.from('timesheets').select('status').eq('tenant_id', tenant);
-          (tsData || []).forEach((x: any) => { ts.total += 1; if (x.status === 'submitted') ts.pending += 1; });
+          (tsData || []).forEach((x: any) => { ts.total += 1; if (x.status === 'submitted') ts.pending += 1; else if (x.status === 'approved') ts.approved += 1; else if (x.status === 'paid') ts.paid += 1; });
         } catch { /* table absente */ }
 
         // Maintenance (GMAO) — fiches d'équipement (maintenance_sheets) + actions dues + alertes publiques.
@@ -257,7 +271,7 @@ export default function ModulesPage() {
         } catch { /* table absente (migration 191) */ }
         try { const { count } = await supabase.from('maintenance_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant).eq('status', 'new'); maint.alerts = count || 0; } catch { /* migration 215 */ }
 
-        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); setInspStats(insp); setTsStats(ts); setMaintStats(maint); }
+        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setInvStats({ low: inv.low, value: Math.round(inv.value) }); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); setInspStats(insp); setTsStats(ts); setMaintStats(maint); }
       } catch { /* dégradé */ } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -271,12 +285,12 @@ export default function ModulesPage() {
   if (has('projects')) cards.push({ key: 'projects', title: t('projects'), href: `/${tenant}/projects`, big: String(proj.soumission + proj.encours + proj.facture), sub: `${proj.soumission} ${tr('soum.', 'quotes')} · ${proj.encours} ${tr('cours', 'active')} · ${proj.facture} ${tr('fact.', 'inv.')} · ${money(proj.amount)}`, available: true });
   if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.actifs), sub: `${tr('en cours auj.', 'active today')} · ${plan.aVenir} ${tr('à venir', 'upcoming')} · ${plan.roster > 0 ? `${plan.occCount}/${plan.roster} ${tr('occupés auj.', 'busy today')} (${plan.occ}%)` : `${plan.occ}% ${tr('occupé auj.', 'busy today')}`}`, available: true });
   if (has('ast')) cards.push({ key: 'ast', title: tr('Santé et sécurité', 'Health & Safety'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft} ${tr('brouillon', 'draft')} · ${ast.in_progress} ${tr('cours', 'wip')} · ${ast.completed} ${tr('terminé', 'done')} · ${ast.approved} ${tr('approuvé', 'appr.')}` , available: true });
-  if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')}`, available: true });
+  if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')} · ${permit.work} ${tr('travail', 'work')} · ${permit.confined} ${tr('espace clos', 'confined')} · ${permit.total} ${tr('total', 'total')}`, available: true });
   if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });
-  if (has('inventory')) cards.push({ key: 'inventory', title: tr('Inventaire', 'Inventory'), href: `/${tenant}/inventory`, big: String(invCount), sub: tr('articles', 'items'), available: true });
-  if (has('inspections')) cards.push({ key: 'inspections', title: tr("Inspections", 'Inspections'), href: `/${tenant}/inspections`, big: String(inspStats.total), sub: inspStats.nonConf ? `${inspStats.nonConf} ${tr('non conforme(s)', 'non-conform')}` : tr('toutes conformes', 'all conform'), available: true });
-  if (has('maintenance')) cards.push({ key: 'maintenance', title: tr("Maintenance d'équipement", 'Equipment maintenance'), href: `/${tenant}/maintenance`, big: String(maintStats.sheets), sub: [maintStats.alerts ? `🔔 ${maintStats.alerts} ${tr('alerte(s)', 'alert(s)')}` : '', maintStats.due ? `⚠ ${maintStats.due} ${tr('due(s)', 'due')}` : ''].filter(Boolean).join(' · ') || tr('fiches d’entretien', 'maintenance sheets'), available: true });
-  if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: String(tsStats.total), sub: tsStats.pending ? `${tsStats.pending} ${tr('à approuver', 'to approve')}` : tr('aucune en attente', 'none pending'), available: true });
+  if (has('inventory')) cards.push({ key: 'inventory', title: tr('Inventaire', 'Inventory'), href: `/${tenant}/inventory`, big: String(invCount), sub: `${invCount} ${tr('articles', 'items')} · ${invStats.low} ${tr('stock bas', 'low stock')} · ${money(invStats.value)} ${tr('valeur', 'value')}`, available: true });
+  if (has('inspections')) cards.push({ key: 'inspections', title: tr("Inspections", 'Inspections'), href: `/${tenant}/inspections`, big: String(inspStats.total), sub: `${inspStats.total} ${tr('total', 'total')} · ${inspStats.nonConf} ${tr('non conf.', 'non-conf.')} · ${Math.max(0, inspStats.total - inspStats.nonConf)} ${tr('conformes', 'conform')}`, available: true });
+  if (has('maintenance')) cards.push({ key: 'maintenance', title: tr("Maintenance d'équipement", 'Equipment maintenance'), href: `/${tenant}/maintenance`, big: String(maintStats.sheets), sub: `${maintStats.sheets} ${tr('fiches', 'sheets')} · ${maintStats.due} ${tr('due(s)', 'due')} · ${maintStats.alerts} ${tr('alerte(s)', 'alert(s)')}`, available: true });
+  if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: String(tsStats.total), sub: `${tsStats.pending} ${tr('à approuver', 'to approve')} · ${tsStats.approved} ${tr('approuvées', 'approved')} · ${tsStats.paid} ${tr('payées', 'paid')} · ${tsStats.total} ${tr('total', 'total')}`, available: true });
   if (has('logbook')) cards.push({ key: 'logbook', title: tr('Logbook véhicules', 'Vehicle logbook'), href: `/${tenant}/logbook`, big: `${Math.round(logbookStats.kmWeek).toLocaleString('fr-CA')} km`, sub: `${logbookStats.vehicles} ${tr('véhicules actifs', 'active vehicles')} · ${Math.round(logbookStats.kmYear).toLocaleString('fr-CA')} km ${tr('cette année', 'this year')}`, available: true });
   if (has('todo')) cards.push({ key: 'todo', title: 'To-Do', href: `/${tenant}/todo`, big: String(todoStats.total), sub: `${todoStats.todo} ${tr('à faire', 'to do')} · ${todoStats.in_progress} ${tr('en cours', 'wip')} · ${todoStats.done} ${tr('terminé', 'done')}`, available: true });
   if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.todo ? `⚠ ${dgaStats.todo} ${tr('à traiter', 'to treat')} · ` : ''}${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}${dgaStats.inspDue ? ` · ${dgaStats.inspDue} ${tr('insp. dues', 'insp. due')}` : ''}`, available: true });
@@ -287,7 +301,7 @@ export default function ModulesPage() {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <KioskBroadcast enabled={kiosk.on} idleSeconds={kiosk.idle} selectedKeys={kiosk.cards} lang={lang === 'en' ? 'en' : 'fr'} tenant={tenant}
-        slides={buildKioskSlides({ lang: lang === 'en' ? 'en' : 'fr', safety, proj, ast, permit, plan, invCount, dgaStats, inspStats, tsStats, maintStats })} />
+        slides={buildKioskSlides({ lang: lang === 'en' ? 'en' : 'fr', safety, proj, ast, permit, plan, invCount, invStats, dgaStats, inspStats, tsStats, maintStats })} />
       <PortalHeader tenant={tenant} />
 
       <div className="px-4 pt-3 lg:px-6">
