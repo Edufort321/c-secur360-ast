@@ -57,25 +57,33 @@ export function pentagonPoint(g: PentaGases): { x: number; y: number; hemisphere
 // ════════════════════════════════════════════════════════════════════════════════════════════════════
 
 export const BOUNDARIES_VALIDATED = false;                    // ← lever à true après validation ingénieur
-export const PENTAGON_BOUNDARY_VERSION = 'cheim-duval-2020-draft-1';
-const BOUNDARY_TOL = 0.8;                                     // proximité frontière → prudence
+export const PENTAGON_BOUNDARY_VERSION = 'cheim-duval-2020-draft-2';
+export const BOUNDARY_TOL = 0.8;                              // proximité frontière → prudence (≈2 % de R=40)
 
 export type ZoneCode = 'PD' | 'S' | 'D1' | 'D2' | 'T1-O' | 'T1-C' | 'T2-O' | 'T2-C' | 'T3-C' | 'T3-H';
 export type Pt = { x: number; y: number };
 export type ZoneDef = { code: ZoneCode; labelFr: string; labelEn: string; polygon: Pt[] };
 
-// Polygones des zones (coordonnées du pentagone, R=40, y vers le haut — même repère que PENTAGON_VERTICES).
+// Polygones des zones — MÊME repère que PENTAGON_VERTICES (origine au centre, y vers le haut). PARTITION
+// COHÉRENTE & CONTENUE (chaque zone = secteur centre→arc du périmètre, donc strictement à l'intérieur de
+// l'enveloppe, aucun débordement). Placement RÉGIONAL correct : PD/S en haut, D2 côté C₂H₂ (haut-droite),
+// D1 côté CH₄ (bas-gauche), zones thermiques T1→T3 vers C₂H₄ (bas-droite) avec T3 (rouge) adjacent à C₂H₄.
+// ⚠️ Les FORMES exactes restent // TODO-VERIFY (Cheim & Duval 2020 Fig. 6–9) : ceci est un PLACEHOLDER
+// régional cohérent tant que BOUNDARIES_VALIDATED=false (verdict provisoire). Sommets périmètre + milieux :
+//   H2(0,40) C2H2(38,12.4) C2H4(23.5,-32.4) CH4(-23.5,-32.4) C2H6(-38,12.4) ; O=(0,0).
 export const ZONE_POLYGONS: ZoneDef[] = [
-  { code: 'PD', labelFr: 'Décharges partielles', labelEn: 'Partial discharges', polygon: [{ x: 0, y: 40 }, { x: -1, y: 33 }, { x: 0, y: 24.5 }, { x: 1, y: 33 }] }, // TODO-VERIFY
-  { code: 'S', labelFr: 'Dégazage parasite (stray gassing)', labelEn: 'Stray gassing', polygon: [{ x: 0, y: 40 }, { x: -35, y: 3 }, { x: -22, y: -8 }, { x: 0, y: 1.5 }, { x: 0, y: 24.5 }] }, // TODO-VERIFY
-  { code: 'D1', labelFr: 'Décharges de faible énergie', labelEn: 'Low-energy discharges', polygon: [{ x: -35, y: 3 }, { x: -38, y: 12.4 }, { x: -23.5, y: -32.4 }, { x: -11, y: -32.4 }, { x: -22, y: -8 }] }, // TODO-VERIFY
-  { code: 'D2', labelFr: 'Décharges de haute énergie', labelEn: 'High-energy discharges', polygon: [{ x: -22, y: -8 }, { x: -11, y: -32.4 }, { x: 1.5, y: -32.4 }, { x: 3.5, y: -3 }, { x: 0, y: 1.5 }] }, // TODO-VERIFY
-  { code: 'T1-O', labelFr: 'Surchauffe < 300 °C sans carbonisation', labelEn: 'Overheating < 300 °C, no carbonization', polygon: [{ x: 0, y: 1.5 }, { x: 3.5, y: -3 }, { x: 24, y: -3 }, { x: 23.5, y: 1.5 }] }, // TODO-VERIFY
-  { code: 'T1-C', labelFr: 'Surchauffe < 300 °C avec carbonisation', labelEn: 'Overheating < 300 °C, carbonization', polygon: [{ x: 1.5, y: -32.4 }, { x: 4, y: -32.4 }, { x: 4, y: -12 }, { x: 3.5, y: -3 }] }, // TODO-VERIFY
-  { code: 'T2-O', labelFr: 'Surchauffe 300–700 °C sans carbonisation', labelEn: 'Overheating 300–700 °C, no carbonization', polygon: [{ x: 3.5, y: -3 }, { x: 24, y: -3 }, { x: 24, y: -20 }, { x: 4, y: -20 }, { x: 4, y: -12 }] }, // TODO-VERIFY
-  { code: 'T2-C', labelFr: 'Surchauffe 300–700 °C avec carbonisation', labelEn: 'Overheating 300–700 °C, carbonization', polygon: [{ x: 4, y: -32.4 }, { x: 12, y: -32.4 }, { x: 12, y: -20 }, { x: 4, y: -20 }] }, // TODO-VERIFY
-  { code: 'T3-C', labelFr: 'Surchauffe > 700 °C avec carbonisation', labelEn: 'Overheating > 700 °C, carbonization', polygon: [{ x: 12, y: -32.4 }, { x: 23.5, y: -32.4 }, { x: 24, y: -20 }, { x: 12, y: -20 }] }, // TODO-VERIFY
-  { code: 'T3-H', labelFr: 'Surchauffe > 700 °C (huile seulement)', labelEn: 'Overheating > 700 °C, oil only', polygon: [{ x: 24, y: -3 }, { x: 38, y: -12.4 }, { x: 23.5, y: -32.4 }, { x: 24, y: -20 }] }, // TODO-VERIFY
+  // — Haut / électrique / parasite (secteurs centre→arc) —
+  { code: 'PD', labelFr: 'Décharges partielles', labelEn: 'Partial discharges', polygon: [{ x: 0, y: 0 }, { x: -19, y: 26.2 }, { x: 0, y: 40 }, { x: 19, y: 26.2 }] },
+  { code: 'D2', labelFr: 'Décharges de haute énergie', labelEn: 'High-energy discharges', polygon: [{ x: 0, y: 0 }, { x: 19, y: 26.2 }, { x: 38, y: 12.4 }, { x: 30.75, y: -10 }] }, // côté C2H2 (test : C2H2 → D)
+  { code: 'S', labelFr: 'Dégazage parasite (stray gassing)', labelEn: 'Stray gassing', polygon: [{ x: 0, y: 0 }, { x: -30.75, y: -10 }, { x: -38, y: 12.4 }, { x: -19, y: 26.2 }] }, // côté C2H6 (haut-gauche)
+  { code: 'D1', labelFr: 'Décharges de faible énergie', labelEn: 'Low-energy discharges', polygon: [{ x: 0, y: 0 }, { x: 0, y: -32.4 }, { x: -23.5, y: -32.4 }, { x: -30.75, y: -10 }] }, // côté CH4 (bas-gauche)
+  // — Région thermique (bas-droite, vers C2H4) : T1→T3, T3 adjacent à C2H4 —
+  { code: 'T1-O', labelFr: 'Surchauffe < 300 °C sans carbonisation', labelEn: 'Overheating < 300 °C, no carbonization', polygon: [{ x: 0, y: 0 }, { x: 0, y: -32.4 }, { x: 7.83, y: -32.4 }] },
+  { code: 'T2-O', labelFr: 'Surchauffe 300–700 °C sans carbonisation', labelEn: 'Overheating 300–700 °C, no carbonization', polygon: [{ x: 0, y: 0 }, { x: 7.83, y: -32.4 }, { x: 15.67, y: -32.4 }] },
+  { code: 'T3-C', labelFr: 'Surchauffe > 700 °C avec carbonisation', labelEn: 'Overheating > 700 °C, carbonization', polygon: [{ x: 0, y: 0 }, { x: 15.67, y: -32.4 }, { x: 23.5, y: -32.4 }] }, // adjacent C2H4
+  { code: 'T3-H', labelFr: 'Surchauffe > 700 °C (huile seulement)', labelEn: 'Overheating > 700 °C, oil only', polygon: [{ x: 0, y: 0 }, { x: 23.5, y: -32.4 }, { x: 25.9, y: -25 }] }, // adjacent C2H4
+  { code: 'T2-C', labelFr: 'Surchauffe 300–700 °C avec carbonisation', labelEn: 'Overheating 300–700 °C, carbonization', polygon: [{ x: 0, y: 0 }, { x: 25.9, y: -25 }, { x: 28.3, y: -17.5 }] },
+  { code: 'T1-C', labelFr: 'Surchauffe < 300 °C avec carbonisation', labelEn: 'Overheating < 300 °C, carbonization', polygon: [{ x: 0, y: 0 }, { x: 28.3, y: -17.5 }, { x: 30.75, y: -10 }] },
 ];
 
 export function pointInPolygon(pt: Pt, poly: Pt[]): boolean {

@@ -33,11 +33,13 @@ export function DuvalPentagon({ samples, lang = 'fr', showZones = true }: { samp
   return (
     <div>
       <svg viewBox="0 0 260 285" className="w-full max-w-[340px]">
-        {/* zones de défaut colorées (zone active surlignée) */}
-        {showZones && ZONE_POLYGONS.map(z => {
+        {/* Filet de sécurité (BUG 2) : tout débordement de zone est masqué par l'enveloppe du pentagone. */}
+        <defs><clipPath id="pentaClip"><polygon points={outline} /></clipPath></defs>
+        {/* zones de défaut colorées (zone active surlignée), clippées dans le pentagone */}
+        {showZones && <g clipPath="url(#pentaClip)">{ZONE_POLYGONS.map(z => {
           const active = dx?.zone === z.code;
-          return <path key={z.code} d={zonePath(z.polygon)} fill={ZONE_COLORS[z.code]} fillOpacity={active ? 0.95 : 0.45} stroke={active ? '#0f172a' : '#cbd5e1'} strokeWidth={active ? 1.1 : 0.4} />;
-        })}
+          return <path key={z.code} d={zonePath(z.polygon)} fill={ZONE_COLORS[z.code]} fillOpacity={active ? (BOUNDARIES_VALIDATED ? 0.95 : 0.7) : 0.4} stroke={active ? (BOUNDARIES_VALIDATED ? '#0f172a' : '#64748b') : '#cbd5e1'} strokeWidth={active ? 1 : 0.4} strokeDasharray={active && !BOUNDARIES_VALIDATED ? '3 2' : undefined} />;
+        })}</g>}
         {/* contour du pentagone */}
         <polygon points={outline} fill="none" stroke="#475569" strokeWidth={1.2} />
         {/* axes du centre vers chaque sommet + libellés des gaz */}
@@ -65,9 +67,11 @@ export function DuvalPentagon({ samples, lang = 'fr', showZones = true }: { samp
         <div className="mt-1 space-y-0.5 text-[11px]">
           {!dx.guard.ok && <p className="rounded bg-amber-50 px-2 py-1 text-amber-800">{dx.guard.reason}</p>}
           <p className="text-gray-500">{tr('Centroïde', 'Centroid')} : x={dx.centroid.x}, y={dx.centroid.y}
-            {dx.zone && <> · <span className="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold text-white">{dx.zone}</span></>}
+            {dx.zone && <> · {BOUNDARIES_VALIDATED
+              ? <span className="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold text-white">{dx.zone}</span>
+              : <span className="rounded border border-dashed border-slate-400 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title={tr('Provisoire — frontières non validées', 'Provisional — boundaries not validated')}>~{dx.zone}</span>}</>}
           </p>
-          {dx.zone && <p className="text-gray-800 dark:text-gray-200">{tr('Diagnostic', 'Diagnosis')} : <strong>{lang === 'en' ? dx.labelEn : dx.labelFr}</strong>
+          {dx.zone && <p className="text-gray-800 dark:text-gray-200">{BOUNDARIES_VALIDATED ? tr('Diagnostic', 'Diagnosis') : tr('Hypothèse (provisoire)', 'Hypothesis (provisional)')} : <strong className={BOUNDARIES_VALIDATED ? '' : 'font-medium text-gray-500'}>{lang === 'en' ? dx.labelEn : dx.labelFr}</strong>
             {dx.onBoundary && <span className="ml-1 text-amber-600">{tr('(proche d’une frontière — prudence)', '(near a boundary — caution)')}</span>}</p>}
           <p className="text-gray-400">{tr('Indicatif — frontières à valider par une personne qualifiée.', 'Indicative — boundaries to be validated by a qualified person.')} <span className="text-gray-300">v{PENTAGON_BOUNDARY_VERSION}</span></p>
         </div>

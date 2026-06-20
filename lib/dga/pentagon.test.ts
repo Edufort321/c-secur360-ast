@@ -47,6 +47,24 @@ describe('Pentagone combiné — moteur (géométrie, garde, structure)', () => 
     expect(r.boundaryVersion).toMatch(/cheim-duval-2020/);
   });
   it('10 zones définies', () => { expect(ZONE_POLYGONS).toHaveLength(10); });
+
+  // BUG 1 — cohérence du repère axes↔zones (indépendant des valeurs exactes des frontières) :
+  // un gaz dominant doit tomber dans SA région (PD/S haut, D côté C2H2/CH4, T côté C2H4).
+  it('C2H2 dominant → zone électrique D (centroïde tiré vers C2H2 haut-droite)', () => {
+    expect(classifyDuval({ H2: 0, CH4: 0, C2H6: 0, C2H4: 0, C2H2: 100 })!.zone).toMatch(/^D/);
+  });
+  it('C2H4 dominant → zone thermique T3 (adjacent C2H4, bas-droite)', () => {
+    expect(classifyDuval({ H2: 0, CH4: 0, C2H6: 0, C2H4: 100, C2H2: 0 })!.zone).toMatch(/^T3/);
+  });
+  it('H2 dominant → PD (sommet haut)', () => {
+    expect(classifyDuval({ H2: 100, CH4: 0, C2H6: 0, C2H4: 0, C2H2: 0 })!.zone).toBe('PD');
+  });
+  it('CH4 dominant → D1 (bas-gauche)', () => {
+    expect(classifyDuval({ H2: 0, CH4: 100, C2H6: 0, C2H4: 0, C2H2: 0 })!.zone).toBe('D1');
+  });
+  it('C2H6 dominant → S (haut-gauche)', () => {
+    expect(classifyDuval({ H2: 0, CH4: 0, C2H6: 100, C2H4: 0, C2H2: 0 })!.zone).toBe('S');
+  });
 });
 
 // ⚠️ Cas de référence du primer (zone ATTENDUE) — SKIP tant que les frontières ne sont pas validées
