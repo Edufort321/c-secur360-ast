@@ -193,12 +193,13 @@ export default function ModulesPage() {
         if (Array.isArray(invState?.data?.items)) {
           const items = invState!.data.items;
           ic = items.length;
+          // Mêmes champs/logique que le module Inventaire (DashboardView/App.jsx) : quantity / minQuantity / costPrice.
           for (const it of items as any[]) {
-            const qty = Number(it.qty ?? it.quantity ?? it.quantite ?? it.stock ?? 0) || 0;
-            const min = Number(it.min ?? it.seuil ?? it.minQty ?? it.reorder ?? it.minimum ?? 0) || 0;
-            const price = Number(it.price ?? it.prix ?? it.unitPrice ?? it.unit_price ?? it.cost ?? it.cout ?? 0) || 0;
-            if (min > 0 && qty <= min) inv.low += 1;
-            inv.value += qty * price;
+            const qty = Number(it.quantity) || 0;
+            const min = Number(it.minQuantity) || 0;
+            const cost = Number(it.costPrice) || 0;
+            if (qty <= min) inv.low += 1;           // stock bas = quantité ≤ minimum (même règle que le module)
+            inv.value += cost * qty;                 // valeur au coût
           }
         } else { const { count: itemsCount } = await supabase.from('items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant); ic = itemsCount ?? 0; }
         // « Utilisateurs » = effectif réel (roster planner_personnel). Déjà chargé plus haut (rosterCount) -> on réutilise (perf : 1 requête en moins).
