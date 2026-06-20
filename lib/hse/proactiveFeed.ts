@@ -24,7 +24,7 @@ async function countByMonth(table: string, tenant: string, dateCol: string, filt
 export async function proactiveFeedLive(tenant: string): Promise<ProactiveLite[]> {
   const [jsa, wp, csp] = await Promise.all([
     countByMonth('ast_forms', tenant, 'created_at', q => q.neq('status', 'draft')),
-    countByMonth('work_permits', tenant, 'created_at'),
+    countByMonth('work_permits', tenant, 'updated_at'),          // work_permits n'a PAS de created_at
     countByMonth('confined_space_permits', tenant, 'created_at'),
   ]);
   const out: ProactiveLite[] = [];

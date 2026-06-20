@@ -150,6 +150,9 @@ export async function saveHoursWorked(tenant: string, h: HseHours): Promise<{ er
   }, { onConflict: 'tenant_id,project_id,period_start' });
   return { error: error?.message };
 }
+export async function deleteHoursWorked(tenant: string, id: string): Promise<void> {
+  await supabase.from('hse_hours_worked').delete().eq('id', id).eq('tenant_id', tenant);
+}
 
 /** Registres arrivant à révision ≤ 30 j (vue). */
 export async function getRegistersDue(tenant: string): Promise<any[]> {

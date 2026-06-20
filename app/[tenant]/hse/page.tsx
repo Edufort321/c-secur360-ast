@@ -9,7 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getFrameworks, getRegisterTypes, getHseSettings, saveHseSettings, getTenantRegisters, toggleTenantRegister,
   getRegisterEntries, saveRegisterEntry, deleteRegisterEntry, computeReviewDue, getIncidents, saveIncident,
-  getOpenDeadlines, getDeadlinesForIncident, completeDeadline, getHoursWorked, saveHoursWorked, getRegistersDue,
+  getOpenDeadlines, getDeadlinesForIncident, completeDeadline, getHoursWorked, saveHoursWorked, deleteHoursWorked, getRegistersDue,
   getProactiveMetrics, getInterconnectStats, getAuditLog, type HseAuditRow,
   type HseFramework, type HseRegisterType, type HseSettings, type HseTenantRegister, type HseIncident, type HseDeadline, type HseHours, type HseProactive, type HseInterconnect,
 } from '@/lib/hse/data';
@@ -153,7 +153,13 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} onMonthlyHours={async (month: string, hours: number) => { const r = await saveHoursWorked(tenant, { ...monthOverridePeriod(month), hours }); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} onMonthlyHours={async (month: string, val: number) => {
+                // Remplace le total MANUEL du mois : retire les lignes manuelles existantes de ce mois, puis
+                // pose une seule ligne-mois (ou rien si 0). Évite l'accumulation à chaque édition.
+                for (const x of (hours as any[]).filter(x => x.id && String(x.period_start).slice(0, 7) === month)) await deleteHoursWorked(tenant, x.id);
+                if (val > 0) { const r = await saveHoursWorked(tenant, { ...monthOverridePeriod(month), hours: val }); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } }
+                await loadAll();
+              }} onDeleteHours={async (id: string) => { await deleteHoursWorked(tenant, id); await loadAll(); }} settings={settings} />}
             {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} userEmail={userEmail} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id, userEmail); setDeadlines(await getOpenDeadlines(tenant)); }} />}
             {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} userEmail={userEmail} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
@@ -167,7 +173,7 @@ export default function HsePage() {
 }
 
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, settings }: any) {
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
@@ -303,7 +309,26 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
             await onHours({ period_start: h.period_start, period_end: h.period_end || h.period_start, hours: n }); setH({ period_start: '', period_end: '', hours: '' });
           }} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{tr('Ajouter', 'Add')}</button>
         </div>
-        <p className="text-[11px] text-gray-400">{tr('Total cumulé', 'Cumulative total')} : {hours.reduce((s: number, x: any) => s + (Number(x.hours) || 0), 0).toLocaleString()} h</p>
+
+        {/* Lignes manuelles existantes — éditables / supprimables */}
+        {hours.length > 0 && (
+          <div className="mb-2 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
+            <table className="w-full text-xs"><thead><tr className="text-left text-gray-400"><th className="px-2 py-1">{tr('Période', 'Period')}</th><th className="px-2 text-right">{tr('Heures', 'Hours')}</th><th></th></tr></thead>
+              <tbody>{[...hours].sort((a: any, b: any) => String(b.period_start).localeCompare(String(a.period_start))).map((x: any) => (
+                <tr key={x.id || x.period_start} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-2 py-1 text-gray-600 dark:text-gray-300">{x.period_start}{x.period_end && x.period_end !== x.period_start ? ` → ${x.period_end}` : ''}</td>
+                  <td className="px-2 text-right">
+                    <input key={`${x.id}:${x.hours}`} type="number" min={0} defaultValue={x.hours}
+                      onBlur={e => { const v = Math.max(0, Number(e.target.value) || 0); if (v !== Number(x.hours)) onHours({ period_start: x.period_start, period_end: x.period_end || x.period_start, hours: v }); }}
+                      className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-right dark:border-gray-700 dark:bg-gray-900" />
+                  </td>
+                  <td className="px-2 text-right"><button onClick={() => { if (x.id && confirm(tr('Supprimer cette ligne ?', 'Delete this line?'))) onDeleteHours(x.id); }} className="text-gray-300 hover:text-rose-500"><Trash2 size={13} /></button></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+        <p className="text-[11px] text-gray-400">{tr('Total manuel cumulé', 'Manual cumulative total')} : {hours.reduce((s: number, x: any) => s + (Number(x.hours) || 0), 0).toLocaleString()} h</p>
       </div>
 
       {/* Rappels */}
