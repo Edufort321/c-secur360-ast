@@ -18,6 +18,7 @@ import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/l
 import { resolveKpiHours, monthOverridePeriod, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { proactiveFeedLive } from '@/lib/hse/proactiveFeed';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
+import { HseInjuryDonut } from '@/components/hse/HseInjuryDonut';
 import { HseAttachments } from '@/components/hse/HseAttachments';
 import { IncidentWorkflow } from '@/components/hse/IncidentWorkflow';
 import { FEED_BY_CODE, importFeedCandidates } from '@/lib/hse/registerFeeds';
@@ -275,6 +276,9 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         <Stat l={tr('Décès', 'Fatalities')} v={vagg.fatalityCount} c={vagg.fatalityCount > 0 ? 'text-red-800' : 'text-gray-700 dark:text-gray-200'} />
         <Stat l={tr('Incidents (total)', 'Incidents (total)')} v={(incidents || []).length} c="text-gray-700 dark:text-gray-200" />
       </div>
+
+      {/* Beigne : blessures par partie du corps (filtre semaine/mois/année). Données santé agrégées (Loi 25). */}
+      <HseInjuryDonut tenant={tenant} lang={EN ? 'en' : 'fr'} card={card} />
 
       {/* Graphiques KPI (meilleures pratiques : tendances + pyramide Heinrich + leading/lagging) */}
       <HseKpiCharts rows={viewRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} />
