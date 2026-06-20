@@ -22,7 +22,7 @@ import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseInjuryDonut } from '@/components/hse/HseInjuryDonut';
 import { HseAttachments } from '@/components/hse/HseAttachments';
 import { IncidentWorkflow } from '@/components/hse/IncidentWorkflow';
-import { FEED_BY_CODE, importFeedCandidates } from '@/lib/hse/registerFeeds';
+import { FEED_BY_CODE, importFeedCandidates, feedSimdut } from '@/lib/hse/registerFeeds';
 import { downloadCsv } from '@/lib/csv';
 
 const INCIDENT_STATUS: Record<string, { fr: string; en: string; cls: string }> = {
@@ -200,6 +200,18 @@ export default function HsePage() {
   );
 }
 
+// Bandeau de CONFORMITÉ WHMIS : produits chimiques de l'inventaire sans FDS (obligation légale).
+function FdsComplianceBanner({ tr, tenant }: any) {
+  const [n, setN] = useState(0);
+  useEffect(() => { let a = true; feedSimdut(tenant).then(c => { if (a) setN(c.filter((x: any) => x.data?.fds_missing).length); }).catch(() => {}); return () => { a = false; }; }, [tenant]);
+  if (!n) return null;
+  return (
+    <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+      ⚠ <b>{n}</b> {tr(`produit(s) chimique(s) sans FDS`, `chemical product(s) without an SDS`)} — {tr('obligation WHMIS/SIMDUT. Importez-les dans le registre SIMDUT (onglet Registres) et ajoutez la fiche.', 'WHMIS requirement. Import them into the WHMIS register (Registers tab) and add the SDS.')}
+    </div>
+  );
+}
+
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
 function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, tenantStart, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
@@ -245,6 +257,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
   return (
     <div className="space-y-4">
       {!settings?.framework_id && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10">{tr('Configurez d’abord le cadre réglementaire (onglet Configuration).', 'Configure the regulatory framework first (Configuration tab).')}</div>}
+      <FdsComplianceBanner tr={tr} tenant={tenant} />
 
       {/* Compteur jours sans accident avec arrêt (affichage chantier) */}
       <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
