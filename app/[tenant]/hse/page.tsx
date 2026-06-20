@@ -20,6 +20,7 @@ import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseAttachments } from '@/components/hse/HseAttachments';
 import { IncidentWorkflow } from '@/components/hse/IncidentWorkflow';
 import { FEED_BY_CODE, importFeedCandidates } from '@/lib/hse/registerFeeds';
+import { downloadCsv } from '@/lib/csv';
 
 const INCIDENT_STATUS: Record<string, { fr: string; en: string; cls: string }> = {
   open: { fr: 'Ouvert', en: 'Open', cls: 'bg-rose-100 text-rose-700' },
@@ -181,9 +182,25 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
     mixed: tr('Feuilles de temps + manuel', 'Timesheets + manual'),
     none: tr('Aucune source', 'No source'),
   };
+
+  // Filtre de période (12 mois glissants / année courante / tout) appliqué aux KPI affichés.
+  const [period, setPeriod] = useState<'rolling12' | 'year' | 'all'>('rolling12');
+  const cutoff = period === 'rolling12' ? new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 7)
+    : period === 'year' ? new Date().toISOString().slice(0, 4) + '-01' : '0000-00';
+  const viewRows = useMemo(() => (kpiRows || []).filter((r: any) => r.month >= cutoff), [kpiRows, cutoff]);
+  const vagg = useMemo(() => computeAggregateKpi(viewRows as any, rateBase), [viewRows, rateBase]);
+  function exportCsv() {
+    downloadCsv(`hse-kpi-${tenant}`, viewRows, [
+      { key: 'month', label: tr('Mois', 'Month') },
+      { key: 'hours', label: tr('Heures', 'Hours'), type: 'number' },
+      { key: 'ltiCount', label: 'LTI', type: 'number' }, { key: 'recordableCount', label: tr('Enregistrables', 'Recordables'), type: 'number' },
+      { key: 'nearMissCount', label: tr('Presque-accidents', 'Near-misses'), type: 'number' }, { key: 'lostDays', label: tr('Jours perdus', 'Lost days'), type: 'number' },
+      { key: 'ltifr', label: 'LTIFR', type: 'number' }, { key: 'trir', label: 'TRIR', type: 'number' }, { key: 'severityRate', label: tr('Gravité', 'Severity'), type: 'number' },
+    ]);
+  }
   async function exportPdf() {
     const { exportHseScorecard } = await import('@/lib/hse/scorecardPdf');
-    await exportHseScorecard({ tenant, lang: EN ? 'en' : 'fr', agg, rows: kpiRows, rateBase }).catch(() => {});
+    await exportHseScorecard({ tenant, lang: EN ? 'en' : 'fr', agg: vagg, rows: viewRows, rateBase }).catch(() => {});
   }
   return (
     <div className="space-y-4">
@@ -201,24 +218,32 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       {monthsNoHours.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">⚠️ {tr('Qualité des données : mois avec incidents mais 0 heure travaillée (taux faussés)', 'Data quality: month(s) with incidents but 0 hours (rates skewed)')} — {monthsNoHours.join(', ')}.</div>}
       {accidentsCount > 0 && <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">{tr(`KPI alimenté automatiquement : ${accidentsCount} incident(s) repris du module Accidents (aucune ressaisie).`, `KPI auto-fed: ${accidentsCount} incident(s) from the Accidents module (no re-entry).`)}</div>}
 
-      <div className="flex items-center justify-between"><h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">{tr('KPI cumulés', 'Aggregate KPIs')} <span className="text-xs font-normal text-gray-400">({tr('base', 'base')} {rateBase.toLocaleString()} h)</span></h2>
-        {kpiRows.length > 0 && <button onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"><Download size={14} /> {tr('Scorecard PDF', 'Scorecard PDF')}</button>}
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">{tr('KPI cumulés', 'Aggregate KPIs')} <span className="text-xs font-normal text-gray-400">({tr('base', 'base')} {rateBase.toLocaleString()} h)</span></h2>
+        <div className="flex items-center gap-2">
+          <select value={period} onChange={e => setPeriod(e.target.value as any)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold dark:border-gray-700 dark:bg-gray-800">
+            <option value="rolling12">{tr('12 mois glissants', 'Rolling 12 months')}</option>
+            <option value="year">{tr('Année courante', 'Current year')}</option>
+            <option value="all">{tr('Tout', 'All')}</option>
+          </select>
+          {viewRows.length > 0 && <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={14} /> CSV</button>}
+          {viewRows.length > 0 && <button onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"><Download size={14} /> {tr('Scorecard PDF', 'Scorecard PDF')}</button>}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat l="LTIFR / TF1" v={agg.ltifr} c="text-rose-600" />
-        <Stat l="TRIR / TF2" v={agg.trir} c="text-amber-600" />
-        <Stat l={tr('Taux de gravité', 'Severity rate')} v={agg.severityRate} c="text-orange-600" />
-        <Stat l={tr('Passés proches', 'Near-misses')} v={agg.nearMissCount} c="text-sky-600" />
+        <Stat l="LTIFR / TF1" v={vagg.ltifr} c="text-rose-600" />
+        <Stat l="TRIR / TF2" v={vagg.trir} c="text-amber-600" />
+        <Stat l={tr('Taux de gravité', 'Severity rate')} v={vagg.severityRate} c="text-orange-600" />
+        <Stat l={tr('Passés proches', 'Near-misses')} v={vagg.nearMissCount} c="text-sky-600" />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat l={tr('Heures travaillées', 'Hours worked')} v={agg.hours.toLocaleString()} c="text-gray-700 dark:text-gray-200" />
-        <Stat l={tr('Accidents avec arrêt', 'Lost-time injuries')} v={agg.ltiCount} c="text-rose-600" />
-        <Stat l={tr('Enregistrables', 'Recordables')} v={agg.recordableCount} c="text-amber-600" />
-        <Stat l={tr('Jours perdus', 'Lost days')} v={agg.lostDays} c="text-orange-600" />
+        <Stat l={tr('Heures travaillées', 'Hours worked')} v={vagg.hours.toLocaleString()} c="text-gray-700 dark:text-gray-200" />
+        <Stat l={tr('Accidents avec arrêt', 'Lost-time injuries')} v={vagg.ltiCount} c="text-rose-600" />
+        <Stat l={tr('Enregistrables', 'Recordables')} v={vagg.recordableCount} c="text-amber-600" />
+        <Stat l={tr('Jours perdus', 'Lost days')} v={vagg.lostDays} c="text-orange-600" />
       </div>
 
       {/* Graphiques KPI (meilleures pratiques : tendances + pyramide Heinrich + leading/lagging) */}
-      <HseKpiCharts rows={kpiRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} />
+      <HseKpiCharts rows={viewRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} />
 
       {/* Interconnexions (contexte d'exposition issu des autres modules) */}
       {interconnect && (
@@ -234,11 +259,11 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         </div>
       )}
 
-      {kpiRows.length > 0 && (
+      {viewRows.length > 0 && (
         <div className={`${card} overflow-x-auto`}>
           <h3 className="mb-2 text-sm font-bold">{tr('Évolution mensuelle', 'Monthly trend')}</h3>
           <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Mois', 'Month')}</th><th className="text-right">{tr('Heures', 'Hours')}</th><th className="text-right">LTIFR</th><th className="text-right">TRIR</th><th className="text-right">{tr('Gravité', 'Severity')}</th></tr></thead>
-            <tbody>{kpiRows.map((r: any) => <tr key={r.month} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1 font-semibold">{r.month}</td><td className="text-right tabular-nums text-gray-500">{r.hours.toLocaleString()}</td><td className="text-right tabular-nums font-semibold text-rose-600">{r.ltifr}</td><td className="text-right tabular-nums font-semibold text-amber-600">{r.trir}</td><td className="text-right tabular-nums text-orange-600">{r.severityRate}</td></tr>)}</tbody>
+            <tbody>{viewRows.map((r: any) => <tr key={r.month} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1 font-semibold">{r.month}</td><td className="text-right tabular-nums text-gray-500">{r.hours.toLocaleString()}</td><td className="text-right tabular-nums font-semibold text-rose-600">{r.ltifr}</td><td className="text-right tabular-nums font-semibold text-amber-600">{r.trir}</td><td className="text-right tabular-nums text-orange-600">{r.severityRate}</td></tr>)}</tbody>
           </table>
         </div>
       )}
@@ -329,7 +354,13 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
       </div>
 
       <div className={`${card} overflow-x-auto`}>
-        <h3 className="mb-2 text-sm font-bold">{tr('Incidents', 'Incidents')} ({incidents.length})</h3>
+        <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold">{tr('Incidents', 'Incidents')} ({incidents.length})</h3>
+          {incidents.length > 0 && <button onClick={() => downloadCsv(`hse-incidents-${tenant}`, incidents, [
+            { key: 'occurred_at', label: tr('Date', 'Date'), type: 'date' }, { key: 'event_code', label: tr('Type', 'Type') }, { key: 'status', label: tr('Statut', 'Status') },
+            { key: 'location_text', label: tr('Lieu', 'Location') }, { key: 'is_lost_time', label: 'LTI', map: (v: any) => (v ? 'Oui' : 'Non') }, { key: 'lost_days', label: tr('Jours perdus', 'Lost days'), type: 'number' },
+            { key: 'root_cause', label: tr('Cause racine', 'Root cause') }, { key: 'created_by', label: tr('Déclaré par', 'Reported by') },
+          ])} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={13} /> CSV</button>}
+        </div>
         {incidents.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucun incident.', 'No incident.')}</p> : (
           <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date', 'Date')}</th><th>{tr('Type', 'Type')}</th><th>{tr('Lieu', 'Location')}</th><th className="text-right">{tr('Jours perdus', 'Lost days')}</th><th></th></tr></thead>
             <tbody>{incidents.map((i: any) => (
@@ -383,6 +414,7 @@ function RegistersTab({ tr, card, tenant, regTypes, tenantRegs, canHr, userEmail
         </select>
         <button onClick={() => setEdit({ title: '', data: {}, last_review_at: today() })} className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouvelle entrée', 'New entry')}</button>
         {feed && <button onClick={runImport} disabled={busy} className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {tr(feed.labelFr, feed.labelEn)}</button>}
+        {entries.length > 0 && <button onClick={() => downloadCsv(`hse-registre-${cur?.type?.code || ''}-${tenant}`, entries, [{ key: 'title', label: tr('Titre', 'Title') }, { key: 'reference', label: tr('Référence', 'Reference') }, { key: 'last_review_at', label: tr('Dernière révision', 'Last review'), type: 'date' }, { key: 'review_due_at', label: tr('Révision due', 'Review due'), type: 'date' }, { key: 'status', label: tr('Statut', 'Status') }])} className="inline-flex items-center gap-1 rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/40"><Download size={15} /> CSV</button>}
       </div>
       {importMsg && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{importMsg} — {tr('aucun doublon (clé = id source).', 'no duplicate (key = source id).')}</div>}
 
