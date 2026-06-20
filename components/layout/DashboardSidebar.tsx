@@ -60,6 +60,20 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
       description: { fr: 'Planification des travaux et ressources', en: 'Work and resource scheduling' }
     },
     {
+      id: 'equipment',
+      label: { fr: 'Équipements', en: 'Equipment' },
+      href: `/${tenant}/equipment`,
+      icon: Wrench,
+      description: { fr: 'Inventaire et maintenance', en: 'Inventory and maintenance' }
+    },
+    {
+      id: 'sites',
+      label: { fr: 'Multi-Sites', en: 'Multi-Sites' },
+      href: `/${tenant}/sites`,
+      icon: MapPin,
+      description: { fr: 'Gestion de plusieurs emplacements', en: 'Multiple locations management' }
+    },
+    {
       id: 'ast',
       label: { fr: 'Santé et sécurité (AST)', en: 'Health & Safety (JSA)' },
       href: `/${tenant}/ast`,
@@ -90,13 +104,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
       description: { fr: 'Registres réglementaires, échéances, KPI LTIFR/TRIR (niveau admin)', en: 'Regulatory registers, deadlines, LTIFR/TRIR KPIs (admin level)' },
     },
     {
-      id: 'accidents',
-      label: { fr: 'Déclarations', en: 'Incident Reports' },
-      href: `/${tenant}/accidents`,
-      icon: AlertTriangle,
-      description: { fr: 'Déclarations d\'accidents conformes', en: 'Compliant incident reports' }
-    },
-    {
       id: 'permits',
       label: { fr: 'Permis de travail', en: 'Work Permits' },
       href: `/${tenant}/permits`,
@@ -104,18 +111,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
       description: { fr: 'Gestion des permis et autorisations', en: 'Permits and authorizations management' }
     },
     {
-      id: 'equipment',
-      label: { fr: 'Équipements', en: 'Equipment' },
-      href: `/${tenant}/equipment`,
-      icon: Wrench,
-      description: { fr: 'Inventaire et maintenance', en: 'Inventory and maintenance' }
-    },
-    {
-      id: 'sites',
-      label: { fr: 'Multi-Sites', en: 'Multi-Sites' },
-      href: `/${tenant}/sites`,
-      icon: MapPin,
-      description: { fr: 'Gestion de plusieurs emplacements', en: 'Multiple locations management' }
+      id: 'accidents',
+      label: { fr: 'Déclarations', en: 'Incident Reports' },
+      href: `/${tenant}/accidents`,
+      icon: AlertTriangle,
+      description: { fr: 'Déclarations d\'accidents conformes', en: 'Compliant incident reports' }
     },
     {
       id: 'team',
