@@ -75,7 +75,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
     },
     {
       id: 'ast',
-      label: { fr: 'Santé et sécurité', en: 'Health & Safety' },
+      label: { fr: 'AST', en: 'JSA' },
       href: `/${tenant}/ast`,
       icon: FileText,
       description: { fr: 'Analyses sécuritaires de tâches (AST/JSA)', en: 'Job safety analyses (JSA)' },

@@ -39,7 +39,7 @@ export const MODULE_ACCESS: { modKey: string; emoji: string; fr: string; en: str
   { modKey: 'projects',   emoji: '📁', fr: 'Projets',           en: 'Projects',       viewTier: 1, editTier: 2 },
   { modKey: 'planner',    emoji: '🗓️', fr: 'Planificateur',     en: 'Planner',        viewTier: 1, editTier: 3 },
   { modKey: 'ast',        emoji: '📋', fr: 'AST / analyses',    en: 'JSA / analyses', viewTier: 0, editTier: 1, externalCapable: true },
-  { modKey: 'hse',        emoji: '🛡️', fr: 'Registres & KPI SST', en: 'HSE registers & KPIs', viewTier: 4, editTier: 4 },
+  { modKey: 'hse',        emoji: '🛡️', fr: 'Registres & KPI SST', en: 'HSE registers & KPIs', viewTier: 1, editTier: 4 },
   { modKey: 'permits',    emoji: '🔖', fr: 'Permis',            en: 'Permits',        viewTier: 0, editTier: 1, externalCapable: true,
     sub: [{ key: 'espace-clos', fr: 'Espace clos', en: 'Confined space' }, { key: 'travail-chaud', fr: 'Travail à chaud', en: 'Hot work' }] },
   { modKey: 'accidents',  emoji: '🚨', fr: 'Accidents / quasi', en: 'Accidents',     viewTier: 2, editTier: 2 },

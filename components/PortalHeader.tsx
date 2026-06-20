@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut, KeyRound, ArrowLeft } from 'lucide-react';
+import { Sun, Moon, Menu, X, LayoutGrid, List, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe, LogOut, KeyRound, ArrowLeft } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -35,6 +35,23 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   const [brandColor, setBrandColor] = useState<string | null>(null); // couleur du header (réglage tenant)
   const [firstLogin, setFirstLogin] = useState(false); // 1re connexion : inviter à changer le mot de passe
   const entitlements = useEntitlements(tenant || '');
+
+  // Préférences d'AFFICHAGE du tableau de bord (par navigateur = par utilisateur). Le dashboard les relit
+  // via l'événement 'dash-view-change'. On n'affiche ces options QUE sur l'accueil modules.
+  const [vArrange, setVArrange] = useState<'grouped' | 'flat' | 'custom'>('grouped');
+  const [vView, setVView] = useState<'grid' | 'list'>('grid');
+  useEffect(() => {
+    if (!tenant) return;
+    try {
+      const a = localStorage.getItem(`dashArrange_${tenant}`); if (a === 'grouped' || a === 'flat' || a === 'custom') setVArrange(a);
+      const v = localStorage.getItem(`dashView_${tenant}`); if (v === 'grid' || v === 'list') setVView(v);
+    } catch { /* ignore */ }
+  }, [tenant, menuOpen]);
+  const setDash = (kind: 'arrange' | 'view', val: string) => {
+    try { localStorage.setItem(kind === 'arrange' ? `dashArrange_${tenant}` : `dashView_${tenant}`, val); } catch { /* ignore */ }
+    if (kind === 'arrange') setVArrange(val as any); else setVView(val as any);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('dash-view-change'));
+  };
 
   // Modules visibles selon entitlements — admin toujours présent, fallback = tout afficher pendant le chargement
   const visibleModules = !tenant || entitlements === null
@@ -223,6 +240,24 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                         })}
                       </div>
                     </div>
+
+                    {/* Affichage du tableau de bord (uniquement sur l'accueil modules) */}
+                    {onModulesHome && (
+                      <div className="border-t border-gray-700 px-3 py-2">
+                        <div className="mb-1 flex items-center gap-1.5 px-1 text-xs font-bold uppercase tracking-wider text-gray-400">
+                          <LayoutGrid size={12} /> {lang === 'fr' ? 'Affichage' : 'View'}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {([['grouped', 'Par type', 'By type'], ['flat', 'Compact', 'Compact'], ['custom', 'Perso.', 'Custom']] as const).map(([k, fr, en]) => (
+                            <button key={k} onClick={() => setDash('arrange', k)} className={`rounded-lg px-2 py-1.5 text-xs font-medium ${vArrange === k ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}>{lang === 'fr' ? fr : en}</button>
+                          ))}
+                        </div>
+                        <div className="mt-1 grid grid-cols-2 gap-1">
+                          <button onClick={() => setDash('view', 'grid')} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs ${vView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}><LayoutGrid size={13} /> {lang === 'fr' ? 'Galerie' : 'Gallery'}</button>
+                          <button onClick={() => setDash('view', 'list')} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs ${vView === 'list' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}><List size={13} /> {lang === 'fr' ? 'Liste' : 'List'}</button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Sélecteur de site (mobile seulement) */}
                     {sites.length > 0 && (

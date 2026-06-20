@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck, Menu, Check as CheckIcon,
+  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck,
 } from 'lucide-react';
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -34,7 +34,6 @@ export default function ModulesPage() {
 
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [viewMenu, setViewMenu] = useState(false);
   const [upsell, setUpsell] = useState<string | null>(null);
   // Widgets ÉPINGLÉS en haut du dashboard (case à cocher dans chaque widget) — persisté par tenant.
   const [pins, setPins] = useState<Record<string, boolean>>({});
@@ -45,13 +44,21 @@ export default function ModulesPage() {
   //  'grouped' = par type avec en-têtes (défaut) · 'flat' = compact, un à la suite · 'custom' = ordre choisi.
   const [arrange, setArrange] = useState<'grouped' | 'flat' | 'custom'>('grouped');
   const [customOrder, setCustomOrder] = useState<string[]>([]);
+  // Les commandes d'affichage vivent dans le HAMBURGER du header (PortalHeader) : il écrit dans
+  // localStorage + émet 'dash-view-change' ; on relit ici. Préférence par navigateur = par utilisateur.
   useEffect(() => {
-    try {
-      const a = localStorage.getItem(`dashArrange_${tenant}`); if (a === 'grouped' || a === 'flat' || a === 'custom') setArrange(a);
-      const o = localStorage.getItem(`dashOrder_${tenant}`); if (o) setCustomOrder(JSON.parse(o) || []);
-    } catch { /* ignore */ }
+    const read = () => {
+      try {
+        const a = localStorage.getItem(`dashArrange_${tenant}`); if (a === 'grouped' || a === 'flat' || a === 'custom') setArrange(a);
+        const v = localStorage.getItem(`dashView_${tenant}`); if (v === 'grid' || v === 'list') setView(v);
+        const o = localStorage.getItem(`dashOrder_${tenant}`); if (o) setCustomOrder(JSON.parse(o) || []);
+      } catch { /* ignore */ }
+    };
+    read();
+    window.addEventListener('dash-view-change', read);
+    window.addEventListener('storage', read);
+    return () => { window.removeEventListener('dash-view-change', read); window.removeEventListener('storage', read); };
   }, [tenant]);
-  const setArr = (a: 'grouped' | 'flat' | 'custom') => { setArrange(a); try { localStorage.setItem(`dashArrange_${tenant}`, a); } catch { /* ignore */ } };
   // Mode diffusion en veille (kiosque) — réglage tenant (Admin › Système). Lecture best-effort (migration 219).
   const [kiosk, setKiosk] = useState<{ on: boolean; idle: number; cards: string[] | null }>({ on: false, idle: 60, cards: null });
   useEffect(() => {
@@ -77,7 +84,7 @@ export default function ModulesPage() {
   ]);
 
   const [proj, setProj] = useState({ soumission: 0, encours: 0, facture: 0, amount: 0 });
-  const [ast, setAst] = useState({ total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 });
+  const [ast, setAst] = useState({ total: 0, draft: 0, active: 0, completed: 0, cancelled: 0 });
   const [permit, setPermit] = useState({ total: 0, active: 0, confined: 0, work: 0 });
   const [evt, setEvt] = useState({ quasi: 0, accident: 0, year: 0, total: 0 });
   const [plan, setPlan] = useState({ actifs: 0, aVenir: 0, occ: 0, occCount: 0, roster: 0 });
@@ -310,7 +317,7 @@ export default function ModulesPage() {
   if (has('admin')) cards.push({ key: 'admin', title: tr('Administration', 'Administration'), href: `/${tenant}/admin`, big: String(userCount), sub: tr('utilisateurs', 'users'), available: true });
   if (has('projects')) cards.push({ key: 'projects', title: t('projects'), href: `/${tenant}/projects`, big: String(proj.soumission + proj.encours + proj.facture), sub: `${proj.soumission} ${tr('soum.', 'quotes')} · ${proj.encours} ${tr('cours', 'active')} · ${proj.facture} ${tr('fact.', 'inv.')} · ${money(proj.amount)}`, available: true });
   if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.actifs), sub: `${tr('en cours auj.', 'active today')} · ${plan.aVenir} ${tr('à venir', 'upcoming')} · ${plan.roster > 0 ? `${plan.occCount}/${plan.roster} ${tr('occupés auj.', 'busy today')} (${plan.occ}%)` : `${plan.occ}% ${tr('occupé auj.', 'busy today')}`}`, available: true });
-  if (has('ast')) cards.push({ key: 'ast', title: tr('Santé et sécurité', 'Health & Safety'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft} ${tr('brouillon', 'draft')} · ${ast.in_progress} ${tr('cours', 'wip')} · ${ast.completed} ${tr('terminé', 'done')} · ${ast.approved} ${tr('approuvé', 'appr.')}` , available: true });
+  if (has('ast')) cards.push({ key: 'ast', title: tr('AST', 'JSA'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft || 0} ${tr('brouillon', 'draft')} · ${ast.active || 0} ${tr('en cours', 'active')} · ${ast.completed || 0} ${tr('terminé', 'done')} · ${ast.cancelled || 0} ${tr('annulé', 'cancelled')}` , available: true });
   if (has('hse')) cards.push({ key: 'hse', title: tr('Registres & KPI (SST)', 'Registers & KPIs (HSE)'), href: `/${tenant}/hse`, big: String(hseStats.deadlines), sub: `${hseStats.deadlines} ${tr('échéance(s)', 'deadline(s)')} · ${hseStats.registersDue} ${tr('registre(s) dû(s)', 'register(s) due')} · ${hseStats.incidents} ${tr('incident(s)', 'incident(s)')}`, available: true });
   if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')} · ${permit.work} ${tr('travail', 'work')} · ${permit.confined} ${tr('espace clos', 'confined')} · ${permit.total} ${tr('total', 'total')}`, available: true });
   if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });
@@ -396,29 +403,7 @@ export default function ModulesPage() {
         <main className="flex-1">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">{tr('Tableau de bord', 'Dashboard')}</h1>
-            {/* Fonctions de vue regroupées dans un menu hamburger */}
-            <div className="relative">
-              <button onClick={() => setViewMenu(o => !o)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                <Menu size={16} /> {tr('Affichage', 'View')}
-              </button>
-              {viewMenu && <>
-                <div className="fixed inset-0 z-10" onClick={() => setViewMenu(false)} />
-                <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">{tr('Disposition', 'Arrangement')}</div>
-                  {([['grouped', tr('Par type', 'By type')], ['flat', tr('Compact', 'Compact')], ['custom', tr('Personnalisé', 'Custom')]] as const).map(([k, label]) => (
-                    <button key={k} onClick={() => { setArr(k as any); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <span>{label}</span>{arrange === k && <CheckIcon size={14} className="text-blue-600" />}
-                    </button>
-                  ))}
-                  <div className="mt-1 border-t border-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-gray-700">{tr('Affichage', 'Layout')}</div>
-                  {([['grid', tr('Galerie', 'Gallery'), LayoutGrid], ['list', tr('Liste', 'List'), List]] as const).map(([k, label, Ic]) => (
-                    <button key={k} onClick={() => { setView(k as any); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <span className="flex items-center gap-2"><Ic size={14} /> {label}</span>{view === k && <CheckIcon size={14} className="text-blue-600" />}
-                    </button>
-                  ))}
-                </div>
-              </>}
-            </div>
+            <span className="text-xs text-gray-400">{tr('Affichage : menu ☰ en haut à droite', 'View options: ☰ menu top-right')}</span>
           </div>
 
           {/* Vue d'ensemble des non-conformités/anomalies (coordination+ ou si nom dans le formulaire) */}
@@ -459,7 +444,7 @@ export default function ModulesPage() {
           {loading ? (
             <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
           ) : view === 'grid' ? (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
               {cards.map((c, i) => {
                 const Icon = iconFor(c.key);
                 const newGroup = showHeaders && groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');

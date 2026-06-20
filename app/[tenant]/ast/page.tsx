@@ -320,12 +320,6 @@ export default function ASTListPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href={`/${tenant}/hse`}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 font-semibold text-emerald-700 transition hover:bg-emerald-100"
-            >
-              <ShieldCheck size={18} /> {tr('Registres & KPI (HSE)', 'Registers & KPIs (HSE)')}
-            </Link>
-            <Link
               href={`/${tenant}/ast/nouveau`}
               className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-teal-700"
             >
