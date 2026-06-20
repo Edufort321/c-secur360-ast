@@ -40,6 +40,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   // via l'événement 'dash-view-change'. On n'affiche ces options QUE sur l'accueil modules.
   const [vArrange, setVArrange] = useState<'grouped' | 'flat' | 'custom'>('grouped');
   const [vView, setVView] = useState<'grid' | 'list'>('grid');
+  const [viewSub, setViewSub] = useState(false); // sous-menu « Affichage » replié par défaut (compact)
   useEffect(() => {
     if (!tenant) return;
     try {
@@ -190,27 +191,6 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                   <div className="fixed inset-0 z-40" onClick={close} />
                   <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-gray-700 bg-gray-800 text-white shadow-2xl">
 
-                    {/* Actions rapides */}
-                    <div className="border-b border-gray-700 px-3 py-2">
-                      <div className="mb-2 flex items-center gap-1.5 px-1 text-xs font-bold uppercase tracking-wider text-gray-400">
-                        <Plus size={12} /> {lang === 'fr' ? 'Créer' : 'Create'}
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {visibleQuickCreates.map(a => {
-                          const Icon = a.icon;
-                          return (
-                            <Link key={a.key} href={`/${tenant}/${a.path}`} onClick={close}
-                              className="flex flex-col items-center gap-1.5 rounded-lg px-2 py-2.5 text-center text-xs font-medium text-gray-200 hover:bg-white/10">
-                              <div className={`grid h-8 w-8 place-items-center rounded-lg ${a.color}`}>
-                                <Icon size={15} />
-                              </div>
-                              {lang === 'fr' ? a.labelFr.replace(/^Nouveau\s+|^Nouvel\s+/i, '') : a.labelEn.replace(/^New\s+/i, '')}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-
                     {/* Navigation modules */}
                     <div className="px-3 py-2">
                       <div className="mb-1 px-1 text-xs font-bold uppercase tracking-wider text-gray-400">
@@ -241,21 +221,26 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                       </div>
                     </div>
 
-                    {/* Affichage du tableau de bord (uniquement sur l'accueil modules) */}
+                    {/* Affichage du tableau de bord — mini-menu repliable (uniquement sur l'accueil modules) */}
                     {onModulesHome && (
                       <div className="border-t border-gray-700 px-3 py-2">
-                        <div className="mb-1 flex items-center gap-1.5 px-1 text-xs font-bold uppercase tracking-wider text-gray-400">
-                          <LayoutGrid size={12} /> {lang === 'fr' ? 'Affichage' : 'View'}
-                        </div>
-                        <div className="grid grid-cols-3 gap-1">
-                          {([['grouped', 'Par type', 'By type'], ['flat', 'Compact', 'Compact'], ['custom', 'Perso.', 'Custom']] as const).map(([k, fr, en]) => (
-                            <button key={k} onClick={() => setDash('arrange', k)} className={`rounded-lg px-2 py-1.5 text-xs font-medium ${vArrange === k ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}>{lang === 'fr' ? fr : en}</button>
-                          ))}
-                        </div>
-                        <div className="mt-1 grid grid-cols-2 gap-1">
-                          <button onClick={() => setDash('view', 'grid')} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs ${vView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}><LayoutGrid size={13} /> {lang === 'fr' ? 'Galerie' : 'Gallery'}</button>
-                          <button onClick={() => setDash('view', 'list')} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs ${vView === 'list' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}><List size={13} /> {lang === 'fr' ? 'Liste' : 'List'}</button>
-                        </div>
+                        <button onClick={() => setViewSub(o => !o)} className="flex w-full items-center justify-between rounded-lg px-1 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:bg-white/5">
+                          <span className="flex items-center gap-1.5"><Menu size={12} /> {lang === 'fr' ? 'Affichage' : 'View'}</span>
+                          <span className="text-[10px]">{viewSub ? '▴' : '▾'}</span>
+                        </button>
+                        {viewSub && (
+                          <div className="mt-1">
+                            <div className="grid grid-cols-3 gap-1">
+                              {([['grouped', 'Par type', 'By type'], ['flat', 'Compact', 'Compact'], ['custom', 'Perso.', 'Custom']] as const).map(([k, fr, en]) => (
+                                <button key={k} onClick={() => setDash('arrange', k)} className={`rounded-lg px-2 py-1.5 text-xs font-medium ${vArrange === k ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}>{lang === 'fr' ? fr : en}</button>
+                              ))}
+                            </div>
+                            <div className="mt-1 grid grid-cols-2 gap-1">
+                              <button onClick={() => setDash('view', 'grid')} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs ${vView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}><LayoutGrid size={13} /> {lang === 'fr' ? 'Galerie' : 'Gallery'}</button>
+                              <button onClick={() => setDash('view', 'list')} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs ${vView === 'list' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}><List size={13} /> {lang === 'fr' ? 'Liste' : 'List'}</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
