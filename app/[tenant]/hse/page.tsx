@@ -81,6 +81,7 @@ export default function HsePage() {
   const [proactive, setProactive] = useState<HseProactive[]>([]);
   const [interconnect, setInterconnect] = useState<HseInterconnect | null>(null);
   const [registersDue, setRegistersDue] = useState<any[]>([]);
+  const [accidentFeed, setAccidentFeed] = useState<any[]>([]);  // incidents du module Accidents (KPI auto)
 
   async function loadAll() {
     setLoading(true);
@@ -96,6 +97,8 @@ export default function HsePage() {
       const resolved = await resolveKpiHours(tenant, hr);
       setAutoHours(resolved.hours); setBreakdown(resolved.breakdown);
       setInterconnect(await getInterconnectStats(tenant, resolved.breakdown.plannedHours));
+      // Feed KPI : incidents du module Accidents (incident_reports) — sans ressaisie.
+      try { const af = await fetch(`/api/hse/incident-feed?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }); const aj = await af.json(); setAccidentFeed(af.ok ? (aj.items || []) : []); } catch { setAccidentFeed([]); }
     } catch (e: any) { setNotice(tr('Module non initialisé — appliquez les migrations 248/249.', 'Module not initialized — apply migrations 248/249.')); }
     setLoading(false);
   }
@@ -103,7 +106,9 @@ export default function HsePage() {
   useEffect(() => { if (canView) loadAll(); else if (tier != null) setLoading(false); /* eslint-disable-next-line */ }, [tenant, canView]);
 
   const rateBase = settings?.rate_base_hours || 200000;
-  const kpiRows = useMemo(() => computeMonthlyKpi(incidents as any, autoHours as any, rateBase), [incidents, autoHours, rateBase]);
+  // KPI = incidents HSE natifs + incidents importés du module Accidents (anti-ressaisie).
+  const kpiIncidents = useMemo(() => [...incidents, ...accidentFeed], [incidents, accidentFeed]);
+  const kpiRows = useMemo(() => computeMonthlyKpi(kpiIncidents as any, autoHours as any, rateBase), [kpiIncidents, autoHours, rateBase]);
   const agg = useMemo(() => computeAggregateKpi(kpiRows, rateBase), [kpiRows, rateBase]);
   const mny = (n: number) => (Number(n) || 0).toLocaleString(EN ? 'en-CA' : 'fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -142,7 +147,7 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={incidents} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
             {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} userEmail={userEmail} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id, userEmail); setDeadlines(await getOpenDeadlines(tenant)); }} />}
             {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} userEmail={userEmail} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
@@ -156,7 +161,7 @@ export default function HsePage() {
 }
 
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, proactive, breakdown, interconnect, tenant, onHours, settings }: any) {
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, proactive, breakdown, interconnect, tenant, onHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
@@ -191,6 +196,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       </div>
 
       {monthsNoHours.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">⚠️ {tr('Qualité des données : mois avec incidents mais 0 heure travaillée (taux faussés)', 'Data quality: month(s) with incidents but 0 hours (rates skewed)')} — {monthsNoHours.join(', ')}.</div>}
+      {accidentsCount > 0 && <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">{tr(`KPI alimenté automatiquement : ${accidentsCount} incident(s) repris du module Accidents (aucune ressaisie).`, `KPI auto-fed: ${accidentsCount} incident(s) from the Accidents module (no re-entry).`)}</div>}
 
       <div className="flex items-center justify-between"><h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">{tr('KPI cumulés', 'Aggregate KPIs')} <span className="text-xs font-normal text-gray-400">({tr('base', 'base')} {rateBase.toLocaleString()} h)</span></h2>
         {kpiRows.length > 0 && <button onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"><Download size={14} /> {tr('Scorecard PDF', 'Scorecard PDF')}</button>}
