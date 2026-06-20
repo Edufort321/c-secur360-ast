@@ -12,6 +12,7 @@ export type KioskCardDef = { key: string; fr: string; en: string };
 // Ordre = ordre d'affichage par défaut dans la rotation et dans les réglages. UNE carte par module.
 export const KIOSK_CARDS: KioskCardDef[] = [
   { key: 'safety', fr: 'Sécurité (4 stats)', en: 'Safety (4 stats)' },
+  { key: 'events', fr: 'Accidents & presque-accidents', en: 'Accidents & near-miss' },
   { key: 'projects', fr: 'Projets en cours', en: 'Active projects' },
   { key: 'ast', fr: 'AST / analyses de risque', en: 'JSA / risk analyses' },
   { key: 'permits', fr: 'Permis actifs', en: 'Active permits' },
@@ -21,6 +22,9 @@ export const KIOSK_CARDS: KioskCardDef[] = [
   { key: 'inspections', fr: 'Inspections', en: 'Inspections' },
   { key: 'timesheets', fr: 'Feuilles de temps en attente', en: 'Pending timesheets' },
   { key: 'maintenance', fr: 'Maintenance — échéances', en: 'Maintenance — due' },
+  { key: 'logbook', fr: 'Logbook véhicules', en: 'Vehicle logbook' },
+  { key: 'todo', fr: 'To-Do', en: 'To-Do' },
+  { key: 'rapports', fr: 'Rapports terrain', en: 'Field reports' },
 ];
 
 export type KioskStatsInput = {
@@ -36,6 +40,10 @@ export type KioskStatsInput = {
   tsStats?: { total: number; pending: number; approved?: number; paid?: number };
   maintStats?: { sheets: number; due: number; alerts: number };
   plan?: { occ: number; occCount: number; roster: number };
+  evt?: { total: number; quasi: number; accident: number; year: number };
+  logbookStats?: { vehicles: number; kmWeek: number; kmYear: number };
+  todoStats?: { total: number; todo: number; in_progress: number; done: number };
+  rapStats?: { total: number; in_progress: number; review: number; approved: number; sent: number };
 };
 
 /**
@@ -126,6 +134,41 @@ export function buildKioskSlides(d: KioskStatsInput): KioskSlide[] {
       { value: d.maintStats.sheets, label: tr('Équipements', 'Equipment'), accent: 'text-sky-400' },
       { value: d.maintStats.due, label: tr('Échéances dues', 'Due'), accent: d.maintStats.due ? 'text-amber-400' : 'text-emerald-400' },
       { value: d.maintStats.alerts, label: tr('Alertes', 'Alerts'), accent: d.maintStats.alerts ? 'text-rose-400' : 'text-emerald-400' },
+    ],
+  });
+  if (d.evt) out.push({
+    key: 'events', big: d.evt.total, title: tr('ACCIDENTS & PRESQUE-ACC.', 'ACCIDENTS & NEAR-MISS'), accent: d.evt.accident ? 'text-rose-400' : 'text-emerald-400',
+    stats: [
+      { value: d.evt.accident, label: tr('Accidents', 'Accidents'), accent: d.evt.accident ? 'text-rose-400' : 'text-emerald-400' },
+      { value: d.evt.quasi, label: tr('Presque-acc.', 'Near-miss'), accent: d.evt.quasi ? 'text-amber-400' : 'text-emerald-400' },
+      { value: d.evt.year, label: tr('Cette année', 'This year'), accent: 'text-sky-400' },
+      { value: d.evt.total, label: tr('Total', 'Total'), accent: 'text-gray-300' },
+    ],
+  });
+  if (d.logbookStats) out.push({
+    key: 'logbook', big: Math.round(d.logbookStats.kmWeek).toLocaleString('fr-CA'), title: tr('LOGBOOK VÉHICULES', 'VEHICLE LOGBOOK'), accent: 'text-cyan-400',
+    stats: [
+      { value: d.logbookStats.vehicles, label: tr('Véhicules actifs', 'Active vehicles'), accent: 'text-cyan-400' },
+      { value: `${Math.round(d.logbookStats.kmWeek).toLocaleString('fr-CA')} km`, label: tr('Cette semaine', 'This week'), accent: 'text-sky-400' },
+      { value: `${Math.round(d.logbookStats.kmYear).toLocaleString('fr-CA')} km`, label: tr('Cette année', 'This year'), accent: 'text-violet-400' },
+    ],
+  });
+  if (d.todoStats) out.push({
+    key: 'todo', big: d.todoStats.total, title: 'TO-DO', accent: 'text-indigo-400',
+    stats: [
+      { value: d.todoStats.todo, label: tr('À faire', 'To do'), accent: 'text-amber-400' },
+      { value: d.todoStats.in_progress, label: tr('En cours', 'In progress'), accent: 'text-sky-400' },
+      { value: d.todoStats.done, label: tr('Terminé', 'Done'), accent: 'text-emerald-400' },
+      { value: d.todoStats.total, label: tr('Total', 'Total'), accent: 'text-gray-300' },
+    ],
+  });
+  if (d.rapStats) out.push({
+    key: 'rapports', big: d.rapStats.total, title: tr('RAPPORTS TERRAIN', 'FIELD REPORTS'), accent: 'text-teal-400',
+    stats: [
+      { value: d.rapStats.in_progress, label: tr('En cours', 'In progress'), accent: 'text-amber-400' },
+      { value: d.rapStats.review, label: tr('Révision', 'Review'), accent: 'text-sky-400' },
+      { value: d.rapStats.approved, label: tr('Approuvés', 'Approved'), accent: 'text-emerald-400' },
+      { value: d.rapStats.sent, label: tr('Envoyés', 'Sent'), accent: 'text-violet-400' },
     ],
   });
   return out;
