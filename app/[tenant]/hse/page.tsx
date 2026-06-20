@@ -15,6 +15,7 @@ import {
 } from '@/lib/hse/data';
 import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/lib/hse/kpi';
 import { resolveKpiHours, type HoursBreakdown } from '@/lib/hse/hoursSource';
+import { proactiveFeedLive } from '@/lib/hse/proactiveFeed';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseAttachments } from '@/components/hse/HseAttachments';
 import { IncidentWorkflow } from '@/components/hse/IncidentWorkflow';
@@ -92,7 +93,9 @@ export default function HsePage() {
         getProactiveMetrics(tenant),
       ]);
       setSettings(s); setFrameworks(fw); setRegTypes(rt); setTenantRegs(treg);
-      setIncidents(inc); setDeadlines(dl); setHours(hr); setRegistersDue(rd); setProactive(pro);
+      // Indicateurs proactifs auto (AST→JSA, permis→WORK_PERMIT) fusionnés avec les saisies manuelles.
+      const proFeed = await proactiveFeedLive(tenant);
+      setIncidents(inc); setDeadlines(dl); setHours(hr); setRegistersDue(rd); setProactive([...(pro as any), ...proFeed] as any);
       // Dénominateur AUTO : feuilles de temps (réel) priorisées, manuel comble les semaines non couvertes.
       const resolved = await resolveKpiHours(tenant, hr);
       setAutoHours(resolved.hours); setBreakdown(resolved.breakdown);
