@@ -61,10 +61,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
     },
     {
       id: 'ast',
-      label: { fr: 'Santé et sécurité', en: 'Health & Safety' },
+      label: { fr: 'Santé et sécurité (AST)', en: 'Health & Safety (JSA)' },
       href: `/${tenant}/ast`,
       icon: FileText,
-      description: { fr: 'AST/JSA, registres SST, échéances réglementaires, KPI', en: 'JSA, HSE registers, regulatory deadlines, KPIs' },
+      description: { fr: 'Analyses sécuritaires de tâches (AST/JSA)', en: 'Job safety analyses (JSA)' },
       children: [
         {
           id: 'ast-new',
@@ -81,6 +81,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
           description: { fr: 'Consulter toutes vos analyses', en: 'View all your analyses' }
         }
       ]
+    },
+    {
+      id: 'hse',
+      label: { fr: 'Registres & KPI (SST)', en: 'Registers & KPIs (HSE)' },
+      href: `/${tenant}/hse`,
+      icon: Shield,
+      description: { fr: 'Registres réglementaires, échéances, KPI LTIFR/TRIR (niveau admin)', en: 'Regulatory registers, deadlines, LTIFR/TRIR KPIs (admin level)' },
     },
     {
       id: 'accidents',

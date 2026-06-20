@@ -20,7 +20,7 @@ import { effectiveNextDate, worstCondition } from '@/lib/dga/fields';
 import { dueStatusByDate } from '@/lib/dga/catalog';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
-  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'maintenance', 'timesheets', 'logbook', 'todo', 'dga', 'conges', 'rapports'],
+  cerdia: ['admin', 'projects', 'ast', 'hse', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'maintenance', 'timesheets', 'logbook', 'todo', 'dga', 'conges', 'rapports'],
 };
 
 const money = (n: number) => `${Math.round(n).toLocaleString('fr-CA')} $`;
@@ -77,6 +77,7 @@ export default function ModulesPage() {
   const [inspStats, setInspStats] = useState({ total: 0, nonConf: 0 });
   const [tsStats, setTsStats] = useState({ total: 0, pending: 0, approved: 0, paid: 0 });
   const [maintStats, setMaintStats] = useState({ sheets: 0, due: 0, alerts: 0 });
+  const [hseStats, setHseStats] = useState({ incidents: 0, deadlines: 0, registersDue: 0 });
   // Rapports terrain : cache localStorage NAMESPACÉ par tenant ({tenant}::rpt_reports_v1) —
   // compté côté client. Doit rester aligné avec __rptNS() de RapportsApp.jsx (anti-fuite inter-tenant).
   const [rapStats, setRapStats] = useState({ total: 0, in_progress: 0, review: 0, approved: 0, sent: 0 });
@@ -272,7 +273,18 @@ export default function ModulesPage() {
         } catch { /* table absente (migration 191) */ }
         try { const { count } = await supabase.from('maintenance_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant).eq('status', 'new'); maint.alerts = count || 0; } catch { /* migration 215 */ }
 
-        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setInvStats({ low: inv.low, value: Math.round(inv.value) }); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); setInspStats(insp); setTsStats(ts); setMaintStats(maint); }
+        // Module SST (HSE) — incidents, échéances réglementaires ouvertes, registres à réviser ≤ 30 j.
+        const hse = { incidents: 0, deadlines: 0, registersDue: 0 };
+        try {
+          const [{ count: inc }, { count: dl }, { count: rd }] = await Promise.all([
+            supabase.from('hse_incident').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
+            supabase.from('hse_v_open_deadlines').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
+            supabase.from('hse_v_register_due').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant),
+          ]);
+          hse.incidents = inc || 0; hse.deadlines = dl || 0; hse.registersDue = rd || 0;
+        } catch { /* migrations 248+ */ }
+
+        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setInvStats({ low: inv.low, value: Math.round(inv.value) }); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); setInspStats(insp); setTsStats(ts); setMaintStats(maint); setHseStats(hse); }
       } catch { /* dégradé */ } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -285,7 +297,8 @@ export default function ModulesPage() {
   if (has('admin')) cards.push({ key: 'admin', title: tr('Administration', 'Administration'), href: `/${tenant}/admin`, big: String(userCount), sub: tr('utilisateurs', 'users'), available: true });
   if (has('projects')) cards.push({ key: 'projects', title: t('projects'), href: `/${tenant}/projects`, big: String(proj.soumission + proj.encours + proj.facture), sub: `${proj.soumission} ${tr('soum.', 'quotes')} · ${proj.encours} ${tr('cours', 'active')} · ${proj.facture} ${tr('fact.', 'inv.')} · ${money(proj.amount)}`, available: true });
   if (has('planner')) cards.push({ key: 'planner', title: tr('Planificateur', 'Scheduler'), href: `/${tenant}/planificateur`, big: String(plan.actifs), sub: `${tr('en cours auj.', 'active today')} · ${plan.aVenir} ${tr('à venir', 'upcoming')} · ${plan.roster > 0 ? `${plan.occCount}/${plan.roster} ${tr('occupés auj.', 'busy today')} (${plan.occ}%)` : `${plan.occ}% ${tr('occupé auj.', 'busy today')}`}`, available: true });
-  if (has('ast')) cards.push({ key: 'ast', title: tr('Santé et sécurité', 'Health & Safety'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft} ${tr('brouillon', 'draft')} · ${ast.in_progress} ${tr('cours', 'wip')} · ${ast.completed} ${tr('terminé', 'done')} · ${ast.approved} ${tr('approuvé', 'appr.')}` , available: true });
+  if (has('ast')) cards.push({ key: 'ast', title: tr('Santé et sécurité (AST)', 'Health & Safety (JSA)'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft} ${tr('brouillon', 'draft')} · ${ast.in_progress} ${tr('cours', 'wip')} · ${ast.completed} ${tr('terminé', 'done')} · ${ast.approved} ${tr('approuvé', 'appr.')}` , available: true });
+  if (has('hse')) cards.push({ key: 'hse', title: tr('Registres & KPI (SST)', 'Registers & KPIs (HSE)'), href: `/${tenant}/hse`, big: String(hseStats.deadlines), sub: `${hseStats.deadlines} ${tr('échéance(s)', 'deadline(s)')} · ${hseStats.registersDue} ${tr('registre(s) dû(s)', 'register(s) due')} · ${hseStats.incidents} ${tr('incident(s)', 'incident(s)')}`, available: true });
   if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')} · ${permit.work} ${tr('travail', 'work')} · ${permit.confined} ${tr('espace clos', 'confined')} · ${permit.total} ${tr('total', 'total')}`, available: true });
   if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });
   if (has('inventory')) cards.push({ key: 'inventory', title: tr('Inventaire', 'Inventory'), href: `/${tenant}/inventory`, big: String(invCount), sub: `${invCount} ${tr('articles', 'items')} · ${invStats.low} ${tr('stock bas', 'low stock')} · ${money(invStats.value)} ${tr('valeur', 'value')}`, available: true });

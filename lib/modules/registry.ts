@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, Megaphone, Wrench, type LucideIcon } from 'lucide-react';
+import { Shield, ShieldCheck, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, FileText, Megaphone, Wrench, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'maintenance' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports' | 'marketing';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'hse' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'maintenance' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges' | 'rapports' | 'marketing';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -44,10 +44,17 @@ export const MODULES: ModuleDef[] = [
   },
   {
     key: 'ast',
-    labelFr: 'Santé et sécurité', labelEn: 'Health & Safety',
-    descFr: 'AST/JSA, registres SST (HSE), échéances réglementaires, KPI (LTIFR/TRIR), permis, LOTO.',
-    descEn: 'JSA, HSE registers, regulatory deadlines, KPIs (LTIFR/TRIR), permits, LOTO.',
+    labelFr: 'Santé et sécurité (AST)', labelEn: 'Health & Safety (JSA)',
+    descFr: 'Analyses sécuritaires de tâches (AST/JSA), dangers, mesures de contrôle, LOTO.',
+    descEn: 'Job safety analyses (JSA), hazards, control measures, LOTO.',
     icon: Shield, basePath: 'ast', color: 'text-emerald-600', accent: 'bg-emerald-600', status: 'available',
+  },
+  {
+    key: 'hse',
+    labelFr: 'Registres & KPI (SST)', labelEn: 'Registers & KPIs (HSE)',
+    descFr: 'Registres réglementaires (normes canadiennes), échéances CNESST, KPI LTIFR/TRIR/gravité, incidents + CAPA, journal d’audit. Accès niveau administration.',
+    descEn: 'Regulatory registers (Canadian standards), CNESST deadlines, LTIFR/TRIR/severity KPIs, incidents + CAPA, audit log. Administration level.',
+    icon: ShieldCheck, basePath: 'hse', color: 'text-emerald-700', accent: 'bg-emerald-700', status: 'available',
   },
   {
     key: 'permits',
