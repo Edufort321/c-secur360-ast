@@ -52,11 +52,48 @@ export async function feedNonConformities(tenant: string): Promise<FeedCandidate
   return out;
 }
 
+/** Inventaire (produits chimiques) → registre SIMDUT/FDS. Détecte le chimique par catégorie ou classe de danger. */
+export async function feedSimdut(tenant: string): Promise<FeedCandidate[]> {
+  try {
+    const { data } = await supabase.from('items').select('id, name, category, fds_url, fds_date, hazard_class').eq('tenant_id', tenant).order('name');
+    const isChem = (c: string) => /chimi|chemical|dangereu|hazard|simdut|whmis|solvant|peinture|carburant|propane|acide/i.test(c || '');
+    return (data || [])
+      .filter((it: any) => isChem(it.category) || (it.hazard_class && String(it.hazard_class).trim()))
+      .map((it: any) => ({
+        reference: String(it.id),
+        title: it.name || 'Produit',
+        data: { product: it.name || '', sds_ref: it.fds_url || '', sds_date: (it.fds_date || '').slice ? String(it.fds_date).slice(0, 10) : (it.fds_date || ''), hazard_class: it.hazard_class || '', fds_missing: !it.fds_url },
+      }));
+  } catch { return []; }
+}
+
+/** AST/JSA (dangers identifiés) → registre des dangers/risques. Une entrée par danger, anti-doublon par ast+index. */
+export async function feedAstHazards(tenant: string): Promise<FeedCandidate[]> {
+  try {
+    const { data } = await supabase.from('ast_forms').select('id, ast_number, hazards, control_measures, created_at, status').eq('tenant_id', tenant).neq('status', 'draft').order('created_at', { ascending: false }).limit(300);
+    const out: FeedCandidate[] = [];
+    for (const f of (data || []) as any[]) {
+      const hz = Array.isArray(f.hazards) ? f.hazards : [];
+      const ctrlGlobal = Array.isArray(f.control_measures) ? f.control_measures.map((c: any) => (typeof c === 'string' ? c : c?.description || c?.measure || c?.name || '')).filter(Boolean).join(' · ') : '';
+      hz.forEach((h: any, idx: number) => {
+        const title = typeof h === 'string' ? h : (h?.hazard || h?.name || h?.title || h?.label || h?.description || h?.category || 'Danger');
+        if (!title) return;
+        const risk = typeof h === 'object' ? (h.riskLevel || h.risk_level || h.severity || h.level || '') : '';
+        const ctrl = typeof h === 'object' && (Array.isArray(h.controlMeasures) ? h.controlMeasures.map((c: any) => (typeof c === 'string' ? c : c?.description || '')).filter(Boolean).join(' · ') : (h.controlMeasures || h.controls || '')) || ctrlGlobal;
+        out.push({ reference: `ast:${f.id}:${idx}`, title: String(title), data: { hazard: String(title), risk_level: String(risk || ''), controls: String(ctrl || ''), source: f.ast_number || String(f.id).slice(0, 8), date: (f.created_at || '').slice(0, 10) } });
+      });
+    }
+    return out;
+  } catch { return []; }
+}
+
 // Quel registre se nourrit de quelle source.
 export const FEED_BY_CODE: Record<string, { labelFr: string; labelEn: string; fetch: (t: string) => Promise<FeedCandidate[]> }> = {
   LIFTING_CSA: { labelFr: 'Importer depuis les équipements', labelEn: 'Import from equipment', fetch: feedEquipment },
   TRAINING: { labelFr: 'Importer depuis les certifications RH', labelEn: 'Import from HR certifications', fetch: feedCertifications },
   NON_CONFORMITY: { labelFr: 'Importer depuis les inspections', labelEn: 'Import from inspections', fetch: feedNonConformities },
+  SIMDUT: { labelFr: 'Importer les produits chimiques (inventaire)', labelEn: 'Import chemicals (inventory)', fetch: feedSimdut },
+  RISK_REGISTER: { labelFr: 'Importer les dangers des AST', labelEn: 'Import hazards from JSAs', fetch: feedAstHazards },
 };
 
 /** Crée les entrées manquantes (anti-doublon par `reference`). Retourne le nombre importé. */
