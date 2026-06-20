@@ -347,8 +347,15 @@ export default function TimesheetDetailPage() {
   }
 
   function updVehicle(id: string, vehicleId: string) {
+    // Option générique « véhicule personnel » (le mien) — régime B, sans véhicule enregistré.
+    if (vehicleId === '__personal__') {
+      setEntries(prev => prev.map(e => e.id !== id ? e : { ...e, vehicle_id: '', vehicle_type: 'personal', vehicle_name: 'Véhicule personnel' }));
+      return;
+    }
     const v = vehicleMap[vehicleId];
-    setEntries(prev => prev.map(e => e.id !== id ? e : { ...e, vehicle_id: vehicleId, vehicle_type: v?.type || '', vehicle_name: v ? (`${v.make} ${v.model}`.trim() || v.name) : '' }));
+    // Véhicule enregistré : régime « entreprise » par défaut (flotte), sauf s'il est marqué personnel.
+    const vtype = v ? (v.type === 'personal' ? 'personal' : 'company') : '';
+    setEntries(prev => prev.map(e => e.id !== id ? e : { ...e, vehicle_id: vehicleId, vehicle_type: vtype, vehicle_name: v ? (v.name || `${v.make || ''} ${v.model || ''}`.trim()) : '' }));
   }
 
   function toggleAllowance(entryId: string, a: Allowance, checked: boolean) {
@@ -365,6 +372,8 @@ export default function TimesheetDetailPage() {
     const d = date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
     setEntries(p => {
       const ne = newEntry(d);
+      // Véhicule attitré pré-sélectionné par défaut (l'utilisateur peut en choisir un autre pour la journée).
+      if (assignedVehicle) { ne.vehicle_id = assignedVehicle.id; ne.vehicle_type = 'company'; ne.vehicle_name = (`${assignedVehicle.make || ''} ${assignedVehicle.model || ''}`.trim() || assignedVehicle.name); }
       // Insère la nouvelle ligne JUSTE APRÈS la dernière ligne du MÊME jour (regroupement par jour).
       let lastIdx = -1;
       p.forEach((x, i) => { if (x.date === d) lastIdx = i; });
@@ -1043,18 +1052,18 @@ export default function TimesheetDetailPage() {
                   <label className="flex flex-col">
                     <span className="mb-1 text-xs text-slate-400">Véhicule</span>
                     <div className="flex items-center gap-1">
-                      <select value={e.vehicle_id} disabled={isReadOnly} onChange={ev => updVehicle(e.id, ev.target.value)} className="inp w-36">
+                      <select value={e.vehicle_id || (e.vehicle_type === 'personal' ? '__personal__' : '')} disabled={isReadOnly} onChange={ev => updVehicle(e.id, ev.target.value)} className="inp w-36">
                         <option value="">— Aucun —</option>
-                        {vehicles.filter(v => v.type === 'company').length > 0 && (
-                          <optgroup label="Entreprise">
-                            {vehicles.filter(v => v.type === 'company').map(v => <option key={v.id} value={v.id}>{v.name || `${v.make} ${v.model}`}</option>)}
-                          </optgroup>
-                        )}
-                        {vehicles.filter(v => v.type === 'personal').length > 0 && (
-                          <optgroup label="Personnel autorisé">
-                            {vehicles.filter(v => v.type === 'personal').map(v => <option key={v.id} value={v.id}>{v.name || `${v.make} ${v.model}`}</option>)}
-                          </optgroup>
-                        )}
+                        <option value="__personal__">Véhicule personnel (le mien)</option>
+                        {(() => {
+                          const company = vehicles.filter(v => v.type === 'company' || !v.type || (v.type !== 'personal'));
+                          const personal = vehicles.filter(v => v.type === 'personal');
+                          const vlabel = (v: Vehicle) => v.name || `${v.make || ''} ${v.model || ''}`.trim() || v.id;
+                          return <>
+                            {company.length > 0 && <optgroup label="Véhicules de l’entreprise">{company.map(v => <option key={v.id} value={v.id}>{vlabel(v)}</option>)}</optgroup>}
+                            {personal.length > 0 && <optgroup label="Véhicules personnels autorisés">{personal.map(v => <option key={v.id} value={v.id}>{vlabel(v)}</option>)}</optgroup>}
+                          </>;
+                        })()}
                       </select>
                       {e.vehicle_type === 'company'  && <Building2 size={13} className="text-blue-500" />}
                       {e.vehicle_type === 'personal' && <Car        size={13} className="text-emerald-600" />}
