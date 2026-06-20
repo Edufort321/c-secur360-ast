@@ -3,7 +3,7 @@
 // Données : lib/hse/data ; calculs purs : lib/hse/kpi. Juridictions CANADIENNES (fédéral + provinces/territoires), bilingue FR/EN.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2 } from 'lucide-react';
+import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -45,6 +45,17 @@ export default function HsePage() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // ── Verrou d'accès (lot 1) : HSE = niveau ADMIN (tier ≥ 4) ; infos santé sensibles = RH (tier ≥ 6).
+  const HSE_VIEW_TIER = 4;   // administration
+  const HSE_HR_TIER = 6;     // rh (canHr) — registres santé / champs médicaux / pièces sensibles
+  const [tier, setTier] = useState<number | null>(null);
+  useEffect(() => {
+    fetch(`/api/me/access?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null)).then(j => setTier(Number(j?.tier) || 0)).catch(() => setTier(0));
+  }, [tenant]);
+  const canView = tier != null && tier >= HSE_VIEW_TIER;
+  const canHr = (tier ?? 0) >= HSE_HR_TIER;
+
   const [settings, setSettings] = useState<HseSettings | null>(null);
   const [frameworks, setFrameworks] = useState<HseFramework[]>([]);
   const [regTypes, setRegTypes] = useState<HseRegisterType[]>([]);
@@ -75,7 +86,8 @@ export default function HsePage() {
     } catch (e: any) { setNotice(tr('Module non initialisé — appliquez les migrations 248/249.', 'Module not initialized — apply migrations 248/249.')); }
     setLoading(false);
   }
-  useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [tenant]);
+  // Ne charge les données HSE que si l'accès est suffisant (tier ≥ administration).
+  useEffect(() => { if (canView) loadAll(); else if (tier != null) setLoading(false); /* eslint-disable-next-line */ }, [tenant, canView]);
 
   const rateBase = settings?.rate_base_hours || 200000;
   const kpiRows = useMemo(() => computeMonthlyKpi(incidents as any, autoHours as any, rateBase), [incidents, autoHours, rateBase]);
@@ -93,6 +105,16 @@ export default function HsePage() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <PortalHeader tenant={tenant} />
+      {tier == null ? (
+        <div className="grid place-items-center py-32 text-gray-400"><Loader2 className="animate-spin" /></div>
+      ) : !canView ? (
+        <div className="mx-auto max-w-lg px-4 py-24 text-center">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gray-900 text-white dark:bg-gray-700"><Lock size={26} /></div>
+          <h1 className="mb-1 text-lg font-bold text-gray-900 dark:text-white">{tr('Accès réservé', 'Restricted access')}</h1>
+          <p className="text-sm text-gray-500">{tr('Le module Santé et sécurité (registres réglementaires & KPI) est réservé au niveau administration (ou supérieur). Les renseignements de santé sensibles ne sont visibles qu’aux profils RH.', 'The Health & Safety module (regulatory registers & KPIs) is restricted to the administration level (or above). Sensitive health information is visible only to HR profiles.')}</p>
+          <p className="mt-2 text-xs text-gray-400">{tr('Demandez à un administrateur de votre organisation de relever votre niveau d’accès.', 'Ask an administrator in your organization to raise your access level.')}</p>
+        </div>
+      ) : (
       <div className="mx-auto max-w-6xl px-4 py-5">
         <h1 className="mb-1 text-xl font-bold text-gray-900 dark:text-white">{tr('Santé et sécurité — HSE', 'Health & Safety — HSE')}</h1>
         <p className="mb-4 text-sm text-gray-500">{tr('Registres réglementaires, échéances (normes canadiennes — fédéral + provinces/territoires) et KPI (LTIFR/TRIR). Indicatif — à valider par une personne qualifiée.', 'Regulatory registers, deadlines (Canadian standards — federal + provinces/territories) and KPIs (LTIFR/TRIR). Indicative — validate with a qualified person.')}</p>
@@ -107,12 +129,13 @@ export default function HsePage() {
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
             {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={incidents} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
-            {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id); setDeadlines(await getOpenDeadlines(tenant)); }} />}
-            {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} />}
+            {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id); setDeadlines(await getOpenDeadlines(tenant)); }} />}
+            {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
