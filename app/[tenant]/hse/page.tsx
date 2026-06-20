@@ -113,7 +113,14 @@ export default function HsePage() {
 
   const rateBase = settings?.rate_base_hours || 200000;
   // KPI = incidents HSE natifs + incidents importés du module Accidents (anti-ressaisie).
-  const kpiIncidents = useMemo(() => [...incidents, ...accidentFeed], [incidents, accidentFeed]);
+  // Anti-doublon : un événement saisi À LA FOIS en incident HSE natif ET importé du module Accidents
+  // (même jour + même type) ne doit compter qu'UNE fois. La saisie native fait foi ; on écarte le doublon du feed.
+  const kpiIncidents = useMemo(() => {
+    const sig = (i: any) => `${String(i.occurred_at || '').slice(0, 10)}|${i.event_code}`;
+    const native = new Set((incidents || []).map(sig));
+    const feed = (accidentFeed || []).filter((a: any) => !native.has(sig(a)));
+    return [...incidents, ...feed];
+  }, [incidents, accidentFeed]);
   const kpiRows = useMemo(() => computeMonthlyKpi(kpiIncidents as any, autoHours as any, rateBase), [kpiIncidents, autoHours, rateBase]);
   const agg = useMemo(() => computeAggregateKpi(kpiRows, rateBase), [kpiRows, rateBase]);
   const mny = (n: number) => (Number(n) || 0).toLocaleString(EN ? 'en-CA' : 'fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -240,14 +247,20 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat l="LTIFR / TF1" v={vagg.ltifr} c="text-rose-600" />
         <Stat l="TRIR / TF2" v={vagg.trir} c="text-amber-600" />
+        <Stat l={tr('Taux DART', 'DART rate')} v={vagg.dartRate} c="text-rose-500" />
         <Stat l={tr('Taux de gravité', 'Severity rate')} v={vagg.severityRate} c="text-orange-600" />
-        <Stat l={tr('Passés proches', 'Near-misses')} v={vagg.nearMissCount} c="text-sky-600" />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat l={tr('Heures travaillées', 'Hours worked')} v={vagg.hours.toLocaleString()} c="text-gray-700 dark:text-gray-200" />
         <Stat l={tr('Accidents avec arrêt', 'Lost-time injuries')} v={vagg.ltiCount} c="text-rose-600" />
         <Stat l={tr('Enregistrables', 'Recordables')} v={vagg.recordableCount} c="text-amber-600" />
+        <Stat l={tr('Passés proches', 'Near-misses')} v={vagg.nearMissCount} c="text-sky-600" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat l={tr('Cas DART', 'DART cases')} v={vagg.dartCount} c="text-rose-500" />
         <Stat l={tr('Jours perdus', 'Lost days')} v={vagg.lostDays} c="text-orange-600" />
+        <Stat l={tr('Décès', 'Fatalities')} v={vagg.fatalityCount} c={vagg.fatalityCount > 0 ? 'text-red-800' : 'text-gray-700 dark:text-gray-200'} />
+        <Stat l={tr('Incidents (total)', 'Incidents (total)')} v={(incidents || []).length} c="text-gray-700 dark:text-gray-200" />
       </div>
 
       {/* Graphiques KPI (meilleures pratiques : tendances + pyramide Heinrich + leading/lagging) */}
@@ -390,6 +403,7 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
               <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">{tr('Renseignements de santé (partie du corps, nature de la blessure) réservés au profil RH (Loi 25).', 'Health details (body part, injury type) are restricted to the HR profile (Quebec Law 25).')}</div>
             )}
             <label className="flex items-center gap-2 pt-5 text-xs font-semibold text-gray-500"><input type="checkbox" checked={!!f.is_lost_time} onChange={e => setF({ ...f, is_lost_time: e.target.checked })} /> {tr('Avec arrêt de travail (LTI)', 'Lost-time injury (LTI)')}</label>
+            <label className="flex items-center gap-2 pt-5 text-xs font-semibold text-gray-500"><input type="checkbox" checked={!!f.is_restricted} onChange={e => setF({ ...f, is_restricted: e.target.checked })} /> {tr('Travail restreint / mutation (DART)', 'Restricted work / transfer (DART)')}</label>
             <label className="text-xs font-semibold text-gray-500">{tr('Jours perdus', 'Lost days')}<input type="number" value={f.lost_days || 0} onChange={e => setF({ ...f, lost_days: Number(e.target.value) || 0 })} className={inp} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Dommages matériels ($)', 'Material damage ($)')}<input type="number" value={f.material_damage_amount ?? ''} onChange={e => setF({ ...f, material_damage_amount: e.target.value === '' ? null : Number(e.target.value) })} className={inp} /></label>
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Description', 'Description')}<textarea value={f.description || ''} onChange={e => setF({ ...f, description: e.target.value })} rows={2} className={inp} /></label>

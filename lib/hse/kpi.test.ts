@@ -24,6 +24,24 @@ describe('HSE KPI', () => {
     expect(apr.recordableCount).toBe(1);  // FATALITY recordable
     expect(apr.trir).toBe(2);
   });
+  it('MULTI_WORKER_INJURY compte en enregistrable (TRIR) — correctif audit', () => {
+    const k = computeMonthlyKpi([
+      { occurred_at: '2026-05-10', event_code: 'MULTI_WORKER_INJURY', is_lost_time: false },
+    ], [{ period_start: '2026-05-04', hours: 200000 }], 200000);
+    const may = k.find(r => r.month === '2026-05')!;
+    expect(may.recordableCount).toBe(1); expect(may.trir).toBe(1);
+  });
+  it('DART = arrêt OU travail restreint/mutation', () => {
+    const k = computeMonthlyKpi([
+      { occurred_at: '2026-06-01', event_code: 'RECORDABLE', is_lost_time: true, lost_days: 3 },   // DART (arrêt)
+      { occurred_at: '2026-06-02', event_code: 'RECORDABLE', is_restricted: true },                 // DART (restreint)
+      { occurred_at: '2026-06-03', event_code: 'RECORDABLE' },                                       // enregistrable, pas DART
+      { occurred_at: '2026-06-04', event_code: 'FATALITY' },                                          // décès (suivi séparé)
+    ], [{ period_start: '2026-06-01', hours: 200000 }], 200000);
+    const jun = k.find(r => r.month === '2026-06')!;
+    expect(jun.dartCount).toBe(2); expect(jun.dartRate).toBe(2);
+    expect(jun.fatalityCount).toBe(1); expect(jun.recordableCount).toBe(4);
+  });
   it('cumul période', () => {
     const rows = computeMonthlyKpi([
       { occurred_at: '2026-01-05', event_code: 'OVER_7_DAY', is_lost_time: true, lost_days: 5 },

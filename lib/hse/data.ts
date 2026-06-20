@@ -9,7 +9,7 @@ export type HseTenantRegister = { id: string; tenant_id?: string; register_type_
 export type HseRegisterEntry = { id?: string; tenant_id?: string; tenant_register_id: string; reference?: string | null; title: string; data: any; status?: string; last_review_at?: string | null; review_due_at?: string | null; created_by?: string | null };
 export type HseIncident = {
   id?: string; tenant_id?: string; project_id?: string | null; occurred_at: string; reported_at?: string;
-  event_code: string; severity?: string | null; is_lost_time?: boolean; lost_days?: number;
+  event_code: string; severity?: string | null; is_lost_time?: boolean; is_restricted?: boolean; lost_days?: number;
   body_part?: string | null; injury_type?: string | null; location_text?: string | null; description?: string | null;
   material_damage_amount?: number | null; reported_to_authority?: boolean; authority_reference?: string | null; created_by?: string | null;
   status?: string; root_cause?: string | null; contributing_factors?: string | null; closed_at?: string | null; closed_by?: string | null;
@@ -88,12 +88,17 @@ export async function getIncidents(tenant: string): Promise<HseIncident[]> {
 }
 /** Crée l'incident ; le trigger DB génère les échéances. Renvoie l'id pour relire les échéances. */
 export async function saveIncident(tenant: string, i: HseIncident): Promise<{ id?: string; error?: string }> {
-  const { data, error } = await supabase.from('hse_incident').insert({
+  const row: any = {
     tenant_id: tenant, project_id: i.project_id || null, occurred_at: i.occurred_at, reported_at: i.reported_at || new Date().toISOString(),
-    event_code: i.event_code, severity: i.severity || null, is_lost_time: !!i.is_lost_time, lost_days: Number(i.lost_days) || 0,
+    event_code: i.event_code, severity: i.severity || null, is_lost_time: !!i.is_lost_time, is_restricted: !!i.is_restricted, lost_days: Number(i.lost_days) || 0,
     body_part: i.body_part || null, injury_type: i.injury_type || null, location_text: i.location_text || null, description: i.description || null,
     material_damage_amount: i.material_damage_amount ?? null, created_by: i.created_by || null,
-  }).select('id').single();
+  };
+  let { data, error } = await supabase.from('hse_incident').insert(row).select('id').single();
+  if (error && /is_restricted/.test(error.message || '')) {   // migration 257 pas encore appliquée → repli
+    delete row.is_restricted;
+    ({ data, error } = await supabase.from('hse_incident').insert(row).select('id').single());
+  }
   if (error) return { error: error.message };
   return { id: (data as any).id };
 }

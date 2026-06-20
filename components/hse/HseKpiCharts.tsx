@@ -47,7 +47,7 @@ export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, la
   const note = 'mt-1 text-[11px] text-gray-400';
 
   // ── 1) Tendance des taux + heures ────────────────────────────────────────────────────────────────
-  const trend = rows.map(r => ({ month: r.month, LTIFR: r.ltifr, TRIR: r.trir, [tr('Gravité', 'Severity')]: r.severityRate, [tr('Heures', 'Hours')]: r.hours }));
+  const trend = rows.map(r => ({ month: r.month, LTIFR: r.ltifr, TRIR: r.trir, DART: r.dartRate, [tr('Gravité', 'Severity')]: r.severityRate, [tr('Heures', 'Hours')]: r.hours }));
 
   // ── 2) Pyramide de sécurité (Heinrich) ───────────────────────────────────────────────────────────
   const near = rows.reduce((s, r) => s + r.nearMissCount, 0);
@@ -60,6 +60,10 @@ export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, la
   ];
   const maxPyr = Math.max(1, near, minor, serious);
   const ratioObs = serious > 0 ? `1 : ${(minor / serious).toFixed(0)} : ${(near / serious).toFixed(0)}` : '—';
+  // Culture de déclaration : peu/pas de passés proches déclarés alors qu'il y a des lésions = sous-déclaration
+  // (signal faible). Réf. pyramide — une base étroite de presque-accidents est un drapeau de culture.
+  const recordableTotal = minor + serious;
+  const poorReporting = recordableTotal > 0 && near < recordableTotal * 3;
 
   // ── 3) Incidents par type ────────────────────────────────────────────────────────────────────────
   const byType: Record<string, number> = {};
@@ -93,6 +97,7 @@ export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, la
             <Bar yAxisId="h" dataKey={tr('Heures', 'Hours')} fill="#cbd5e1" opacity={0.5} barSize={18} />
             <Line yAxisId="r" type="monotone" dataKey="LTIFR" stroke="#dc2626" strokeWidth={2} dot={false} />
             <Line yAxisId="r" type="monotone" dataKey="TRIR" stroke="#2563eb" strokeWidth={2} dot={false} />
+            <Line yAxisId="r" type="monotone" dataKey="DART" stroke="#db2777" strokeWidth={2} strokeDasharray="5 3" dot={false} />
             <Line yAxisId="r" type="monotone" dataKey={tr('Gravité', 'Severity')} stroke="#f59e0b" strokeWidth={2} dot={false} />
             {targets.ltifr != null && <ReferenceLine yAxisId="r" y={targets.ltifr} stroke="#dc2626" strokeDasharray="4 4" label={{ value: `Cible LTIFR ${targets.ltifr}`, fontSize: 10, fill: '#dc2626' }} />}
             {targets.trir != null && <ReferenceLine yAxisId="r" y={targets.trir} stroke="#2563eb" strokeDasharray="4 4" label={{ value: `Cible TRIR ${targets.trir}`, fontSize: 10, fill: '#2563eb' }} />}
@@ -116,6 +121,7 @@ export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, la
           ))}
         </div>
         <div className={note}>{tr('Ratio observé grave : mineur : passé proche', 'Observed ratio serious : minor : near-miss')} = <b>{ratioObs}</b> ({tr('réf. Heinrich 1 : 29 : 300', 'Heinrich ref. 1 : 29 : 300')}). {tr('Une large base de passés proches déclarés = culture saine.', 'A wide reported near-miss base = healthy culture.')}</div>
+        {poorReporting && <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">⚠ {tr('Peu de passés proches déclarés au regard des lésions : possible sous-déclaration. Encouragez la déclaration des presque-accidents (indicateur précurseur).', 'Few near-misses reported relative to injuries: possible under-reporting. Encourage near-miss reporting (a leading indicator).')}</div>}
       </div>
 
       {/* Incidents par type */}
