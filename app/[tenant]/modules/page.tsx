@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck,
+  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck, Menu, Check as CheckIcon,
 } from 'lucide-react';
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -34,6 +34,7 @@ export default function ModulesPage() {
 
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [viewMenu, setViewMenu] = useState(false);
   const [upsell, setUpsell] = useState<string | null>(null);
   // Widgets ÉPINGLÉS en haut du dashboard (case à cocher dans chaque widget) — persisté par tenant.
   const [pins, setPins] = useState<Record<string, boolean>>({});
@@ -395,18 +396,28 @@ export default function ModulesPage() {
         <main className="flex-1">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">{tr('Tableau de bord', 'Dashboard')}</h1>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Arrangement (préférence utilisateur) : par type / compact / personnalisé */}
-              <div className="flex overflow-hidden rounded-lg border border-gray-300 text-xs font-semibold dark:border-gray-600">
-                <button onClick={() => setArr('grouped')} className={`px-2.5 py-2 ${arrange === 'grouped' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Par type', 'By type')}</button>
-                <button onClick={() => setArr('flat')} className={`border-l border-gray-300 px-2.5 py-2 dark:border-gray-600 ${arrange === 'flat' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Compact', 'Compact')}</button>
-                <button onClick={() => setArr('custom')} className={`border-l border-gray-300 px-2.5 py-2 dark:border-gray-600 ${arrange === 'custom' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Personnalisé', 'Custom')}</button>
-              </div>
-              {/* Sélecteur de vue */}
-              <div className="flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-                <button onClick={() => setView('grid')} title={tr('Galerie', 'Gallery')} className={`p-2 ${view === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><LayoutGrid size={16} /></button>
-                <button onClick={() => setView('list')} title={tr('Liste', 'List')} className={`p-2 ${view === 'list' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><List size={16} /></button>
-              </div>
+            {/* Fonctions de vue regroupées dans un menu hamburger */}
+            <div className="relative">
+              <button onClick={() => setViewMenu(o => !o)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                <Menu size={16} /> {tr('Affichage', 'View')}
+              </button>
+              {viewMenu && <>
+                <div className="fixed inset-0 z-10" onClick={() => setViewMenu(false)} />
+                <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">{tr('Disposition', 'Arrangement')}</div>
+                  {([['grouped', tr('Par type', 'By type')], ['flat', tr('Compact', 'Compact')], ['custom', tr('Personnalisé', 'Custom')]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => { setArr(k as any); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <span>{label}</span>{arrange === k && <CheckIcon size={14} className="text-blue-600" />}
+                    </button>
+                  ))}
+                  <div className="mt-1 border-t border-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-gray-700">{tr('Affichage', 'Layout')}</div>
+                  {([['grid', tr('Galerie', 'Gallery'), LayoutGrid], ['list', tr('Liste', 'List'), List]] as const).map(([k, label, Ic]) => (
+                    <button key={k} onClick={() => { setView(k as any); }} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <span className="flex items-center gap-2"><Ic size={14} /> {label}</span>{view === k && <CheckIcon size={14} className="text-blue-600" />}
+                    </button>
+                  ))}
+                </div>
+              </>}
             </div>
           </div>
 
