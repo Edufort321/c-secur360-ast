@@ -39,6 +39,18 @@ export default function ModulesPage() {
   const [pins, setPins] = useState<Record<string, boolean>>({});
   useEffect(() => { try { const s = localStorage.getItem(`dashPins_${tenant}`); if (s) setPins(JSON.parse(s)); } catch { /* ignore */ } }, [tenant]);
   const togglePin = (k: string) => setPins(p => { const n = { ...p, [k]: !p[k] }; try { localStorage.setItem(`dashPins_${tenant}`, JSON.stringify(n)); } catch { /* ignore */ } return n; });
+
+  // Arrangement des cartes — PRÉFÉRENCE de l'UTILISATEUR (localStorage du navigateur), pas du tenant.
+  //  'grouped' = par type avec en-têtes (défaut) · 'flat' = compact, un à la suite · 'custom' = ordre choisi.
+  const [arrange, setArrange] = useState<'grouped' | 'flat' | 'custom'>('grouped');
+  const [customOrder, setCustomOrder] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const a = localStorage.getItem(`dashArrange_${tenant}`); if (a === 'grouped' || a === 'flat' || a === 'custom') setArrange(a);
+      const o = localStorage.getItem(`dashOrder_${tenant}`); if (o) setCustomOrder(JSON.parse(o) || []);
+    } catch { /* ignore */ }
+  }, [tenant]);
+  const setArr = (a: 'grouped' | 'flat' | 'custom') => { setArrange(a); try { localStorage.setItem(`dashArrange_${tenant}`, a); } catch { /* ignore */ } };
   // Mode diffusion en veille (kiosque) — réglage tenant (Admin › Système). Lecture best-effort (migration 219).
   const [kiosk, setKiosk] = useState<{ on: boolean; idle: number; cards: string[] | null }>({ on: false, idle: 60, cards: null });
   useEffect(() => {
@@ -320,7 +332,22 @@ export default function ModulesPage() {
   ];
   const CARD_ORDER = CARD_GROUPS.flatMap(g => g.keys);
   const groupOf = (k: string) => CARD_GROUPS.find(g => g.keys.includes(k))?.title || '';
-  cards.sort((a, b) => { const ia = CARD_ORDER.indexOf(a.key), ib = CARD_ORDER.indexOf(b.key); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  // Ordre selon la préférence : personnalisé (ordre choisi) sinon par groupes logiques.
+  if (arrange === 'custom' && customOrder.length) {
+    cards.sort((a, b) => { const ia = customOrder.indexOf(a.key), ib = customOrder.indexOf(b.key); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+  } else {
+    cards.sort((a, b) => { const ia = CARD_ORDER.indexOf(a.key), ib = CARD_ORDER.indexOf(b.key); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  }
+  const showHeaders = arrange === 'grouped';
+  // Réordonnancement manuel (mode personnalisé) — déplace une carte d'un cran, persiste l'ordre.
+  function reorderCard(key: string, dir: -1 | 1) {
+    const base = (customOrder.length ? customOrder.slice() : cards.map(c => c.key));
+    cards.forEach(c => { if (!base.includes(c.key)) base.push(c.key); });
+    const i = base.indexOf(key), j = i + dir;
+    if (i < 0 || j < 0 || j >= base.length) return;
+    [base[i], base[j]] = [base[j], base[i]];
+    setCustomOrder(base); try { localStorage.setItem(`dashOrder_${tenant}`, JSON.stringify(base)); } catch { /* ignore */ }
+  }
 
   const iconFor = (k: string) => (MODULES.find(m => m.key === k || (k === 'events' && m.key === 'accidents'))?.icon) || LayoutGrid;
 
@@ -368,7 +395,13 @@ export default function ModulesPage() {
         <main className="flex-1">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">{tr('Tableau de bord', 'Dashboard')}</h1>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Arrangement (préférence utilisateur) : par type / compact / personnalisé */}
+              <div className="flex overflow-hidden rounded-lg border border-gray-300 text-xs font-semibold dark:border-gray-600">
+                <button onClick={() => setArr('grouped')} className={`px-2.5 py-2 ${arrange === 'grouped' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Par type', 'By type')}</button>
+                <button onClick={() => setArr('flat')} className={`border-l border-gray-300 px-2.5 py-2 dark:border-gray-600 ${arrange === 'flat' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Compact', 'Compact')}</button>
+                <button onClick={() => setArr('custom')} className={`border-l border-gray-300 px-2.5 py-2 dark:border-gray-600 ${arrange === 'custom' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Personnalisé', 'Custom')}</button>
+              </div>
               {/* Sélecteur de vue */}
               <div className="flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
                 <button onClick={() => setView('grid')} title={tr('Galerie', 'Gallery')} className={`p-2 ${view === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><LayoutGrid size={16} /></button>
@@ -418,12 +451,16 @@ export default function ModulesPage() {
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {cards.map((c, i) => {
                 const Icon = iconFor(c.key);
-                const newGroup = groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
+                const newGroup = showHeaders && groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
                 const inner = (
                   <div className="flex h-[122px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div className="mb-1.5 flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{c.title}</span>
                       <div className="flex items-center gap-1.5">
+                        {arrange === 'custom' && <span className="flex flex-col leading-none" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+                          <button onClick={() => reorderCard(c.key, -1)} className="text-gray-300 hover:text-blue-600" title={tr('Monter', 'Up')}>▲</button>
+                          <button onClick={() => reorderCard(c.key, 1)} className="text-gray-300 hover:text-blue-600" title={tr('Descendre', 'Down')}>▼</button>
+                        </span>}
                         {/* Case « épingler » : seulement sur la carte Accidents/Presque-acc. */}
                         {c.key === 'events' && <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
@@ -453,9 +490,13 @@ export default function ModulesPage() {
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
               {cards.map((c, i) => {
                 const Icon = iconFor(c.key);
-                const newGroup = groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
+                const newGroup = showHeaders && groupOf(c.key) !== groupOf(i ? cards[i - 1].key : '');
                 const inner = (
-                  <div className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${i && !newGroup ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
+                  <div className={`flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${i && !newGroup ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
+                    {arrange === 'custom' && <span className="flex shrink-0 flex-col text-[10px] leading-none" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+                      <button onClick={() => reorderCard(c.key, -1)} className="text-gray-300 hover:text-blue-600">▲</button>
+                      <button onClick={() => reorderCard(c.key, 1)} className="text-gray-300 hover:text-blue-600">▼</button>
+                    </span>}
                     {c.key === 'events'
                       ? <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
