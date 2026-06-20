@@ -22,9 +22,11 @@ export async function getFrameworks(): Promise<HseFramework[]> {
   const { data } = await supabase.from('hse_regulatory_framework').select('*').eq('is_active', true).order('code');
   return (data || []) as HseFramework[];
 }
+// Registres propres au Royaume-Uni (RIDDOR) — masqués : le module est CANADA-only depuis la migration 251.
+const UK_REGISTER_CODES = new Set(['COSHH', 'LOLER', 'PUWER', 'FIRE_RISK']);
 export async function getRegisterTypes(): Promise<HseRegisterType[]> {
   const { data } = await supabase.from('hse_register_type').select('*').order('name_fr');
-  return (data || []) as HseRegisterType[];
+  return ((data || []) as HseRegisterType[]).filter(t => !UK_REGISTER_CODES.has(t.code));
 }
 
 // ── Config tenant ────────────────────────────────────────────────────────────────────────────────────

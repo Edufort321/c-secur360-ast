@@ -31,5 +31,21 @@ export async function GET(req: NextRequest) {
     title: nameById[c.personnel_id] || (c.name || 'Certification'),
     data: { worker: nameById[c.personnel_id] || '', course: c.name || '', issuer: c.issuer || '', completed_at: c.issued_date || '', expires_at: c.expiry_date || '' },
   }));
+
+  // Documents RH de type certification/attestation (hr_documents) → aussi des formations. Référence
+  // préfixée « doc: » pour ne pas entrer en collision avec les certifications (anti-doublon).
+  try {
+    const { data: docs } = await supabaseAdmin.from('hr_documents')
+      .select('id, personnel_id, type, name, expiry_date').eq('tenant_id', tenant).in('type', ['certification', 'attestation']);
+    const docIds = Array.from(new Set((docs || []).map((d: any) => d.personnel_id).filter((x: any) => x && !nameById[x])));
+    if (docIds.length) {
+      const { data: pers2 } = await supabaseAdmin.from('planner_personnel').select('id, name').eq('tenant_id', tenant).in('id', docIds);
+      for (const p of (pers2 || []) as any[]) nameById[p.id] = p.name;
+    }
+    for (const d of (docs || []) as any[]) {
+      items.push({ reference: 'doc:' + d.id, title: nameById[d.personnel_id] || (d.name || 'Attestation'), data: { worker: nameById[d.personnel_id] || '', course: d.name || '', issuer: '', completed_at: '', expires_at: d.expiry_date || '' } });
+    }
+  } catch { /* best-effort */ }
+
   return NextResponse.json({ items });
 }

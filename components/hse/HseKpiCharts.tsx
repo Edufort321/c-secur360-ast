@@ -35,6 +35,7 @@ const PROACTIVE_LABEL: Record<string, { fr: string; en: string }> = {
   AAA: { fr: 'Actes/conditions corrigés', en: 'Acts/conditions fixed' },
   ASA: { fr: 'Observations sécurité', en: 'Safety observations' },
   WORK_PERMIT: { fr: 'Permis de travail', en: 'Work permits' },
+  INSPECTION: { fr: 'Inspections réalisées', en: 'Inspections done' },
 };
 
 export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, lang = 'fr' }: {
