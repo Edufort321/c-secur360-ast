@@ -47,21 +47,30 @@ export async function plannedManHours(tenant: string): Promise<{ month: string; 
   } catch { return []; }
 }
 
+// Saisie manuelle au niveau du MOIS (1er → dernier jour) : heures de SOUS-TRAITANTS / ajustement
+// faites sur le site, ADDITIONNÉES aux heures auto (employés). Sert à l'édition de l'« Évolution mensuelle ».
+const lastDayOfMonth = (ym: string) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).toISOString().slice(0, 10); };
+export const isMonthEntry = (h: HseHours) => !!h.period_start && /-01$/.test(h.period_start) && !!h.period_end && h.period_end === lastDayOfMonth(h.period_start.slice(0, 7));
+export const monthOverridePeriod = (month: string) => ({ period_start: `${month}-01`, period_end: lastDayOfMonth(month) });
+const monthOf = (s?: string) => (s || '').slice(0, 7);
+
 /**
- * Dénominateur KPI résolu : feuilles de temps EN PRIORITÉ par semaine ; les saisies manuelles
- * (hse_hours_worked) ne comblent QUE les semaines non couvertes (pas de double comptage).
+ * Dénominateur KPI : AUTO (feuilles de temps employés) PRIORITAIRE + manuel ADDITIF (sous-traitants /
+ * ajustement sur le site, non saisis dans les feuilles de temps). Total mois = auto + manuel.
+ * Retourne aussi les heures auto et manuelles PAR MOIS pour l'affichage/édition de l'évolution mensuelle.
  */
-export async function resolveKpiHours(tenant: string, manual: HseHours[]): Promise<{ hours: HseHours[]; breakdown: HoursBreakdown }> {
+export async function resolveKpiHours(tenant: string, manual: HseHours[]): Promise<{ hours: HseHours[]; breakdown: HoursBreakdown; tsByMonth: Record<string, number>; manualByMonth: Record<string, number> }> {
   const { rows: ts } = await aggregateTimesheetHours(tenant);
-  const tsWeeks = new Set(ts.map(r => r.period_start));
-  const manualKept = manual.filter(m => !tsWeeks.has(m.period_start));   // manuel seulement hors semaines couvertes
-  const hours = [...ts, ...manualKept];
+  const hours = [...ts, ...manual];   // additif : employés (auto) + sous-traitants/ajustements (manuel)
+
+  const tsByMonth: Record<string, number> = {}; for (const r of ts) tsByMonth[monthOf(r.period_start)] = (tsByMonth[monthOf(r.period_start)] || 0) + (Number(r.hours) || 0);
+  const manualByMonth: Record<string, number> = {}; for (const m of manual) manualByMonth[monthOf(m.period_start)] = (manualByMonth[monthOf(m.period_start)] || 0) + (Number(m.hours) || 0);
 
   const timesheetHours = ts.reduce((s, r) => s + (Number(r.hours) || 0), 0);
-  const manualHours = manualKept.reduce((s, r) => s + (Number(r.hours) || 0), 0);
+  const manualHours = manual.reduce((s, r) => s + (Number(r.hours) || 0), 0);
   const planned = await plannedManHours(tenant);
   const plannedHours = planned.reduce((s, r) => s + r.hours, 0);
-  const source: HoursBreakdown['source'] = ts.length && manualKept.length ? 'mixed' : ts.length ? 'timesheets' : manualKept.length ? 'manual' : 'none';
+  const source: HoursBreakdown['source'] = ts.length && manual.length ? 'mixed' : ts.length ? 'timesheets' : manual.length ? 'manual' : 'none';
 
-  return { hours, breakdown: { timesheetHours: Math.round(timesheetHours * 100) / 100, manualHours: Math.round(manualHours * 100) / 100, plannedHours, weeks: ts.length, source } };
+  return { hours, breakdown: { timesheetHours: Math.round(timesheetHours * 100) / 100, manualHours: Math.round(manualHours * 100) / 100, plannedHours, weeks: ts.length, source }, tsByMonth, manualByMonth };
 }

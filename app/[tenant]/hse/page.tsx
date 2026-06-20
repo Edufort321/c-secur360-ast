@@ -14,7 +14,7 @@ import {
   type HseFramework, type HseRegisterType, type HseSettings, type HseTenantRegister, type HseIncident, type HseDeadline, type HseHours, type HseProactive, type HseInterconnect,
 } from '@/lib/hse/data';
 import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/lib/hse/kpi';
-import { resolveKpiHours, type HoursBreakdown } from '@/lib/hse/hoursSource';
+import { resolveKpiHours, monthOverridePeriod, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { proactiveFeedLive } from '@/lib/hse/proactiveFeed';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseAttachments } from '@/components/hse/HseAttachments';
@@ -80,6 +80,8 @@ export default function HsePage() {
   const [hours, setHours] = useState<HseHours[]>([]);          // saisies manuelles (hse_hours_worked)
   const [autoHours, setAutoHours] = useState<HseHours[]>([]);  // dénominateur résolu (feuilles de temps + manuel)
   const [breakdown, setBreakdown] = useState<HoursBreakdown | null>(null);
+  const [tsByMonth, setTsByMonth] = useState<Record<string, number>>({});
+  const [manualByMonth, setManualByMonth] = useState<Record<string, number>>({});
   const [proactive, setProactive] = useState<HseProactive[]>([]);
   const [interconnect, setInterconnect] = useState<HseInterconnect | null>(null);
   const [registersDue, setRegistersDue] = useState<any[]>([]);
@@ -99,7 +101,7 @@ export default function HsePage() {
       setIncidents(inc); setDeadlines(dl); setHours(hr); setRegistersDue(rd); setProactive([...(pro as any), ...proFeed] as any);
       // Dénominateur AUTO : feuilles de temps (réel) priorisées, manuel comble les semaines non couvertes.
       const resolved = await resolveKpiHours(tenant, hr);
-      setAutoHours(resolved.hours); setBreakdown(resolved.breakdown);
+      setAutoHours(resolved.hours); setBreakdown(resolved.breakdown); setTsByMonth(resolved.tsByMonth); setManualByMonth(resolved.manualByMonth);
       setInterconnect(await getInterconnectStats(tenant, resolved.breakdown.plannedHours));
       // Feed KPI : incidents du module Accidents (incident_reports) — sans ressaisie.
       try { const af = await fetch(`/api/hse/incident-feed?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }); const aj = await af.json(); setAccidentFeed(af.ok ? (aj.items || []) : []); } catch { setAccidentFeed([]); }
@@ -151,7 +153,7 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} onMonthlyHours={async (month: string, hours: number) => { const r = await saveHoursWorked(tenant, { ...monthOverridePeriod(month), hours }); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} settings={settings} />}
             {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} userEmail={userEmail} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id, userEmail); setDeadlines(await getOpenDeadlines(tenant)); }} />}
             {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} userEmail={userEmail} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
@@ -165,7 +167,7 @@ export default function HsePage() {
 }
 
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, proactive, breakdown, interconnect, tenant, onHours, settings }: any) {
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
@@ -261,9 +263,24 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
 
       {viewRows.length > 0 && (
         <div className={`${card} overflow-x-auto`}>
-          <h3 className="mb-2 text-sm font-bold">{tr('Évolution mensuelle', 'Monthly trend')}</h3>
-          <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Mois', 'Month')}</th><th className="text-right">{tr('Heures', 'Hours')}</th><th className="text-right">LTIFR</th><th className="text-right">TRIR</th><th className="text-right">{tr('Gravité', 'Severity')}</th></tr></thead>
-            <tbody>{viewRows.map((r: any) => <tr key={r.month} className="border-t border-gray-50 dark:border-gray-700/50"><td className="py-1 font-semibold">{r.month}</td><td className="text-right tabular-nums text-gray-500">{r.hours.toLocaleString()}</td><td className="text-right tabular-nums font-semibold text-rose-600">{r.ltifr}</td><td className="text-right tabular-nums font-semibold text-amber-600">{r.trir}</td><td className="text-right tabular-nums text-orange-600">{r.severityRate}</td></tr>)}</tbody>
+          <h3 className="mb-1 text-sm font-bold">{tr('Évolution mensuelle', 'Monthly trend')}</h3>
+          <p className="mb-2 text-[11px] text-gray-400">{tr('Heures AUTO = feuilles de temps (employés), prioritaires. La colonne « Manuel » s’édite (heures de sous-traitants / ajustement faits sur le site) et s’AJOUTE à l’auto.', 'AUTO hours = timesheets (employees), priority. The “Manual” column is editable (subcontractor / on-site adjustment hours) and ADDS to auto.')}</p>
+          <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Mois', 'Month')}</th><th className="text-right">{tr('Auto', 'Auto')}</th><th className="text-right">{tr('Manuel (+)', 'Manual (+)')}</th><th className="text-right">{tr('Total', 'Total')}</th><th className="text-right">LTIFR</th><th className="text-right">TRIR</th><th className="text-right">{tr('Gravité', 'Severity')}</th></tr></thead>
+            <tbody>{viewRows.map((r: any) => { const a = Math.round(Number(tsByMonth[r.month]) || 0); const m = Math.round(Number(manualByMonth[r.month]) || 0); return (
+              <tr key={r.month} className="border-t border-gray-50 dark:border-gray-700/50">
+                <td className="py-1 font-semibold">{r.month}</td>
+                <td className="text-right tabular-nums text-gray-500">{a.toLocaleString()}</td>
+                <td className="text-right">
+                  <input key={`${r.month}:${m}`} type="number" min={0} defaultValue={m || ''} placeholder="0"
+                    onBlur={e => { const v = Math.max(0, Number(e.target.value) || 0); if (v !== m) onMonthlyHours(r.month, v); }}
+                    className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-right text-xs dark:border-gray-700 dark:bg-gray-900" />
+                </td>
+                <td className="text-right tabular-nums font-semibold">{Math.round(Number(r.hours) || 0).toLocaleString()}</td>
+                <td className="text-right tabular-nums font-semibold text-rose-600">{r.ltifr}</td>
+                <td className="text-right tabular-nums font-semibold text-amber-600">{r.trir}</td>
+                <td className="text-right tabular-nums text-orange-600">{r.severityRate}</td>
+              </tr>
+            ); })}</tbody>
           </table>
         </div>
       )}
@@ -274,7 +291,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
           <h3 className="text-sm font-bold">{tr('Heures travaillées (dénominateur des taux)', 'Hours worked (rate denominator)')}</h3>
           {breakdown && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{tr('Source', 'Source')} : {srcLabel[breakdown.source]} · {breakdown.weeks} {tr('semaine(s)', 'week(s)')}</span>}
         </div>
-        <p className="mb-2 text-[11px] text-gray-500">{tr('Généré automatiquement depuis les feuilles de temps de TOUS les employés du tenant (cumul paie hebdo) — pas seulement les vôtres. La saisie ci-dessous est un complément manuel pour les semaines NON couvertes par les feuilles de temps.', 'Auto-generated from ALL tenant employees’ timesheets (weekly payroll roll-up) — not just yours. The entry below is a manual top-up for weeks NOT covered by timesheets.')}</p>
+        <p className="mb-2 text-[11px] text-gray-500">{tr('AUTO depuis les feuilles de temps de TOUS les employés du tenant (prioritaire). La saisie manuelle ci-dessous (ou la colonne « Manuel » du tableau mensuel) S’AJOUTE à l’auto — pour les heures de SOUS-TRAITANTS sur le site ou un ajustement, non saisies dans les feuilles de temps.', 'AUTO from ALL tenant employees’ timesheets (priority). The manual entry below (or the “Manual” column in the monthly table) ADDS to auto — for SUBCONTRACTOR on-site hours or an adjustment not captured in timesheets.')}</p>
         <div className="mb-2 flex flex-wrap items-end gap-2">
           <label className="text-xs font-semibold text-gray-500">{tr('Semaine du', 'Week of')}<input type="date" value={h.period_start} onChange={e => setH({ ...h, period_start: e.target.value, period_end: e.target.value })} className="mt-1 block rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
           <label className="text-xs font-semibold text-gray-500">{tr('Heures', 'Hours')}<input type="number" value={h.hours} onChange={e => setH({ ...h, hours: e.target.value })} className="mt-1 block w-28 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
