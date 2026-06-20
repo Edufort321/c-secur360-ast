@@ -181,7 +181,7 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await reloadHours(); }} onMonthlyHours={async (month: string, val: number) => {
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} canHr={canHr} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await reloadHours(); }} onMonthlyHours={async (month: string, val: number) => {
                 // Remplace le total MANUEL du mois : retire les lignes manuelles existantes de ce mois, puis
                 // pose une seule ligne-mois (ou rien si 0). Évite l'accumulation à chaque édition.
                 for (const x of (hours as any[]).filter(x => x.id && String(x.period_start).slice(0, 7) === month)) await deleteHoursWorked(tenant, x.id);
@@ -213,8 +213,33 @@ function FdsComplianceBanner({ tr, tenant }: any) {
   );
 }
 
+// Bandeau de CONFORMITÉ FORMATIONS : certifications expirées / à renouveler (≤ 30 j). Données RH → seulement
+// si canHr. Source = route service_role register-feed (certifications + documents RH).
+function TrainingExpiryBanner({ tr, tenant, canHr }: any) {
+  const [s, setS] = useState<{ expired: number; soon: number }>({ expired: 0, soon: 0 });
+  useEffect(() => {
+    if (!canHr) return; let a = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/hse/register-feed?source=certifications&tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+        if (!r.ok) return; const j = await r.json();
+        const now = Date.now(); const horizon = now + 30 * 86400000; let expired = 0, soon = 0;
+        for (const it of (j.items || [])) { const d = it?.data?.expires_at; if (!d) continue; const t = new Date(d).getTime(); if (isNaN(t)) continue; if (t < now) expired++; else if (t <= horizon) soon++; }
+        if (a) setS({ expired, soon });
+      } catch { /* best-effort */ }
+    })();
+    return () => { a = false; };
+  }, [tenant, canHr]);
+  if (!canHr || (!s.expired && !s.soon)) return null;
+  return (
+    <div className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm text-rose-800 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-200">
+      🎓 {s.expired > 0 && <><b>{s.expired}</b> {tr('formation(s) expirée(s)', 'expired training record(s)')}{s.soon > 0 ? ' · ' : ' '}</>}{s.soon > 0 && <><b>{s.soon}</b> {tr('à renouveler (≤ 30 j)', 'to renew (≤ 30 d)')} </>}— {tr('voir le registre des formations.', 'see the training register.')}
+    </div>
+  );
+}
+
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, tenantStart, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, tenantStart, canHr, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
@@ -259,6 +284,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
     <div className="space-y-4">
       {!settings?.framework_id && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10">{tr('Configurez d’abord le cadre réglementaire (onglet Configuration).', 'Configure the regulatory framework first (Configuration tab).')}</div>}
       <FdsComplianceBanner tr={tr} tenant={tenant} />
+      <TrainingExpiryBanner tr={tr} tenant={tenant} canHr={canHr} />
 
       {/* Compteur jours sans accident avec arrêt (affichage chantier) */}
       <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
