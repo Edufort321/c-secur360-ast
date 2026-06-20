@@ -31,11 +31,13 @@ async function countByMonth(table: string, tenant: string, dateCols: string | st
 
 /** Indicateurs proactifs dérivés des autres modules (JSA depuis AST, WORK_PERMIT depuis permis). */
 export async function proactiveFeedLive(tenant: string): Promise<ProactiveLite[]> {
-  const [jsa, wp, csp, insp] = await Promise.all([
+  const [jsa, wp, csp, insp, tbm, obs] = await Promise.all([
     countByMonth('ast_forms', tenant, ['created_at', 'updated_at'], q => q.neq('status', 'draft')),
     countByMonth('work_permits', tenant, ['updated_at', 'created_at']),  // schéma prod variable
     countByMonth('confined_space_permits', tenant, ['created_at', 'updated_at']),
     countByMonth('inspection_submissions', tenant, ['submitted_at', 'created_at']),  // inspections réalisées (leading)
+    countByMonth('hse_safety_meeting', tenant, ['meeting_date', 'created_at'], q => q.eq('kind', 'tbm')),          // causeries
+    countByMonth('hse_safety_meeting', tenant, ['meeting_date', 'created_at'], q => q.eq('kind', 'observation')), // observations
   ]);
   const out: ProactiveLite[] = [];
   for (const [m, v] of Object.entries(jsa)) out.push({ metric_code: 'JSA', period_start: m, count_value: v });
@@ -43,5 +45,7 @@ export async function proactiveFeedLive(tenant: string): Promise<ProactiveLite[]
   for (const [m, v] of Object.entries(csp)) permitsByMonth[m] = (permitsByMonth[m] || 0) + v;
   for (const [m, v] of Object.entries(permitsByMonth)) out.push({ metric_code: 'WORK_PERMIT', period_start: m, count_value: v });
   for (const [m, v] of Object.entries(insp)) out.push({ metric_code: 'INSPECTION', period_start: m, count_value: v });
+  for (const [m, v] of Object.entries(tbm)) out.push({ metric_code: 'TBM', period_start: m, count_value: v });
+  for (const [m, v] of Object.entries(obs)) out.push({ metric_code: 'ASA', period_start: m, count_value: v });
   return out;
 }
