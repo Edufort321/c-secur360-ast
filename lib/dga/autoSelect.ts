@@ -5,6 +5,7 @@
 import { keyGasMethod, doernenburg, rogers, iec60599, co2coRatio, faultFamily, type DGAGases, type MethodResult, type Lang } from './methods';
 import { classifyTriangle1 } from './triangle1';
 import { classifyTriangle4 as rawT4, type Fault4 } from './triangle4';
+import { classifyTriangle5 as rawT5, t5Validated, type Fault5 as RawT5Fault } from './triangle5';
 
 type OptionalClassifier = ((g: DGAGases, lang: Lang) => MethodResult) | null;
 
@@ -22,7 +23,15 @@ const classifyTriangle4: OptionalClassifier = (g, lang = 'fr') => {
     note: r.fault === 'S' ? (lang === 'en' ? 'Stray gassing of oil — not a true fault.' : "Gazage parasite de l'huile — pas un vrai défaut.") : undefined,
   };
 };
-const classifyTriangle5: OptionalClassifier = null;
+// Triangle 5 (haute-T T2/T3) : routé mais DORMANT tant que les frontières ne sont pas validées
+// (t5Validated=false → valid:false → n'entre pas dans le verdict). Mappe le sous-type vers une famille.
+const T5_PROXY: Record<RawT5Fault, string> = { PD: 'PD', S: 'N', O: 'T1', C: 'PAP', T3: 'T3' };
+const classifyTriangle5: OptionalClassifier = (g, lang = 'fr') => {
+  const r = rawT5(g as any);
+  const method = 'Duval Triangle 5';
+  if (!r || !t5Validated()) return { method, fault: null, label: r ? (lang === 'en' ? r.labelEn : r.label) + ' (à valider)' : 'n/a', valid: false };
+  return { method, fault: T5_PROXY[r.fault], valid: true, confidence: 'moyenne', label: lang === 'en' ? r.labelEn : r.label };
+};
 const classifyPentagon1: OptionalClassifier = null;
 
 export type AutoDiagnosis = {
@@ -64,7 +73,7 @@ export function autoDiagnose(g: DGAGases, lang: Lang = 'fr'): AutoDiagnosis {
     if (classifyPentagon1) { const p = (classifyPentagon1 as any)(g); if (p.valid) { primaryMethod = L(lang, 'Duval Pentagone 1', 'Duval Pentagon 1'); primaryReason = L(lang, 'Défaut électrique : pentagone 5 gaz plus discriminant.', 'Electrical fault: 5-gas pentagon is more discriminating.'); primaryResult = p; } }
     else primaryReason = L(lang, "Défaut électrique (arc) : Triangle 1 fait foi (Triangles 4/5 ne traitent pas l'arc).", 'Electrical fault (arc): Triangle 1 prevails (Triangles 4/5 do not handle arcing).');
   } else if (t1Family === 'thermique') {
-    if ((t1?.fault === 'T2' || t1?.fault === 'T3') && classifyTriangle5) { const r = (classifyTriangle5 as any)(g); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 5', 'Duval Triangle 5'); primaryReason = L(lang, 'Défaut thermique haute T : Triangle 5 départage huile/papier.', 'High-T thermal fault: Triangle 5 separates oil/paper.'); primaryResult = r; } }
+    if ((t1?.fault === 'T2' || t1?.fault === 'T3') && classifyTriangle5) { const r = classifyTriangle5(g, lang); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 5', 'Duval Triangle 5'); primaryReason = L(lang, 'Défaut thermique haute T : Triangle 5 départage huile/papier.', 'High-T thermal fault: Triangle 5 separates oil/paper.'); primaryResult = r; } }
     else if ((t1?.fault === 'T1' || t1?.fault === 'T2') && classifyTriangle4) { const r = classifyTriangle4(g, lang); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Défaut thermique basse T : Triangle 4 précise le sous-type.', 'Low-T thermal fault: Triangle 4 refines the subtype.'); primaryResult = r; } }
   } else if (t1Family === 'pd') {
     if (classifyTriangle4) { const r = classifyTriangle4(g, lang); if (r.valid) { primaryMethod = L(lang, 'Duval Triangle 4', 'Duval Triangle 4'); primaryReason = L(lang, 'Décharges partielles : Triangle 4 précise le sous-type.', 'Partial discharges: Triangle 4 refines the subtype.'); primaryResult = r; } }

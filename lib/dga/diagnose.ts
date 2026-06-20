@@ -1,3 +1,10 @@
+// ⚠️ ARCHIVÉ (décision A1, 2026-06-19) — méthode IEEE C57.104-**2008** (Conditions 1-4 + TDCG).
+// La révision **2019** a ABANDONNÉ cette approche au profit des 2 tables de valeurs de référence
+// (statut 90e/95e percentile) + taux de génération → `lib/dga/severity2019.ts` est la SOURCE UNIQUE du
+// verdict. Ce fichier est CONSERVÉ (archive/historique + TDCG isolé comme simple « tendance »), mais NE
+// DOIT PLUS produire de verdict Condition 1-4 affiché à côté du statut 2019 (deux verdicts contradictoires).
+// Ne PAS réintroduire `condition` dans un verdict UI. Voir [[project-dga-pro-2019]].
+//
 // Module externe DGA — Diagnostic de gaz dissous (huile de transformateur).
 // Réfs : IEEE C57.104 (conditions 1-4 + TDCG) et Triangle de Duval 1 (CH4/C2H2/C2H4).
 // Indicatif : à confirmer par analyse de laboratoire et tendance dans le temps.
