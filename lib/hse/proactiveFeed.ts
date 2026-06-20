@@ -9,23 +9,32 @@ import type { ProactiveLite } from '@/components/hse/HseKpiCharts';
 
 const monthStart = (iso: string) => (iso || '').slice(0, 7) + '-01';
 
-async function countByMonth(table: string, tenant: string, dateCol: string, filter?: (q: any) => any): Promise<Record<string, number>> {
-  try {
-    let q = supabase.from(table).select(`id, ${dateCol}`).eq('tenant_id', tenant);
-    if (filter) q = filter(q);
-    const { data } = await q;
-    const by: Record<string, number> = {};
-    for (const r of (data || []) as any[]) { const d = (r as any)[dateCol]; if (!d) continue; const m = monthStart(String(d)); by[m] = (by[m] || 0) + 1; }
-    return by;
-  } catch { return {}; }
+// Compte par mois en essayant plusieurs colonnes de date candidates (les schémas prod diffèrent :
+// certaines tables n'ont pas created_at/updated_at). Best-effort : si aucune colonne ne répond, retourne {}.
+async function countByMonth(table: string, tenant: string, dateCols: string | string[], filter?: (q: any) => any): Promise<Record<string, number>> {
+  const cols = Array.isArray(dateCols) ? dateCols : [dateCols];
+  for (const dateCol of cols) {
+    try {
+      // On NE sélectionne QUE la colonne de date (certaines tables, ex. work_permits, n'ont pas de colonne `id` —
+      // PK = permit_number). Évite un 400 « column id does not exist ».
+      let q = supabase.from(table).select(dateCol).eq('tenant_id', tenant);
+      if (filter) q = filter(q);
+      const { data, error } = await q;
+      if (error) continue;                          // colonne absente → on essaie la suivante
+      const by: Record<string, number> = {};
+      for (const r of (data || []) as any[]) { const d = (r as any)[dateCol]; if (!d) continue; const m = monthStart(String(d)); by[m] = (by[m] || 0) + 1; }
+      return by;
+    } catch { /* essaie la colonne suivante */ }
+  }
+  return {};
 }
 
 /** Indicateurs proactifs dérivés des autres modules (JSA depuis AST, WORK_PERMIT depuis permis). */
 export async function proactiveFeedLive(tenant: string): Promise<ProactiveLite[]> {
   const [jsa, wp, csp] = await Promise.all([
-    countByMonth('ast_forms', tenant, 'created_at', q => q.neq('status', 'draft')),
-    countByMonth('work_permits', tenant, 'updated_at'),          // work_permits n'a PAS de created_at
-    countByMonth('confined_space_permits', tenant, 'created_at'),
+    countByMonth('ast_forms', tenant, ['created_at', 'updated_at'], q => q.neq('status', 'draft')),
+    countByMonth('work_permits', tenant, ['updated_at', 'created_at']),  // schéma prod variable
+    countByMonth('confined_space_permits', tenant, ['created_at', 'updated_at']),
   ]);
   const out: ProactiveLite[] = [];
   for (const [m, v] of Object.entries(jsa)) out.push({ metric_code: 'JSA', period_start: m, count_value: v });

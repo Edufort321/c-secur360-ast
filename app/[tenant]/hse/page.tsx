@@ -117,6 +117,14 @@ export default function HsePage() {
     } catch (e: any) { setNotice(tr('Module non initialisé — appliquez les migrations 248/249.', 'Module not initialized — apply migrations 248/249.')); }
     setLoading(false);
   }
+  // Rechargement LÉGER après une saisie d'heures : ne refait QUE les heures (évite de tout recharger —
+  // incidents, miroirs, beigne, feeds — ce qui faisait « skipper » les graphiques à chaque saisie).
+  async function reloadHours() {
+    const hr = await getHoursWorked(tenant);
+    setHours(hr);
+    const resolved = await resolveKpiHours(tenant, hr);
+    setAutoHours(resolved.hours); setBreakdown(resolved.breakdown); setTsByMonth(resolved.tsByMonth); setManualByMonth(resolved.manualByMonth);
+  }
   // Ne charge les données HSE que si l'accès est suffisant (tier ≥ administration).
   useEffect(() => { if (canView) loadAll(); else if (tier != null) setLoading(false); /* eslint-disable-next-line */ }, [tenant, canView]);
 
@@ -170,13 +178,13 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await loadAll(); }} onMonthlyHours={async (month: string, val: number) => {
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await reloadHours(); }} onMonthlyHours={async (month: string, val: number) => {
                 // Remplace le total MANUEL du mois : retire les lignes manuelles existantes de ce mois, puis
                 // pose une seule ligne-mois (ou rien si 0). Évite l'accumulation à chaque édition.
                 for (const x of (hours as any[]).filter(x => x.id && String(x.period_start).slice(0, 7) === month)) await deleteHoursWorked(tenant, x.id);
                 if (val > 0) { const r = await saveHoursWorked(tenant, { ...monthOverridePeriod(month), hours: val }); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } }
-                await loadAll();
-              }} onDeleteHours={async (id: string) => { await deleteHoursWorked(tenant, id); await loadAll(); }} settings={settings} />}
+                await reloadHours();
+              }} onDeleteHours={async (id: string) => { await deleteHoursWorked(tenant, id); await reloadHours(); }} settings={settings} />}
             {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} userEmail={userEmail} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id, userEmail); setDeadlines(await getOpenDeadlines(tenant)); }} />}
             {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} userEmail={userEmail} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
