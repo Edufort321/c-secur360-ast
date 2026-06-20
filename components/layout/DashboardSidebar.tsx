@@ -113,7 +113,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
     {
       id: 'accidents',
       label: { fr: 'Déclarations', en: 'Incident Reports' },
-      href: `/${tenant}/accidents`,
+      href: `/${tenant}/hse?tab=incidents`,
       icon: AlertTriangle,
       description: { fr: 'Déclarations d\'accidents conformes', en: 'Compliant incident reports' }
     },
@@ -269,9 +269,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
               {language === 'fr' ? 'Nouvelle AST' : 'New JSA'}
             </Link>
             <Link
-              href={`/${tenant}/accidents`}
+              href={`/${tenant}/hse?tab=incidents`}
               className={`flex items-center text-sm ${
-                isDark 
+                isDark
                   ? 'text-slate-300 hover:text-white' 
                   : 'text-slate-600 hover:text-slate-900'
               } transition-colors`}

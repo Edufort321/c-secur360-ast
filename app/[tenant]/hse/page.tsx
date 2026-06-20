@@ -2,9 +2,10 @@
 // Module HSE (Santé & sécurité) — registres réglementaires + incidents/échéances + KPI (LTIFR/TRIR).
 // Données : lib/hse/data ; calculs purs : lib/hse/kpi. Juridictions CANADIENNES (fédéral + provinces/territoires), bilingue FR/EN.
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock, Paperclip, History } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
+import AccidentsPanel from '@/components/AccidentsPanel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getFrameworks, getRegisterTypes, getHseSettings, saveHseSettings, getTenantRegisters, toggleTenantRegister,
@@ -53,7 +54,10 @@ export default function HsePage() {
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const EN = lang === 'en';
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>('kpi');
+  // Deep-link ?tab=incidents (ex. redirection depuis /accidents ou « Déclarer un incident » d'un AST).
+  useEffect(() => { const q = searchParams.get('tab'); if (q && ['kpi', 'incidents', 'registers', 'config', 'audit'].includes(q)) setTab(q as Tab); }, [searchParams]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -132,7 +136,7 @@ export default function HsePage() {
 
   const TABS: { k: Tab; label: string; icon: any }[] = [
     { k: 'kpi', label: tr('Tableau de bord', 'Dashboard'), icon: ShieldCheck },
-    { k: 'incidents', label: tr('Incidents & échéances', 'Incidents & deadlines'), icon: AlertTriangle },
+    { k: 'incidents', label: tr('Incidents & accidents', 'Incidents & accidents'), icon: AlertTriangle },
     { k: 'registers', label: tr('Registres', 'Registers'), icon: ClipboardList },
     { k: 'config', label: tr('Configuration', 'Configuration'), icon: Settings },
     { k: 'audit', label: tr('Journal d’audit', 'Audit log'), icon: History },
@@ -380,47 +384,17 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
 
 // ── INCIDENTS ────────────────────────────────────────────────────────────────────────────────────────
 function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canHr, userEmail, onSaved, onComplete }: any) {
-  const blank = (): HseIncident => ({ occurred_at: nowLocal(), event_code: 'NEAR_MISS', is_lost_time: false, lost_days: 0 });
-  const [f, setF] = useState<HseIncident | null>(null);
   const [openInc, setOpenInc] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [gen, setGen] = useState<HseDeadline[] | null>(null);
-  const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
-  async function submit() {
-    if (!f) return; setBusy(true); setGen(null);
-    const r = await saveIncident(tenant, { ...f, occurred_at: new Date(f.occurred_at).toISOString(), created_by: userEmail || null });
-    if (r.id) { const dl = await getDeadlinesForIncident(tenant, r.id); setGen(dl); await onSaved(); setF(null); }
-    setBusy(false);
-  }
   return (
     <div className="space-y-4">
-      {!configured && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20">{tr('Sans cadre réglementaire configuré, aucune échéance ne sera générée automatiquement.', 'Without a configured framework, no deadline will be auto-generated.')}</div>}
-      {gen && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20">{gen.length ? tr(`${gen.length} obligation(s) générée(s) automatiquement.`, `${gen.length} obligation(s) auto-generated.`) : tr('Aucune obligation réglementaire pour ce type/seuil.', 'No regulatory obligation for this type/threshold.')}</div>}
+      {!configured && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20">{tr('Sans cadre réglementaire configuré (onglet Configuration), aucune échéance ne sera générée automatiquement à la soumission d’un rapport.', 'Without a configured framework (Configuration tab), no deadline will be auto-generated when a report is submitted.')}</div>}
 
-      {!f ? <button onClick={() => setF(blank())} className="inline-flex items-center gap-1 rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Déclarer un incident', 'Report an incident')}</button> : (
-        <div className={card}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-gray-500">{tr('Date/heure', 'Date/time')}<input type="datetime-local" value={f.occurred_at} onChange={e => setF({ ...f, occurred_at: e.target.value })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Type d’événement', 'Event type')}<select value={f.event_code} onChange={e => setF({ ...f, event_code: e.target.value })} className={inp}>{EVENT_CODES.map(c => <option key={c.code} value={c.code}>{tr(c.fr, c.en)}</option>)}</select></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Lieu', 'Location')}<input value={f.location_text || ''} onChange={e => setF({ ...f, location_text: e.target.value })} className={inp} /></label>
-            {canHr ? (
-              <>
-                <label className="text-xs font-semibold text-gray-500">{tr('Partie du corps', 'Body part')} <span className="text-amber-600">🛈</span><input value={f.body_part || ''} onChange={e => setF({ ...f, body_part: e.target.value })} className={inp} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Nature de la blessure', 'Injury type')} <span className="text-amber-600">🛈</span><input value={f.injury_type || ''} onChange={e => setF({ ...f, injury_type: e.target.value })} className={inp} /></label>
-              </>
-            ) : (
-              <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">{tr('Renseignements de santé (partie du corps, nature de la blessure) réservés au profil RH (Loi 25).', 'Health details (body part, injury type) are restricted to the HR profile (Quebec Law 25).')}</div>
-            )}
-            <label className="flex items-center gap-2 pt-5 text-xs font-semibold text-gray-500"><input type="checkbox" checked={!!f.is_lost_time} onChange={e => setF({ ...f, is_lost_time: e.target.checked })} /> {tr('Avec arrêt de travail (LTI)', 'Lost-time injury (LTI)')}</label>
-            <label className="flex items-center gap-2 pt-5 text-xs font-semibold text-gray-500"><input type="checkbox" checked={!!f.is_restricted} onChange={e => setF({ ...f, is_restricted: e.target.checked })} /> {tr('Travail restreint / mutation (DART)', 'Restricted work / transfer (DART)')}</label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Jours perdus', 'Lost days')}<input type="number" value={f.lost_days || 0} onChange={e => setF({ ...f, lost_days: Number(e.target.value) || 0 })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Dommages matériels ($)', 'Material damage ($)')}<input type="number" value={f.material_damage_amount ?? ''} onChange={e => setF({ ...f, material_damage_amount: e.target.value === '' ? null : Number(e.target.value) })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Description', 'Description')}<textarea value={f.description || ''} onChange={e => setF({ ...f, description: e.target.value })} rows={2} className={inp} /></label>
-          </div>
-          <div className="mt-3 flex justify-end gap-2"><button onClick={() => setF(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button><button onClick={submit} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">{busy ? <Loader2 size={15} className="animate-spin" /> : null} {tr('Enregistrer', 'Save')}</button></div>
-        </div>
-      )}
+      {/* Module Accidents/Incidents complet (déclaration riche : blessés, témoins, véhicule, schéma corporel,
+          5-pourquoi, photos, signatures, CAPA). À la soumission, l'événement est classé en code réglementaire
+          et nourrit AUTOMATIQUEMENT les échéances + le KPI ci-dessous (zéro ressaisie). */}
+      <AccidentsPanel tenant={tenant} />
 
+      {/* Couche réglementaire HSE : échéances CNESST auto-générées à partir des rapports soumis. */}
       <div className={card}>
         <h3 className="mb-2 text-sm font-bold">{tr('Échéances à traiter', 'Deadlines to action')} ({deadlines.length})</h3>
         {deadlines.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune échéance ouverte.', 'No open deadline.')}</p> : deadlines.map((d: any) => (
@@ -432,7 +406,7 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
       </div>
 
       <div className={`${card} overflow-x-auto`}>
-        <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold">{tr('Incidents', 'Incidents')} ({incidents.length})</h3>
+        <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold">{tr('Suivi réglementaire des incidents', 'Regulatory incident follow-up')} ({incidents.length}) <span className="font-normal text-gray-400">— {tr('classés auto. + enquête/causes/CAPA/pièces', 'auto-classified + investigation/causes/CAPA/files')}</span></h3>
           {incidents.length > 0 && <button onClick={() => downloadCsv(`hse-incidents-${tenant}`, incidents, [
             { key: 'occurred_at', label: tr('Date', 'Date'), type: 'date' }, { key: 'event_code', label: tr('Type', 'Type') }, { key: 'status', label: tr('Statut', 'Status') },
             { key: 'location_text', label: tr('Lieu', 'Location') }, { key: 'is_lost_time', label: 'LTI', map: (v: any) => (v ? 'Oui' : 'Non') }, { key: 'lost_days', label: tr('Jours perdus', 'Lost days'), type: 'number' },
