@@ -47,3 +47,75 @@ export function pentagonPoint(g: PentaGases): { x: number; y: number; hemisphere
   // hémisphère NORD (y>0) = tendance électrique (H2/C2H2/C2H6) ; SUD (y<0) = thermique (CH4/C2H4). Indicatif.
   return { x, y, hemisphere: y >= 0 ? 'nord' : 'sud' };
 }
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════════
+// PENTAGONE COMBINÉ — 10 zones (Cheim & Duval, « Combined Duval Pentagons », Energies 2020, 13, 2859).
+// RÉUTILISE la géométrie + le centroïde + les % ci-dessus (PAS de recalcul dupliqué). ⚠️ Les FRONTIÈRES
+// internes (ZONE_POLYGONS) sont reconstruites (// TODO-VERIFY) → tant que BOUNDARIES_VALIDATED=false :
+// bandeau « frontières à valider » + export PDF du diagnostic désactivé. À confronter aux Fig. 6–9 par
+// un ingénieur avant production. Versionné (PENTAGON_BOUNDARY_VERSION) pour la traçabilité des diagnostics.
+// ════════════════════════════════════════════════════════════════════════════════════════════════════
+
+export const BOUNDARIES_VALIDATED = false;                    // ← lever à true après validation ingénieur
+export const PENTAGON_BOUNDARY_VERSION = 'cheim-duval-2020-draft-1';
+const BOUNDARY_TOL = 0.8;                                     // proximité frontière → prudence
+
+export type ZoneCode = 'PD' | 'S' | 'D1' | 'D2' | 'T1-O' | 'T1-C' | 'T2-O' | 'T2-C' | 'T3-C' | 'T3-H';
+export type Pt = { x: number; y: number };
+export type ZoneDef = { code: ZoneCode; labelFr: string; labelEn: string; polygon: Pt[] };
+
+// Polygones des zones (coordonnées du pentagone, R=40, y vers le haut — même repère que PENTAGON_VERTICES).
+export const ZONE_POLYGONS: ZoneDef[] = [
+  { code: 'PD', labelFr: 'Décharges partielles', labelEn: 'Partial discharges', polygon: [{ x: 0, y: 40 }, { x: -1, y: 33 }, { x: 0, y: 24.5 }, { x: 1, y: 33 }] }, // TODO-VERIFY
+  { code: 'S', labelFr: 'Dégazage parasite (stray gassing)', labelEn: 'Stray gassing', polygon: [{ x: 0, y: 40 }, { x: -35, y: 3 }, { x: -22, y: -8 }, { x: 0, y: 1.5 }, { x: 0, y: 24.5 }] }, // TODO-VERIFY
+  { code: 'D1', labelFr: 'Décharges de faible énergie', labelEn: 'Low-energy discharges', polygon: [{ x: -35, y: 3 }, { x: -38, y: 12.4 }, { x: -23.5, y: -32.4 }, { x: -11, y: -32.4 }, { x: -22, y: -8 }] }, // TODO-VERIFY
+  { code: 'D2', labelFr: 'Décharges de haute énergie', labelEn: 'High-energy discharges', polygon: [{ x: -22, y: -8 }, { x: -11, y: -32.4 }, { x: 1.5, y: -32.4 }, { x: 3.5, y: -3 }, { x: 0, y: 1.5 }] }, // TODO-VERIFY
+  { code: 'T1-O', labelFr: 'Surchauffe < 300 °C sans carbonisation', labelEn: 'Overheating < 300 °C, no carbonization', polygon: [{ x: 0, y: 1.5 }, { x: 3.5, y: -3 }, { x: 24, y: -3 }, { x: 23.5, y: 1.5 }] }, // TODO-VERIFY
+  { code: 'T1-C', labelFr: 'Surchauffe < 300 °C avec carbonisation', labelEn: 'Overheating < 300 °C, carbonization', polygon: [{ x: 1.5, y: -32.4 }, { x: 4, y: -32.4 }, { x: 4, y: -12 }, { x: 3.5, y: -3 }] }, // TODO-VERIFY
+  { code: 'T2-O', labelFr: 'Surchauffe 300–700 °C sans carbonisation', labelEn: 'Overheating 300–700 °C, no carbonization', polygon: [{ x: 3.5, y: -3 }, { x: 24, y: -3 }, { x: 24, y: -20 }, { x: 4, y: -20 }, { x: 4, y: -12 }] }, // TODO-VERIFY
+  { code: 'T2-C', labelFr: 'Surchauffe 300–700 °C avec carbonisation', labelEn: 'Overheating 300–700 °C, carbonization', polygon: [{ x: 4, y: -32.4 }, { x: 12, y: -32.4 }, { x: 12, y: -20 }, { x: 4, y: -20 }] }, // TODO-VERIFY
+  { code: 'T3-C', labelFr: 'Surchauffe > 700 °C avec carbonisation', labelEn: 'Overheating > 700 °C, carbonization', polygon: [{ x: 12, y: -32.4 }, { x: 23.5, y: -32.4 }, { x: 24, y: -20 }, { x: 12, y: -20 }] }, // TODO-VERIFY
+  { code: 'T3-H', labelFr: 'Surchauffe > 700 °C (huile seulement)', labelEn: 'Overheating > 700 °C, oil only', polygon: [{ x: 24, y: -3 }, { x: 38, y: -12.4 }, { x: 23.5, y: -32.4 }, { x: 24, y: -20 }] }, // TODO-VERIFY
+];
+
+export function pointInPolygon(pt: Pt, poly: Pt[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+    if (yi > pt.y !== yj > pt.y && pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function distToSeg(p: Pt, a: Pt, b: Pt): number {
+  const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+  let t = len2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2 : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+function distToPolygon(p: Pt, poly: Pt[]): number {
+  let m = Infinity; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) m = Math.min(m, distToSeg(p, poly[j], poly[i])); return m;
+}
+
+// Garde-fou C57.104-2019 : sous ces minima (Tableau 1), ne pas diagnostiquer (gaz de fond). // TODO-VERIFY
+export const C57104_TABLE1_MIN: Record<PentaGasKey, number> = { H2: 80, CH4: 90, C2H6: 90, C2H4: 50, C2H2: 1 };
+export function guardGasLevels(g: PentaGases): { ok: boolean; reason?: string } {
+  const allBelow = PENTAGON_ORDER.every(k => (Number(g[k]) || 0) < C57104_TABLE1_MIN[k]);
+  return allBelow ? { ok: false, reason: 'Tous les gaz sont sous les seuils du Tableau 1 (C57.104-2019) : diagnostic non recommandé.' } : { ok: true };
+}
+
+export type DuvalResult = {
+  centroid: Pt; zone: ZoneCode | null; labelFr: string | null; labelEn: string | null;
+  onBoundary: boolean; guard: { ok: boolean; reason?: string }; percentages: Record<PentaGasKey, number>;
+  validated: boolean; boundaryVersion: string;
+};
+
+/** Classification combinée : centroïde (réutilisé) → zone (point-dans-polygone) → diagnostic. */
+export function classifyDuval(g: PentaGases): DuvalResult | null {
+  const pt = pentagonPoint(g); if (!pt) return null;
+  const sum = PENTAGON_ORDER.reduce((s, k) => s + Math.max(0, Number(g[k]) || 0), 0) || 1;
+  const percentages = PENTAGON_ORDER.reduce((acc, k) => { acc[k] = r2((Math.max(0, Number(g[k]) || 0) / sum) * 100); return acc; }, {} as Record<PentaGasKey, number>);
+  const centroid: Pt = { x: pt.x, y: pt.y };
+  let found: ZoneDef | null = ZONE_POLYGONS.find(z => pointInPolygon(centroid, z.polygon)) || null;
+  if (!found) { let bestD = Infinity; for (const z of ZONE_POLYGONS) { const d = distToPolygon(centroid, z.polygon); if (d < bestD) { bestD = d; found = z; } } }
+  const onBoundary = found != null && distToPolygon(centroid, found.polygon) < BOUNDARY_TOL;
+  return { centroid, zone: found?.code ?? null, labelFr: found?.labelFr ?? null, labelEn: found?.labelEn ?? null, onBoundary, guard: guardGasLevels(g), percentages, validated: BOUNDARIES_VALIDATED, boundaryVersion: PENTAGON_BOUNDARY_VERSION };
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { polygonCentroid, pentagonPoint, PENTAGON_VERTICES } from './pentagon';
+import { polygonCentroid, pentagonPoint, PENTAGON_VERTICES, classifyDuval, pointInPolygon, guardGasLevels, BOUNDARIES_VALIDATED, ZONE_POLYGONS } from './pentagon';
 
 describe('Pentagone de Duval — sommets + centroïde', () => {
   it('sommets publics exacts (rayon ≈ 40)', () => {
@@ -26,5 +26,33 @@ describe('Pentagone de Duval — sommets + centroïde', () => {
     const p = pentagonPoint({ H2: 1082, CH4: 529, C2H6: 54, C2H4: 768, C2H2: 947 })!;
     expect(p).not.toBeNull();
     expect(Math.hypot(p.x, p.y)).toBeLessThanOrEqual(40.01);
+  });
+});
+
+describe('Pentagone combiné — moteur (géométrie, garde, structure)', () => {
+  it('point-dans-polygone : carré unité', () => {
+    const sq = [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }];
+    expect(pointInPolygon({ x: 0, y: 0 }, sq)).toBe(true);
+    expect(pointInPolygon({ x: 2, y: 0 }, sq)).toBe(false);
+  });
+  it('garde-fou C57.104 : tous les gaz sous les seuils → non diagnosticable', () => {
+    expect(guardGasLevels({ H2: 10, CH4: 10, C2H6: 10, C2H4: 5, C2H2: 0 }).ok).toBe(false);
+    expect(guardGasLevels({ H2: 500, CH4: 10, C2H6: 10, C2H4: 5, C2H2: 0 }).ok).toBe(true);
+  });
+  it('classifyDuval renvoie un résultat tracé+versionné, drapeau validated cohérent', () => {
+    const r = classifyDuval({ H2: 29, C2H6: 264, CH4: 204, C2H4: 17, C2H2: 0 })!;
+    expect(r).not.toBeNull();
+    expect(r.percentages.C2H6).toBeGreaterThan(40);   // C2H6 dominant (stray gassing attendu)
+    expect(r.validated).toBe(BOUNDARIES_VALIDATED);
+    expect(r.boundaryVersion).toMatch(/cheim-duval-2020/);
+  });
+  it('10 zones définies', () => { expect(ZONE_POLYGONS).toHaveLength(10); });
+});
+
+// ⚠️ Cas de référence du primer (zone ATTENDUE) — SKIP tant que les frontières ne sont pas validées
+// par un ingénieur (coordonnées // TODO-VERIFY). Lever describe.skip→describe quand BOUNDARIES_VALIDATED.
+describe.skip('Pentagone combiné — cas publiés (zones à valider)', () => {
+  it('exemple primer (29,264,204,17,0) → zone S (stray gassing)', () => {
+    expect(classifyDuval({ H2: 29, C2H6: 264, CH4: 204, C2H4: 17, C2H2: 0 })!.zone).toBe('S');
   });
 });
