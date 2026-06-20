@@ -5,6 +5,7 @@
 import React from 'react';
 import { autoDiagnose } from '@/lib/dga/autoSelect';
 import { faultFamily, type DGAGases } from '@/lib/dga/methods';
+import { classifyDuval, BOUNDARIES_VALIDATED } from '@/lib/dga/pentagon';
 
 const FAMILY_STYLE: Record<string, { bg: string; fg: string }> = {
   arc: { bg: '#F09595', fg: '#501313' },
@@ -22,6 +23,7 @@ export function ConsensusView({ gases, duvalTriangle1, lang = 'fr' }: { gases: D
   const EN = lang === 'en';
   const tr = (fr: string, en: string) => (EN ? en : fr);
   const dx = autoDiagnose(gases, lang);
+  const penta = classifyDuval(gases as any);   // source COMPLÉMENTAIRE indicative (n'entre pas dans le vote tant que non validé)
   const famStyle = dx.verdict.family ? FAMILY_STYLE[dx.verdict.family] : null;
   const famLabel = dx.verdict.family ? (EN ? (FAMILY_EN[dx.verdict.family] || dx.verdict.label) : dx.verdict.label) : tr('Indéterminé', 'Undetermined');
   const conf = EN ? (CONF_EN[dx.verdict.confidence] || dx.verdict.confidence) : dx.verdict.confidence;
@@ -70,6 +72,14 @@ export function ConsensusView({ gases, duvalTriangle1, lang = 'fr' }: { gases: D
       )}
       {dx.consensus.nonConclusive.length > 0 && (
         <div className="text-xs text-gray-500">{tr('Non concluant', 'Inconclusive')} : {dx.consensus.nonConclusive.join(', ')} — {tr('limite connue (souvent ratios hors plage avec arc), pas un désaccord.', 'known limitation (often out-of-range ratios with arcing), not a disagreement.')}</div>
+      )}
+      {penta && penta.zone && (
+        <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs dark:border-violet-500/30 dark:bg-violet-500/10">
+          <span className="font-semibold text-violet-800 dark:text-violet-200">{tr('Pentagone de Duval (combiné) — source complémentaire', 'Duval Pentagon (combined) — complementary source')}</span> :
+          {' '}<span className="rounded bg-violet-900 px-1.5 py-0.5 text-[10px] font-bold text-white">{penta.zone}</span> {EN ? penta.labelEn : penta.labelFr}
+          {penta.onBoundary && <span className="ml-1 text-amber-600">{tr('(proche frontière)', '(near boundary)')}</span>}
+          {!BOUNDARIES_VALIDATED && <span className="ml-1 text-amber-700 dark:text-amber-300">— {tr('indicatif, frontières à valider (n’entre pas dans le vote).', 'indicative, boundaries to validate (excluded from the vote).')}</span>}
+        </div>
       )}
       <p className="text-[11px] italic text-gray-400">{tr('Diagnostic assisté par ordinateur, déterministe. À valider par une personne qualifiée (équipement sous tension). Seuils IEEE C57.104 / IEC 60599 (réf. publiques), à confirmer contre la norme officielle.', 'Deterministic computer-assisted diagnosis. To be validated by a qualified person (energized equipment). IEEE C57.104 / IEC 60599 thresholds (public refs), to confirm against the official standard.')}</p>
     </div>
