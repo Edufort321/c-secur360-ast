@@ -44,7 +44,7 @@ export const MODULES: ModuleDef[] = [
   },
   {
     key: 'ast',
-    labelFr: 'Santé et sécurité (AST)', labelEn: 'Health & Safety (JSA)',
+    labelFr: 'Santé et sécurité', labelEn: 'Health & Safety',
     descFr: 'Analyses sécuritaires de tâches (AST/JSA), dangers, mesures de contrôle, LOTO.',
     descEn: 'Job safety analyses (JSA), hazards, control measures, LOTO.',
     icon: Shield, basePath: 'ast', color: 'text-emerald-600', accent: 'bg-emerald-600', status: 'available',
