@@ -147,7 +147,7 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
     doc.text(`TDCG: ${Math.round(lastGas.tdcg || 0)}    ${fr ? 'Condition' : 'Condition'}: ${lastGas.condition || '—'}/4    Duval: ${lastGas.duval || '—'}`, M, y); y += 16;
   }
 
-  // ── Analyse experte ──
+  // ── Analyse experte (Partie A : interprétation) ──
   if (last?.ai_summary || ai) {
     ensure(30); doc.setFont('helvetica', 'bold'); doc.setTextColor(20); doc.text(fr ? 'Analyse experte' : 'Expert analysis', M, y); y += 14;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.setFontSize(9.5);
@@ -155,6 +155,28 @@ function renderDossier(doc: any, W: number, Hp: number, M: number, fr: boolean, 
     for (const ln of doc.splitTextToSize(String(summary), W - 2 * M)) { ensure(13); doc.text(ln, M, y); y += 13; }
     const recos = (fr ? ai?.recommendationsFr : ai?.recommendationsEn) || [];
     for (const r of recos) { for (const ln of doc.splitTextToSize('- ' + r, W - 2 * M)) { ensure(13); doc.text(ln, M, y); y += 13; } }
+  }
+
+  // ── Recommandations & plan de suivi (Partie B) ──────────────────────────────────────────────────
+  // Synthèse structurée du plan de re-échantillonnage produite par l'analyse (type de défaut, tendance,
+  // analyses ciblées, délais de recontrôle). Indicatif — à valider par une personne qualifiée.
+  if (ai && (ai.faultType || ai.trend != null || ai.targetedDays != null || ai.targetedMonths != null || ai.fullMonths != null || (ai.targetedAnalyses && ai.targetedAnalyses.length) || ai.recheckJustification)) {
+    y += 6; ensure(30); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20);
+    doc.text(fr ? 'Recommandations & plan de suivi' : 'Recommendations & follow-up plan', M, y); y += 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(60);
+    const line = (label: string, val: string) => { if (!val) return; for (const ln of doc.splitTextToSize(`${label}: ${val}`, W - 2 * M)) { ensure(13); doc.text(ln, M, y); y += 13; } };
+    // `trend` est déjà une formulation française produite par l'IA ("hausse"/"hausse rapide"/"stable"/"baisse").
+    const TREND_EN: Record<string, string> = { 'stable': 'stable', 'hausse': 'increasing', 'hausse rapide': 'rapidly increasing', 'baisse': 'decreasing' };
+    line(fr ? 'Type de défaut probable' : 'Probable fault type', String(ai.faultType || ''));
+    if (ai.trend != null) line(fr ? 'Tendance' : 'Trend', fr ? String(ai.trend) : (TREND_EN[String(ai.trend).toLowerCase()] || String(ai.trend)));
+    if (Array.isArray(ai.targetedAnalyses) && ai.targetedAnalyses.length) line(fr ? 'Analyses ciblées' : 'Targeted analyses', ai.targetedAnalyses.join(', '));
+    if (ai.targetedDays != null) line(fr ? 'Recontrôle ciblé (urgent)' : 'Targeted recheck (urgent)', fr ? `dans ${ai.targetedDays} jour(s)` : `in ${ai.targetedDays} day(s)`);
+    if (ai.targetedMonths != null) line(fr ? 'Suivi rapproché' : 'Close follow-up', fr ? `dans ${ai.targetedMonths} mois` : `in ${ai.targetedMonths} month(s)`);
+    if (ai.fullMonths != null) line(fr ? 'Analyse complète suivante' : 'Next full analysis', fr ? `dans ${ai.fullMonths} mois` : `in ${ai.fullMonths} month(s)`);
+    if (ai.recheckJustification) line(fr ? 'Justification' : 'Rationale', String(ai.recheckJustification));
+    y += 4; doc.setFontSize(8); doc.setTextColor(140);
+    for (const ln of doc.splitTextToSize(fr ? 'Plan indicatif — à valider par une personne qualifiée (IEEE C57.104 / IEC 60599).' : 'Indicative plan — validate with a qualified person (IEEE C57.104 / IEC 60599).', W - 2 * M)) { ensure(11); doc.text(ln, M, y); y += 11; }
+    doc.setFontSize(9.5); doc.setTextColor(60);
   }
 
   // ── Page TENDANCES : courbes auto par paramètre ──
