@@ -26,8 +26,8 @@ export async function exportHseScorecard(opts: {
   const cards: [string, string | number, [number, number, number]][] = [
     ['LTIFR / TF1', agg.ltifr, [192, 0, 32]],
     ['TRIR / TF2', agg.trir, [180, 83, 9]],
+    [tr('Taux DART', 'DART rate'), (agg as any).dartRate ?? 0, [225, 29, 72]],
     [tr('Taux de gravité', 'Severity rate'), agg.severityRate, [194, 65, 12]],
-    [tr('Passés proches', 'Near-misses'), agg.nearMissCount, [3, 105, 161]],
   ];
   const cw = (W - 2 * M - 30) / 4;
   cards.forEach((c, i) => {
@@ -41,15 +41,17 @@ export async function exportHseScorecard(opts: {
   // Bandeau exposition
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(70);
   doc.text(`${tr('Heures travaillées', 'Hours worked')}: ${agg.hours.toLocaleString()}   ·   ${tr('Accidents avec arrêt', 'Lost-time')}: ${agg.ltiCount}   ·   ${tr('Enregistrables', 'Recordables')}: ${agg.recordableCount}   ·   ${tr('Jours perdus', 'Lost days')}: ${agg.lostDays}`, M, y);
+  y += 13;
+  doc.text(`${tr('Passés proches', 'Near-misses')}: ${agg.nearMissCount}   ·   ${tr('Cas DART', 'DART cases')}: ${(agg as any).dartCount ?? 0}   ·   ${tr('Décès', 'Fatalities')}: ${(agg as any).fatalityCount ?? 0}`, M, y);
   y += 16;
 
   // Tableau mensuel
   autoTable(doc, {
     startY: y, margin: { left: M, right: M },
-    head: [[tr('Mois', 'Month'), tr('Heures', 'Hours'), 'LTIFR', 'TRIR', tr('Gravité', 'Severity'), tr('Presqu’acc.', 'Near-miss')]],
-    body: rows.map(r => [r.month, r.hours.toLocaleString(), r.ltifr, r.trir, r.severityRate, r.nearMissCount]),
+    head: [[tr('Mois', 'Month'), tr('Heures', 'Hours'), 'LTIFR', 'TRIR', 'DART', tr('Gravité', 'Severity'), tr('Presqu’acc.', 'Near-miss')]],
+    body: rows.map(r => [r.month, r.hours.toLocaleString(), r.ltifr, r.trir, (r as any).dartRate ?? 0, r.severityRate, r.nearMissCount]),
     styles: { fontSize: 8, cellPadding: 3 }, headStyles: { fillColor: accent, textColor: 255 },
-    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
   });
 
   const Hp = doc.internal.pageSize.getHeight();
