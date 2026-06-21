@@ -143,6 +143,7 @@ export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, la
         <div className={title}>{tr('Indicateurs proactifs (leading) vs réactifs (lagging)', 'Proactive (leading) vs reactive (lagging) indicators')}</div>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="md:col-span-2">
+            <div className="mb-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">{tr('Évolution mensuelle : actions proactives vs incidents enregistrables', 'Monthly: proactive actions vs recordable incidents')}</div>
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart data={llData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -154,6 +155,7 @@ export function HseKpiCharts({ rows, incidents, proactive = [], targets = {}, la
             </ResponsiveContainer>
           </div>
           <div>
+            <div className="mb-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">{tr('Total des actions proactives par type', 'Total proactive actions by type')}</div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={proData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
