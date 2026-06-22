@@ -169,6 +169,7 @@ export const BODY_REGIONS: BodyRegion[] = [
 
 /* Zones cliquables INVISIBLES du visage (posees sur la couche visuelle realiste). */
 export const FACE_REGIONS: BodyRegion[] = [
+  { id:"skull-top", labelFr:"Dessus de la tête (sommet)", labelEn:"Top of head (vertex)", d:"M100,16 C67,16 47,43 46,68 C60,56 75,52 100,52 C125,52 140,56 154,68 C153,43 133,16 100,16 Z" },
   { id:"forehead", labelFr:"Front", labelEn:"Forehead", d:"M54,52 C75,40 125,40 146,52 L146,80 L54,80 Z" },
   { id:"eye-r", labelFr:"Œil droit", labelEn:"Right eye", d:"M60,90 L92,90 L92,108 L60,108 Z" },
   { id:"eye-l", labelFr:"Œil gauche", labelEn:"Left eye", d:"M108,90 L140,90 L140,108 L108,108 Z" },
