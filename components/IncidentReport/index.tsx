@@ -1169,13 +1169,19 @@ export default function IncidentReportForm({
   const [personnelId, setPersonnelId] = useState<string | null>(null);
   // Véhicules du tenant — pour la recherche dynamique dans la section Véhicule (sous-traitant = saisie libre).
   const [vehicleList, setVehicleList] = useState<{ id: string; name: string; make?: string; model?: string; plate?: string }[]>([]);
+  // Nom de la compagnie du tenant — pour auto-remplir l'« Employeur » d'un employé du tenant sélectionné.
+  const [companyName, setCompanyName] = useState('');
   useEffect(() => {
     fetch(`/api/permits/espace-clos/people?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
       .then(r => (r.ok ? r.json() : { people: [] }))
       .then(j => setPersonnelList((j.people || []).map((p: any) => ({ id: p.id, name: p.name, role: p.role || '' }))))
       .catch(() => {});
-    if (supabase) supabase.from('vehicles').select('id, name, make, model, license_plate').eq('tenant_id', tenant).eq('active', true).order('name')
-      .then(({ data }) => setVehicleList((data || []).map((v: any) => ({ id: v.id, name: v.name || [v.make, v.model].filter(Boolean).join(' '), make: v.make, model: v.model, plate: v.license_plate }))), () => {});
+    if (supabase) {
+      supabase.from('vehicles').select('id, name, make, model, license_plate').eq('tenant_id', tenant).eq('active', true).order('name')
+        .then(({ data }) => setVehicleList((data || []).map((v: any) => ({ id: v.id, name: v.name || [v.make, v.model].filter(Boolean).join(' '), make: v.make, model: v.model, plate: v.license_plate }))), () => {});
+      supabase.from('company_settings').select('*').eq('tenant_id', tenant).maybeSingle()
+        .then(({ data }) => { const c: any = data || {}; setCompanyName(c.legal_name || c.company_name || c.name || ''); }, () => {});
+    }
   }, [tenant]);
 
   useEffect(() => {
@@ -1231,7 +1237,8 @@ export default function IncidentReportForm({
   }
 
   async function doSave(data: IncidentReportData, submit: boolean) {
-    if (!supabase) return null;
+    // NB : l'enregistrement passe par la route serveur /api/incidents/data (fetch) — PAS par le client
+    // `supabase`. On ne bloque donc PAS sur la présence du client anon (sinon échec silencieux).
     setSaving(true);
     const now = new Date().toISOString();
     const payload = {
@@ -1248,25 +1255,27 @@ export default function IncidentReportForm({
       ...(submit ? { submitted_at: now } : {}),
     };
 
-    let id = dbId;
+    let id = dbId; let ok = false;
     // Écriture via route SERVEUR (tables fermées à l'anon) — tenant forcé à la session.
     try {
       const res = await fetch('/api/incidents/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ action: 'save', item: { id: id || undefined, ...payload } }),
       });
-      const j: any = res.ok ? await res.json() : {};
-      if (!id && j.id) { id = j.id; setDbId(id); onSaved?.(id!); }
-    } catch { /* hors-ligne : on tentera plus tard */ }
+      const j: any = await res.json().catch(() => ({}));
+      if (res.ok) { ok = true; if (!id && j.id) { id = j.id; setDbId(id); onSaved?.(id!); } }
+      else alert((lang === 'fr' ? 'Échec de l’enregistrement : ' : 'Save failed: ') + (j.error || `HTTP ${res.status}`));
+    } catch (e: any) {
+      alert((lang === 'fr' ? 'Enregistrement impossible (réseau) : ' : 'Save failed (network): ') + (e?.message || ''));
+    }
 
-    if (submit && id) {
+    if (submit && id && ok) {
       await resetDayCounter(data.incidentType);
       setStatus('submitted');
     }
 
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
     return id;
   }
 
@@ -1298,7 +1307,7 @@ export default function IncidentReportForm({
     switch (section) {
       case 'general':     return <GeneralSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} personnelId={personnelId} setPersonnelId={setPersonnelId} />;
       case 'location':    return <LocationSection    report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'persons':     return <PersonsSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} />;
+      case 'persons':     return <PersonsSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} companyName={companyName} />;
       case 'body':        return <BodySection        report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'description': return <DescriptionSection report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} vehicleList={vehicleList} />;
@@ -1640,11 +1649,12 @@ function LocationSection({ report, onChange, readOnly }: {
   );
 }
 
-function PersonsSection({ report, onChange, readOnly, personnelList }: {
+function PersonsSection({ report, onChange, readOnly, personnelList, companyName = '' }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
   personnelList: { id: string; name: string; role?: string }[];
+  companyName?: string;
 }) {
   function updatePerson(id: string, updater: (p: InjuredPerson) => InjuredPerson) {
     onChange(r => ({
@@ -1718,7 +1728,7 @@ function PersonsSection({ report, onChange, readOnly, personnelList }: {
                 <EntitySearch value={person.name} placeholder={t.g.namePh} readOnly={readOnly}
                   options={personnelList.map(pl => ({ id: pl.id, label: pl.name, sub: pl.role }))}
                   onText={v => updatePerson(person.id, p => ({ ...p, name: v }))}
-                  onPick={o => updatePerson(person.id, p => ({ ...p, name: o.label, jobTitle: o.sub || p.jobTitle || '' }))} />
+                  onPick={o => updatePerson(person.id, p => ({ ...p, name: o.label, jobTitle: o.sub || p.jobTitle || '', company: companyName || p.company }))} />
                 <p className="mt-0.5 text-[11px] text-gray-400">{lang === 'fr' ? 'Cherchez dans le personnel, ou saisissez librement (sous-traitant, visiteur…).' : 'Search staff, or type freely (subcontractor, visitor…).'}</p>
               </Field>
               <Field label={t.p.jobTitle}>
