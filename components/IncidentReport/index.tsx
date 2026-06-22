@@ -17,6 +17,7 @@ import {
   type IncidentAction, type IncidentActionStatus,
 } from '@/lib/incidentActions';
 import { BODY_REGION_LABELS } from '@/lib/hse/bodyRegions';
+import BodyMap from './BodyMap';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -1852,16 +1853,18 @@ function BodySection({ report, onChange, readOnly }: {
         <p className="text-sm text-gray-600 mb-4 text-center">
           {t.b.clickA}<strong>{person.name || `${t.b.injuredN} #${safeIdx + 1}`}</strong>
         </p>
-        <BodyDiagram
-          selected={person.bodyRegions}
-          onChange={sel => onChange(r => ({
-            ...r,
-            injuredPersons: r.injuredPersons.map((p, i) =>
-              i === safeIdx ? { ...p, bodyRegions: sel } : p
-            ),
-          }))}
-          readOnly={readOnly}
-        />
+        <div className={readOnly ? 'pointer-events-none' : ''}>
+          <BodyMap
+            value={person.bodyRegions}
+            locale={lang}
+            onChange={(ids: string[]) => onChange(r => ({
+              ...r,
+              injuredPersons: r.injuredPersons.map((p, i) =>
+                i === safeIdx ? { ...p, bodyRegions: ids } : p
+              ),
+            }))}
+          />
+        </div>
       </div>
     </Card>
   );

@@ -52,10 +52,11 @@ export const BODY_GROUP_LABELS: Record<BodyGroup, { fr: string; en: string; colo
 export function bodyRegionGroup(key: string): BodyGroup {
   const k = String(key || '').toLowerCase();
   if (k.includes('eye')) return 'eyes';
-  if (k.includes('head') || k.includes('skull')) return 'head';
-  if (k.includes('neck')) return 'neck';
-  if (k.includes('hand') || k.includes('finger')) return 'hands';
-  if (k.includes('foot') || k.includes('toe')) return 'feet';
+  // Tête / visage : crâne, oreille, sourcil, nez, narine, bouche, menton, mâchoire, lèvre, front.
+  if (k.includes('head') || k.includes('skull') || k.includes('forehead') || k.includes('ear') || k.includes('brow') || k.includes('nose') || k.includes('nostril') || k.includes('mouth') || k.includes('chin') || k.includes('jaw') || k.includes('lip')) return 'head';
+  if (k.includes('neck')) return 'neck';                                  // 'neck-face' → cou (avant les mains/pieds)
+  if (k.includes('hand') || k.includes('finger') || k.includes('thumb') || k.includes('palm') || k.includes('wrist')) return 'hands';
+  if (k.includes('foot') || k.includes('toe') || k.includes('ankle') || k.includes('heel') || k.includes('sole') || k.includes('instep')) return 'feet';
   if (k.includes('knee')) return 'knees';
   if (k.includes('deltoid') || k.includes('shoulder') || k.includes('trapez')) return 'shoulders';
   if (k.includes('biceps') || k.includes('triceps') || k.includes('forearm') || k.includes('arm')) return 'arms';
