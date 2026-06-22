@@ -2,21 +2,22 @@
 import React, { useState, useCallback } from "react";
 
 /**
- * BodyMap v11 — Schema corporel realiste, homme/femme, mains & pieds detailles
+ * BodyMap v12 — Schema corporel realiste + VISAGE realiste (relief/degrades)
  * (C-Secur360 / module HSE — declaration de blesse)
  * ===========================================================================
- * • Corps homme ET femme, vues avant + arriere, sans cheveux (tete complete).
- * • Tracés realistes ; chaque zone musculaire = PLUSIEURS sous-paths rendus
- *   separement mais partageant le meme id (corrige les artefacts de remplissage,
- *   notamment sur la silhouette feminine).
- * • Cotes gauche/droite distincts.
- * • Encarts permanents : visage affine, 2 mains (D/G), 2 pieds (D/G) —
- *   chaque doigt/orteil/trait cliquable.
+ * • Corps homme/femme, vues avant + arriere, tete complete, sans cheveux.
+ * • VISAGE REALISTE : couche visuelle vectorielle avec degrades (teint, joues,
+ *   yeux iris/pupille, nez modele, levres) + zones INVISIBLES cliquables par
+ *   dessus (front, yeux G/D, oreilles G/D, nez, joues G/D, bouche, menton, cou).
+ *   Au survol/selection, la zone se teinte en rouge translucide sans masquer
+ *   le visage. Visage 100% vectoriel original (aucun probleme de licence/droit
+ *   a l'image), net a toute taille.
+ * • Encarts permanents : 2 mains (D/G) + 2 pieds (D/G), doigts/orteils cliquables.
  *
- * ATTRIBUTION (obligatoire, MIT) :
- *   Tracés du corps + mains = "react-native-body-highlighter"
- *   (c) 2022 ELABBASSI Hicham (github.com/HichamELBSI/react-native-body-highlighter).
- *   Visage + pieds de profil + adaptation = C-Secur360. Conserver cette mention.
+ * ATTRIBUTION (obligatoire, MIT) : tracés du corps + mains =
+ *   "react-native-body-highlighter" (c) 2022 ELABBASSI Hicham
+ *   (github.com/HichamELBSI/react-native-body-highlighter).
+ *   Visage realiste, pieds de profil, adaptation = C-Secur360.
  *
  * Convention G/D = cote ANATOMIQUE du patient (miroir clinique).
  */
@@ -26,9 +27,7 @@ export type BodyGender = "male" | "female";
 
 export interface BodyRegion {
   id: string; view?: BodyView; gender?: BodyGender; slug?: string;
-  labelFr: string; labelEn: string;
-  paths?: string[];   // zones corps = plusieurs sous-paths
-  d?: string;         // encarts = un seul path
+  labelFr: string; labelEn: string; paths?: string[]; d?: string;
 }
 export interface BodyMapProps {
   value?: string[]; defaultSelected?: string[];
@@ -167,20 +166,22 @@ export const BODY_REGIONS: BodyRegion[] = [
   { id:"feet-l-back", view:"back", gender:"female", slug:"feet", labelFr:"Pied gauche", labelEn:"Foot (left)", paths:["m 1079.17,1372.43 q 2.14,-5.13 4.33,-10.15 0.64,-1.46 0.77,0.13 0.19,2.38 0.04,5.19 -0.48,8.92 -1.17,17.73 c -0.55,6.98 -0.51,14.62 0.97,21.25 q 0.81,3.6 3.17,7.55 2.42,4.04 6.98,2.53 2.09,-0.69 2.69,-2.94 c 5.05,-18.81 8.53,-32.57 10.08,-47.69 q 0.17,-1.71 0.65,-0.06 c 4.88,16.71 7.77,34.11 9.71,51.52 a 2.81,2.81 0 0 1 -0.55,2.02 c -5.24,7.01 -14.76,8.75 -23.07,8.71 -8.31,-0.03 -16.89,-1.11 -24.67,-3.97 -3.23,-1.19 -5.27,-5.26 -4.38,-8.25 4.42,-14.8 8.65,-29.67 14.45,-43.57 z"] },
   { id:"feet-r-back", view:"back", gender:"female", slug:"feet", labelFr:"Pied droit", labelEn:"Foot (right)", paths:["m 1206.8,1373.7 q 8.72,22.21 13.81,42.33 0.94,3.7 -1.71,6.53 -1.44,1.54 -5.28,2.63 -14.71,4.18 -29.01,2.49 -9.46,-1.11 -14.96,-6.81 -1.68,-1.75 -1.46,-3.83 2.75,-26.35 9.42,-50.74 0.68,-2.5 0.89,0.09 0.63,7.86 2.59,16.87 2.96,13.59 7.32,30.23 0.79,2.98 3.86,3.47 3.52,0.56 5.1,-1.58 c 2.84,-3.86 4.42,-8.89 4.83,-13.69 0.96,-11.15 -0.35,-22.32 -1,-33 q -0.2,-3.25 0.17,-6.56 0.09,-0.79 0.42,-0.07 2.74,5.83 5.01,11.64 z"] }
 ];
+
+/* Zones cliquables INVISIBLES du visage (posees sur la couche visuelle realiste). */
 export const FACE_REGIONS: BodyRegion[] = [
-  { id:"face-skull", labelFr:"Tête / front", labelEn:"Head / forehead", d:"M50,6 C33,6 22,22 22,44 C22,57 25,69 31,80 C36,89 43,97 50,100 C57,97 64,89 69,80 C75,69 78,57 78,44 C78,22 67,6 50,6 Z" },
-  { id:"ear-r", labelFr:"Oreille droite", labelEn:"Right ear", d:"M22,45 C15,43 14,55 19,62 C21,58 22,51 22,46 Z" },
-  { id:"ear-l", labelFr:"Oreille gauche", labelEn:"Left ear", d:"M78,45 C85,43 86,55 81,62 C79,58 78,51 78,46 Z" },
-  { id:"brow-r", labelFr:"Sourcil droit", labelEn:"Right eyebrow", d:"M31,41 C37,38 44,38 47,40 C44,40 37,40 31,42 Z" },
-  { id:"brow-l", labelFr:"Sourcil gauche", labelEn:"Left eyebrow", d:"M53,40 C56,38 63,38 69,41 C63,40 56,40 53,42 Z" },
-  { id:"eye-r", labelFr:"Œil droit", labelEn:"Right eye", d:"M31,47 C35,44 42,44 46,47 C42,50 35,50 31,47 Z" },
-  { id:"eye-l", labelFr:"Œil gauche", labelEn:"Left eye", d:"M54,47 C58,44 65,44 69,47 C65,50 58,50 54,47 Z" },
-  { id:"nose", labelFr:"Nez", labelEn:"Nose", d:"M49,50 L51,50 L52,66 C52,69 48,69 48,66 L49,50 Z" },
-  { id:"nostril", labelFr:"Narines", labelEn:"Nostrils", d:"M46,67 C48,69 52,69 54,67 C53,70 47,70 46,67 Z" },
-  { id:"mouth", labelFr:"Bouche", labelEn:"Mouth", d:"M39,80 C44,77 56,77 61,80 C56,84 44,84 39,80 Z" },
-  { id:"chin", labelFr:"Menton", labelEn:"Chin", d:"M42,89 C45,93 55,93 58,89 C55,93 45,93 42,89 Z" },
-  { id:"neck-face", labelFr:"Cou", labelEn:"Neck", d:"M41,99 C43,104 57,104 59,99 L61,114 L39,114 Z" }
+  { id:"forehead", labelFr:"Front", labelEn:"Forehead", d:"M54,52 C75,40 125,40 146,52 L146,80 L54,80 Z" },
+  { id:"eye-r", labelFr:"Œil droit", labelEn:"Right eye", d:"M60,90 L92,90 L92,108 L60,108 Z" },
+  { id:"eye-l", labelFr:"Œil gauche", labelEn:"Left eye", d:"M108,90 L140,90 L140,108 L108,108 Z" },
+  { id:"ear-r", labelFr:"Oreille droite", labelEn:"Right ear", d:"M40,86 L50,86 L50,120 L40,120 Z" },
+  { id:"ear-l", labelFr:"Oreille gauche", labelEn:"Left ear", d:"M150,86 L160,86 L160,120 L150,120 Z" },
+  { id:"nose", labelFr:"Nez", labelEn:"Nose", d:"M86,104 L114,104 L114,144 L86,144 Z" },
+  { id:"cheek-r", labelFr:"Joue droite", labelEn:"Right cheek", d:"M54,110 L84,110 L84,150 L58,150 Z" },
+  { id:"cheek-l", labelFr:"Joue gauche", labelEn:"Left cheek", d:"M116,110 L146,110 L142,150 L116,150 Z" },
+  { id:"mouth", labelFr:"Bouche", labelEn:"Mouth", d:"M76,150 L124,150 L124,170 L76,170 Z" },
+  { id:"chin", labelFr:"Menton", labelEn:"Chin", d:"M78,172 L122,172 L118,196 L82,196 Z" },
+  { id:"neck-face", labelFr:"Cou", labelEn:"Neck", d:"M78,198 L122,198 L122,232 L78,232 Z" }
 ];
+
 export const HAND_L_REGIONS: BodyRegion[] = [
   { id:"hand-0-l", labelFr:"Paume", labelEn:"Palm", d:"M100.98 745.85c-9.03-6.62-15.78-13.18-13.3-24.59 2.67-12.29 15.01-20.6 25.37-26.21 7.76-4.21 18.22-1.68 26.15.97 7.14 2.39 11.11 6.16 11.1 13.86q-.04 18.51-4.75 36.37c-5.47 20.76-34.48 6.99-44.57-.4z" },
   { id:"hand-1-l", labelFr:"Pouce", labelEn:"Thumb", d:"M53.81 746.32a.91.91 0 01-.74-.95c.14-2.49-.23-6.34 2.25-7.8 4.66-2.71 11.37-5.53 14.15-10.3q6.32-10.86 16.56-20.3 1.27-1.17.64.44c-1.45 3.73-2.86 7.21-3.87 11.59-2.76 11.9-14.62 30-28.99 27.32z" },
@@ -217,6 +218,10 @@ export const FOOT_R_REGIONS: BodyRegion[] = [
 export const VIEWBOXES: Record<string,string> = {"male-front":"0 0 724 1448","male-back":"724 0 724 1448","female-front":"-50 -40 734 1538","female-back":"756 0 774 1448"};
 export const INSET_VB = { handL:"30 680 135 150", handR:"563 678 127 152", foot:"0 0 82 60" };
 
+/* Couche visuelle realiste du visage (vectorielle, non cliquable). viewBox 0 0 200 240. */
+const FACE_DEFS = "<defs> <radialGradient id=\"manskin\" cx=\"50%\" cy=\"40%\" r=\"62%\"> <stop offset=\"0%\" stop-color=\"#f4f6f9\"/> <stop offset=\"55%\" stop-color=\"#e2e8f0\"/> <stop offset=\"100%\" stop-color=\"#c3cdda\"/> </radialGradient> <radialGradient id=\"manshade\" cx=\"50%\" cy=\"50%\" r=\"50%\"> <stop offset=\"0%\" stop-color=\"#9aa8bd\" stop-opacity=\"0.5\"/> <stop offset=\"100%\" stop-color=\"#9aa8bd\" stop-opacity=\"0\"/> </radialGradient> <linearGradient id=\"manneck\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"> <stop offset=\"0%\" stop-color=\"#d4dce6\"/> <stop offset=\"100%\" stop-color=\"#aab6c6\"/> </linearGradient> </defs>";
+const FACE_VISUAL = "<path d=\"M78,194 C80,212 120,212 122,194 L132,236 L68,236 Z\" fill=\"url(#manneck)\" stroke=\"#9aa8bd\" stroke-width=\"0.8\"/> <path d=\"M78,194 C80,206 120,206 122,194 L124,206 C112,214 88,214 76,206 Z\" fill=\"#9aa8bd\" opacity=\"0.4\"/> <path d=\"M100,16 C67,16 47,43 45,82 C44,105 49,130 60,152 C70,173 84,190 100,196 C116,190 130,173 140,152 C151,130 156,105 155,82 C153,43 133,16 100,16 Z\" fill=\"url(#manskin)\" stroke=\"#aab6c6\" stroke-width=\"1\"/> <path d=\"M45,90 C35,86 33,108 43,118 C47,110 46,98 46,92 Z\" fill=\"url(#manskin)\" stroke=\"#aab6c6\" stroke-width=\"0.8\"/> <path d=\"M155,90 C165,86 167,108 157,118 C153,110 154,98 154,92 Z\" fill=\"url(#manskin)\" stroke=\"#aab6c6\" stroke-width=\"0.8\"/> <ellipse cx=\"66\" cy=\"122\" rx=\"17\" ry=\"32\" fill=\"url(#manshade)\"/> <ellipse cx=\"134\" cy=\"122\" rx=\"17\" ry=\"32\" fill=\"url(#manshade)\"/> <path d=\"M58,84 C72,76 90,76 96,82 C88,80 72,80 60,86 Z\" fill=\"#9aa8bd\" opacity=\"0.35\"/> <path d=\"M104,82 C110,76 128,76 142,84 C130,80 112,80 104,86 Z\" fill=\"#9aa8bd\" opacity=\"0.35\"/> <ellipse cx=\"76\" cy=\"98\" rx=\"13\" ry=\"7\" fill=\"#ced8e3\"/> <ellipse cx=\"124\" cy=\"98\" rx=\"13\" ry=\"7\" fill=\"#ced8e3\"/> <path d=\"M64,98 C70,92 82,92 88,97 C82,94 70,94 64,98 Z\" fill=\"#9aa8bd\" opacity=\"0.55\"/> <path d=\"M112,97 C118,92 130,92 136,98 C130,94 118,94 112,97 Z\" fill=\"#9aa8bd\" opacity=\"0.55\"/> <path d=\"M65,100 C72,104 82,104 87,100\" stroke=\"#9aa8bd\" stroke-width=\"0.7\" fill=\"none\" opacity=\"0.5\"/> <path d=\"M113,100 C118,104 128,104 135,100\" stroke=\"#9aa8bd\" stroke-width=\"0.7\" fill=\"none\" opacity=\"0.5\"/> <circle cx=\"76\" cy=\"98\" r=\"4\" fill=\"#b4c0cf\"/> <circle cx=\"124\" cy=\"98\" r=\"4\" fill=\"#b4c0cf\"/> <path d=\"M97,102 C96,118 93,132 90,138 C95,142 105,142 110,138 C107,132 104,118 103,102 Z\" fill=\"url(#manskin)\"/> <path d=\"M97,102 C96,118 93,132 91,137 C93,135 96,133 98,133 L99,104 Z\" fill=\"#f4f6f9\" opacity=\"0.6\"/> <path d=\"M103,104 C104,118 106,130 109,137 C107,135 104,133 102,133 L101,104 Z\" fill=\"#9aa8bd\" opacity=\"0.3\"/> <ellipse cx=\"93\" cy=\"138\" rx=\"3.5\" ry=\"2.2\" fill=\"#8d9bb0\" opacity=\"0.5\"/> <ellipse cx=\"107\" cy=\"138\" rx=\"3.5\" ry=\"2.2\" fill=\"#8d9bb0\" opacity=\"0.5\"/> <path d=\"M80,160 C90,155 110,155 120,160 C110,158 90,158 80,160 Z\" fill=\"#bcc8d6\"/> <path d=\"M80,160 C90,166 110,166 120,160 C110,164 90,164 80,160 Z\" fill=\"#aeb9c9\"/> <path d=\"M82,160 C90,161 110,161 118,160\" stroke=\"#8d9bb0\" stroke-width=\"0.8\" fill=\"none\"/> <ellipse cx=\"100\" cy=\"172\" rx=\"9\" ry=\"4\" fill=\"#9aa8bd\" opacity=\"0.25\"/> <ellipse cx=\"100\" cy=\"184\" rx=\"15\" ry=\"9\" fill=\"#9aa8bd\" opacity=\"0.2\"/>";
+
 const ALL = [...BODY_REGIONS, ...FACE_REGIONS, ...HAND_L_REGIONS, ...HAND_R_REGIONS, ...FOOT_L_REGIONS, ...FOOT_R_REGIONS];
 const slugFill = (slug?: string) =>
   slug === "head" ? "#bcc7d6" : (slug === "hands" || slug === "feet") ? "#aebccf" : "#cbd5e1";
@@ -251,7 +256,7 @@ export default function BodyMap({
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(r.id); } },
     onMouseEnter: () => setHovered(r.id), onMouseLeave: () => setHovered(null),
     onFocus: () => setHovered(r.id), onBlur: () => setHovered(null),
-    className: "cursor-pointer outline-none transition-colors duration-150",
+    className: "cursor-pointer outline-none transition-all duration-150",
   });
 
   // Zone corps = plusieurs sous-paths partageant l'id
@@ -264,21 +269,26 @@ export default function BodyMap({
         fill={fill} stroke={stroke} strokeWidth={1.2} strokeLinejoin="round" />
     ));
   };
-  // Encart = un seul path
-  const DetailPath = (r: BodyRegion) => {
+
+  // Zone visage = path INVISIBLE qui se teinte en rouge au survol/selection
+  const FaceZone = (r: BodyRegion) => {
     const isSel = selected.includes(r.id), isHov = hovered === r.id;
-    const base = r.id === "neck-face" ? "#bcc7d6" : "#cbd5e1";
     return (
       <path key={r.id} d={r.d} {...handlers(r)}
-        fill={isSel ? "#dc2626" : isHov ? "#fca5a5" : base}
-        stroke={isSel ? "#991b1b" : "#64748b"} strokeWidth={0.8} strokeLinejoin="round" />
+        fill="#dc2626" fillOpacity={isSel ? 0.45 : isHov ? 0.22 : 0}
+        stroke={isSel ? "#991b1b" : "none"} strokeWidth={isSel ? 1 : 0} />
     );
   };
 
-  const faceOrdered = [...FACE_REGIONS].sort((a, b) => {
-    const rk = (id: string) => id === "face-skull" ? 0 : id === "neck-face" ? -1 : 1;
-    return rk(a.id) - rk(b.id);
-  });
+  // Encart main/pied = un seul path visible
+  const DetailPath = (r: BodyRegion) => {
+    const isSel = selected.includes(r.id), isHov = hovered === r.id;
+    return (
+      <path key={r.id} d={r.d} {...handlers(r)}
+        fill={isSel ? "#dc2626" : isHov ? "#fca5a5" : "#cbd5e1"}
+        stroke={isSel ? "#991b1b" : "#64748b"} strokeWidth={0.8} strokeLinejoin="round" />
+    );
+  };
 
   const InsetPair = ({ left, right, vbL, vbR, label }: any) => (
     <div className="flex flex-col items-center">
@@ -329,7 +339,13 @@ export default function BodyMap({
               <figcaption className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {locale === "fr" ? "Visage" : "Face"}
               </figcaption>
-              <svg viewBox="0 0 100 118" className="h-auto w-20 select-none">{faceOrdered.map((r) => DetailPath(r))}</svg>
+              <svg viewBox="0 0 200 240" className="h-auto w-28 select-none"
+                role="group" aria-label={locale === "fr" ? "Visage" : "Face"}>
+                {/* Couche visuelle realiste (non cliquable) */}
+                <g dangerouslySetInnerHTML={{ __html: FACE_DEFS + FACE_VISUAL }} />
+                {/* Zones invisibles cliquables par-dessus */}
+                {FACE_REGIONS.map((r) => FaceZone(r))}
+              </svg>
             </figure>
           )}
           <InsetPair left={HAND_L_REGIONS} right={HAND_R_REGIONS} vbL={INSET_VB.handL} vbR={INSET_VB.handR}
