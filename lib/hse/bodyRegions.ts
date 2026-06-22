@@ -62,7 +62,7 @@ export function bodyRegionGroup(key: string): BodyGroup {
   if (k.includes('biceps') || k.includes('triceps') || k.includes('forearm') || k.includes('arm')) return 'arms';
   if (k.includes('chest') || k.includes('abs') || k.includes('oblique') || k.includes('abdom') || k.includes('thorax') || k.includes('rib')) return 'trunk';
   if (k.includes('hip') || k.includes('glut') || k.includes('buttock') || k.includes('pelvi')) return 'hips';
-  if (k.includes('quad') || k.includes('hamstring') || k.includes('calf') || k.includes('calves') || k.includes('soleus') || k.includes('thigh') || k.includes('leg') || k.includes('abductor') || k.includes('adductor')) return 'legs';
+  if (k.includes('quad') || k.includes('hamstring') || k.includes('calf') || k.includes('calves') || k.includes('soleus') || k.includes('tibial') || k.includes('tibia') || k.includes('shin') || k.includes('thigh') || k.includes('leg') || k.includes('abductor') || k.includes('adductor')) return 'legs';
   if (k.includes('back')) return 'back';
   return 'other';
 }

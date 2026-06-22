@@ -17,7 +17,12 @@ import {
   type IncidentAction, type IncidentActionStatus,
 } from '@/lib/incidentActions';
 import { BODY_REGION_LABELS } from '@/lib/hse/bodyRegions';
-import BodyMap from './BodyMap';
+import BodyMap, { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS } from './BodyMap';
+
+// Libellé d'une zone corporelle (id → nom) pour l'export PDF — construit depuis les régions de BodyMap.
+const BODY_LABELS: Record<string, { fr: string; en: string }> = {};
+for (const r of [...BODY_REGIONS, ...FACE_REGIONS, ...HAND_L_REGIONS, ...HAND_R_REGIONS, ...FOOT_L_REGIONS, ...FOOT_R_REGIONS]) BODY_LABELS[r.id] = { fr: r.labelFr, en: r.labelEn };
+const bodyLabel = (id: string, lang: 'fr' | 'en') => BODY_LABELS[id]?.[lang] || id;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -516,6 +521,7 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
       ${row(t.p.jobTitle, p.jobTitle)}${row(t.p.employer, p.company)}${row(t.p.empId, p.employeeId)}${row(t.p.phone, p.phone)}
       ${row(t.p.injuryType, p.injuryType ? tl(lang, p.injuryType) : '')}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
       ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}${p.restricted ? row(t.p.restricted, '✔') : ''}${p.fatality ? row(t.p.fatality, '✔') : ''}
+      ${p.bodyRegions?.length ? row(lang === 'fr' ? 'Zones blessées' : 'Injured areas', p.bodyRegions.map(id => bodyLabel(id, lang)).join(', ')) : ''}
     </div>`).join('');
 
   // Temoins
@@ -579,9 +585,15 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
     .sig { flex: 1; border-top: 1px solid #9ca3af; padding-top: 4px; }
     .sig-l { color: #6b7280; font-size: 11px; } .sig-n { font-weight: 600; min-height: 16px; } .sig-d { font-size: 11px; color: #6b7280; }
     .foot { margin-top: 16px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+    .logo { height: 34px; width: auto; margin-bottom: 6px; }
+    .photos { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ph { width: 31%; margin: 0; page-break-inside: avoid; }
+    .ph img { width: 100%; height: auto; max-height: 180px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; }
+    .ph figcaption { font-size: 10px; color: #6b7280; margin-top: 2px; }
     @media print { .noprint { display: none; } }
   </style></head><body>
   <div class="doc-h">
+    <img class="logo" src="/c-secur360-logo.png" alt="logo" onerror="this.style.display='none'"/>
     <h1>${esc(t.pr.docTitle)} — ${esc(typeLabel)}<span class="badge">${esc(reportNumber)}</span></h1>
     <div class="meta">${esc(t.g.severity)}: ${esc(sev)} · ${esc(t.g.dateIncident)}: ${v(report.incidentDate)} ${esc(report.incidentTime || '')}</div>
   </div>
@@ -596,7 +608,7 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
     (report.immediateCauses ? row(t.an.immediate, report.immediateCauses) : '') +
     (report.basicCauses ? row(t.an.basic, report.basicCauses) : '') +
     whys + (report.rootCause ? row(t.an.rootTitle, report.rootCause) : '')) : ''}
-  ${(report.photos?.length) ? sec(t.an.photos, `<div class="row"><span class="val">${esc(report.photos.map(p => p.name).join(', '))}</span></div>`) : ''}
+  ${(report.photos?.length) ? sec(t.an.photos, `<div class="photos">${report.photos.map(p => `<figure class="ph"><img src="${esc(p.url)}" alt="${esc(p.name)}"/><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>`) : ''}
   ${actions ? sec(t.ac.title, actions) : ''}
   ${reqs ? sec(t.c.notifTitle, reqs) : ''}
   ${sec(t.an.sigTitle, `<div class="sigs">${sig(t.an.investigator, report.investigatorName, report.investigatorSignedAt, !!report.investigatorSignedAt)}${sig(t.an.invSup, report.invSupervisorName, report.invSupervisorSignedAt, !!report.invSupervisorSignedAt)}</div>`)}
