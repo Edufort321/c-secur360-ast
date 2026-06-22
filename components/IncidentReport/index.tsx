@@ -429,9 +429,9 @@ const tl = (lang: Lang, fr: string) => (lang === 'en' ? (EN_LABEL[fr] ?? fr) : f
 
 const TR = {
   fr: {
-    back: 'Retour', draft: 'Brouillon', submittedRO: 'Soumis — lecture seule', closed: 'Fermé',
-    saving: 'Enregistrement…', saved: 'Enregistré', save: 'Sauvegarder', submit: 'Soumettre',
-    confirmSubmit: 'Soumettre verrouille le rapport, le COMPILE dans les KPI SST et remet le compteur « jours sans accident » à 0. Pour ne pas affecter les statistiques, utilisez « Sauvegarder » (brouillon). Soumettre maintenant ?', yes: 'Soumettre', cancel: 'Annuler',
+    back: 'Retour', draft: 'Brouillon', submittedRO: 'Finalisé — lecture seule', closed: 'Fermé',
+    saving: 'Enregistrement…', saved: 'Enregistré', save: 'Sauvegarder (brouillon)', submit: 'Finaliser le rapport',
+    confirmSubmit: 'Finaliser verrouille le rapport, le COMPILE dans les KPI SST et remet le compteur « jours sans accident » à 0. Pour ne pas affecter les statistiques, utilisez « Sauvegarder » (brouillon). Finaliser maintenant ?', yes: 'Finaliser', cancel: 'Annuler',
     nav: { general: 'Général', location: 'Lieu', persons: 'Blessés', body: 'Schéma corporel', description: 'Description', vehicle: 'Véhicule', analysis: 'Analyse', actions: 'Actions', capa: 'Suivi CAPA', compliance: 'Réglementation', approval: 'Approbation' },
     g: {
       title: 'Informations générales', type: "Type d'incident", province: 'Province / territoire', severity: 'Sévérité',
@@ -469,9 +469,9 @@ const TR = {
     },
   },
   en: {
-    back: 'Back', draft: 'Draft', submittedRO: 'Submitted — read only', closed: 'Closed',
-    saving: 'Saving…', saved: 'Saved', save: 'Save', submit: 'Submit',
-    confirmSubmit: 'Submitting locks the report, COMPILES it into the HSE KPIs and resets the “days without accident” counter to 0. To avoid affecting statistics, use “Save” (draft). Submit now?', yes: 'Submit', cancel: 'Cancel',
+    back: 'Back', draft: 'Draft', submittedRO: 'Finalized — read only', closed: 'Closed',
+    saving: 'Saving…', saved: 'Saved', save: 'Save (draft)', submit: 'Finalize report',
+    confirmSubmit: 'Finalizing locks the report, COMPILES it into the HSE KPIs and resets the “days without accident” counter to 0. To avoid affecting statistics, use “Save” (draft). Finalize now?', yes: 'Finalize', cancel: 'Cancel',
     nav: { general: 'General', location: 'Location', persons: 'Injured', body: 'Body diagram', description: 'Description', vehicle: 'Vehicle', analysis: 'Analysis', actions: 'Actions', capa: 'CAPA tracking', compliance: 'Regulations', approval: 'Approval' },
     g: {
       title: 'General information', type: 'Incident type', province: 'Province / territory', severity: 'Severity',
@@ -1311,9 +1311,9 @@ export default function IncidentReportForm({
       case 'body':        return <BodySection        report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'description': return <DescriptionSection report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} vehicleList={vehicleList} />;
-      case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} tenant={tenant} reportNumber={reportNumber} lang={lang} />;
-      case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} />;
+      case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} tenant={tenant} reportNumber={reportNumber} lang={lang} personnelList={personnelList} />;
+      case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} />;
+      case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} personnelList={personnelList} />;
       case 'compliance':  return <ComplianceSection  report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'approval':    return <ApprovalSection    report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} />;
     }
@@ -2105,14 +2105,16 @@ function VehicleSection({ report, onChange, readOnly, vehicleList }: {
   );
 }
 
-function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lang }: {
+function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lang, personnelList = [] }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
   tenant: string;
   reportNumber: string;
   lang: Lang;
+  personnelList?: { id: string; name: string; role?: string }[];
 }) {
+  const personOpts = personnelList.map(p => ({ id: p.id, label: p.name, sub: p.role || '' }));
   const t = TR[lang];
   const [uploading, setUploading] = useState(false);
   const [photoErr, setPhotoErr] = useState(false);
@@ -2149,7 +2151,7 @@ function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lan
     return (
       <div className={`border rounded-lg p-3 ${signedAt ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
         <div className="text-xs text-gray-500 mb-1">{label}</div>
-        <TextInput value={report[nameKey] as string} onChange={v => up(nameKey, v)} placeholder={t.g.namePh} readOnly={readOnly} />
+        <EntitySearch value={report[nameKey] as string} onText={v => up(nameKey, v)} onPick={o => up(nameKey, o.label)} options={personOpts} placeholder={t.g.namePh} readOnly={readOnly} />
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs text-gray-500">
             {signedAt ? `${t.an.signedOn} ${new Date(signedAt).toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA')}` : t.an.notSigned}
@@ -2271,11 +2273,13 @@ function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lan
   );
 }
 
-function ActionsSection({ report, onChange, readOnly }: {
+function ActionsSection({ report, onChange, readOnly, personnelList = [] }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  personnelList?: { id: string; name: string; role?: string }[];
 }) {
+  const personOpts = personnelList.map(p => ({ id: p.id, label: p.name, sub: p.role || '' }));
   function updateAction(id: string, updater: (a: CorrectiveAction) => CorrectiveAction) {
     onChange(r => ({
       ...r,
@@ -2333,7 +2337,7 @@ function ActionsSection({ report, onChange, readOnly }: {
           </div>
           <div>
             <div className="text-xs text-gray-500 mb-1">{t.ac.responsible}</div>
-            <TextInput value={action.responsible} onChange={v => updateAction(action.id, a => ({ ...a, responsible: v }))} readOnly={readOnly} />
+            <EntitySearch value={action.responsible} onText={v => updateAction(action.id, a => ({ ...a, responsible: v }))} onPick={o => updateAction(action.id, a => ({ ...a, responsible: o.label }))} options={personOpts} readOnly={readOnly} />
             <div className="text-xs text-gray-500 mb-1 mt-2">{t.ac.dueDate}</div>
             <TextInput type="date" value={action.dueDate} onChange={v => updateAction(action.id, a => ({ ...a, dueDate: v }))} readOnly={readOnly} />
           </div>
@@ -2511,10 +2515,11 @@ const CAPA_PRIORITY_COLOR: Record<string, string> = {
   haute: 'bg-orange-100 text-orange-700', critique: 'bg-red-100 text-red-700',
 };
 
-function CapaPanel({ tenant, incidentId, lang, readOnly }: {
-  tenant: string; incidentId: string | null; lang: Lang; readOnly: boolean;
+function CapaPanel({ tenant, incidentId, lang, readOnly, personnelList = [] }: {
+  tenant: string; incidentId: string | null; lang: Lang; readOnly: boolean; personnelList?: { id: string; name: string; role?: string }[];
 }) {
   const t = TR[lang].cp;
+  const personOpts = personnelList.map(p => ({ id: p.id, label: p.name, sub: p.role || '' }));
   const [actions, setActions] = useState<IncidentAction[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [draft, setDraft] = useState({ description: '', assignee: '', due_date: '', priority: 'normale', status: 'a_faire' });
@@ -2582,7 +2587,7 @@ function CapaPanel({ tenant, incidentId, lang, readOnly }: {
           </Field>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <Field label={t.assignee}>
-              <TextInput value={draft.assignee} onChange={v => setDraft(d => ({ ...d, assignee: v }))} placeholder={t.assigneePh} />
+              <EntitySearch value={draft.assignee} onText={v => setDraft(d => ({ ...d, assignee: v }))} onPick={o => setDraft(d => ({ ...d, assignee: o.label }))} options={personOpts} placeholder={t.assigneePh} />
             </Field>
             <Field label={t.dueDate}>
               <TextInput type="date" value={draft.due_date} onChange={v => setDraft(d => ({ ...d, due_date: v }))} />

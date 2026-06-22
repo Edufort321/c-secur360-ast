@@ -2,7 +2,7 @@
 // logo tenant, couleur de marque (Modèles PDF, module 'rapports'), en-tête + pieds de page numérotés,
 // lettre de présentation optionnelle. Couvre TOUT ce qui est saisi (blessés + zones du schéma, témoins,
 // véhicule, dommages, 5-pourquoi, photos, CAPA, réglementation, signatures).
-import { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS } from './BodyMap';
+import { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS, INSET_VB } from './BodyMap';
 import { PDF, drawHeader, drawTitle, applyFooters } from '@/lib/pdf/letterhead';
 
 const BODY_LABELS: Record<string, { fr: string; en: string }> = {};
@@ -25,6 +25,15 @@ function bodySvg(selected: Set<string>): string {
     return `<path d="${d}" fill="${sel ? '#dc2626' : '#dbe2ea'}" stroke="${sel ? '#991b1b' : '#9aa6b2'}" stroke-width="1.4" stroke-linejoin="round"/>`;
   })).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1448 1448">${paths}</svg>`;
+}
+
+// Encart (visage, main ou pied) : régions à PATH UNIQUE (r.d). Zones touchées en rouge. → SVG string.
+function insetSvg(regions: any[], viewBox: string, selected: Set<string>): string {
+  const paths = regions.map((r: any) => {
+    const sel = selected.has(r.id);
+    return `<path d="${r.d}" fill="${sel ? '#dc2626' : '#e2e8f0'}" stroke="${sel ? '#991b1b' : '#94a3b8'}" stroke-width="0.9" stroke-linejoin="round"/>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${paths}</svg>`;
 }
 
 // SVG → PNG (data URL) via canvas. Client-side. Best-effort (null si échec).
@@ -90,7 +99,22 @@ export async function generateIncidentReportPdf(opts: {
   let y = header();
   const ensure = (h: number) => { if (y + h > Hp - 46) { doc.addPage(); y = header(); } };
   const sectionTitle = (s: string) => { ensure(22); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...accent); doc.text(s.toUpperCase(), M, y); y += 6; doc.setDrawColor(...accent); doc.setLineWidth(0.4); doc.line(M, y, W - M, y); y += 10; };
-  const rowKV = (label: string, value: any) => { const val = (value === null || value === undefined || value === '') ? '—' : String(value); ensure(13); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(90); doc.text(label, M, y); doc.setFont('helvetica', 'normal'); doc.setTextColor(40); const lines = doc.splitTextToSize(val, W - 2 * M - 150); doc.text(lines, M + 150, y); y += Math.max(13, lines.length * 12); };
+  // Paire libellé/valeur. Si le libellé est TROP LARGE pour la colonne (ex. « 1. Pourquoi… ? »), on passe
+  // le libellé sur sa propre ligne et la valeur EN DESSOUS (indentée) — évite tout chevauchement.
+  const LBL_COL = 150;
+  const rowKV = (label: string, value: any) => {
+    const val = (value === null || value === undefined || value === '') ? '—' : String(value);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    const labelLines = doc.splitTextToSize(label, W - 2 * M);
+    const tooWide = doc.getTextWidth(label) > LBL_COL - 10 || labelLines.length > 1;
+    if (tooWide) {
+      ensure(13 + labelLines.length * 11); doc.setTextColor(90); for (const ln of labelLines) { doc.text(ln, M, y); y += 11; }
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(40); for (const ln of doc.splitTextToSize(val, W - 2 * M - 12)) { ensure(12); doc.text(ln, M + 12, y); y += 12; } y += 2;
+    } else {
+      ensure(13); doc.setTextColor(90); doc.text(label, M, y); doc.setFont('helvetica', 'normal'); doc.setTextColor(40);
+      const lines = doc.splitTextToSize(val, W - 2 * M - LBL_COL); doc.text(lines, M + LBL_COL, y); y += Math.max(13, lines.length * 12);
+    }
+  };
   const para = (txt: string) => { if (!txt) return; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40); for (const ln of doc.splitTextToSize(String(txt), W - 2 * M)) { ensure(12); doc.text(ln, M, y); y += 12; } };
   const has = (v: any) => v !== null && v !== undefined && v !== '';
 
@@ -129,11 +153,34 @@ export async function generateIncidentReportPdf(opts: {
       if (p.restricted) rowKV(tr('Travail restreint / mutation', 'Restricted / transfer'), '✔');
       if (p.fatality) rowKV(tr('Décès', 'Fatality'), '✔');
       if (Array.isArray(p.bodyRegions) && p.bodyRegions.length) {
+        const sel = new Set<string>(p.bodyRegions);
         rowKV(tr('Zones blessées', 'Injured areas'), p.bodyRegions.map((id: string) => (BODY_LABELS[id] ? (fr ? BODY_LABELS[id].fr : BODY_LABELS[id].en) : id)).join(', '));
-        // Schéma corporel (avant + arrière) avec les zones touchées en rouge — joint au rapport.
+        // Schéma corporel : silhouette (avant + arrière) + encarts visage/mains/pieds SI une zone y est touchée.
         try {
-          const png = await svgToPng(bodySvg(new Set(p.bodyRegions)), 760, 760);
-          if (png) { const dim = 150; ensure(dim + 8); doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(120); doc.text(tr('Schéma corporel (avant / arrière)', 'Body diagram (front / back)'), M, y); y += 4; try { doc.addImage(png, 'PNG', M, y, dim, dim); } catch { /* skip */ } y += dim + 6; }
+          const dim = 150;
+          // Encarts à montrer (seulement ceux qui ont une zone sélectionnée).
+          const insets = [
+            { regions: FACE_REGIONS, vb: '0 0 100 118', w: 50, h: 59, label: tr('Visage', 'Face') },
+            { regions: HAND_L_REGIONS, vb: INSET_VB.handL, w: 56, h: 62, label: tr('Main G.', 'Hand L') },
+            { regions: HAND_R_REGIONS, vb: INSET_VB.handR, w: 54, h: 64, label: tr('Main D.', 'Hand R') },
+            { regions: FOOT_L_REGIONS, vb: INSET_VB.foot, w: 70, h: 51, label: tr('Pied G.', 'Foot L') },
+            { regions: FOOT_R_REGIONS, vb: INSET_VB.foot, w: 70, h: 51, label: tr('Pied D.', 'Foot R') },
+          ].filter(ins => ins.regions.some((r: any) => sel.has(r.id)));
+          if (y + dim + 12 > Hp - 46) { doc.addPage(); y = header(); }
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(120);
+          doc.text(tr('Schéma corporel (avant / arrière)', 'Body diagram (front / back)'), M, y); y += 5;
+          const bodyPng = await svgToPng(bodySvg(sel), 760, 760);
+          if (bodyPng) { try { doc.addImage(bodyPng, 'PNG', M, y, dim, dim); } catch { /* skip */ } }
+          // Encarts à droite de la silhouette, en grille qui passe à la ligne.
+          let ix = M + dim + 14, iy = y;
+          for (const ins of insets) {
+            if (ix + ins.w > W - M) { ix = M + dim + 14; iy += 78; }
+            const ipng = await svgToPng(insetSvg(ins.regions, ins.vb, sel), Math.round(ins.w * 5), Math.round(ins.h * 5));
+            if (ipng) { try { doc.addImage(ipng, 'PNG', ix, iy, ins.w, ins.h); } catch { /* skip */ } }
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110); doc.text(ins.label, ix, iy + ins.h + 8);
+            ix += ins.w + 12;
+          }
+          y += dim + 8;
         } catch { /* best-effort */ }
       }
       y += 4;
