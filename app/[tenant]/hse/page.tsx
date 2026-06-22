@@ -18,6 +18,8 @@ import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/l
 import { resolveKpiHours, monthOverridePeriod, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { proactiveFeedLive } from '@/lib/hse/proactiveFeed';
 import { getSafetyMeetings, saveSafetyMeeting, deleteSafetyMeeting, type HseSafetyMeeting } from '@/lib/hse/safetyMeetings';
+import { EntitySearch } from '@/components/ui/EntitySearch';
+import { useTenantDirectory } from '@/lib/useTenantDirectory';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseInjuryDonut } from '@/components/hse/HseInjuryDonut';
 import { HseAiInsights } from '@/components/hse/HseAiInsights';
@@ -169,7 +171,7 @@ export default function HsePage() {
           <p className="mt-2 text-xs text-gray-400">{tr('Demandez à un administrateur de votre organisation de relever votre niveau d’accès.', 'Ask an administrator in your organization to raise your access level.')}</p>
         </div>
       ) : (
-      <div className="mx-auto max-w-6xl px-4 py-5">
+      <div className="mx-auto max-w-screen-2xl px-4 py-5 sm:px-6">
         <h1 className="mb-1 text-xl font-bold text-gray-900 dark:text-white">{tr('Santé et sécurité — HSE', 'Health & Safety — HSE')}</h1>
         <p className="mb-4 text-sm text-gray-500">{tr('Registres réglementaires, échéances (normes canadiennes — fédéral + provinces/territoires) et KPI (LTIFR/TRIR). Indicatif — à valider par une personne qualifiée.', 'Regulatory registers, deadlines (Canadian standards — federal + provinces/territories) and KPIs (LTIFR/TRIR). Indicative — validate with a qualified person.')}</p>
 
@@ -515,6 +517,7 @@ function MeetingsTab({ tr, card, tenant, userEmail }: any) {
   const [rows, setRows] = useState<HseSafetyMeeting[]>([]);
   const [f, setF] = useState<HseSafetyMeeting | null>(null);
   const [busy, setBusy] = useState(false);
+  const { projects } = useTenantDirectory(tenant);   // recherche dynamique du lieu/chantier (saisie libre permise)
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
   const load = async () => setRows(await getSafetyMeetings(tenant));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -535,7 +538,7 @@ function MeetingsTab({ tr, card, tenant, userEmail }: any) {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-gray-500">{tr('Type', 'Type')}<select value={f.kind} onChange={e => setF({ ...f, kind: e.target.value as any })} className={inp}><option value="tbm">{tr('Causerie sécurité (TBM)', 'Toolbox talk (TBM)')}</option><option value="observation">{tr('Observation sécurité', 'Safety observation')}</option></select></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={f.meeting_date} onChange={e => setF({ ...f, meeting_date: e.target.value })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Lieu / chantier', 'Location / site')}<input value={f.location || ''} onChange={e => setF({ ...f, location: e.target.value })} className={inp} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Lieu / chantier', 'Location / site')}<div className="mt-1"><EntitySearch value={f.location || ''} onText={v => setF({ ...f, location: v })} onPick={o => setF({ ...f, location: o.label })} options={projects} placeholder={tr('Chantier ou lieu…', 'Site or location…')} /></div></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Sujet', 'Topic')}<input value={f.topic || ''} onChange={e => setF({ ...f, topic: e.target.value })} className={inp} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Participants', 'Attendees')}<input value={f.attendees || ''} onChange={e => setF({ ...f, attendees: e.target.value })} placeholder={tr('noms ou nombre', 'names or count')} className={inp} /></label>
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<textarea value={f.notes || ''} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className={inp} /></label>

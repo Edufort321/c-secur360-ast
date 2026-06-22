@@ -1291,7 +1291,7 @@ export default function IncidentReportForm({
       case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} />;
       case 'compliance':  return <ComplianceSection  report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'approval':    return <ApprovalSection    report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'approval':    return <ApprovalSection    report={report} onChange={updateReport} readOnly={readOnly} personnelList={personnelList} />;
     }
   }
 
@@ -1328,7 +1328,7 @@ export default function IncidentReportForm({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className={`bg-white border-b border-gray-200 sticky z-20 ${embedded ? 'top-20' : 'top-0'}`}>
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {onClose && (
               <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
@@ -1404,7 +1404,7 @@ export default function IncidentReportForm({
       </div>
 
       {/* Body */}
-      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-4 md:gap-6">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row gap-4 md:gap-6">
         {/* Sidebar (desktop) / barre d'onglets horizontale defilante (mobile) */}
         <div className="md:w-48 md:shrink-0">
           <nav className={`flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 md:sticky ${embedded ? 'md:top-36' : 'md:top-20'}`}>
@@ -2402,10 +2402,11 @@ function ComplianceSection({ report, onChange, readOnly }: {
   );
 }
 
-function ApprovalSection({ report, onChange, readOnly }: {
+function ApprovalSection({ report, onChange, readOnly, personnelList = [] }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  personnelList?: { id: string; name: string; role?: string }[];
 }) {
   const { lang } = useLanguage();
   const t = TR[lang];
@@ -2451,7 +2452,8 @@ function ApprovalSection({ report, onChange, readOnly }: {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                 <Field label={t.ap.name}>
-                  <TextInput value={report[s.nameKey] as string} onChange={v => up(s.nameKey, v)} readOnly={readOnly} />
+                  <EntitySearch value={report[s.nameKey] as string} onText={v => up(s.nameKey, v)} onPick={o => up(s.nameKey, o.label)} readOnly={readOnly}
+                    options={(personnelList || []).map(p => ({ id: p.id, label: p.name, sub: p.role || '' }))} />
                 </Field>
                 <Field label={t.ap.date}>
                   <TextInput type="date" value={report[s.dateKey] as string} onChange={v => up(s.dateKey, v)} readOnly={readOnly} />

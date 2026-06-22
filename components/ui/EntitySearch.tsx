@@ -17,7 +17,9 @@ export function EntitySearch({ value, onText, onPick, options, placeholder, read
 }) {
   const [open, setOpen] = useState(false);
   const q = (value || '').toLowerCase().trim();
-  const filtered = (q ? options.filter(o => o.label.toLowerCase().includes(q) || (o.sub || '').toLowerCase().includes(q)) : options).slice(0, 8);
+  // Limite d'AFFICHAGE généreuse (la liste déroulante est scrollable) : sinon des noms valides du tenant
+  // restaient cachés au-delà du 8e résultat. Sans recherche, on montre les 50 premiers ; avec recherche, 50 correspondances.
+  const filtered = (q ? options.filter(o => o.label.toLowerCase().includes(q) || (o.sub || '').toLowerCase().includes(q)) : options).slice(0, 50);
   return (
     <div className="relative">
       <input
