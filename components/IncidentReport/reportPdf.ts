@@ -4,6 +4,9 @@
 // véhicule, dommages, 5-pourquoi, photos, CAPA, réglementation, signatures).
 import { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS, INSET_VB } from './BodyMap';
 import { PDF, drawHeader, drawTitle, applyFooters } from '@/lib/pdf/letterhead';
+import { assessCnesst, cnesstFromReport, cnesstNotes, CNESST_REASON_LABEL } from '@/lib/sst/cnesstObligations';
+
+const SEV_COLOR: Record<number, [number, number, number]> = { 1: [22, 163, 74], 2: [132, 204, 22], 3: [217, 119, 6], 4: [220, 38, 38], 5: [153, 27, 27] };
 
 const BODY_LABELS: Record<string, { fr: string; en: string }> = {};
 for (const r of [...BODY_REGIONS, ...FACE_REGIONS, ...HAND_L_REGIONS, ...HAND_R_REGIONS, ...FOOT_L_REGIONS, ...FOOT_R_REGIONS]) BODY_LABELS[r.id] = { fr: r.labelFr, en: r.labelEn };
@@ -126,6 +129,33 @@ export async function generateIncidentReportPdf(opts: {
   y = drawTitle(doc, y, tr("Rapport d'incident / accident", 'Incident / accident report'),
     `${opts.typeLabel} · ${tr('Gravité', 'Severity')} ${rep.severityLevel ?? '—'}/5 · ${tr('Date', 'Date')} ${rep.incidentDate || '—'} ${rep.incidentTime || ''}`,
     accent, titleSize, subtitleSize);
+
+  // ── Bloc VERDICT CNESST (équivalent du « Condition 4 » du DGA) : déclarabilité auto LSST art. 62.
+  // Encadré coloré (rouge = déclarable 24 h, vert = non déclarable) près du haut, avant le détail.
+  {
+    const o = assessCnesst(cnesstFromReport(rep));
+    const col: [number, number, number] = o.reportable24h ? [220, 38, 38] : [22, 163, 74];
+    const head = o.reportable24h
+      ? tr('DÉCLARABLE À LA CNESST SOUS 24 H (LSST art. 62)', 'REPORTABLE TO CNESST WITHIN 24 H')
+      : tr('NON déclarable sous 24 h — Registre obligatoire', 'NOT reportable within 24 h — Register required');
+    const lines: string[] = [];
+    if (o.reasons.length) lines.push(tr('Motif(s) : ', 'Reason(s): ') + o.reasons.map(r => (fr ? CNESST_REASON_LABEL[r].fr : CNESST_REASON_LABEL[r].en)).join(' · '));
+    for (const n of cnesstNotes(o, fr ? 'fr' : 'en')) lines.push('• ' + n);
+    const body = lines.flatMap(l => doc.splitTextToSize(l, W - 2 * M - 16));
+    const boxH = 20 + body.length * 11 + 8;
+    ensure(boxH + 6);
+    doc.setFillColor(col[0], col[1], col[2]); doc.rect(M, y, 4, boxH, 'F');           // barre latérale
+    doc.setDrawColor(col[0], col[1], col[2]); doc.setLineWidth(0.5);
+    doc.setFillColor(248, 250, 252); doc.roundedRect(M + 4, y, W - 2 * M - 4, boxH, 2, 2, 'FD');
+    let by = y + 14;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(col[0], col[1], col[2]); doc.text(head, M + 12, by); by += 13;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(55);
+    for (const ln of body) { doc.text(ln, M + 12, by); by += 11; }
+    y += boxH + 8;
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(130);
+    doc.text(tr('Évaluation indicative — la qualification finale appartient à l’employeur et doit être validée par une personne qualifiée.', 'Indicative assessment — final qualification rests with the employer and must be validated by a qualified person.'), M, y);
+    y += 12; doc.setTextColor(40);
+  }
 
   sectionTitle(tr('Informations générales', 'General information'));
   rowKV(tr('Type', 'Type'), opts.typeLabel);

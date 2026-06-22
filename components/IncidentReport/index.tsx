@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { EntitySearch } from '@/components/ui/EntitySearch';
@@ -16,6 +16,7 @@ import {
   isActionOverdue, ACTION_STATUSES, ACTION_PRIORITIES,
   type IncidentAction, type IncidentActionStatus,
 } from '@/lib/incidentActions';
+import { assessCnesst, cnesstFromReport, cnesstNotes, CNESST_REASON_LABEL } from '@/lib/sst/cnesstObligations';
 import { BODY_REGION_LABELS } from '@/lib/hse/bodyRegions';
 import BodyMap, { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS } from './BodyMap';
 
@@ -1207,20 +1208,21 @@ export default function IncidentReportForm({
   }, [reportId]);
 
   async function loadReport(id: string) {
-    if (!supabase) return;
-    const { data } = await supabase
-      .from('incident_reports')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (data) {
+    // incident_reports est FERMÉ à l'anon (REVOKE) → lire via la route SERVEUR (service_role), jamais le
+    // client anon (qui renvoyait null en silence → le rapport « disparaissait » à la réouverture).
+    try {
+      const res = await fetch('/api/incidents/data', { credentials: 'include' });
+      if (!res.ok) return;
+      const j: any = await res.json().catch(() => ({}));
+      const data = (j.reports || []).find((r: any) => r.id === id);
+      if (!data) return;
       setDbId(data.id);
-      setReportNumber(data.report_number);
+      setReportNumber(data.report_number || genReportNumber(data.incident_type));
       setStatus(data.status);
       setPersonnelId((data as any).personnel_id ?? null); // pré-remplit le rattachement personnel à l'édition
       // Fusionne avec les defauts pour que les rapports anterieurs aient les champs #81 (photos, causes, signatures).
       setReport({ ...emptyReport(data.incident_type, data.province), ...(data.data as Partial<IncidentReportData>) });
-    }
+    } catch { /* non bloquant */ }
   }
 
   function updateReport(updater: (prev: IncidentReportData) => IncidentReportData) {
@@ -1432,6 +1434,11 @@ export default function IncidentReportForm({
         </div>
       </div>
 
+      {/* Verdict CNESST — déclarabilité auto (LSST art. 62), l'équivalent SST du « Condition 4 » du DGA */}
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4">
+        <CnesstVerdictBanner report={report} lang={lang} />
+      </div>
+
       {/* Body */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row gap-4 md:gap-6">
         {/* Sidebar (desktop) / barre d'onglets horizontale defilante (mobile) */}
@@ -1461,6 +1468,38 @@ export default function IncidentReportForm({
             <span>{lang === 'fr' ? SECTION_ROLE[section].fr : SECTION_ROLE[section].en}</span>
           </div>
           {renderSection()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bannière verdict CNESST (déclarabilité auto). Affichée en haut du rapport.
+function CnesstVerdictBanner({ report, lang }: { report: IncidentReportData; lang: Lang }) {
+  const fr = lang === 'fr';
+  const o = useMemo(() => assessCnesst(cnesstFromReport(report)), [report]);
+  const reportable = o.reportable24h;
+  return (
+    <div className={`rounded-lg border px-3 py-2.5 ${reportable ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'}`}>
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={16} className={`mt-0.5 shrink-0 ${reportable ? 'text-red-600' : 'text-green-600'}`} />
+        <div className="min-w-0">
+          <p className={`text-sm font-semibold ${reportable ? 'text-red-700' : 'text-green-700'}`}>
+            {reportable
+              ? (fr ? 'DÉCLARABLE à la CNESST sous 24 h (LSST art. 62)' : 'REPORTABLE to CNESST within 24 h')
+              : (fr ? 'Non déclarable sous 24 h — Registre obligatoire' : 'Not reportable within 24 h — Register required')}
+          </p>
+          {o.reasons.length > 0 && (
+            <p className="mt-0.5 text-xs text-gray-600">
+              {(fr ? 'Motif(s) : ' : 'Reason(s): ') + o.reasons.map(r => (fr ? CNESST_REASON_LABEL[r].fr : CNESST_REASON_LABEL[r].en)).join(' · ')}
+            </p>
+          )}
+          <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+            {cnesstNotes(o, fr ? 'fr' : 'en').map((n, i) => <li key={i}>• {n}</li>)}
+          </ul>
+          <p className="mt-1 text-[10px] italic text-gray-400">
+            {fr ? 'Évaluation indicative — qualification finale par une personne qualifiée.' : 'Indicative — final qualification by a qualified person.'}
+          </p>
         </div>
       </div>
     </div>

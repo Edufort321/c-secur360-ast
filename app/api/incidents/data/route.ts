@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
     // Champs autorisés uniquement ; tenant FORCÉ à la session (anti-IDOR).
     const payload: any = {
       tenant_id: tenant,
+      // report_number est NOT NULL en base — TOUJOURS le persister (sinon l'INSERT échoue silencieusement
+      // → le rapport « disparaît » et rien ne remonte au dashboard). Repli défensif si absent.
+      report_number: it.report_number || `INC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
       incident_type: it.incident_type ?? null,
       province: it.province ?? null,
       status: it.status || 'draft',

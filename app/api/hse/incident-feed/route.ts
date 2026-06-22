@@ -26,8 +26,11 @@ export async function GET(req: NextRequest) {
     const event_code = r.incident_type === 'near_miss' ? 'NEAR_MISS'
       : r.incident_type === 'property' ? 'MATERIAL_DAMAGE'
       : 'RECORDABLE';                                              // accident | vehicle | medical
-    const lost_days = Number(d.lostDays ?? d.daysLost ?? d.lost_days ?? 0) || 0;
-    const is_lost_time = event_code === 'RECORDABLE' && (lost_days > 0 || Number(d.severityLevel ?? 0) >= 4 || d.isLostTime === true);
+    // Arrêt de travail = saisi PAR PERSONNE blessée (injuredPersons[].lostTimeDays). On prend le pire cas.
+    const persons: any[] = Array.isArray(d.injuredPersons) ? d.injuredPersons : [];
+    const lost_days = persons.reduce((m, p) => Math.max(m, Number(p?.lostTimeDays) || 0), Number(d.lostDays ?? d.daysLost ?? d.lost_days ?? 0) || 0);
+    const anyLostTime = persons.some(p => p?.lostTime || p?.fatality);
+    const is_lost_time = event_code === 'RECORDABLE' && (lost_days > 0 || anyLostTime || Number(d.severityLevel ?? 0) >= 4 || d.isLostTime === true);
     return { id: r.id, occurred_at, event_code, is_lost_time, lost_days, source: 'accidents' };
   });
   return NextResponse.json({ items });

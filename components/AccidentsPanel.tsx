@@ -85,7 +85,7 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       if (!search) return true;
       const q = search.toLowerCase();
-      return r.report_number.toLowerCase().includes(q) || t.typeLabel[r.incident_type].toLowerCase().includes(q) || (r.data?.description ?? '').toLowerCase().includes(q) || (r.data?.reportedBy ?? '').toLowerCase().includes(q);
+      return (r.report_number ?? '').toLowerCase().includes(q) || t.typeLabel[r.incident_type].toLowerCase().includes(q) || (r.data?.description ?? '').toLowerCase().includes(q) || (r.data?.reportedBy ?? '').toLowerCase().includes(q);
     })
     .sort((a, b) => (b.data?.severityLevel ?? 0) - (a.data?.severityLevel ?? 0) || String(b.created_at).localeCompare(String(a.created_at)));
 
