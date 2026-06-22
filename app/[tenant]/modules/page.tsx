@@ -322,7 +322,8 @@ export default function ModulesPage() {
   if (has('ast')) cards.push({ key: 'ast', title: tr('AST', 'JSA'), href: `/${tenant}/ast`, big: String(ast.total), sub: `${ast.draft || 0} ${tr('brouillon', 'draft')} · ${ast.active || 0} ${tr('en cours', 'active')} · ${ast.completed || 0} ${tr('terminé', 'done')} · ${ast.cancelled || 0} ${tr('annulé', 'cancelled')}` , available: true });
   if (has('hse')) cards.push({ key: 'hse', title: tr('Registres & KPI (SST)', 'Registers & KPIs (HSE)'), href: `/${tenant}/hse`, big: String(hseStats.deadlines), sub: `${hseStats.deadlines} ${tr('échéance(s)', 'deadline(s)')} · ${hseStats.registersDue} ${tr('registre(s) dû(s)', 'register(s) due')} · ${hseStats.incidents} ${tr('incident(s)', 'incident(s)')}`, available: true });
   if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')} · ${permit.work} ${tr('travail', 'work')} · ${permit.confined} ${tr('espace clos', 'confined')} · ${permit.total} ${tr('total', 'total')}`, available: true });
-  if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });
+  // Carte « Accidents & Presque-acc. » RETIRÉE : fusionnée dans la carte « Registres & KPI (SST) » ci-dessus
+  // (les relevés sécurité + la case « épingler » y sont déplacés). Les accidents vivent désormais dans HSE.
   if (has('inventory')) cards.push({ key: 'inventory', title: tr('Inventaire', 'Inventory'), href: `/${tenant}/inventory`, big: String(invCount), sub: `${invCount} ${tr('articles', 'items')} · ${invStats.low} ${tr('stock bas', 'low stock')} · ${money(invStats.value)} ${tr('valeur', 'value')}`, available: true });
   if (has('inspections')) cards.push({ key: 'inspections', title: tr("Inspections", 'Inspections'), href: `/${tenant}/inspections`, big: String(inspStats.total), sub: `${inspStats.total} ${tr('total', 'total')} · ${inspStats.nonConf} ${tr('non conf.', 'non-conf.')} · ${Math.max(0, inspStats.total - inspStats.nonConf)} ${tr('conformes', 'conform')}`, available: true });
   if (has('maintenance')) cards.push({ key: 'maintenance', title: tr("Maintenance d'équipement", 'Equipment maintenance'), href: `/${tenant}/maintenance`, big: String(maintStats.sheets), sub: `${maintStats.sheets} ${tr('fiches', 'sheets')} · ${maintStats.due} ${tr('due(s)', 'due')} · ${maintStats.alerts} ${tr('alerte(s)', 'alert(s)')}`, available: true });
@@ -336,7 +337,7 @@ export default function ModulesPage() {
   const CARD_GROUPS: { title: string; keys: string[] }[] = [
     { title: tr('Administration', 'Administration'), keys: ['admin', 'marketing'] },
     { title: tr('Opération', 'Operations'), keys: ['projects', 'planner', 'timesheets', 'logbook', 'todo', 'inventory', 'inspections', 'maintenance'] },
-    { title: tr('Santé & sécurité', 'Health & Safety'), keys: ['ast', 'hse', 'permits', 'events'] },
+    { title: tr('Santé & sécurité', 'Health & Safety'), keys: ['ast', 'hse', 'permits'] },
     { title: tr('Technique', 'Technical'), keys: ['dga', 'rapports'] },
     { title: tr('Utilisateur / RH', 'User / HR'), keys: ['conges'] },
   ];
@@ -413,7 +414,7 @@ export default function ModulesPage() {
           {cards.filter(c => pins[c.key]).length > 0 && (
             <div className="mb-4 flex flex-wrap gap-3">
               {cards.filter(c => pins[c.key]).map(c => (
-                c.key === 'events' && safety ? (
+                c.key === 'hse' && safety ? (
                   // Sécurité épinglé : WIDGET PLEINE LARGEUR avec GROSSES PASTILLES de couleur.
                   <div key={c.key} className="w-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-100"><ShieldCheck size={16} className="text-emerald-600" /> {c.title}</div>
@@ -460,7 +461,7 @@ export default function ModulesPage() {
                           <button onClick={() => reorderCard(c.key, 1)} className="text-gray-300 hover:text-blue-600" title={tr('Descendre', 'Down')}>▼</button>
                         </span>}
                         {/* Case « épingler » : seulement sur la carte Accidents/Presque-acc. */}
-                        {c.key === 'events' && <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
+                        {c.key === 'hse' && <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
                           className="cursor-pointer accent-emerald-600" />}
                         <div className="grid h-8 w-8 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
@@ -468,8 +469,8 @@ export default function ModulesPage() {
                     </div>
                     <div className="text-2xl font-bold leading-tight">{c.big}</div>
                     {/* Carte Accidents : on N'affiche PAS le sous-titre redondant (acc./année) — les pastilles ci-dessous le couvrent. */}
-                    {c.key !== 'events' && <div className="mt-1 line-clamp-2 text-[11px] leading-snug text-gray-500 dark:text-gray-400">{c.sub}</div>}
-                    {c.key === 'events' && safety && (
+                    {c.key !== 'hse' && <div className="mt-1 line-clamp-2 text-[11px] leading-snug text-gray-500 dark:text-gray-400">{c.sub}</div>}
+                    {c.key === 'hse' && safety && (
                       <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px]">
                         {safetyDots(safety).map((d, i) => (
                           <span key={i} className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
@@ -495,7 +496,7 @@ export default function ModulesPage() {
                       <button onClick={() => reorderCard(c.key, -1)} className="text-gray-300 hover:text-blue-600">▲</button>
                       <button onClick={() => reorderCard(c.key, 1)} className="text-gray-300 hover:text-blue-600">▼</button>
                     </span>}
-                    {c.key === 'events'
+                    {c.key === 'hse'
                       ? <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
                           className="cursor-pointer accent-emerald-600" />
@@ -504,7 +505,7 @@ export default function ModulesPage() {
                     <div className="w-40 shrink-0 font-semibold">{c.title}</div>
                     <div className="w-14 shrink-0 text-2xl font-bold">{c.big}</div>
                     <div className="flex flex-1 flex-wrap items-center gap-1.5">
-                      {(c.key === 'events' && safety ? safetyDots(safety).map(d => `${d.v} ${d.l}`) : String(c.sub || '').split('·').map(s => s.trim()).filter(Boolean)).map((part, j) => (
+                      {(c.key === 'hse' && safety ? safetyDots(safety).map(d => `${d.v} ${d.l}`) : String(c.sub || '').split('·').map(s => s.trim()).filter(Boolean)).map((part, j) => (
                         <span key={j} className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{part}</span>
                       ))}
                     </div>
