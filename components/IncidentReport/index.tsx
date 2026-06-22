@@ -351,6 +351,21 @@ const COLLISION_TYPES = [
 
 type SectionId = 'general' | 'location' | 'persons' | 'body' | 'description' | 'vehicle' | 'analysis' | 'actions' | 'capa' | 'compliance' | 'approval';
 
+// Qui est RESPONSABLE de remplir chaque section (clarté du flux de déclaration).
+const SECTION_ROLE: Record<SectionId, { fr: string; en: string }> = {
+  general: { fr: 'Déclarant / superviseur — qui déclare, quand et où.', en: 'Reporter / supervisor — who reports, when and where.' },
+  location: { fr: 'Déclarant — lieu exact, conditions.', en: 'Reporter — exact location, conditions.' },
+  persons: { fr: 'Renseignements fournis par le(s) blessé(s) (données de santé confidentielles — Loi 25).', en: 'Provided by the injured person(s) (confidential health data — Law 25).' },
+  body: { fr: 'Blessé / secouriste — zones touchées sur le schéma.', en: 'Injured person / first-aider — affected areas on the diagram.' },
+  description: { fr: 'Déclarant ou témoin — déroulement et action immédiate.', en: 'Reporter or witness — sequence and immediate action.' },
+  vehicle: { fr: 'Déclarant — détails du véhicule impliqué.', en: 'Reporter — involved vehicle details.' },
+  analysis: { fr: 'Enquêteur / responsable SST — causes et 5 pourquoi.', en: 'Investigator / HSE lead — causes and 5-whys.' },
+  actions: { fr: 'Responsable SST / superviseur — actions correctives + responsables.', en: 'HSE lead / supervisor — corrective actions + owners.' },
+  capa: { fr: 'Responsable SST — suivi des actions correctives/préventives.', en: 'HSE lead — corrective/preventive action follow-up.' },
+  compliance: { fr: 'Responsable SST — déclaration à l’autorité (CNESST/…).', en: 'HSE lead — notification to authority (CNESST/…).' },
+  approval: { fr: 'Superviseur, réviseur SST et direction — signatures d’approbation.', en: 'Supervisor, HSE reviewer and management — approval signatures.' },
+};
+
 // ── i18n (connecte au header FR/EN via useLanguage) ──────────────────────────
 // Les valeurs stockees restent en FR (canoniques) ; on traduit seulement l'AFFICHAGE.
 const EN_LABEL: Record<string, string> = {
@@ -1427,6 +1442,10 @@ export default function IncidentReportForm({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
+          <div className="mb-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            <span className="font-semibold whitespace-nowrap">{lang === 'fr' ? 'À remplir par :' : 'To be completed by:'}</span>
+            <span>{lang === 'fr' ? SECTION_ROLE[section].fr : SECTION_ROLE[section].en}</span>
+          </div>
           {renderSection()}
         </div>
       </div>
@@ -1534,7 +1553,7 @@ function GeneralSection({ report, onChange, readOnly, personnelList, personnelId
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:bg-gray-50"
                 value={personnelId || ''}
                 disabled={readOnly}
-                onChange={e => { const pid = e.target.value || null; setPersonnelId(pid); const p = personnelList.find(x => x.id === pid); if (p && !report.reportedBy) up('reportedBy', p.name); }}
+                onChange={e => { const pid = e.target.value || null; setPersonnelId(pid); const p = personnelList.find(x => x.id === pid) as any; if (p) { up('reportedBy', p.name); if (p.role) up('reportedByTitle', p.role); } }}
               >
                 <option value="">{lang === 'en' ? '— none —' : '— aucun —'}</option>
                 {personnelList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -1694,7 +1713,7 @@ function PersonsSection({ report, onChange, readOnly, personnelList }: {
                 <EntitySearch value={person.name} placeholder={t.g.namePh} readOnly={readOnly}
                   options={personnelList.map(pl => ({ id: pl.id, label: pl.name, sub: pl.role }))}
                   onText={v => updatePerson(person.id, p => ({ ...p, name: v }))}
-                  onPick={o => updatePerson(person.id, p => ({ ...p, name: o.label, jobTitle: p.jobTitle || o.sub || '' }))} />
+                  onPick={o => updatePerson(person.id, p => ({ ...p, name: o.label, jobTitle: o.sub || p.jobTitle || '' }))} />
                 <p className="mt-0.5 text-[11px] text-gray-400">{lang === 'fr' ? 'Cherchez dans le personnel, ou saisissez librement (sous-traitant, visiteur…).' : 'Search staff, or type freely (subcontractor, visitor…).'}</p>
               </Field>
               <Field label={t.p.jobTitle}>
@@ -1795,7 +1814,7 @@ function PersonsSection({ report, onChange, readOnly, personnelList }: {
                 <EntitySearch value={w.name} readOnly={readOnly}
                   options={personnelList.map(pl => ({ id: pl.id, label: pl.name, sub: pl.role }))}
                   onText={v => updateWitness(w.id, x => ({ ...x, name: v }))}
-                  onPick={o => updateWitness(w.id, x => ({ ...x, name: o.label, jobTitle: x.jobTitle || o.sub || '' }))} />
+                  onPick={o => updateWitness(w.id, x => ({ ...x, name: o.label, jobTitle: o.sub || x.jobTitle || '' }))} />
               </Field>
               <Field label={t.p.wPost}>
                 <TextInput value={w.jobTitle} onChange={v => updateWitness(w.id, x => ({ ...x, jobTitle: v }))} readOnly={readOnly} />
@@ -2229,8 +2248,8 @@ function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lan
           {t.an.sigTitle}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <InvSig label={t.an.investigator} nameKey="investigatorName" dateKey="investigatorSignedAt" />
-          <InvSig label={t.an.invSup} nameKey="invSupervisorName" dateKey="invSupervisorSignedAt" />
+          {InvSig({ label: t.an.investigator, nameKey: 'investigatorName', dateKey: 'investigatorSignedAt' })}
+          {InvSig({ label: t.an.invSup, nameKey: 'invSupervisorName', dateKey: 'invSupervisorSignedAt' })}
         </div>
       </Card>
     </div>
