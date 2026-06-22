@@ -3,6 +3,7 @@
 // lettre de présentation optionnelle. Couvre TOUT ce qui est saisi (blessés + zones du schéma, témoins,
 // véhicule, dommages, 5-pourquoi, photos, CAPA, réglementation, signatures).
 import { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS } from './BodyMap';
+import { PDF, drawHeader, drawTitle, applyFooters } from '@/lib/pdf/letterhead';
 
 const BODY_LABELS: Record<string, { fr: string; en: string }> = {};
 for (const r of [...BODY_REGIONS, ...FACE_REGIONS, ...HAND_L_REGIONS, ...HAND_R_REGIONS, ...FOOT_L_REGIONS, ...FOOT_R_REGIONS]) BODY_LABELS[r.id] = { fr: r.labelFr, en: r.labelEn };
@@ -63,42 +64,40 @@ export async function generateIncidentReportPdf(opts: {
   const lbl = (m: Record<string, { fr: string; en: string }>, k: string) => (m[k] ? (fr ? m[k].fr : m[k].en) : (k || ''));
 
   const { default: jsPDF } = await import('jspdf');
-  let accent: [number, number, number] = [185, 28, 28]; // rouge accident par défaut
+  // Style résolu depuis Admin › Modèles PDF (clé 'accidents') : accent + épaisseur + tailles. Par défaut
+  // (non personnalisé), on garde une identité ROUGE accident (sinon le gris DGA).
+  let accent: [number, number, number] = [185, 28, 28];
+  let ruleWidth = 1, titleSize = 14, subtitleSize = 11, showRule = true;
   try {
-    const { getPdfStyles, resolveKnobs, hexToRgb, DEFAULT_ACCENT } = await import('@/lib/pdfStyle');
-    const k = resolveKnobs(await getPdfStyles(opts.tenant || ''), 'accidents');
-    if (k.accent && k.accent.toLowerCase() !== DEFAULT_ACCENT.toLowerCase()) accent = hexToRgb(k.accent);
+    const { pdfStyleFor } = await import('@/lib/pdfStyle');
+    const st = await pdfStyleFor(opts.tenant || '', 'accidents');
+    const isDefaultGray = st.accent[0] === 60 && st.accent[1] === 60 && st.accent[2] === 60;
+    accent = isDefaultGray ? [185, 28, 28] : st.accent;
+    ruleWidth = st.ruleWidth; titleSize = st.titleSize; subtitleSize = st.subtitleSize; showRule = st.showRule;
   } catch { /* défaut */ }
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  const W = doc.internal.pageSize.getWidth(); const Hp = doc.internal.pageSize.getHeight(); const M = 42;
+  const W = PDF.W, Hp = PDF.H, M = PDF.M;
 
   // Lettre de présentation optionnelle (même socle que DGA / terrain).
   if (opts.coverLetter) {
     try { const { drawCoverLetterPage } = await import('@/lib/pdf/letterhead'); drawCoverLetterPage(doc, { logo, ...opts.coverLetter } as any); doc.addPage(); } catch { /* ignore */ }
   }
 
-  const header = () => {
-    if (logo) { try { doc.addImage(logo, 'PNG', M, 22, 0, 26); } catch { /* */ } }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
-    doc.text(`${tr('Rapport', 'Report')}: ${reportNumber}`, W - M, 30, { align: 'right' });
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${tr('Généré le', 'Generated')}: ${new Date().toISOString().slice(0, 10)}`, W - M, 42, { align: 'right' });
-    doc.setDrawColor(...accent); doc.setLineWidth(0.8); doc.line(M, 50, W - M, 50);
-  };
-  let y = 64;
-  const ensure = (h: number) => { if (y + h > Hp - 46) { doc.addPage(); header(); y = 64; } };
+  // En-tête de page IDENTIQUE au socle DGA/terrain (logo ratio préservé + métadonnées droite + filet accent).
+  const header = () => drawHeader(doc, { logo, rightLines: [`${tr('Rapport', 'Report')} ${reportNumber}`, `${tr('Généré le', 'Generated')} ${new Date().toISOString().slice(0, 10)}`], accent, ruleWidth, showRule });
+  let y = header();
+  const ensure = (h: number) => { if (y + h > Hp - 46) { doc.addPage(); y = header(); } };
   const sectionTitle = (s: string) => { ensure(22); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...accent); doc.text(s.toUpperCase(), M, y); y += 6; doc.setDrawColor(...accent); doc.setLineWidth(0.4); doc.line(M, y, W - M, y); y += 10; };
   const rowKV = (label: string, value: any) => { const val = (value === null || value === undefined || value === '') ? '—' : String(value); ensure(13); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(90); doc.text(label, M, y); doc.setFont('helvetica', 'normal'); doc.setTextColor(40); const lines = doc.splitTextToSize(val, W - 2 * M - 150); doc.text(lines, M + 150, y); y += Math.max(13, lines.length * 12); };
   const para = (txt: string) => { if (!txt) return; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40); for (const ln of doc.splitTextToSize(String(txt), W - 2 * M)) { ensure(12); doc.text(ln, M, y); y += 12; } };
   const has = (v: any) => v !== null && v !== undefined && v !== '';
 
-  header();
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(...accent);
-  doc.text(tr("Rapport d'incident / accident", 'Incident / accident report'), M, y); y += 18;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
-  doc.text(`${opts.typeLabel} · ${tr('Gravité', 'Severity')} ${rep.severityLevel ?? '—'}/5 · ${tr('Date', 'Date')} ${rep.incidentDate || '—'} ${rep.incidentTime || ''}`, M, y); y += 16;
+  // Titre de document façon DGA (drawTitle : titre gras + sous-titre gris).
+  y = drawTitle(doc, y, tr("Rapport d'incident / accident", 'Incident / accident report'),
+    `${opts.typeLabel} · ${tr('Gravité', 'Severity')} ${rep.severityLevel ?? '—'}/5 · ${tr('Date', 'Date')} ${rep.incidentDate || '—'} ${rep.incidentTime || ''}`,
+    accent, titleSize, subtitleSize);
 
   sectionTitle(tr('Informations générales', 'General information'));
   rowKV(tr('Type', 'Type'), opts.typeLabel);
@@ -204,13 +203,8 @@ export async function generateIncidentReportPdf(opts: {
   sigRow(tr('Réviseur SST', 'HSE reviewer'), rep.hseReviewerName, rep.hseReviewerDate, !!rep.hseReviewerSigned);
   sigRow(tr('Direction', 'Management'), rep.managementName, rep.managementDate, !!rep.managementSigned);
 
-  // Pieds de page numérotés + avertissement (même esprit que DGA).
-  const total = doc.getNumberOfPages();
-  for (let p = 1; p <= total; p++) {
-    doc.setPage(p); doc.setFontSize(7); doc.setTextColor(150);
-    doc.text(tr("C-Secur360 — Rapport d'incident. Données fournies par le déclarant ; présentation à titre indicatif.", 'C-Secur360 — Incident report. Data provided by the reporter; presented for information only.'), M, Hp - 24, { maxWidth: W - 2 * M } as any);
-    doc.text(`${p} / ${total}`, W - M, Hp - 14, { align: 'right' });
-  }
+  // Pieds de page numérotés (helper letterhead — identique à DGA/terrain).
+  applyFooters(doc, tr("C-Secur360 — Rapport d'incident. Données fournies par le déclarant ; présentation à titre indicatif.", 'C-Secur360 — Incident report. Data provided by the reporter; presented for information only.'));
 
   const base = String(reportNumber || 'rapport').trim().replace(/[^\w.-]+/g, '_');
   doc.save(`Rapport-accident-${base}.pdf`);
