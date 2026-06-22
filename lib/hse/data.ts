@@ -15,7 +15,7 @@ export type HseIncident = {
   status?: string; root_cause?: string | null; contributing_factors?: string | null; closed_at?: string | null; closed_by?: string | null;
 };
 export type HseDeadline = { id: string; tenant_id: string; incident_id: string; kind: string; due_at: string; label_fr?: string; label_en?: string; status: string; completed_at?: string | null; event_code?: string; occurred_at?: string };
-export type HseHours = { id?: string; tenant_id?: string; project_id?: string | null; period_start: string; period_end: string; hours: number; headcount?: number | null };
+export type HseHours = { id?: string; tenant_id?: string; project_id?: string | null; period_start: string; period_end: string; hours: number; headcount?: number | null; note?: string | null };
 
 // ── Référentiels globaux (lecture) ──────────────────────────────────────────────────────────────────
 export async function getFrameworks(): Promise<HseFramework[]> {
@@ -150,10 +150,15 @@ export async function getHoursWorked(tenant: string): Promise<HseHours[]> {
   return (data || []) as HseHours[];
 }
 export async function saveHoursWorked(tenant: string, h: HseHours): Promise<{ error?: string }> {
-  const { error } = await supabase.from('hse_hours_worked').upsert({
+  const row: any = {
     tenant_id: tenant, project_id: h.project_id || null, period_start: h.period_start, period_end: h.period_end,
-    hours: Number(h.hours) || 0, headcount: h.headcount ?? null,
-  }, { onConflict: 'tenant_id,project_id,period_start' });
+    hours: Number(h.hours) || 0, headcount: h.headcount ?? null, note: h.note ?? null,
+  };
+  let { error } = await supabase.from('hse_hours_worked').upsert(row, { onConflict: 'tenant_id,project_id,period_start' });
+  if (error && /note/.test(error.message || '')) {   // migration 262 pas encore appliquée → repli sans la note
+    delete row.note;
+    ({ error } = await supabase.from('hse_hours_worked').upsert(row, { onConflict: 'tenant_id,project_id,period_start' }));
+  }
   return { error: error?.message };
 }
 export async function deleteHoursWorked(tenant: string, id: string): Promise<void> {

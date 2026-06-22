@@ -86,6 +86,7 @@ export default function HsePage() {
   const [deadlines, setDeadlines] = useState<HseDeadline[]>([]);
   const [hours, setHours] = useState<HseHours[]>([]);          // saisies manuelles (hse_hours_worked)
   const [autoHours, setAutoHours] = useState<HseHours[]>([]);  // dénominateur résolu (feuilles de temps + manuel)
+  const [autoWeeks, setAutoWeeks] = useState<HseHours[]>([]);  // semaines AUTO (paie) en lecture seule
   const [breakdown, setBreakdown] = useState<HoursBreakdown | null>(null);
   const [tsByMonth, setTsByMonth] = useState<Record<string, number>>({});
   const [manualByMonth, setManualByMonth] = useState<Record<string, number>>({});
@@ -112,7 +113,7 @@ export default function HsePage() {
       setIncidents(inc); setDeadlines(dl); setHours(hr); setRegistersDue(rd); setProactive([...(pro as any), ...proFeed] as any);
       // Dénominateur AUTO : feuilles de temps (réel) priorisées, manuel comble les semaines non couvertes.
       const resolved = await resolveKpiHours(tenant, hr);
-      setAutoHours(resolved.hours); setBreakdown(resolved.breakdown); setTsByMonth(resolved.tsByMonth); setManualByMonth(resolved.manualByMonth);
+      setAutoHours(resolved.hours); setBreakdown(resolved.breakdown); setTsByMonth(resolved.tsByMonth); setManualByMonth(resolved.manualByMonth); setAutoWeeks(resolved.autoWeeks);
       setInterconnect(await getInterconnectStats(tenant, resolved.breakdown.plannedHours));
       // Feed KPI : incidents du module Accidents (incident_reports) — sans ressaisie.
       try { const af = await fetch(`/api/hse/incident-feed?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }); const aj = await af.json(); setAccidentFeed(af.ok ? (aj.items || []) : []); } catch { setAccidentFeed([]); }
@@ -181,7 +182,7 @@ export default function HsePage() {
 
         {loading ? <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <>
-            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} canHr={canHr} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await reloadHours(); }} onMonthlyHours={async (month: string, val: number) => {
+            {tab === 'kpi' && <KpiTab tr={tr} EN={EN} card={card} agg={agg} kpiRows={kpiRows} rateBase={rateBase} deadlines={deadlines} registersDue={registersDue} hours={hours} incidents={kpiIncidents} accidentsCount={accidentFeed.length} tenantStart={tenantStart} canHr={canHr} proactive={proactive} breakdown={breakdown} interconnect={interconnect} tsByMonth={tsByMonth} manualByMonth={manualByMonth} autoWeeks={autoWeeks} tenant={tenant} onHours={async (h: HseHours) => { const r = await saveHoursWorked(tenant, h); if (r.error) { setNotice(tr('Heures non enregistrées : ' + r.error, 'Hours not saved: ' + r.error)); return; } await reloadHours(); }} onMonthlyHours={async (month: string, val: number) => {
                 // Remplace le total MANUEL du mois : retire les lignes manuelles existantes de ce mois, puis
                 // pose une seule ligne-mois (ou rien si 0). Évite l'accumulation à chaque édition.
                 for (const x of (hours as any[]).filter(x => x.id && String(x.period_start).slice(0, 7) === month)) await deleteHoursWorked(tenant, x.id);
@@ -239,8 +240,8 @@ function TrainingExpiryBanner({ tr, tenant, canHr }: any) {
 }
 
 // ── KPI ────────────────────────────────────────────────────────────────────────────────────────────
-function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, tenantStart, canHr, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
-  const [h, setH] = useState({ period_start: '', period_end: '', hours: '' });
+function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue, hours, incidents, accidentsCount, tenantStart, canHr, proactive, breakdown, interconnect, tsByMonth = {}, manualByMonth = {}, autoWeeks = [], tenant, onHours, onMonthlyHours, onDeleteHours, settings }: any) {
+  const [h, setH] = useState({ period_start: '', period_end: '', hours: '', note: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
   // Jours sans accident avec arrêt (affichage chantier). Source = miroirs Accidents (vraies données).
@@ -384,27 +385,50 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         <p className="mb-2 text-[11px] text-gray-500">{tr('AUTO depuis les feuilles de temps de TOUS les employés du tenant (prioritaire). La saisie manuelle ci-dessous (ou la colonne « Manuel » du tableau mensuel) S’AJOUTE à l’auto — pour les heures de SOUS-TRAITANTS sur le site ou un ajustement, non saisies dans les feuilles de temps.', 'AUTO from ALL tenant employees’ timesheets (priority). The manual entry below (or the “Manual” column in the monthly table) ADDS to auto — for SUBCONTRACTOR on-site hours or an adjustment not captured in timesheets.')}</p>
         <div className="mb-2 flex flex-wrap items-end gap-2">
           <label className="text-xs font-semibold text-gray-500">{tr('Semaine du', 'Week of')}<input type="date" value={h.period_start} onChange={e => setH({ ...h, period_start: e.target.value, period_end: e.target.value })} className="mt-1 block rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
-          <label className="text-xs font-semibold text-gray-500">{tr('Heures', 'Hours')}<input type="number" value={h.hours} onChange={e => setH({ ...h, hours: e.target.value })} className="mt-1 block w-28 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
+          <label className="text-xs font-semibold text-gray-500">{tr('Heures', 'Hours')}<input type="number" value={h.hours} onChange={e => setH({ ...h, hours: e.target.value })} className="mt-1 block w-24 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
+          <label className="flex-1 text-xs font-semibold text-gray-500">{tr('Note', 'Note')}<input type="text" value={h.note} onChange={e => setH({ ...h, note: e.target.value })} placeholder={tr('Ex. Temps effectué par un sous-traitant', 'E.g. Time worked by a subcontractor')} className="mt-1 block w-full min-w-[180px] rounded-lg border border-gray-200 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900" /></label>
           <button onClick={async () => {
             const n = Number(h.hours);
             if (!h.period_start) return;
             if (!isFinite(n) || n <= 0) { alert(tr('Heures invalides : saisir un nombre positif.', 'Invalid hours: enter a positive number.')); return; }
             if (n > 100000) { alert(tr('Valeur aberrante (> 100 000 h pour une semaine).', 'Aberrant value (> 100,000 h for one week).')); return; }
-            await onHours({ period_start: h.period_start, period_end: h.period_end || h.period_start, hours: n }); setH({ period_start: '', period_end: '', hours: '' });
+            await onHours({ period_start: h.period_start, period_end: h.period_end || h.period_start, hours: n, note: h.note || null }); setH({ period_start: '', period_end: '', hours: '', note: '' });
           }} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">{tr('Ajouter', 'Add')}</button>
         </div>
 
-        {/* Lignes manuelles existantes — éditables / supprimables */}
+        {/* Semaines AUTO (paie) — lecture seule, une ligne par semaine */}
+        {autoWeeks.length > 0 && (
+          <div className="mb-2 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
+            <div className="bg-emerald-50 px-2 py-1 text-[11px] font-semibold uppercase text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{tr('Auto (paie) — total par semaine', 'Auto (payroll) — total by week')}</div>
+            <table className="w-full text-xs"><thead><tr className="text-left text-gray-400"><th className="px-2 py-1">{tr('Semaine', 'Week')}</th><th className="px-2 text-right">{tr('Heures', 'Hours')}</th></tr></thead>
+              <tbody>{autoWeeks.slice(0, 16).map((w: any, i: number) => (
+                <tr key={`auto-${w.period_start}-${i}`} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-2 py-1 text-gray-600 dark:text-gray-300">{w.period_start}{w.period_end && w.period_end !== w.period_start ? ` → ${w.period_end}` : ''}</td>
+                  <td className="px-2 text-right tabular-nums">{Math.round(Number(w.hours) || 0).toLocaleString()}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+            {autoWeeks.length > 16 && <div className="px-2 py-1 text-[11px] text-gray-400">… {autoWeeks.length - 16} {tr('semaine(s) de plus', 'more week(s)')}</div>}
+          </div>
+        )}
+
+        {/* Lignes MANUELLES — éditables (heures + note) / supprimables */}
         {hours.length > 0 && (
           <div className="mb-2 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
-            <table className="w-full text-xs"><thead><tr className="text-left text-gray-400"><th className="px-2 py-1">{tr('Période', 'Period')}</th><th className="px-2 text-right">{tr('Heures', 'Hours')}</th><th></th></tr></thead>
+            <div className="bg-amber-50 px-2 py-1 text-[11px] font-semibold uppercase text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{tr('Manuel (sous-traitants / ajustements)', 'Manual (subcontractors / adjustments)')}</div>
+            <table className="w-full text-xs"><thead><tr className="text-left text-gray-400"><th className="px-2 py-1">{tr('Période', 'Period')}</th><th className="px-2 text-right">{tr('Heures', 'Hours')}</th><th className="px-2">{tr('Note', 'Note')}</th><th></th></tr></thead>
               <tbody>{[...hours].sort((a: any, b: any) => String(b.period_start).localeCompare(String(a.period_start))).map((x: any) => (
                 <tr key={x.id || x.period_start} className="border-t border-gray-50 dark:border-gray-700/50">
                   <td className="px-2 py-1 text-gray-600 dark:text-gray-300">{x.period_start}{x.period_end && x.period_end !== x.period_start ? ` → ${x.period_end}` : ''}</td>
                   <td className="px-2 text-right">
                     <input key={`${x.id}:${x.hours}`} type="number" min={0} defaultValue={x.hours}
-                      onBlur={e => { const v = Math.max(0, Number(e.target.value) || 0); if (v !== Number(x.hours)) onHours({ period_start: x.period_start, period_end: x.period_end || x.period_start, hours: v }); }}
+                      onBlur={e => { const v = Math.max(0, Number(e.target.value) || 0); if (v !== Number(x.hours)) onHours({ period_start: x.period_start, period_end: x.period_end || x.period_start, hours: v, note: x.note ?? null }); }}
                       className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-right dark:border-gray-700 dark:bg-gray-900" />
+                  </td>
+                  <td className="px-2">
+                    <input key={`${x.id}:note`} type="text" defaultValue={x.note || ''} placeholder={tr('Ex. Sous-traitant', 'E.g. Subcontractor')}
+                      onBlur={e => { const nv = e.target.value.trim(); if (nv !== (x.note || '')) onHours({ period_start: x.period_start, period_end: x.period_end || x.period_start, hours: Number(x.hours) || 0, note: nv || null }); }}
+                      className="w-full min-w-[160px] rounded border border-gray-200 px-1.5 py-0.5 dark:border-gray-700 dark:bg-gray-900" />
                   </td>
                   <td className="px-2 text-right"><button onClick={() => { if (x.id && confirm(tr('Supprimer cette ligne ?', 'Delete this line?'))) onDeleteHours(x.id); }} className="text-gray-300 hover:text-rose-500"><Trash2 size={13} /></button></td>
                 </tr>

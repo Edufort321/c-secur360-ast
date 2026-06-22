@@ -59,7 +59,7 @@ const monthOf = (s?: string) => (s || '').slice(0, 7);
  * ajustement sur le site, non saisis dans les feuilles de temps). Total mois = auto + manuel.
  * Retourne aussi les heures auto et manuelles PAR MOIS pour l'affichage/édition de l'évolution mensuelle.
  */
-export async function resolveKpiHours(tenant: string, manual: HseHours[]): Promise<{ hours: HseHours[]; breakdown: HoursBreakdown; tsByMonth: Record<string, number>; manualByMonth: Record<string, number> }> {
+export async function resolveKpiHours(tenant: string, manual: HseHours[]): Promise<{ hours: HseHours[]; breakdown: HoursBreakdown; tsByMonth: Record<string, number>; manualByMonth: Record<string, number>; autoWeeks: HseHours[] }> {
   const { rows: ts } = await aggregateTimesheetHours(tenant);
   const hours = [...ts, ...manual];   // additif : employés (auto) + sous-traitants/ajustements (manuel)
 
@@ -72,5 +72,7 @@ export async function resolveKpiHours(tenant: string, manual: HseHours[]): Promi
   const plannedHours = planned.reduce((s, r) => s + r.hours, 0);
   const source: HoursBreakdown['source'] = ts.length && manual.length ? 'mixed' : ts.length ? 'timesheets' : manual.length ? 'manual' : 'none';
 
-  return { hours, breakdown: { timesheetHours: Math.round(timesheetHours * 100) / 100, manualHours: Math.round(manualHours * 100) / 100, plannedHours, weeks: ts.length, source }, tsByMonth, manualByMonth };
+  // Semaines AUTO (feuilles de temps) triées récentes d'abord — affichées en lecture seule dans la carte.
+  const autoWeeks = [...ts].sort((a, b) => String(b.period_start).localeCompare(String(a.period_start)));
+  return { hours, breakdown: { timesheetHours: Math.round(timesheetHours * 100) / 100, manualHours: Math.round(manualHours * 100) / 100, plannedHours, weeks: ts.length, source }, tsByMonth, manualByMonth, autoWeeks };
 }
