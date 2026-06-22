@@ -15,6 +15,37 @@ const ASTATUS: Record<string, { fr: string; en: string }> = {
   pending: { fr: 'En attente', en: 'Pending' }, in_progress: { fr: 'En cours', en: 'In progress' }, completed: { fr: 'Complétée', en: 'Completed' },
 };
 
+// Schéma corporel (silhouette AVANT + ARRIÈRE, homme) avec les zones sélectionnées en rouge → SVG string.
+// Les vues avant/arrière partagent le repère (avant x 0–724, arrière x 724–1448) → un seul SVG.
+function bodySvg(selected: Set<string>): string {
+  const regs = BODY_REGIONS.filter((r: any) => r.gender === 'male'); // avant + arrière
+  const paths = regs.flatMap((r: any) => (r.paths || []).map((d: string) => {
+    const sel = selected.has(r.id);
+    return `<path d="${d}" fill="${sel ? '#dc2626' : '#dbe2ea'}" stroke="${sel ? '#991b1b' : '#9aa6b2'}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  })).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1448 1448">${paths}</svg>`;
+}
+
+// SVG → PNG (data URL) via canvas. Client-side. Best-effort (null si échec).
+async function svgToPng(svg: string, w: number, h: number): Promise<string | null> {
+  if (typeof document === 'undefined') return null;
+  return new Promise(res => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d'); if (!ctx) { res(null); return; }
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+          res(c.toDataURL('image/png'));
+        } catch { res(null); }
+      };
+      img.onerror = () => res(null);
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    } catch { res(null); }
+  });
+}
+
 async function loadImg(url?: string | null): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:')) return url;
@@ -87,7 +118,8 @@ export async function generateIncidentReportPdf(opts: {
   const persons: any[] = Array.isArray(rep.injuredPersons) ? rep.injuredPersons : [];
   if (persons.length) {
     sectionTitle(tr('Personnes blessées', 'Injured persons'));
-    persons.forEach((p, i) => {
+    for (let i = 0; i < persons.length; i++) {
+      const p = persons[i];
       ensure(16); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20); doc.text(`${tr('Blessé', 'Injured')} #${i + 1} — ${p.name || '—'}`, M, y); y += 13;
       rowKV(tr('Poste', 'Position'), p.jobTitle);
       rowKV(tr('Employeur', 'Employer'), p.company);
@@ -97,9 +129,16 @@ export async function generateIncidentReportPdf(opts: {
       if (p.lostTime) rowKV(tr('Arrêt de travail', 'Lost time'), `${p.lostTimeDays || 0} ${tr('jour(s)', 'day(s)')}`);
       if (p.restricted) rowKV(tr('Travail restreint / mutation', 'Restricted / transfer'), '✔');
       if (p.fatality) rowKV(tr('Décès', 'Fatality'), '✔');
-      if (Array.isArray(p.bodyRegions) && p.bodyRegions.length) rowKV(tr('Zones blessées', 'Injured areas'), p.bodyRegions.map((id: string) => (BODY_LABELS[id] ? (fr ? BODY_LABELS[id].fr : BODY_LABELS[id].en) : id)).join(', '));
+      if (Array.isArray(p.bodyRegions) && p.bodyRegions.length) {
+        rowKV(tr('Zones blessées', 'Injured areas'), p.bodyRegions.map((id: string) => (BODY_LABELS[id] ? (fr ? BODY_LABELS[id].fr : BODY_LABELS[id].en) : id)).join(', '));
+        // Schéma corporel (avant + arrière) avec les zones touchées en rouge — joint au rapport.
+        try {
+          const png = await svgToPng(bodySvg(new Set(p.bodyRegions)), 760, 760);
+          if (png) { const dim = 150; ensure(dim + 8); doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(120); doc.text(tr('Schéma corporel (avant / arrière)', 'Body diagram (front / back)'), M, y); y += 4; try { doc.addImage(png, 'PNG', M, y, dim, dim); } catch { /* skip */ } y += dim + 6; }
+        } catch { /* best-effort */ }
+      }
       y += 4;
-    });
+    }
   }
 
   const witnesses: any[] = Array.isArray(rep.witnesses) ? rep.witnesses : [];
