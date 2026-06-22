@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { Wrench, LayoutDashboard, ClipboardList, Building2, Settings, AlertTriangle, Loader2, CheckCircle, Phone, Save, Package, FileText, CalendarClock } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import ClientTree from '@/components/maintenance/ClientTree';
 import PlanningBoard from '@/components/maintenance/PlanningBoard';
-import GabaritManager from '@/components/maintenance/GabaritManager';
 import ProjectChainPanel from '@/components/maintenance/ProjectChainPanel';
 import { supabase } from '@/lib/supabase';
 import { getServiceClients, getServiceEquipment, getLastInspections, type SClient, type SEquip, type LastInsp } from '@/lib/serviceTree';
 import { RESULT_META } from '@/lib/inspectionForms';
+// Onglet « Rapport de Maintenance » = MÊME moteur que Rapport terrain (gabarits + rapports + import IA +
+// brouillons + transfert/partage), scopé doc_type='maintenance'. Client-only (localStorage/window).
+const RapportsApp = dynamic<{ docType?: string }>(() => import('@/components/rapports/RapportsApp') as any, { ssr: false });
 
 // Module Maintenance — flux unique et LÉGER : on part d'un GABARIT (modèle « Rapport d'inspection »),
 // on l'assigne à un ÉQUIPEMENT (avec QR + récurrence), on lance une inspection, et le TABLEAU DE BORD
@@ -106,15 +109,9 @@ export default function MaintenancePage() {
           ))}
         </div>
 
-        {/* ── GABARITS (léger) : modèles « Rapport d'inspection » faits de blocs simples ── */}
-        {tab === 'gabarits' && (
-          <div>
-            <div className="mb-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm text-orange-800 dark:border-orange-800 dark:bg-orange-900/20">
-              <strong>Pars d'un gabarit</strong> : un modèle réutilisable (genre « Rapport d'inspection ») fait de blocs simples — Équipement, Photos, Mesures, Points d'inspection. Ensuite, crée tes équipements et assigne-leur un gabarit dans « Clients & équipements ».
-            </div>
-            <GabaritManager tenant={tenant} tr={(fr) => fr} />
-          </div>
-        )}
+        {/* ── RAPPORT DE MAINTENANCE : moteur COMPLET du Rapport terrain (gabarits identiques, import IA,
+              brouillons, transfert/partage), scopé doc_type='maintenance'. ── */}
+        {tab === 'gabarits' && <RapportsApp docType="maintenance" />}
 
         {/* ── CLIENTS & ÉQUIPEMENTS (rattachement sur sélection + lancer une inspection) ── */}
         {tab === 'clients' && <ClientTree tenant={tenant} tr={(fr) => fr} />}
