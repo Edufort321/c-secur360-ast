@@ -108,8 +108,8 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
               <ArrowLeft size={20} />
             </button>
           )}
-          <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-3">
-          <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-16 w-auto" />
+          <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-2 sm:gap-3">
+          <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-9 w-auto max-w-[130px] object-contain sm:h-14 sm:max-w-[200px]" />
           <div className="leading-tight hidden sm:block">
             <div className="font-bold text-white">C-Secur360</div>
             <div className="text-xs text-gray-400">{subtitle || (tenant ? `${t('platform')} · ${tenant}` : (lang === 'fr' ? 'Panneau multi-clients' : 'Multi-client panel'))}</div>
@@ -156,7 +156,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
             <Link
               href={`/${tenant}/modules`}
               title={lang === 'fr' ? 'Accueil' : 'Home'}
-              className="rounded-lg p-2 text-gray-300 transition hover:bg-white/10 hover:text-white"
+              className="hidden rounded-lg p-2 text-gray-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
             >
               <Home size={18} />
             </Link>
@@ -167,7 +167,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
               onClick={logout}
               title={lang === 'fr' ? 'Déconnexion' : 'Log out'}
               aria-label={lang === 'fr' ? 'Déconnexion' : 'Log out'}
-              className="rounded-lg p-2 text-gray-300 transition hover:bg-red-500/20 hover:text-red-300"
+              className="hidden rounded-lg p-2 text-gray-300 transition hover:bg-red-500/20 hover:text-red-300 sm:inline-flex"
             >
               <LogOut size={18} />
             </button>
