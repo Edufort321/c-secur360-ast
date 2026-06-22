@@ -79,10 +79,14 @@ export async function generateIncidentReportPdf(opts: {
   let ruleWidth = 1, titleSize = 14, subtitleSize = 11, showRule = true;
   try {
     const { pdfStyleFor } = await import('@/lib/pdfStyle');
+    const isGray = (a: [number, number, number]) => a[0] === 60 && a[1] === 60 && a[2] === 60;  // accent défaut (#3c3c3c)
     const st = await pdfStyleFor(opts.tenant || '', 'accidents');
-    const isDefaultGray = st.accent[0] === 60 && st.accent[1] === 60 && st.accent[2] === 60;
-    accent = isDefaultGray ? [185, 28, 28] : st.accent;
     ruleWidth = st.ruleWidth; titleSize = st.titleSize; subtitleSize = st.subtitleSize; showRule = st.showRule;
+    if (!isGray(st.accent)) accent = st.accent;                          // 1) couleur « Rapport d'accident » réglée en admin
+    else {                                                               // 2) repli sur « Rapport terrain », sinon rouge accident
+      const rap = await pdfStyleFor(opts.tenant || '', 'rapports');
+      accent = isGray(rap.accent) ? [185, 28, 28] : rap.accent;
+    }
   } catch { /* défaut */ }
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
 
