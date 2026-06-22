@@ -1311,15 +1311,17 @@ export default function IncidentReportForm({
     medical:   'bg-yellow-100 text-yellow-700 border-yellow-200',
   };
 
-  // #71 : ouvre un document imprimable (impression -> PDF du navigateur), bilingue + reglementaire.
-  function printReport() {
-    const stamp = new Date().toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA');
-    const html = buildPrintHtml(report, reportNumber, lang, stamp);
-    const w = window.open('', '_blank', 'width=900,height=1000');
-    if (!w) { alert(tr.pr.popupBlocked); return; }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+  // Rapport PDF PRO (jsPDF) — même socle que le DGA / rapport terrain (logo, couleur de marque, pieds de
+  // page). Couvre tout le rapport (blessés + zones, témoins, véhicule, 5-pourquoi, photos, CAPA, signatures).
+  async function printReport() {
+    const typeLabel = report.incidentType === 'near_miss' ? (lang === 'fr' ? 'Passé proche' : 'Near miss')
+      : ({ accident: ['Accident de travail', 'Workplace accident'], vehicle: ['Accident de véhicule', 'Vehicle accident'], property: ['Dommages matériels', 'Property damage'], medical: ['Maladie professionnelle', 'Occupational illness'] }[report.incidentType] || ['Incident', 'Incident'])[lang === 'fr' ? 0 : 1];
+    try {
+      const { generateIncidentReportPdf } = await import('./reportPdf');
+      await generateIncidentReportPdf({ report, reportNumber, lang, typeLabel, tenant, logoUrl: null });
+    } catch (e: any) {
+      alert((lang === 'fr' ? 'Échec de la génération du PDF : ' : 'PDF generation failed: ') + (e?.message || ''));
+    }
   }
 
   return (
