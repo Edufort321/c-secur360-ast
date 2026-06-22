@@ -431,7 +431,7 @@ const TR = {
   fr: {
     back: 'Retour', draft: 'Brouillon', submittedRO: 'Soumis — lecture seule', closed: 'Fermé',
     saving: 'Enregistrement…', saved: 'Enregistré', save: 'Sauvegarder', submit: 'Soumettre',
-    confirmSubmit: 'Confirmer la soumission ?', yes: 'Oui', cancel: 'Annuler',
+    confirmSubmit: 'Soumettre verrouille le rapport, le COMPILE dans les KPI SST et remet le compteur « jours sans accident » à 0. Pour ne pas affecter les statistiques, utilisez « Sauvegarder » (brouillon). Soumettre maintenant ?', yes: 'Soumettre', cancel: 'Annuler',
     nav: { general: 'Général', location: 'Lieu', persons: 'Blessés', body: 'Schéma corporel', description: 'Description', vehicle: 'Véhicule', analysis: 'Analyse', actions: 'Actions', capa: 'Suivi CAPA', compliance: 'Réglementation', approval: 'Approbation' },
     g: {
       title: 'Informations générales', type: "Type d'incident", province: 'Province / territoire', severity: 'Sévérité',
@@ -471,7 +471,7 @@ const TR = {
   en: {
     back: 'Back', draft: 'Draft', submittedRO: 'Submitted — read only', closed: 'Closed',
     saving: 'Saving…', saved: 'Saved', save: 'Save', submit: 'Submit',
-    confirmSubmit: 'Confirm submission?', yes: 'Yes', cancel: 'Cancel',
+    confirmSubmit: 'Submitting locks the report, COMPILES it into the HSE KPIs and resets the “days without accident” counter to 0. To avoid affecting statistics, use “Save” (draft). Submit now?', yes: 'Submit', cancel: 'Cancel',
     nav: { general: 'General', location: 'Location', persons: 'Injured', body: 'Body diagram', description: 'Description', vehicle: 'Vehicle', analysis: 'Analysis', actions: 'Actions', capa: 'CAPA tracking', compliance: 'Regulations', approval: 'Approval' },
     g: {
       title: 'General information', type: 'Incident type', province: 'Province / territory', severity: 'Severity',
@@ -1401,15 +1401,20 @@ export default function IncidentReportForm({
                     {tr.submit}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-300 rounded-lg px-3 py-1.5">
-                    <span className="text-xs text-red-700 font-medium">{tr.confirmSubmit}</span>
-                    <button
-                      onClick={() => { doSave(report, true); setSubmitConfirm(false); }}
-                      className="text-xs px-2 py-0.5 bg-red-600 text-white rounded font-medium"
-                    >
-                      {tr.yes}
-                    </button>
-                    <button onClick={() => setSubmitConfirm(false)} className="text-xs text-gray-500">{tr.cancel}</button>
+                  <div className="flex max-w-md items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-600" />
+                    <div>
+                      <p className="text-xs leading-snug text-red-700">{tr.confirmSubmit}</p>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <button
+                          onClick={() => { doSave(report, true); setSubmitConfirm(false); }}
+                          className="rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                        >
+                          {tr.yes}
+                        </button>
+                        <button onClick={() => setSubmitConfirm(false)} className="text-xs text-gray-500 hover:text-gray-700">{tr.cancel}</button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </>
