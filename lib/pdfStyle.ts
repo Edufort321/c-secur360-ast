@@ -4,7 +4,7 @@
 // tenant : company_settings.pdf_styles (JSONB). Les exporteurs appellent pdfStyleFor(tenant, module).
 import { supabase } from '@/lib/supabase';
 
-export type PdfModuleKey = 'soumission' | 'facture' | 'paie' | 'projet' | 'dga' | 'rapports' | 'feuille_temps' | 'inspection' | 'bon_commande';
+export type PdfModuleKey = 'soumission' | 'facture' | 'paie' | 'projet' | 'dga' | 'rapports' | 'feuille_temps' | 'inspection' | 'bon_commande' | 'rh' | 'comptabilite' | 'fiscal' | 'hse' | 'accidents';
 export const PDF_MODULES: { key: PdfModuleKey; fr: string; en: string }[] = [
   { key: 'soumission', fr: 'Soumission', en: 'Quote' },
   { key: 'facture', fr: 'Facture', en: 'Invoice' },
@@ -15,6 +15,11 @@ export const PDF_MODULES: { key: PdfModuleKey; fr: string; en: string }[] = [
   { key: 'dga', fr: 'Diagnostic DGA', en: 'DGA diagnostic' },
   { key: 'rapports', fr: 'Rapport terrain', en: 'Field report' },
   { key: 'inspection', fr: 'Inspection', en: 'Inspection' },
+  { key: 'accidents', fr: 'Rapport d’accident', en: 'Incident report' },
+  { key: 'hse', fr: 'Santé-sécurité (KPI)', en: 'Health & safety (KPI)' },
+  { key: 'rh', fr: 'Ressources humaines', en: 'Human resources' },
+  { key: 'comptabilite', fr: 'Comptabilité', en: 'Accounting' },
+  { key: 'fiscal', fr: 'Fiscal', en: 'Tax' },
 ];
 
 export const DEFAULT_ACCENT = '#3c3c3c';

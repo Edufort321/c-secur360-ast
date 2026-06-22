@@ -66,7 +66,7 @@ export async function generateIncidentReportPdf(opts: {
   let accent: [number, number, number] = [185, 28, 28]; // rouge accident par défaut
   try {
     const { getPdfStyles, resolveKnobs, hexToRgb, DEFAULT_ACCENT } = await import('@/lib/pdfStyle');
-    const k = resolveKnobs(await getPdfStyles(opts.tenant || ''), 'rapports');
+    const k = resolveKnobs(await getPdfStyles(opts.tenant || ''), 'accidents');
     if (k.accent && k.accent.toLowerCase() !== DEFAULT_ACCENT.toLowerCase()) accent = hexToRgb(k.accent);
   } catch { /* défaut */ }
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');

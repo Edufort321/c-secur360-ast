@@ -12,7 +12,7 @@ export async function exportHseScorecard(opts: {
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default as any;
   let accent: [number, number, number] = [60, 96, 122];
-  try { const { pdfStyleFor } = await import('@/lib/pdfStyle'); const st = await pdfStyleFor(opts.tenant, 'rapports'); if (st?.accent) accent = st.accent as any; } catch { /* défaut */ }
+  try { const { pdfStyleFor } = await import('@/lib/pdfStyle'); const st = await pdfStyleFor(opts.tenant, 'hse'); if (st?.accent) accent = st.accent as any; } catch { /* défaut */ }
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth(); const M = 40; let y = 50;
