@@ -247,7 +247,8 @@ export default function BodyMap({
   }, [selected, multiple, isControlled, onChange]);
 
   const lbl = (r: BodyRegion) => (locale === "fr" ? r.labelFr : r.labelEn);
-  const selectedRegions = ALL.filter((r) => selected.includes(r.id));
+  // Une SEULE entrée par id sélectionné (un même id existe en plusieurs vues/genres → sinon doublons d'affichage).
+  const selectedRegions = selected.map((id) => ALL.find((r) => r.id === id)).filter(Boolean) as BodyRegion[];
   const bodyRegions = BODY_REGIONS.filter((r) => r.view === view && r.gender === gender);
   const viewBox = VIEWBOXES[gender + "-" + view];
 
