@@ -2943,7 +2943,12 @@ async function renderAstSection(
   ast: ASTPermit, language: Language, logoDataUrl?: string | null,
 ) {
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
-  const NAVY: [number, number, number] = [17, 24, 39]; // = gray-900 (header principal)
+  const NAVY: [number, number, number] = [17, 24, 39]; // titres/encre (gray-900)
+  // Palette façon DGA : filet GRIS fin, en-têtes de table CLAIRS à texte foncé (pas de bandeau plein).
+  const RULE: [number, number, number] = [214, 217, 222];
+  const HEAD_BG: [number, number, number] = [243, 244, 246];
+  const INK: [number, number, number] = [31, 41, 55];
+  const BODY: [number, number, number] = [55, 65, 81];
   const margin = 14;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -2974,13 +2979,26 @@ async function renderAstSection(
     doc.text(tr('Analyse Sécurité au Travail', 'Job Safety Analysis'), tx, 12);
     doc.setFontSize(10); doc.setFont('helvetica', 'normal');
     doc.text(ast.permit_number, tx, 18);
-    doc.setDrawColor(NAVY[0], NAVY[1], NAVY[2]); doc.setLineWidth(0.5);
+    // Métadonnées à DROITE (façon DGA) : date de génération + statut.
+    doc.setFontSize(8); doc.setTextColor(110); doc.setFont('helvetica', 'normal');
+    doc.text(`${tr('Généré le', 'Generated')} ${new Date().toISOString().slice(0, 10)}`, pageW - margin, 12, { align: 'right' });
+    doc.setDrawColor(RULE[0], RULE[1], RULE[2]); doc.setLineWidth(0.4);
     doc.line(margin, HEADER_H - 4, pageW - margin, HEADER_H - 4);
     doc.setTextColor(0, 0, 0);
   };
 
   const tableMargin = { top: HEADER_H, left: margin, right: margin };
   let y = HEADER_H;
+  // Wrapper de table aux défauts DGA : en-tête clair (texte foncé gras), filet gris fin, lignes alternées
+  // discrètes. Remplace les bandeaux navy pleins de l'ancienne version.
+  const AT = (opts: any) => autoTable(doc, {
+    ...opts,
+    theme: 'grid',
+    headStyles: { fillColor: HEAD_BG, textColor: INK, fontStyle: 'bold', lineColor: RULE, lineWidth: 0.3, ...(opts.headStyles || {}) },
+    bodyStyles: { textColor: BODY, ...(opts.bodyStyles || {}) },
+    styles: { lineColor: RULE, lineWidth: 0.3, ...(opts.styles || {}) },
+    alternateRowStyles: { fillColor: [249, 250, 251], ...(opts.alternateRowStyles || {}) },
+  });
 
   const ti = ast.taskInfo;
   const infoRows = ([
@@ -3002,12 +3020,11 @@ async function renderAstSection(
     [tr('Référence réglementaire', 'Regulatory reference'), ti.regulatoryRef],
   ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim());
 
-  autoTable(doc, {
+  AT({
     startY: HEADER_H,
     head: [[tr('Informations générales', 'General information'), '']],
     body: infoRows.map(([k, v]) => [k, String(v)]),
     theme: 'striped',
-    headStyles: { fillColor: NAVY },
     styles: { fontSize: 9, cellPadding: 2 },
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } },
     margin: tableMargin,
@@ -3036,31 +3053,31 @@ async function renderAstSection(
   if (lotoMeta.length || energy.length || locks.length) {
     if (y > pageH - 40) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
     if (lotoMeta.length) {
-      autoTable(doc, {
+      AT({
         startY: y,
         head: [[tr('Sources d’énergie et cadenassage (LOTO)', 'Energy sources and lockout (LOTO)'), '']],
         body: lotoMeta.map(([k, v]) => [k, String(v)]),
-        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 9, cellPadding: 2 },
+        theme: 'striped', styles: { fontSize: 9, cellPadding: 2 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }, margin: tableMargin, didDrawPage: drawHeader,
       });
       y = doc.lastAutoTable.finalY + 4;
     }
     if (energy.length) {
-      autoTable(doc, {
+      AT({
         startY: y,
         head: [[tr('Type', 'Type'), tr('Description', 'Description'), tr('Ampleur', 'Magnitude'), tr('Emplacement', 'Location'), tr('Méthode d’isolement', 'Isolation method'), tr('Vérifié par', 'Verified by'), '✓']],
         body: energy.map(s => [s.type || '—', s.description || '—', s.magnitude || '—', s.location || '—', s.isolationMethod || '—', s.verifiedBy || '—', s.verified ? '✓' : '—']),
-        theme: 'grid', headStyles: { fillColor: NAVY }, styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'top' },
+        theme: 'grid', styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'top' },
         columnStyles: { 6: { halign: 'center', cellWidth: 8 } }, margin: tableMargin, didDrawPage: drawHeader,
       });
       y = doc.lastAutoTable.finalY + 4;
     }
     if (locks.length) {
-      autoTable(doc, {
+      AT({
         startY: y,
         head: [[tr('Cadenas (ID)', 'Lock (ID)'), tr('Propriétaire', 'Owner'), tr('Posé le', 'Placed'), tr('Retiré le', 'Removed')]],
         body: locks.map(l => [l.lockId || '—', l.owner || '—', l.placedAt || '—', l.removedAt || '—']),
-        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+        theme: 'striped', styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
       });
       y = doc.lastAutoTable.finalY + 6;
     }
@@ -3090,12 +3107,11 @@ async function renderAstSection(
         body.push(row);
       });
     });
-    autoTable(doc, {
+    AT({
       startY: y,
       head: [[tr('Étape', 'Step'), tr('Danger', 'Hazard'), tr('Moyens de contrôle', 'Control measures'), tr('Risque', 'Risk')]],
       body,
       theme: 'grid',
-      headStyles: { fillColor: NAVY },
       styles: { fontSize: 8, cellPadding: 2, valign: 'top' },
       columnStyles: { 0: { cellWidth: 42 }, 1: { cellWidth: 38 }, 3: { cellWidth: 18, halign: 'center' } },
       margin: tableMargin,
@@ -3107,12 +3123,11 @@ async function renderAstSection(
   // EPI requis
   const ppe = ast.ppeRequirements.filter(p => p.required);
   if (ppe.length > 0) {
-    autoTable(doc, {
+    AT({
       startY: y,
       head: [[tr('EPI requis', 'Required PPE'), tr('Spécification', 'Specification')]],
       body: ppe.map(p => [p.item, p.specification || '—']),
       theme: 'striped',
-      headStyles: { fillColor: NAVY },
       styles: { fontSize: 9, cellPadding: 2 },
       margin: tableMargin,
       didDrawPage: drawHeader,
@@ -3136,20 +3151,20 @@ async function renderAstSection(
   if (tools.length || vehicles.length || (eq.specialEquipment && String(eq.specialEquipment).trim())) {
     if (y > pageH - 40) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
     if (tools.length) {
-      autoTable(doc, {
+      AT({
         startY: y,
         head: [[tr('Outil / équipement', 'Tool / equipment'), tr('État', 'Condition'), tr('Inspecté par', 'Inspected by'), tr('Notes', 'Notes')]],
         body: tools.map(t => [t.name || '—', t.condition || '—', t.inspectedBy || '—', t.notes || '—']),
-        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+        theme: 'striped', styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
       });
       y = doc.lastAutoTable.finalY + 4;
     }
     if (vehicles.length) {
-      autoTable(doc, {
+      AT({
         startY: y,
         head: [[tr('Véhicule / engin', 'Vehicle / machine'), tr('Plaque / n°', 'Plate / no.'), tr('Inspecté', 'Inspected')]],
         body: vehicles.map(v => [v.type || '—', v.license || '—', v.inspected ? tr('Oui', 'Yes') : tr('Non', 'No')]),
-        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+        theme: 'striped', styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
       });
       y = doc.lastAutoTable.finalY + 4;
     }
@@ -3164,11 +3179,11 @@ async function renderAstSection(
   const workers: any[] = Array.isArray(ast.workers) ? ast.workers.filter((w: any) => w.name) : [];
   if (workers.length) {
     if (y > pageH - 40) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
-    autoTable(doc, {
+    AT({
       startY: y,
       head: [[tr('Travailleur', 'Worker'), tr('Rôle', 'Role'), tr('Entreprise', 'Company'), tr('Badge', 'Badge'), tr('Contact urgence', 'Emergency contact'), tr('Présent', 'Present')]],
       body: workers.map(w => [w.name || '—', w.role || '—', w.company || '—', w.badgeNumber || '—', [w.emergencyContact, w.emergencyPhone].filter(Boolean).join(' · ') || '—', w.present ? tr('Oui', 'Yes') : tr('Non', 'No')]),
-      theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 7.5, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+      theme: 'striped', styles: { fontSize: 7.5, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
     });
     y = doc.lastAutoTable.finalY + 4;
   }
@@ -3176,7 +3191,7 @@ async function renderAstSection(
 
   // Participants
   if (ast.participants.length > 0) {
-    autoTable(doc, {
+    AT({
       startY: y,
       head: [[tr('Participant', 'Participant'), tr('Rôle', 'Role'), tr('Entreprise', 'Company'), tr('Prise de connaissance', 'Acknowledged')]],
       body: ast.participants.map(p => [
@@ -3186,7 +3201,6 @@ async function renderAstSection(
         p.acknowledged ? (p.acknowledgedAt ? new Date(p.acknowledgedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : tr('Oui', 'Yes')) : tr('Non', 'No'),
       ]),
       theme: 'striped',
-      headStyles: { fillColor: NAVY },
       styles: { fontSize: 8, cellPadding: 2 },
       margin: tableMargin,
       didDrawPage: drawHeader,
