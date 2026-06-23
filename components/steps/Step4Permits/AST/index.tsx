@@ -1697,6 +1697,22 @@ function TaskSection({ ast, onChange, language, readOnly, personnel = [], projec
   const set = (key: keyof ASTPermit['taskInfo'], val: string | number) =>
     onChange(p => ({ ...p, taskInfo: { ...p.taskInfo, [key]: val } }));
 
+  // Sélection d'un projet (module Projet) → auto-remplit les champs existants (nom, lieu) depuis la table
+  // projects. Les valeurs vides du projet ne remplacent rien. Saisie libre toujours possible (onText).
+  async function pickProject(o: EntityOption) {
+    set('projectNumber', o.label);
+    if (!o.id || !supabase) return;
+    try {
+      const { data } = await supabase.from('projects').select('project_number, title, location, client_name').eq('id', o.id).maybeSingle();
+      const d: any = data; if (!d) return;
+      onChange(p => ({ ...p, taskInfo: { ...p.taskInfo,
+        projectNumber: d.project_number || p.taskInfo.projectNumber,
+        projectName: d.title || p.taskInfo.projectName,
+        workLocation: d.location || p.taskInfo.workLocation,
+      } }));
+    } catch { /* best-effort */ }
+  }
+
   const taskTypeOptions = Object.entries(t.taskTypes).map(([k, v]) => ({ value: k, label: v }));
 
   return (
@@ -1748,7 +1764,7 @@ function TaskSection({ ast, onChange, language, readOnly, personnel = [], projec
       <Card title={t.cardGeneral} icon={<ClipboardList className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label={t.projectNumber}>
-            <EntitySearch value={ti.projectNumber} readOnly={readOnly} options={projects} onText={v => set('projectNumber', v)} onPick={o => set('projectNumber', o.label)} />
+            <EntitySearch value={ti.projectNumber} readOnly={readOnly} options={projects} onText={v => set('projectNumber', v)} onPick={pickProject} />
           </Field>
           <Field label={t.projectName}>
             <TextInput value={ti.projectName} onChange={v => set('projectName', v)} disabled={readOnly} />
@@ -2852,7 +2868,9 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={t.supervisorName}>
-                  <TextInput value={ast.supervisorSigName} onChange={v => onChange(p => ({ ...p, supervisorSigName: v }))} disabled={readOnly} />
+                  <EmployeeNameInput value={ast.supervisorSigName} employees={employees} disabled={readOnly} language={language}
+                    onChange={name => onChange(p => ({ ...p, supervisorSigName: name }))}
+                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
                 </Field>
                 <Field label={t.supervisorCert}>
                   <TextInput value={ast.supervisorSigCert} onChange={v => onChange(p => ({ ...p, supervisorSigCert: v }))} disabled={readOnly} />
@@ -3120,6 +3138,7 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
   const t = T[language].finalization;
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const { personnel } = useTenantDirectory(tenant);   // recherche dynamique du personnel (approbateur)
 
   // BLOCAGE STRICT : une non-conformité/correctif signalé(e) exige explication (≥10 car.) + pièce jointe.
   const ncOpen = ast.supervisorSigStatus === 'corrective' || ast.supervisorSigStatus === 'nonconform';
@@ -3203,7 +3222,7 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
       <Card title={t.cardApproval} icon={<CheckCircle className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t.supervisorName}>
-            <TextInput value={ast.supervisor_name} onChange={v => field('supervisor_name', v)} placeholder={t.supervisorNamePh} disabled={readOnly} />
+            <EntitySearch value={ast.supervisor_name} readOnly={readOnly} options={personnel} onText={v => field('supervisor_name', v)} onPick={o => field('supervisor_name', o.label)} placeholder={t.supervisorNamePh} />
           </Field>
           <Field label={t.supervisorCert}>
             <TextInput value={ast.supervisor_cert} onChange={v => field('supervisor_cert', v)} placeholder={t.supervisorCertPh} disabled={readOnly} />
