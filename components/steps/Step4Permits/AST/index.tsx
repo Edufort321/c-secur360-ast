@@ -2985,12 +2985,18 @@ async function renderAstSection(
   const ti = ast.taskInfo;
   const infoRows = ([
     [tr('Province', 'Province'), ast.province],
+    [tr('N° de projet', 'Project No.'), ti.projectNumber],
+    [tr('Nom du projet', 'Project name'), ti.projectName],
     [tr('Lieu des travaux', 'Work location'), ti.workLocation],
-    [tr('Projet', 'Project'), ti.projectNumber],
+    [tr('Département', 'Department'), ti.department],
     [tr('Entrepreneur', 'Contractor'), ti.contractor],
     [tr('Superviseur', 'Supervisor'), ti.supervisor],
+    [tr('Certification superviseur', 'Supervisor certification'), ti.supervisorCert],
     [tr('Date', 'Date'), ti.taskDate],
     [tr('Durée estimée', 'Estimated duration'), ti.estimatedDuration],
+    [tr('Nombre de travailleurs', 'Worker count'), ti.workerCount ? String(ti.workerCount) : ''],
+    [tr('Type de tâche', 'Task type'), ti.taskType],
+    [tr('Équipements impliqués', 'Equipment involved'), ti.equipmentInvolved],
     [tr('Description de la tâche', 'Task description'), ti.taskDescription],
     [tr('Conditions spéciales', 'Special conditions'), ti.specialConditions],
     [tr('Référence réglementaire', 'Regulatory reference'), ti.regulatoryRef],
@@ -3008,6 +3014,57 @@ async function renderAstSection(
     didDrawPage: drawHeader,
   });
   y = doc.lastAutoTable.finalY + 6;
+
+  // ── Énergie & cadenassage (LOTO) — TOUT ce qui est saisi ────────────────────
+  const loto: any = ast.loto || {};
+  const eq: any = ast.equipment || {};
+  const energy: any[] = Array.isArray(loto.energySources) ? loto.energySources : [];
+  const locks: any[] = Array.isArray(loto.locks) ? loto.locks : [];
+  const eqEnergyStr: string[] = Array.isArray(eq.energySources) ? eq.energySources.filter(Boolean) : [];
+  const lotoMeta = ([
+    [tr('Cadenassage requis', 'Lockout required'), (loto.required || eq.lotoRequired) ? tr('Oui', 'Yes') : (loto.required === false ? tr('Non', 'No') : '')],
+    [tr('Référence procédure LOTO', 'LOTO procedure reference'), loto.ref || eq.lotoRef],
+    [tr('Gabarit LOTO', 'LOTO template'), loto.templateName],
+    [tr('Sources d’énergie (liste)', 'Energy sources (list)'), eqEnergyStr.join(', ')],
+    [tr('Vérification d’absence d’énergie', 'Zero-energy verification'), loto.verificationDone ? tr('Effectuée', 'Done') : ''],
+    [tr('Vérifiée par', 'Verified by'), loto.verificationBy],
+    [tr('Date de vérification', 'Verification date'), loto.verificationDate],
+    [tr('Réénergisation autorisée par', 'Re-energization authorized by'), loto.reenergizationAuthBy],
+    [tr('Date de réénergisation', 'Re-energization date'), loto.reenergizationAuthDate],
+    [tr('Notes LOTO', 'LOTO notes'), loto.notes],
+  ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim());
+  if (lotoMeta.length || energy.length || locks.length) {
+    if (y > pageH - 40) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
+    if (lotoMeta.length) {
+      autoTable(doc, {
+        startY: y,
+        head: [[tr('Sources d’énergie et cadenassage (LOTO)', 'Energy sources and lockout (LOTO)'), '']],
+        body: lotoMeta.map(([k, v]) => [k, String(v)]),
+        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 9, cellPadding: 2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } }, margin: tableMargin, didDrawPage: drawHeader,
+      });
+      y = doc.lastAutoTable.finalY + 4;
+    }
+    if (energy.length) {
+      autoTable(doc, {
+        startY: y,
+        head: [[tr('Type', 'Type'), tr('Description', 'Description'), tr('Ampleur', 'Magnitude'), tr('Emplacement', 'Location'), tr('Méthode d’isolement', 'Isolation method'), tr('Vérifié par', 'Verified by'), '✓']],
+        body: energy.map(s => [s.type || '—', s.description || '—', s.magnitude || '—', s.location || '—', s.isolationMethod || '—', s.verifiedBy || '—', s.verified ? '✓' : '—']),
+        theme: 'grid', headStyles: { fillColor: NAVY }, styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'top' },
+        columnStyles: { 6: { halign: 'center', cellWidth: 8 } }, margin: tableMargin, didDrawPage: drawHeader,
+      });
+      y = doc.lastAutoTable.finalY + 4;
+    }
+    if (locks.length) {
+      autoTable(doc, {
+        startY: y,
+        head: [[tr('Cadenas (ID)', 'Lock (ID)'), tr('Propriétaire', 'Owner'), tr('Posé le', 'Placed'), tr('Retiré le', 'Removed')]],
+        body: locks.map(l => [l.lockId || '—', l.owner || '—', l.placedAt || '—', l.removedAt || '—']),
+        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    }
+  }
 
   // Étapes : chaque danger sur sa ligne avec ses moyens de contrôle (puces).
   if (ast.jobSteps.length > 0) {
@@ -3063,6 +3120,60 @@ async function renderAstSection(
     y = doc.lastAutoTable.finalY + 6;
   }
 
+  // Notes EPI / travailleurs (texte libre saisi).
+  const noteBlock = (label: string, val?: string) => {
+    if (!val || !String(val).trim()) return;
+    if (y > pageH - 24) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text(label, margin, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.splitTextToSize(String(val), pageW - 2 * margin).forEach((ln: string) => { if (y > pageH - 16) { doc.addPage(); drawHeader(); y = HEADER_H + 4; } doc.text(ln, margin, y); y += 5; });
+    y += 3;
+  };
+  noteBlock(tr('Notes EPI :', 'PPE notes:'), ast.ppeNotes);
+
+  // Outils & équipements
+  const tools: any[] = Array.isArray(eq.tools) ? eq.tools.filter((t: any) => t.name || t.inspectedBy || t.notes) : [];
+  const vehicles: any[] = Array.isArray(eq.vehicles) ? eq.vehicles.filter((v: any) => v.type || v.license) : [];
+  if (tools.length || vehicles.length || (eq.specialEquipment && String(eq.specialEquipment).trim())) {
+    if (y > pageH - 40) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
+    if (tools.length) {
+      autoTable(doc, {
+        startY: y,
+        head: [[tr('Outil / équipement', 'Tool / equipment'), tr('État', 'Condition'), tr('Inspecté par', 'Inspected by'), tr('Notes', 'Notes')]],
+        body: tools.map(t => [t.name || '—', t.condition || '—', t.inspectedBy || '—', t.notes || '—']),
+        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+      });
+      y = doc.lastAutoTable.finalY + 4;
+    }
+    if (vehicles.length) {
+      autoTable(doc, {
+        startY: y,
+        head: [[tr('Véhicule / engin', 'Vehicle / machine'), tr('Plaque / n°', 'Plate / no.'), tr('Inspecté', 'Inspected')]],
+        body: vehicles.map(v => [v.type || '—', v.license || '—', v.inspected ? tr('Oui', 'Yes') : tr('Non', 'No')]),
+        theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 8, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+      });
+      y = doc.lastAutoTable.finalY + 4;
+    }
+    if (eq.specialEquipment && String(eq.specialEquipment).trim()) {
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text(tr('Équipement spécial :', 'Special equipment:'), margin, y); y += 5;
+      doc.setFont('helvetica', 'normal'); doc.splitTextToSize(String(eq.specialEquipment), pageW - 2 * margin).forEach((ln: string) => { if (y > pageH - 16) { doc.addPage(); drawHeader(); y = HEADER_H + 4; } doc.text(ln, margin, y); y += 5; });
+    }
+    y += 4;
+  }
+
+  // Travailleurs présents
+  const workers: any[] = Array.isArray(ast.workers) ? ast.workers.filter((w: any) => w.name) : [];
+  if (workers.length) {
+    if (y > pageH - 40) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
+    autoTable(doc, {
+      startY: y,
+      head: [[tr('Travailleur', 'Worker'), tr('Rôle', 'Role'), tr('Entreprise', 'Company'), tr('Badge', 'Badge'), tr('Contact urgence', 'Emergency contact'), tr('Présent', 'Present')]],
+      body: workers.map(w => [w.name || '—', w.role || '—', w.company || '—', w.badgeNumber || '—', [w.emergencyContact, w.emergencyPhone].filter(Boolean).join(' · ') || '—', w.present ? tr('Oui', 'Yes') : tr('Non', 'No')]),
+      theme: 'striped', headStyles: { fillColor: NAVY }, styles: { fontSize: 7.5, cellPadding: 1.5 }, margin: tableMargin, didDrawPage: drawHeader,
+    });
+    y = doc.lastAutoTable.finalY + 4;
+  }
+  noteBlock(tr('Notes travailleurs :', 'Worker notes:'), ast.workerNotes);
+
   // Participants
   if (ast.participants.length > 0) {
     autoTable(doc, {
@@ -3097,10 +3208,19 @@ async function renderAstSection(
     [tr('Superviseur', 'Supervisor'), ast.supervisor_name || ast.supervisorSigName],
     [tr('Certification', 'Certification'), ast.supervisor_cert || ast.supervisorSigCert],
     [tr('Verdict', 'Verdict'), verdictLabel],
+    [tr('Travaux autorisés', 'Permitted work'), ast.permitted_work],
+    [tr('Restrictions', 'Restrictions'), ast.restrictions],
     [tr('Valide du', 'Valid from'), ast.permit_valid_from?.replace('T', ' ').slice(0, 16)],
     [tr('Valide au', 'Valid to'), ast.permit_valid_to?.replace('T', ' ').slice(0, 16)],
+    [tr('Notes du superviseur', 'Supervisor notes'), ast.supervisorSigNotes],
+    [tr('Notes de finalisation', 'Finalization notes'), ast.finalization_notes],
   ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim()).forEach(([k, v]) => {
-    doc.text(`${k} : ${v}`, margin, y); y += 6;
+    doc.setFont('helvetica', 'bold'); doc.text(`${k} : `, margin, y);
+    const kw = doc.getTextWidth(`${k} : `);
+    doc.setFont('helvetica', 'normal');
+    const lines = doc.splitTextToSize(String(v), pageW - 2 * margin - kw);
+    doc.text(lines[0] || '', margin + kw, y); y += 6;
+    for (let i = 1; i < lines.length; i++) { if (y > pageH - 16) { doc.addPage(); drawHeader(); y = HEADER_H + 4; } doc.text(lines[i], margin, y); y += 6; }
   });
   y += 6;
   doc.text(tr('Signature : _______________________________', 'Signature: _______________________________'), margin, y);
