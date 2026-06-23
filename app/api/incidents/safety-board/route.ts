@@ -2,7 +2,7 @@
 // Compte les accidents / passés proches de l'année en cours et les compteurs « jours sans … » qui
 // repartent à 0 lors d'un événement, avec pour plancher le JOUR 0 de l'abonnement (tenants.created_at).
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/apiAuth';
+import { resolveAccess, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -13,9 +13,10 @@ const dOnly = (s: any): string | null => { if (!s) return null; const d = new Da
 const daysBetween = (fromIso: string, toIso: string) => Math.max(0, Math.floor((new Date(toIso + 'T00:00:00').getTime() - new Date(fromIso + 'T00:00:00').getTime()) / dayMs));
 
 export async function GET(req: NextRequest) {
-  const u = await getSessionUser(req);
-  if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
+  const acc = await resolveAccess(req);
+  if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+  const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
+  if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
   const todayIso = new Date().toISOString().slice(0, 10);
   const year = new Date().getFullYear();
 
@@ -90,10 +91,11 @@ export async function GET(req: NextRequest) {
 // RÉINITIALISATION PAR TYPE : remet le compteur « jours sans … » à 0 pour UN type seulement.
 // body { type: 'accident' | 'near_miss', date? } → fixe le plancher du type à `date` (défaut aujourd'hui).
 export async function POST(req: NextRequest) {
-  const u = await getSessionUser(req);
-  if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
+  const acc = await resolveAccess(req);
+  if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   let body: any = {}; try { body = await req.json(); } catch { /* vide */ }
+  const tenant = effectiveTenant(acc, body.tenant || new URL(req.url).searchParams.get('tenant'));
+  if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
   const type = body.type === 'near_miss' ? 'near_miss' : body.type === 'accident' ? 'accident' : null;
   if (!type) return NextResponse.json({ error: 'type requis (accident | near_miss)' }, { status: 400 });
   const date = dOnly(body.date) || new Date().toISOString().slice(0, 10);

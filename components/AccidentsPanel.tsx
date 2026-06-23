@@ -59,7 +59,7 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/incidents/data', { credentials: 'include' });
+      const res = await fetch(`/api/incidents/data?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
       const j: any = res.ok ? await res.json() : {};
       setReports((j.reports as IncidentRow[]) ?? []);
       setCounter((j.counter as DayCounter | null) ?? null);
@@ -71,7 +71,7 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
   useRealtime(['incident_reports'], tenant, load);
 
   async function handleReset(type: 'accident' | 'near_miss') {
-    try { await fetch('/api/incidents/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'reset', incidentType: type }) }); } catch { /* ignore */ }
+    try { await fetch('/api/incidents/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'reset', incidentType: type, tenant }) }); } catch { /* ignore */ }
     setResetConfirm(null); load();
   }
   function newReport(type: IncidentType) { setDefaultType(type); setActiveReport('new'); }

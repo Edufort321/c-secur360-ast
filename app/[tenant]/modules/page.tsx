@@ -73,7 +73,7 @@ export default function ModulesPage() {
   // Relevés sécurité (jours sans accident…) injectés dans la carte « Accidents & Presque-acc. ».
   const [safety, setSafety] = useState<any>(null);
   useEffect(() => {
-    fetch('/api/incidents/safety-board', { credentials: 'include' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j?.ok) setSafety(j); }).catch(() => {});
+    fetch(`/api/incidents/safety-board?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j?.ok) setSafety(j); }).catch(() => {});
   }, [tenant]);
   // Pastilles sécurité (réutilisé carte + bandeau épinglé).
   const safetyDots = (b: any) => ([

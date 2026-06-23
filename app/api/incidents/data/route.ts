@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/apiAuth';
+import { resolveAccess, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { syncMirror } from '@/lib/hse/incidentMirror';
 
@@ -12,9 +12,11 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const u = await getSessionUser(req);
-  if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
+  const acc = await resolveAccess(req);
+  if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+  // super_admin peut cibler le tenant de la PAGE (param) ; tout autre rôle est forcé à son propre tenant.
+  const tenant = effectiveTenant(acc, new URL(req.url).searchParams.get('tenant'));
+  if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
   const [{ data: reports }, { data: counter }] = await Promise.all([
     supabaseAdmin.from('incident_reports').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }),
     supabaseAdmin.from('incident_day_counters').select('*').eq('tenant_id', tenant).maybeSingle(),
@@ -38,10 +40,13 @@ async function resetCounter(tenant: string, incidentType: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const u = await getSessionUser(req);
-  if (!u) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  const tenant = u.tenant_id || '';
+  const acc = await resolveAccess(req);
+  if (!acc) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  // Tenant CIBLE = page (param/body) si super_admin, sinon tenant propre (anti-IDOR). Évite que l'accident
+  // d'un super_admin visitant un AUTRE tenant soit écrit sous son tenant de session.
+  const tenant = effectiveTenant(acc, body.tenant || new URL(req.url).searchParams.get('tenant'));
+  if (!tenant) return NextResponse.json({ error: 'Tenant introuvable' }, { status: 400 });
 
   if (body.action === 'reset') {
     const t = body.incidentType === 'near_miss' ? 'near_miss' : 'accident';

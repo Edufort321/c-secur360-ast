@@ -1220,7 +1220,7 @@ export default function IncidentReportForm({
     // incident_reports est FERMÉ à l'anon (REVOKE) → lire via la route SERVEUR (service_role), jamais le
     // client anon (qui renvoyait null en silence → le rapport « disparaissait » à la réouverture).
     try {
-      const res = await fetch('/api/incidents/data', { credentials: 'include' });
+      const res = await fetch(`/api/incidents/data?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
       if (!res.ok) return;
       const j: any = await res.json().catch(() => ({}));
       const data = (j.reports || []).find((r: any) => r.id === id);
@@ -1271,7 +1271,7 @@ export default function IncidentReportForm({
     try {
       const res = await fetch('/api/incidents/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ action: 'save', item: { id: id || undefined, ...payload } }),
+        body: JSON.stringify({ action: 'save', tenant, item: { id: id || undefined, ...payload } }),
       });
       const j: any = await res.json().catch(() => ({}));
       if (res.ok) { ok = true; if (!id && j.id) { id = j.id; setDbId(id); onSaved?.(id!); } }
@@ -1295,7 +1295,7 @@ export default function IncidentReportForm({
     try {
       await fetch('/api/incidents/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ action: 'reset', incidentType: type }),
+        body: JSON.stringify({ action: 'reset', incidentType: type, tenant }),
       });
     } catch { /* ignore */ }
   }
