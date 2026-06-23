@@ -3061,12 +3061,6 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
     load();
   }
 
-  // Assigne un site à un compte directement depuis la liste (atterrissage par défaut de l'utilisateur).
-  async function setUserSite(u: UserAccount, siteId: string) {
-    await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: u.id, site_id: siteId || null }) });
-    load();
-  }
-
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   // Changer mot de passe d'un compte existant
   // (Le générateur de mot de passe inline de « Comptes existants » a été retiré — doublon source de
@@ -3202,8 +3196,28 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                 ? tr('✓ Ce compte de connexion existe. « Mettre à jour l’accès » change son mot de passe.', '✓ This login account exists. "Update access" changes its password.')
                 : tr('⚠ Aucun compte de connexion pour ce courriel. Cliquez « Créer l’accès » pour qu’il puisse se connecter — « Fiche » ne fait qu’enregistrer le mot de passe affiché.', '⚠ No login account for this email. Click "Create access" so they can log in — "Record" only saves the displayed password.'); })()}
             </p>
-            <div className="hidden">
-            </div>
+            {/* Gestion du compte de connexion existant (suspendre / supprimer) — déplacé ici depuis la liste. */}
+            {(() => {
+              const acc = userByEmail[(form.email || '').toLowerCase()];
+              if (!acc) return null;
+              return (
+                <div className="flex flex-wrap items-center gap-2 border-t border-blue-200/60 pt-2 dark:border-blue-500/20">
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">{tr('Compte de connexion :', 'Login account:')}</span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${acc.is_active ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-400'}`}><span className={`h-1.5 w-1.5 rounded-full ${acc.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />{acc.is_active ? tr('actif', 'active') : tr('suspendu', 'suspended')}</span>
+                  <button onClick={() => toggleActive(acc)} className={`text-[10px] font-semibold rounded-full px-2.5 py-1 ${acc.is_active ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
+                    {acc.is_active ? tr('Suspendre', 'Suspend') : tr('Réactiver', 'Reactivate')}
+                  </button>
+                  {confirmDel === acc.id ? (
+                    <span className="inline-flex items-center gap-1">
+                      <button onClick={() => deleteUser(acc)} disabled={busy} className="rounded bg-red-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-60">{busy ? <Loader2 size={10} className="animate-spin" /> : tr('Confirmer la suppression', 'Confirm delete')}</button>
+                      <button onClick={() => setConfirmDel(null)} className="text-[10px] text-gray-400 hover:text-gray-600">{tr('Annuler', 'Cancel')}</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setConfirmDel(acc.id)} className="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full bg-red-50 px-2.5 py-1 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400"><Trash2 size={11} /> {tr('Supprimer', 'Delete')}</button>
+                  )}
+                </div>
+              );
+            })()}
             {notice && <p className={`text-xs font-medium ${notice.includes('✓') ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>{notice}</p>}
           </div>
         ) : (
@@ -3212,52 +3226,6 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
           </div>
         )}
 
-        {/* Liste des comptes existants */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-sm">{tr('Comptes existants', 'Existing accounts')} ({users.length})</h3>
-            <button onClick={load} className="text-[10px] text-blue-600 hover:underline">↻ {tr('Actualiser', 'Refresh')}</button>
-          </div>
-          <div className="space-y-1 max-h-[28rem] overflow-y-auto">
-            {users.map(u => (
-              <div key={u.id} className="rounded border border-gray-100 dark:border-gray-700 hover:border-gray-300 transition">
-                <div className="flex items-center gap-2 text-xs px-2 py-1.5 group">
-                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${u.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate font-medium">{u.email}</div>
-                    {u.name && <div className="truncate text-[10px] text-gray-400">{u.name}</div>}
-                  </div>
-                  <span className="text-[10px] text-gray-400 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5">{u.role}</span>
-                  {sites.length > 0 && (
-                    <select value={u.site_id || ''} onChange={e => setUserSite(u, e.target.value)} title={tr('Site assigné', 'Assigned site')}
-                      className="shrink-0 rounded-full border border-gray-200 dark:border-gray-600 bg-transparent px-1.5 py-0.5 text-[10px] text-gray-600 dark:text-gray-300 outline-none max-w-[110px]">
-                      <option value="">{tr('Tous les sites', 'All sites')}</option>
-                      {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  )}
-                  <button onClick={() => toggleActive(u)} title={u.is_active ? tr('Suspendre le compte (connexion bloquée)', 'Suspend account (login blocked)') : tr('Réactiver le compte', 'Reactivate account')}
-                    className={`text-[10px] font-semibold rounded-full px-2 py-0.5 shrink-0 ${u.is_active ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
-                    {u.is_active ? tr('Suspendre', 'Suspend') : tr('Réactiver', 'Reactivate')}
-                  </button>
-                  {confirmDel === u.id ? (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => deleteUser(u)} disabled={busy} className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-60">
-                        {busy ? <Loader2 size={10} className="animate-spin" /> : tr('Confirmer', 'Confirm')}
-                      </button>
-                      <button onClick={() => setConfirmDel(null)} className="text-[10px] text-gray-400 hover:text-gray-600">×</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmDel(u.id)} title={tr('Supprimer le compte', 'Delete account')}
-                      className="shrink-0 rounded-full bg-red-50 p-1 text-red-500 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/10 dark:text-red-400">
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {users.length === 0 && <p className="text-xs text-gray-400 py-2 text-center">{tr('Aucun compte créé.', 'No accounts.')}</p>}
-          </div>
-        </div>
       </div>
     </div>
   );
