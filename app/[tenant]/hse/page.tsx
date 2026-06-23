@@ -261,11 +261,21 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
 
   // Jours sans accident avec arrêt (affichage chantier). Source = miroirs Accidents (vraies données).
   // Sans LTI enregistré, on affiche la séquence DEPUIS LE DÉBUT du tenant (plancher), comme le dashboard.
-  const lastLti = (incidents || []).filter((i: any) => i.is_lost_time).map((i: any) => new Date(i.occurred_at).getTime()).sort((a: number, b: number) => b - a)[0];
   const startMs = tenantStart ? new Date(tenantStart).getTime() : null;
-  const daysSinceLti = lastLti ? Math.floor((Date.now() - lastLti) / 86400000)
-    : (startMs ? Math.max(0, Math.floor((Date.now() - startMs) / 86400000)) : null);
-  const ltiStreakFromStart = !lastLti && startMs != null;
+  const nowMs = Date.now();
+  // Âge du tenant = plafond ABSOLU d'un compteur « jours sans … » (impossible d'avoir plus de jours sans
+  // accident que de jours d'existence). Une date d'incident incohérente (future ou antérieure à la
+  // création du tenant) ne doit JAMAIS gonfler ni fausser le compteur.
+  const ageDays = startMs != null ? Math.max(0, Math.floor((nowMs - startMs) / 86400000)) : null;
+  const ltiTimes = (incidents || []).filter((i: any) => i.is_lost_time)
+    .map((i: any) => new Date(i.occurred_at).getTime())
+    .filter((t: number) => !isNaN(t))
+    // borne chaque date entre [création du tenant, aujourd'hui] → pas de date aberrante.
+    .map((t: number) => Math.min(nowMs, startMs != null ? Math.max(startMs, t) : t));
+  const lastLti = ltiTimes.length ? Math.max(...ltiTimes) : null;
+  let daysSinceLti: number | null = lastLti != null ? Math.max(0, Math.floor((nowMs - lastLti) / 86400000)) : ageDays;
+  if (daysSinceLti != null && ageDays != null) daysSinceLti = Math.min(daysSinceLti, ageDays);   // plafond = âge tenant
+  const ltiStreakFromStart = lastLti == null && startMs != null;
 
   // Qualité de données : mois avec incidents mais 0 heure (taux faussés).
   const monthsNoHours = (kpiRows || []).filter((r: any) => r.hours <= 0 && (r.recordableCount > 0 || r.nearMissCount > 0 || r.ltiCount > 0)).map((r: any) => r.month);
