@@ -7,7 +7,7 @@
 // Donnée opérationnelle (pas de donnée santé). La saisie libre reste permise (sous-traitants/tiers).
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Plus, Trash2, Loader2, Mic, MicOff, Video, VideoOff, Square, Link2, Radio, FileAudio, FileVideo, X, Save,
+  Plus, Trash2, Loader2, Mic, MicOff, Video, Square, Link2, Radio, FileAudio, FileVideo, X, Save, FileDown, Sparkles,
 } from 'lucide-react';
 import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 import { useTenantDirectory } from '@/lib/useTenantDirectory';
@@ -15,6 +15,7 @@ import {
   saveSafetyMeeting, uploadMeetingMedia,
   type HseSafetyMeeting, type HseParticipant, type HsePoint, type HseMedia,
 } from '@/lib/hse/safetyMeetings';
+import { generateCauseriePdf } from '@/lib/hse/causeriePdf';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -129,6 +130,35 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
     setLinkVal('');
   }
 
+  // ── transcription IA d'un média (Whisper via route serveur) ────────────────
+  const [transcribing, setTranscribing] = useState<number | null>(null);
+  async function transcribe(i: number) {
+    const md = media[i]; if (!md?.url) return;
+    setTranscribing(i);
+    try {
+      const res = await fetch('/api/hse/transcribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ tenant, url: md.url, lang }),
+      });
+      const j: any = await res.json().catch(() => ({}));
+      if (!res.ok) { alert((j?.code === 'no_key' ? '' : (fr ? 'Échec : ' : 'Failed: ')) + (j?.error || `HTTP ${res.status}`)); return; }
+      const txt = (j.transcript || '').trim();
+      if (txt) set({ transcript: ((f.transcript || '').trim() + (f.transcript ? '\n\n' : '') + txt).trim() });
+      else alert(t('Transcription vide.', 'Empty transcript.'));
+    } catch (e: any) { alert((fr ? 'Erreur : ' : 'Error: ') + (e?.message || '')); }
+    finally { setTranscribing(null); }
+  }
+
+  // ── export PDF (style DGA + feuille de présence signée) ────────────────────
+  const [pdfBusy, setPdfBusy] = useState(false);
+  async function exportPdf() {
+    setPdfBusy(true);
+    const attendees = parts.length ? parts.map(p => p.name).filter(Boolean).join(', ') : (f.attendees || '');
+    try { await generateCauseriePdf({ meeting: { ...f, attendees }, lang, tenant }); }
+    catch (e: any) { alert((fr ? 'Échec de l’export PDF : ' : 'PDF export failed: ') + (e?.message || '')); }
+    finally { setPdfBusy(false); }
+  }
+
   async function submit() {
     setBusy(true);
     // Synchronise le résumé texte « attendees » (rétrocompat dashboard) à partir des participants.
@@ -239,6 +269,11 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
               <li key={i} className="flex items-center gap-2 rounded-lg bg-white px-2 py-1.5 text-sm dark:bg-gray-900">
                 {m.kind === 'video' ? <FileVideo size={15} className="text-indigo-500" /> : m.kind === 'audio' ? <FileAudio size={15} className="text-indigo-500" /> : <Link2 size={15} className="text-indigo-500" />}
                 <a href={m.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-indigo-600 hover:underline dark:text-indigo-300">{m.label || m.url}</a>
+                {(m.kind === 'audio' || m.kind === 'video') && (
+                  <button onClick={() => transcribe(i)} disabled={transcribing !== null} title={t('Transcrire par IA', 'Transcribe with AI')} className="inline-flex items-center gap-1 rounded-md border border-indigo-300 px-2 py-0.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/40 dark:text-indigo-300">
+                    {transcribing === i ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {t('Transcrire', 'Transcribe')}
+                  </button>
+                )}
                 <button onClick={() => delMedia(i)} className="text-rose-500 hover:text-rose-700"><X size={14} /></button>
               </li>
             ))}
@@ -254,7 +289,8 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
         <textarea value={f.notes || ''} onChange={e => set({ notes: e.target.value })} rows={2} className={inp} />
       </label>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button onClick={exportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600">{pdfBusy ? <Loader2 size={15} className="animate-spin" /> : <FileDown size={15} />} {t('Exporter PDF', 'Export PDF')}</button>
         <button onClick={onCancel} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{t('Annuler', 'Cancel')}</button>
         <button onClick={submit} disabled={busy || recording} title={recording ? t('Arrêtez l’enregistrement avant d’enregistrer', 'Stop recording before saving') : ''} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {t('Enregistrer', 'Save')}
