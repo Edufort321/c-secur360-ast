@@ -87,10 +87,27 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
   const [recMode, setRecMode] = useState<'audio' | 'video' | null>(null);
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Sélection de la caméra et du micro AVANT de démarrer (énumération des périphériques).
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [camId, setCamId] = useState('');
+  const [micId, setMicId] = useState('');
+  async function refreshDevices() {
+    try {
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const cams = devs.filter(d => d.kind === 'videoinput'); const ms = devs.filter(d => d.kind === 'audioinput');
+      setCameras(cams); setMics(ms);
+      setCamId(prev => prev || cams[0]?.deviceId || ''); setMicId(prev => prev || ms[0]?.deviceId || '');
+    } catch { /* énumération indisponible */ }
+  }
+  useEffect(() => { refreshDevices(); /* eslint-disable-next-line */ }, []);
 
   async function startRec(mode: 'audio' | 'video') {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(mode === 'video' ? { audio: true, video: { width: 1280 } } : { audio: true });
+      const audioC: any = micId ? { deviceId: { exact: micId } } : true;
+      const videoC: any = { width: 1280, ...(camId ? { deviceId: { exact: camId } } : {}) };
+      const stream = await navigator.mediaDevices.getUserMedia(mode === 'video' ? { audio: audioC, video: videoC } : { audio: audioC });
+      refreshDevices(); // les libellés des périphériques deviennent visibles une fois la permission accordée
       streamRef.current = stream;
       if (mode === 'video' && previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.muted = true; await previewRef.current.play().catch(() => {}); }
       const mime = mode === 'video'
@@ -270,6 +287,26 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
           )}
           {uploading && <span className="inline-flex items-center gap-1 text-xs text-gray-500"><Loader2 size={13} className="animate-spin" /> {uploading}</span>}
         </div>
+        {/* Choix des périphériques AVANT l'enregistrement */}
+        {recMode === null && (cameras.length > 0 || mics.length > 0) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            {cameras.length > 0 && (
+              <label className="inline-flex items-center gap-1"><Video size={13} />
+                <select value={camId} onChange={e => setCamId(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900">
+                  {cameras.map((c, i) => <option key={c.deviceId || i} value={c.deviceId}>{c.label || `${t('Caméra', 'Camera')} ${i + 1}`}</option>)}
+                </select>
+              </label>
+            )}
+            {mics.length > 0 && (
+              <label className="inline-flex items-center gap-1"><Mic size={13} />
+                <select value={micId} onChange={e => setMicId(e.target.value)} className="rounded-lg border border-gray-200 px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900">
+                  {mics.map((mi, i) => <option key={mi.deviceId || i} value={mi.deviceId}>{mi.label || `${t('Micro', 'Mic')} ${i + 1}`}</option>)}
+                </select>
+              </label>
+            )}
+            <button type="button" onClick={refreshDevices} className="text-gray-400 hover:text-gray-600 underline">{t('Rafraîchir', 'Refresh')}</button>
+          </div>
+        )}
         {/* Aperçu vidéo */}
         <video ref={previewRef} className={`mt-2 w-full max-w-md rounded-lg bg-black ${recMode === 'video' ? '' : 'hidden'}`} playsInline />
         {/* Lien Teams/enregistrement */}
