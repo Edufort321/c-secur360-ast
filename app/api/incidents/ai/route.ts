@@ -67,6 +67,14 @@ export async function POST(req: NextRequest) {
       : "You are a senior OHS advisor (Canada). From the incident context, propose 3 to 6 concrete CORRECTIVE/PREVENTIVE actions, ranked by the hierarchy of controls (elimination > substitution > engineering > administrative > PPE). Each: short, actionable, measurable. Reply as JSON {\"actions\":[{\"description\":\"...\",\"priority\":\"high|medium|low\"}],\"rootCauseHint\":\"...\"}. INDICATIVE — to be validated by a qualified person.";
     prompt = ctx || (lang === 'fr' ? 'Aucun détail fourni.' : 'No detail provided.');
     max_tokens = 1500;
+  } else if (action === 'fivewhys') {
+    expectJson = true;
+    const ctx = String(body.context || '').slice(0, 8000);
+    system += lang === 'fr'
+      ? "Tu es un enquêteur SST. À partir du contexte d'incident, construis une analyse « 5 Pourquoi » qui remonte la chaîne causale jusqu'à une CAUSE RACINE ORGANISATIONNELLE (gestion, formation, procédure, conception — pas la faute individuelle). Chaque « pourquoi » découle logiquement du précédent. Réponds en JSON {\"whys\":[\"réponse1\",\"réponse2\",\"réponse3\",\"réponse4\",\"réponse5\"],\"rootCause\":\"...\"}. Exactement 5 réponses, concises. INDICATIF — à valider par une personne qualifiée."
+      : "You are an OHS investigator. From the incident context, build a '5 Whys' analysis tracing the causal chain to an ORGANIZATIONAL ROOT CAUSE (management, training, procedure, design — not individual blame). Each 'why' follows logically from the previous. Reply as JSON {\"whys\":[\"answer1\",\"answer2\",\"answer3\",\"answer4\",\"answer5\"],\"rootCause\":\"...\"}. Exactly 5 concise answers. INDICATIVE — to be validated by a qualified person.";
+    prompt = ctx || (lang === 'fr' ? 'Aucun détail fourni.' : 'No detail provided.');
+    max_tokens = 1500;
   } else return NextResponse.json({ error: 'Action inconnue' }, { status: 400 });
 
   try {

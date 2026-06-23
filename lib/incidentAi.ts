@@ -35,6 +35,12 @@ export async function aiTranslateFields(fields: Record<string, string>, target: 
   return (j && typeof j === 'object') ? j : {};
 }
 
+/** Construit l'analyse 5 Pourquoi + cause racine organisationnelle à partir du contexte. */
+export async function aiFiveWhys(context: string, lang: Lang): Promise<{ whys: string[]; rootCause: string }> {
+  const j = await call({ action: 'fivewhys', context, lang });
+  return { whys: Array.isArray(j?.whys) ? j.whys.map((x: any) => String(x || '')) : [], rootCause: j?.rootCause || '' };
+}
+
 /** Suggère des actions correctives/préventives à partir du contexte de l'incident. */
 export async function aiRecommend(context: string, lang: Lang): Promise<{ actions: { description: string; priority?: string }[]; rootCauseHint?: string }> {
   const j = await call({ action: 'recommend', context, lang });

@@ -18,7 +18,7 @@ import {
 } from '@/lib/incidentActions';
 import { assessCnesst, cnesstFromReport, cnesstNotes, CNESST_REASON_LABEL } from '@/lib/sst/cnesstObligations';
 import { AiTextTools } from './AiTextTools';
-import { aiRecommend, aiTranslateFields } from '@/lib/incidentAi';
+import { aiRecommend, aiTranslateFields, aiFiveWhys } from '@/lib/incidentAi';
 import { BODY_REGION_LABELS } from '@/lib/hse/bodyRegions';
 import BodyMap, { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS } from './BodyMap';
 
@@ -2219,6 +2219,36 @@ function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lan
     });
   }
 
+  // 5 Pourquoi assistés par IA : lit le contexte (narration, action, blessures, causes) et remonte la
+  // chaîne causale jusqu'à la cause racine organisationnelle. Remplit les 5 réponses + la cause racine.
+  const [whyBusy, setWhyBusy] = useState(false);
+  const [whyMsg, setWhyMsg] = useState<string | null>(null);
+  async function fillFiveWhys() {
+    setWhyBusy(true); setWhyMsg(null);
+    const injuries = (report.injuredPersons || []).map(p => `${p.injuryType || ''} (${(p.bodyRegions || []).join(', ')})`).filter(s => s.trim()).join('; ');
+    const ctx = [
+      `Type: ${report.incidentType}`,
+      report.workType && `Travail: ${report.workType}`,
+      report.description && `Narration: ${report.description}`,
+      report.immediateAction && `Action immédiate: ${report.immediateAction}`,
+      injuries && `Blessures: ${injuries}`,
+      (report.contributingFactors || []).length && `Facteurs: ${report.contributingFactors.join(', ')}`,
+      report.immediateCauses && `Causes immédiates: ${report.immediateCauses}`,
+      report.basicCauses && `Causes fondamentales: ${report.basicCauses}`,
+    ].filter(Boolean).join('\n');
+    if (!report.description && !report.immediateCauses) { setWhyMsg(tl(lang, 'Renseignez d’abord la narration ou les causes.')); setWhyBusy(false); return; }
+    try {
+      const { whys, rootCause } = await aiFiveWhys(ctx, lang);
+      if (!whys.length) { setWhyMsg(tl(lang, 'Aucune suggestion.')); }
+      else onChange(r => ({
+        ...r,
+        whyAnalysis: r.whyAnalysis.map((w, i) => ({ ...w, answer: whys[i] != null ? whys[i] : w.answer })),
+        rootCause: rootCause || r.rootCause,
+      }));
+    } catch (e: any) { setWhyMsg((lang === 'fr' ? 'IA : ' : 'AI: ') + (e?.message || '')); }
+    finally { setWhyBusy(false); }
+  }
+
   async function onPhotos(files: FileList | null) {
     if (!files || !files.length || !supabase) return;
     setUploading(true); setPhotoErr(false);
@@ -2272,11 +2302,22 @@ function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lan
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
-          <Search size={18} className="text-red-500" />
-          {t.an.fiveWhy}
-        </h2>
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+            <Search size={18} className="text-red-500" />
+            {t.an.fiveWhy}
+          </h2>
+          {!readOnly && (
+            <button onClick={fillFiveWhys} disabled={whyBusy}
+              className="flex items-center gap-1.5 text-xs text-indigo-700 border border-indigo-300 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+              title={tl(lang, 'L’IA lit les pages précédentes et remonte la chaîne causale jusqu’à la cause racine organisationnelle')}>
+              {whyBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              {tl(lang, 'Remplir avec l’IA')}
+            </button>
+          )}
+        </div>
         <p className="text-xs text-gray-500 mb-4">{t.an.fiveWhyHelp}</p>
+        {whyMsg && <p className="mb-2 text-xs text-gray-500">{whyMsg}</p>}
 
         {report.whyAnalysis.map((why, idx) => (
           <div key={idx} className="mb-3">
