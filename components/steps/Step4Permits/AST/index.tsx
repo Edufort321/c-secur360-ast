@@ -2562,7 +2562,7 @@ function EmployeeNameInput({ value, employees, onChange, onSelectEmployee, disab
     const base = q
       ? employees.filter(e => (e.name || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q))
       : employees;
-    return base.slice(0, 8);
+    return base.slice(0, 50);
   }, [value, employees]);
 
   // Position en `fixed` calculée depuis l'input : la liste échappe ainsi au
@@ -2669,8 +2669,8 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
   useEffect(() => {
     if (!tenant || !supabase) return;
     let cancelled = false;
-    supabase.from('tenants').select('name').eq('subdomain', tenant).maybeSingle()
-      .then(({ data }: { data: { name?: string } | null }) => { if (!cancelled && data?.name) setTenantName(data.name); }, () => {});
+    supabase.from('tenants').select('companyName, name').eq('id', tenant).maybeSingle()
+      .then(({ data }: { data: { companyName?: string; name?: string } | null }) => { if (!cancelled && data) setTenantName(data.companyName || data.name || ''); }, () => {});
     return () => { cancelled = true; };
   }, [tenant]);
   const defaultCompany = tenantName || tenant;
