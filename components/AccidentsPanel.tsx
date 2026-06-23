@@ -47,6 +47,9 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
 
   const [reports, setReports] = useState<IncidentRow[]>([]);
   const [counter, setCounter] = useState<DayCounter | null>(null);
+  // Source UNIQUE des « jours sans … » = /api/incidents/safety-board (calcul depuis incident_reports),
+  // identique à la carte du dashboard principal → plus de divergence entre les pages.
+  const [board, setBoard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [severityFilter, setSeverityFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
@@ -59,11 +62,15 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/incidents/data?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+      const [res, br] = await Promise.all([
+        fetch(`/api/incidents/data?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }),
+        fetch(`/api/incidents/safety-board?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }),
+      ]);
       const j: any = res.ok ? await res.json() : {};
       setReports((j.reports as IncidentRow[]) ?? []);
       setCounter((j.counter as DayCounter | null) ?? null);
-    } catch { setReports([]); setCounter(null); }
+      setBoard(br.ok ? await br.json().catch(() => null) : null);
+    } catch { setReports([]); setCounter(null); setBoard(null); }
     setLoading(false);
   }, [tenant]);
 
@@ -71,6 +78,9 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
   useRealtime(['incident_reports'], tenant, load);
 
   async function handleReset(type: 'accident' | 'near_miss') {
+    // Réinitialise le PLANCHER de la source unique (safety-board) → met le compteur calculé à 0 partout.
+    try { await fetch('/api/incidents/safety-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type, tenant }) }); } catch { /* ignore */ }
+    // Conserve aussi le « record » legacy (incident_day_counters) pour l'affichage du meilleur score.
     try { await fetch('/api/incidents/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'reset', incidentType: type, tenant }) }); } catch { /* ignore */ }
     setResetConfirm(null); load();
   }
@@ -126,8 +136,8 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
 
       {/* Compteurs de jours */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <DaySafetyCounter label={t.daysAccident} lastDate={counter?.last_accident_date ?? null} recordDays={counter?.accident_record_days ?? 0} color="green" onReset={() => setResetConfirm('accident')} />
-        <DaySafetyCounter label={t.daysNearMiss} lastDate={counter?.last_near_miss_date ?? null} recordDays={counter?.near_miss_record_days ?? 0} color="orange" onReset={() => setResetConfirm('near_miss')} />
+        <DaySafetyCounter label={t.daysAccident} daysOverride={board?.daysSinceAccident ?? null} lastDate={board?.lastAccidentDate ?? counter?.last_accident_date ?? null} recordDays={counter?.accident_record_days ?? 0} color="green" onReset={() => setResetConfirm('accident')} />
+        <DaySafetyCounter label={t.daysNearMiss} daysOverride={board?.daysSinceNearMiss ?? null} lastDate={board?.lastNearMissDate ?? counter?.last_near_miss_date ?? null} recordDays={counter?.near_miss_record_days ?? 0} color="orange" onReset={() => setResetConfirm('near_miss')} />
       </div>
 
       {/* Modale de réinitialisation */}

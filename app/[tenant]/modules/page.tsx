@@ -160,7 +160,7 @@ export default function ModulesPage() {
         pm.total = pm.confined + pm.work;
 
         // near_miss_events fermée à l'anon -> route serveur scopée à la session.
-        const events: any[] = await fetch('/api/incidents/summary?kind=nearmiss', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).then((j: any) => (j?.nearMiss || [])).catch(() => []);
+        const events: any[] = await fetch(`/api/incidents/summary?kind=nearmiss&tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).then((j: any) => (j?.nearMiss || [])).catch(() => []);
         const e = { quasi: 0, accident: 0, year: 0, total: 0 };
         const Y = new Date().getFullYear();
         (events || []).forEach((x: any) => {

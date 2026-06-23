@@ -195,6 +195,7 @@ export async function saveProactiveMetric(tenant: string, p: HseProactive): Prom
 export type HseInterconnect = { astCount: number; permitCount: number; plannedHours: number };
 export async function getInterconnectStats(tenant: string, plannedHours: number): Promise<HseInterconnect> {
   const safeCount = async (table: string) => { try { const { count } = await supabase.from(table).select('*', { count: 'exact', head: true }).eq('tenant_id', tenant); return count || 0; } catch { return 0; } };
-  const [astCount, permitCount] = await Promise.all([safeCount('ast_forms'), safeCount('work_permits')]);
+  // ⚠️ La table active de l'AST est 'ast_permits' (et non 'ast_forms', legacy/migration 004 souvent vide).
+  const [astCount, permitCount] = await Promise.all([safeCount('ast_permits'), safeCount('work_permits')]);
   return { astCount, permitCount, plannedHours };
 }

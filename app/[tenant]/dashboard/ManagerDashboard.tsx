@@ -382,7 +382,7 @@ export default function ManagerDashboard({
         // ast_permits et near_miss_events sont fermées à l'anon (RLS) -> routes serveur (session).
         const [astJson, nmJson] = await Promise.all([
           fetch('/api/ast-permits', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-          fetch('/api/incidents/summary?kind=nearmiss', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+          fetch(`/api/incidents/summary?kind=nearmiss&tenant=${encodeURIComponent(tenant.subdomain || tenant.id || '')}`, { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
         ]);
         const asts = ((astJson as any)?.rows || []);
         const events = ((nmJson as any)?.nearMiss || []);

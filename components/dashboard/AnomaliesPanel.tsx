@@ -109,7 +109,7 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
       };
       try {
         // Lecture via route SERVEUR (tables fermées à l'anon) — scopée au tenant de session.
-        const res = await fetch('/api/incidents/summary', { credentials: 'include' });
+        const res = await fetch(`/api/incidents/summary?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
         const j: any = res.ok ? await res.json() : {};
         const incidents = (j.incidents || []) as any[];
         if (incidents.length) { for (const r of incidents) { if (r.status !== 'closed') pushIncident(r, r.data?.declarant || r.data?.reporter_name || ''); } }

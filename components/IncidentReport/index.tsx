@@ -1011,17 +1011,18 @@ function BodyDiagram({ selected, onChange, readOnly }: {
 
 // ── Day Safety Counter (exported for use in list page) ────────────────────────
 
-export function DaySafetyCounter({ label, lastDate, recordDays, onReset, readOnly, color = 'green' }: {
+export function DaySafetyCounter({ label, lastDate, recordDays, onReset, readOnly, color = 'green', daysOverride }: {
   label: string;
   lastDate: string | null;
   recordDays: number;
   onReset: () => void;
   readOnly?: boolean;
   color?: 'green' | 'orange';
+  daysOverride?: number | null;   // jours calculés par la source unique (safety-board) — prioritaire
 }) {
-  const days = lastDate
+  const days = (daysOverride != null) ? daysOverride : (lastDate
     ? Math.max(0, Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000))
-    : 0;
+    : 0);
   const isRecord = days > 0 && days >= recordDays && recordDays > 0;
   const colorCls = color === 'green' ? 'text-green-600' : 'text-orange-500';
   const bgCls = color === 'green' ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50';
