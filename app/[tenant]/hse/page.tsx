@@ -41,6 +41,7 @@ const nowLocal = () => new Date().toISOString().slice(0, 16);
 // Types d'événement (doivent matcher hse_deadline_rule.event_code du seed).
 const EVENT_CODES: { code: string; fr: string; en: string }[] = [
   { code: 'NEAR_MISS', fr: 'Passé proche', en: 'Near-miss' },
+  { code: 'FIRST_AID', fr: 'Premiers soins (sans arrêt)', en: 'First aid (no lost time)' },
   { code: 'RECORDABLE', fr: 'Accident enregistrable', en: 'Recordable injury' },
   { code: 'OVER_7_DAY', fr: 'Incapacité > 7 jours', en: 'Over-7-day incapacitation' },
   { code: 'SPECIFIED_INJURY', fr: 'Blessure spécifiée / grave', en: 'Specified / serious injury' },
@@ -131,6 +132,19 @@ export default function HsePage() {
   }
   // Ne charge les données HSE que si l'accès est suffisant (tier ≥ administration).
   useEffect(() => { if (canView) loadAll(); else if (tier != null) setLoading(false); /* eslint-disable-next-line */ }, [tenant, canView]);
+  // Un incident soumis dans l'onglet Accidents doit REMONTER au tableau de bord sans recharger la page :
+  // à l'ouverture du tableau de bord, on re-synchronise les miroirs puis on rafraîchit incidents + feed.
+  useEffect(() => {
+    if (tab !== 'kpi' || !canView) return;
+    let active = true;
+    (async () => {
+      try { await fetch(`/api/hse/sync-mirrors?tenant=${encodeURIComponent(tenant)}`, { method: 'POST', credentials: 'include' }); } catch {}
+      try { const inc = await getIncidents(tenant); if (active) setIncidents(inc); } catch {}
+      try { const af = await fetch(`/api/hse/incident-feed?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' }); const aj = await af.json(); if (active && af.ok) setAccidentFeed(aj.items || []); } catch {}
+    })();
+    return () => { active = false; };
+    /* eslint-disable-next-line */
+  }, [tab]);
 
   const rateBase = settings?.rate_base_hours || 200000;
   // KPI = incidents HSE natifs + incidents importés du module Accidents (anti-ressaisie).
@@ -329,6 +343,29 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
         <Stat l={tr('Décès', 'Fatalities')} v={vagg.fatalityCount} c={vagg.fatalityCount > 0 ? 'text-red-800' : 'text-gray-700 dark:text-gray-200'} />
         <Stat l={tr('Incidents (total)', 'Incidents (total)')} v={(incidents || []).length} c="text-gray-700 dark:text-gray-200" />
       </div>
+
+      {/* Répartition par classification réglementaire — TOUS les incidents (incl. premiers soins) sont
+          répertoriés ici, même ceux qui n'entrent pas dans LTIFR/TRIR. */}
+      {(() => {
+        const counts = new Map<string, number>();
+        for (const i of (incidents || [])) { const c = i.event_code || 'AUTRE'; counts.set(c, (counts.get(c) || 0) + 1); }
+        const ordered = EVENT_CODES.filter(c => counts.get(c.code)).map(c => ({ ...c, n: counts.get(c.code)! }));
+        for (const [code, n] of counts) if (!EVENT_CODES.find(c => c.code === code)) ordered.push({ code, fr: code, en: code, n });
+        if (!ordered.length) return null;
+        return (
+          <div className={card}>
+            <h3 className="mb-3 text-sm font-bold">{tr('Répartition par classification', 'Breakdown by classification')} <span className="text-xs font-normal text-gray-400">({(incidents || []).length} {tr('au total', 'total')})</span></h3>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {ordered.map(c => (
+                <div key={c.code} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 dark:border-gray-700/50">
+                  <span className="truncate text-xs text-gray-600 dark:text-gray-300">{tr(c.fr, c.en)}</span>
+                  <span className="ml-2 shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200">{c.n}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Beigne : blessures par partie du corps (filtre semaine/mois/année). Données santé agrégées (Loi 25). */}
       <HseInjuryDonut tenant={tenant} lang={EN ? 'en' : 'fr'} card={card} />
