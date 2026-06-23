@@ -113,6 +113,9 @@ export async function generateIncidentReportPdf(opts: {
   // Paire libellé/valeur. Si le libellé est TROP LARGE pour la colonne (ex. « 1. Pourquoi… ? »), on passe
   // le libellé sur sa propre ligne et la valeur EN DESSOUS (indentée) — évite tout chevauchement.
   const LBL_COL = 150;
+  const SEP: [number, number, number] = [230, 232, 236];     // filet de ligne très fin (effet tableau DGA)
+  // Trait de séparation gris fin entre deux lignes clé/valeur (sépare visuellement chaque champ).
+  const rowSep = () => { doc.setDrawColor(...SEP); doc.setLineWidth(0.3); doc.line(M, y - 3, W - M, y - 3); };
   const rowKV = (label: string, value: any) => {
     const val = (value === null || value === undefined || value === '') ? '—' : String(value);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
@@ -120,10 +123,10 @@ export async function generateIncidentReportPdf(opts: {
     const tooWide = doc.getTextWidth(label) > LBL_COL - 10 || labelLines.length > 1;
     if (tooWide) {
       ensure(13 + labelLines.length * 11); doc.setTextColor(90); for (const ln of labelLines) { doc.text(ln, M, y); y += 11; }
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(40); for (const ln of doc.splitTextToSize(val, W - 2 * M - 12)) { ensure(12); doc.text(ln, M + 12, y); y += 12; } y += 2;
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(40); for (const ln of doc.splitTextToSize(val, W - 2 * M - 12)) { ensure(12); doc.text(ln, M + 12, y); y += 12; } y += 4; rowSep();
     } else {
       ensure(13); doc.setTextColor(90); doc.text(label, M, y); doc.setFont('helvetica', 'normal'); doc.setTextColor(40);
-      const lines = doc.splitTextToSize(val, W - 2 * M - LBL_COL); doc.text(lines, M + LBL_COL, y); y += Math.max(13, lines.length * 12);
+      const lines = doc.splitTextToSize(val, W - 2 * M - LBL_COL); doc.text(lines, M + LBL_COL, y); y += Math.max(13, lines.length * 12) + 2; rowSep();
     }
   };
   const para = (txt: string) => { if (!txt) return; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40); for (const ln of doc.splitTextToSize(String(txt), W - 2 * M)) { ensure(12); doc.text(ln, M, y); y += 12; } };
