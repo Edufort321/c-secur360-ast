@@ -98,6 +98,9 @@ function ensureY(doc: jsPDF, y: number, need: number): number {
 
 export async function exportInspectionsPDF(opts: ExportOptions): Promise<void> {
   const { tenant, typeFilter, typeLabel, cards, supabase, stats, logoUrl } = opts;
+  // Couleur du bandeau d'en-tête depuis Admin › Modèles PDF (clé 'inspection') ; repli navy sobre.
+  let band: [number, number, number] = [17, 24, 39];
+  try { const { pdfStyleFor } = await import('@/lib/pdfStyle'); const st = await pdfStyleFor(tenant, 'inspection'); if (!(st.accent[0] === 60 && st.accent[1] === 60 && st.accent[2] === 60)) band = st.accent; } catch { /* défaut navy */ }
 
   // Récupérer tout l'historique d'un coup
   const ids = cards.map(c => c.equipment.id);
@@ -120,7 +123,7 @@ export async function exportInspectionsPDF(opts: ExportOptions): Promise<void> {
 
   // ── BANDEAU EN-TÊTE ──────────────────────────────────────────────────────
 
-  doc.setFillColor(17, 24, 39);
+  doc.setFillColor(band[0], band[1], band[2]);
   doc.rect(0, 0, PAGE_W, 24, 'F');
 
   // Logo (tenant si fourni, sinon C-Secur360 par défaut) en haut à gauche

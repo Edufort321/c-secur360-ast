@@ -4993,8 +4993,10 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   async function exportPdf() {
     if (!grid) return;
     const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
-    const { exportPostePdf } = await import('@/lib/salaryPdf');
+    const [{ exportPostePdf }, { pdfStyleFor }] = await Promise.all([import('@/lib/salaryPdf'), import('@/lib/pdfStyle')]);
+    const style = await pdfStyleFor(tenant, 'paie').catch(() => undefined);
     await exportPostePdf({
+      style,
       tr, dateStr: new Date().toLocaleDateString('fr-CA'), posteName: poste.name, logoUrl: t?.logo_url || undefined,
       grid, tiers: grid.use_skill_grid === false ? [] : tiers,
       skillForm: grid.use_skill_grid === false ? null : (grid.skill_form || { types: [] }),

@@ -6,6 +6,8 @@ import autoTable from 'jspdf-autotable';
 
 const money = (n: number) => `${(Math.round((n || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 const lastY = (doc: jsPDF, fallback: number) => (doc as any).lastAutoTable?.finalY ?? fallback;
+// En-tête de table SOBRE (gris clair + texte foncé) — cohérence DGA pour toutes les fiches RH/paie.
+const HEAD = { fillColor: [243, 244, 246] as [number, number, number], textColor: [31, 41, 55] as [number, number, number], fontStyle: 'bold' as const };
 
 type Tr = (fr: string, en: string) => string;
 type Logo = { data: string; w: number; h: number };
@@ -50,16 +52,21 @@ export async function exportPostePdf(opts: {
   tr: Tr; dateStr: string; posteName: string; logoUrl?: string;
   grid: any; tiers: any[]; skillForm: { types: any[] } | null;
   bonuses: { label: string; amount: number; unit: 'fixed' | 'pct' }[];
+  style?: { accent: [number, number, number]; ruleWidth?: number; titleSize?: number; subtitleSize?: number; showRule?: boolean };
 }) {
   const { tr, dateStr, posteName, logoUrl, grid, tiers, skillForm, bonuses } = opts;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const M = 40;
   let y = 48;
+  // Couleur d'accent depuis Admin › Modèles PDF (clé 'paie') ; repli encre sobre. En-têtes de table
+  // neutralisés (gris clair, texte foncé) — cohérence DGA, fini le bleu/vert/violet.
+  const isGray = (a: [number, number, number]) => a[0] === 60 && a[1] === 60 && a[2] === 60;
+  const accent: [number, number, number] = opts.style && !isGray(opts.style.accent) ? opts.style.accent : [30, 41, 59];
 
   const tx = await drawLogo(doc, logoUrl, M, y - 16);
   doc.setFontSize(16); doc.setTextColor(30);
   doc.text(tr('Fiche de poste', 'Position sheet'), tx, y);
-  doc.setFontSize(13); doc.setTextColor(37, 99, 235);
+  doc.setFontSize(13); doc.setTextColor(...accent);
   doc.text(posteName || '—', tx, y + 18);
   doc.setFontSize(9); doc.setTextColor(120);
   doc.text(`${tr('Généré le', 'Generated on')} ${dateStr}`, tx, y + 32);
@@ -73,7 +80,7 @@ export async function exportPostePdf(opts: {
   autoTable(doc, {
     startY: y,
     theme: 'grid', styles: { fontSize: 9, cellPadding: 4 },
-    headStyles: { fillColor: [59, 130, 246] },
+    headStyles: HEAD,
     head: [[tr('Paramètre', 'Parameter'), tr('Valeur', 'Value')]],
     body: [
       [tr('Nom de la grille', 'Grid name'), grid?.name || '—'],
@@ -91,7 +98,7 @@ export async function exportPostePdf(opts: {
     doc.text(tr('Paliers de progression', 'Progression tiers'), M, y); y += 6;
     autoTable(doc, {
       startY: y, theme: 'striped', styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: [16, 185, 129] },
+      headStyles: HEAD,
       head: [['#', tr('Palier', 'Tier'), tr('Salaire annuel', 'Annual salary'), tr('Taux/h', 'Hourly'), tr('Note min', 'Min score'), tr('Min mois', 'Min months')]],
       body: tiers.map((t: any) => [t.tier_level, t.tier_name || '—', money(t.annual_salary || 0), `${(t.hourly_rate || 0).toFixed(2)} $`, `${t.min_score ?? 0} %`, String(t.min_months_experience ?? 0)]),
     });
@@ -104,12 +111,12 @@ export async function exportPostePdf(opts: {
     doc.text(tr("Formulaire d'évaluation des compétences", 'Skill evaluation form'), M, y); y += 6;
     const body: any[] = [];
     skillForm.types.forEach((ty: any) => {
-      body.push([{ content: `${ty.name}  —  ${tr('pond.', 'weight')} ${ty.weight}%  ·  ${ty.mode === 'pct' ? '%' : '/' + ty.max}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [243, 232, 255] } }]);
+      body.push([{ content: `${ty.name}  —  ${tr('pond.', 'weight')} ${ty.weight}%  ·  ${ty.mode === 'pct' ? '%' : '/' + ty.max}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }]);
       (ty.skills || []).forEach((s: any) => body.push([`   ${s.name || '—'}`, `${s.weight || 1} %`]));
     });
     autoTable(doc, {
       startY: y, theme: 'grid', styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: [139, 92, 246] },
+      headStyles: HEAD,
       head: [[tr('Compétence', 'Skill'), tr('Poids', 'Weight')]],
       body,
     });
@@ -122,7 +129,7 @@ export async function exportPostePdf(opts: {
     doc.text(tr('Primes discrétionnaires', 'Discretionary bonuses'), M, y); y += 6;
     autoTable(doc, {
       startY: y, theme: 'grid', styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: [124, 58, 237] },
+      headStyles: HEAD,
       head: [[tr('Prime', 'Bonus'), tr('Montant', 'Amount')]],
       body: bonuses.map(b => [b.label, b.unit === 'pct' ? `${b.amount} %` : money(b.amount)]),
     });
@@ -135,7 +142,7 @@ export async function exportPostePdf(opts: {
     doc.text(tr('Commission sur ventes', 'Sales commission'), M, y); y += 6;
     autoTable(doc, {
       startY: y, theme: 'grid', styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: [217, 119, 6] },
+      headStyles: HEAD,
       head: [[tr('Paramètre', 'Parameter'), tr('Valeur', 'Value')]],
       body: [
         [tr('% par défaut', 'Default %'), `${grid.commission_pct || 0} %`],
@@ -181,7 +188,7 @@ export async function exportEvaluationPdf(opts: {
     if (skillForm?.types?.length) {
       const body: any[] = [];
       skillForm.types.forEach((ty: any) => {
-        body.push([{ content: `${ty.name}  (${tr('note type', 'type score')} ${(byType[ty.id] || 0).toFixed(0)} %  ·  ${tr('pond.', 'weight')} ${ty.weight}%)`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 232, 255] } }]);
+        body.push([{ content: `${ty.name}  (${tr('note type', 'type score')} ${(byType[ty.id] || 0).toFixed(0)} %  ·  ${tr('pond.', 'weight')} ${ty.weight}%)`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }]);
         (ty.skills || []).forEach((s: any) => {
           const v = scores[s.id] || 0;
           body.push([`   ${s.name || '—'}`, ty.mode === 'pct' ? `${v} %` : `${v}/${ty.max}`, `${s.weight || 1} %`]);
@@ -189,7 +196,7 @@ export async function exportEvaluationPdf(opts: {
       });
       autoTable(doc, {
         startY: y, theme: 'grid', styles: { fontSize: 9, cellPadding: 4 },
-        headStyles: { fillColor: [139, 92, 246] },
+        headStyles: HEAD,
         head: [[tr('Compétence', 'Skill'), tr('Note', 'Score'), tr('Poids', 'Weight')]],
         body,
       });
@@ -210,7 +217,7 @@ export async function exportEvaluationPdf(opts: {
   ]);
   autoTable(doc, {
     startY: y, theme: 'grid', styles: { fontSize: 10, cellPadding: 5 },
-    headStyles: { fillColor: [59, 130, 246] },
+    headStyles: HEAD,
     head: [[tr('Élément', 'Item'), tr('Annuel', 'Annual'), '$/h']],
     body: rows,
   });
