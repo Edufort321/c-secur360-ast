@@ -78,19 +78,22 @@ export async function generateIncidentReportPdf(opts: {
   const { default: jsPDF } = await import('jspdf');
   // Style résolu depuis Admin › Modèles PDF (clé 'accidents') : accent + épaisseur + tailles. Par défaut
   // (non personnalisé), on garde une identité ROUGE accident (sinon le gris DGA).
-  let accent: [number, number, number] = [185, 28, 28];
-  let ruleWidth = 1, titleSize = 14, subtitleSize = 11, showRule = true;
+  // SOBRIÉTÉ DGA par défaut : titre ENCRE foncée + filet GRIS fin. Une couleur d'accent ne s'applique
+  // QUE si elle est explicitement réglée dans Admin › Modèles PDF (module 'accidents', repli 'rapports').
+  let adminAccent: [number, number, number] | null = null;
+  let ruleWidth = 0.6, titleSize = 14, subtitleSize = 11, showRule = true;
   try {
     const { pdfStyleFor } = await import('@/lib/pdfStyle');
     const isGray = (a: [number, number, number]) => a[0] === 60 && a[1] === 60 && a[2] === 60;  // accent défaut (#3c3c3c)
     const st = await pdfStyleFor(opts.tenant || '', 'accidents');
-    ruleWidth = st.ruleWidth; titleSize = st.titleSize; subtitleSize = st.subtitleSize; showRule = st.showRule;
-    if (!isGray(st.accent)) accent = st.accent;                          // 1) couleur « Rapport d'accident » réglée en admin
-    else {                                                               // 2) repli sur « Rapport terrain », sinon rouge accident
-      const rap = await pdfStyleFor(opts.tenant || '', 'rapports');
-      accent = isGray(rap.accent) ? [185, 28, 28] : rap.accent;
-    }
-  } catch { /* défaut */ }
+    titleSize = st.titleSize; subtitleSize = st.subtitleSize; showRule = st.showRule;
+    if (!isGray(st.accent)) { adminAccent = st.accent; ruleWidth = st.ruleWidth; }
+    else { const rap = await pdfStyleFor(opts.tenant || '', 'rapports'); if (!isGray(rap.accent)) { adminAccent = rap.accent; ruleWidth = rap.ruleWidth; } }
+  } catch { /* défaut sobre */ }
+  const INK: [number, number, number] = [20, 20, 20];
+  const titleColor: [number, number, number] = adminAccent || INK;       // titre/section = accent admin sinon encre (DGA)
+  const ruleColor: [number, number, number] = adminAccent || [210, 210, 210]; // filet = accent admin sinon gris DGA
+  const accent = titleColor;                                             // compat : drawTitle/sections utilisent l'encre
   const logo = await loadImg(opts.logoUrl || '/c-secur360-logo.png');
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -102,10 +105,11 @@ export async function generateIncidentReportPdf(opts: {
   }
 
   // En-tête de page IDENTIQUE au socle DGA/terrain (logo ratio préservé + métadonnées droite + filet accent).
-  const header = () => drawHeader(doc, { logo, rightLines: [`${tr('Rapport', 'Report')} ${reportNumber}`, `${tr('Généré le', 'Generated')} ${new Date().toISOString().slice(0, 10)}`], accent, ruleWidth, showRule });
+  const header = () => drawHeader(doc, { logo, rightLines: [`${tr('Rapport', 'Report')} ${reportNumber}`, `${tr('Généré le', 'Generated')} ${new Date().toISOString().slice(0, 10)}`], accent: ruleColor, ruleWidth, showRule });
   let y = header();
   const ensure = (h: number) => { if (y + h > Hp - 46) { doc.addPage(); y = header(); } };
-  const sectionTitle = (s: string) => { ensure(22); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...accent); doc.text(s.toUpperCase(), M, y); y += 6; doc.setDrawColor(...accent); doc.setLineWidth(0.4); doc.line(M, y, W - M, y); y += 10; };
+  // Titre de section façon DGA : casse NORMALE, 11 pt, couleur titre, filet GRIS fin pleine largeur.
+  const sectionTitle = (s: string) => { ensure(24); y += 4; doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...titleColor); doc.text(s, M, y); y += 5; doc.setDrawColor(...ruleColor); doc.setLineWidth(0.6); doc.line(M, y, W - M, y); y += 12; };
   // Paire libellé/valeur. Si le libellé est TROP LARGE pour la colonne (ex. « 1. Pourquoi… ? »), on passe
   // le libellé sur sa propre ligne et la valeur EN DESSOUS (indentée) — évite tout chevauchement.
   const LBL_COL = 150;
