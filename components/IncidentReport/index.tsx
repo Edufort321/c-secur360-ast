@@ -58,6 +58,7 @@ interface InjuredPerson {
   phone: string;
   bodyRegions: string[];
   injuryType: string;
+  injuryTypeOther?: string;        // précision si injuryType === 'Autre'
   injuryDescription: string;
   medicalTreatment: 'none' | 'first_aid' | 'clinic' | 'hospital' | 'emergency';
   lostTime: boolean;
@@ -346,7 +347,7 @@ const INJURY_TYPES = [
 
 const WEATHER_CONDITIONS = [
   'Clair / ensoleillé', 'Nuageux', 'Pluie', 'Neige', 'Verglas',
-  'Brouillard', 'Vent fort', 'Chaleur extrême', 'Froid extrême', 'Intérieur',
+  'Brouillard', 'Vent', 'Vent fort', 'Chaleur extrême', 'Froid extrême', 'Intérieur',
 ];
 
 const COLLISION_TYPES = [
@@ -417,7 +418,7 @@ const EN_LABEL: Record<string, string> = {
   'Écrasement': 'Crush injury', 'Amputation': 'Amputation', 'Égratignure / Abrasion': 'Scratch / Abrasion',
   // Meteo
   'Clair / ensoleillé': 'Clear / sunny', 'Nuageux': 'Cloudy', 'Pluie': 'Rain', 'Neige': 'Snow', 'Verglas': 'Black ice',
-  'Brouillard': 'Fog', 'Vent fort': 'Strong wind', 'Chaleur extrême': 'Extreme heat', 'Froid extrême': 'Extreme cold', 'Intérieur': 'Indoor',
+  'Brouillard': 'Fog', 'Vent': 'Wind', 'Vent fort': 'Strong wind', 'Chaleur extrême': 'Extreme heat', 'Froid extrême': 'Extreme cold', 'Intérieur': 'Indoor',
   // Types de collision
   'Collision frontale': 'Head-on collision', 'Collision arrière': 'Rear-end collision', 'Collision latérale': 'Side collision',
   'Renversement / tonneau': 'Rollover', 'Collision avec piéton': 'Pedestrian collision', 'Collision avec objet fixe': 'Collision with fixed object',
@@ -540,7 +541,7 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
   const persons = (report.injuredPersons ?? []).map((p, i) => `
     <div class="card"><div class="card-h">${esc(t.p.injuredN)} #${i + 1} — ${v(p.name)}</div>
       ${row(t.p.jobTitle, p.jobTitle)}${row(t.p.employer, p.company)}${row(t.p.empId, p.employeeId)}${row(t.p.phone, p.phone)}
-      ${row(t.p.injuryType, p.injuryType ? tl(lang, p.injuryType) : '')}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
+      ${row(t.p.injuryType, p.injuryType === 'Autre' && p.injuryTypeOther ? `${tl(lang, 'Autre')} — ${p.injuryTypeOther}` : (p.injuryType ? tl(lang, p.injuryType) : ''))}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
       ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}${p.restricted ? row(t.p.restricted, '✔') : ''}${p.fatality ? row(t.p.fatality, '✔') : ''}
       ${p.bodyRegions?.length ? row(lang === 'fr' ? 'Zones blessées' : 'Injured areas', p.bodyRegions.map(id => bodyLabel(id, lang)).join(', ')) : ''}
     </div>`).join('');
@@ -1778,7 +1779,6 @@ function LocationSection({ report, onChange, readOnly }: {
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
-  const weatherOpts = WEATHER_CONDITIONS.map(w => ({ value: w, label: tl(lang, w) }));
   const lightingOpts = [
     'Bon éclairage', 'Éclairage insuffisant', 'Absence de lumière',
     'Lumière naturelle seulement', 'Éblouissement',
@@ -1802,7 +1802,23 @@ function LocationSection({ report, onChange, readOnly }: {
             <TextInput value={report.exactLocation} onChange={v => up('exactLocation', v)} placeholder={t.loc.exactPh} readOnly={readOnly} />
           </Field>
           <Field label={t.loc.weather}>
-            <SelectInput value={report.weatherConditions} onChange={v => up('weatherConditions', v)} options={weatherOpts} readOnly={readOnly} />
+            {(() => {
+              const sel = (report.weatherConditions || '').split(',').map(s => s.trim()).filter(Boolean);
+              const toggle = (w: string) => { if (readOnly) return; const next = sel.includes(w) ? sel.filter(x => x !== w) : [...sel, w]; up('weatherConditions', next.join(', ')); };
+              return (
+                <div className="flex flex-wrap gap-1.5">
+                  {WEATHER_CONDITIONS.map(w => {
+                    const on = sel.includes(w);
+                    return (
+                      <button key={w} type="button" onClick={() => toggle(w)} disabled={readOnly}
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${on ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-300 text-gray-600 hover:border-gray-400'} ${readOnly ? 'opacity-60' : ''}`}>
+                        {tl(lang, w)}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </Field>
           <Field label={t.loc.lighting}>
             <SelectInput value={report.lighting} onChange={v => up('lighting', v)} options={lightingOpts} readOnly={readOnly} />
@@ -1909,6 +1925,11 @@ function PersonsSection({ report, onChange, readOnly, personnelList, companyName
               </Field>
               <Field label={t.p.injuryType}>
                 <SelectInput value={person.injuryType} onChange={v => updatePerson(person.id, p => ({ ...p, injuryType: v }))} options={injuryOpts} readOnly={readOnly} />
+                {person.injuryType === 'Autre' && (
+                  <input value={person.injuryTypeOther || ''} onChange={e => updatePerson(person.id, p => ({ ...p, injuryTypeOther: e.target.value }))} disabled={readOnly}
+                    placeholder={lang === 'fr' ? 'Précisez le type de blessure…' : 'Specify the injury type…'}
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 disabled:bg-gray-50 dark:bg-gray-900 dark:border-gray-600" />
+                )}
               </Field>
               <Field label={t.p.treatment}>
                 <SelectInput value={person.medicalTreatment} onChange={v => updatePerson(person.id, p => ({ ...p, medicalTreatment: v as InjuredPerson['medicalTreatment'] }))} options={treatmentOpts} readOnly={readOnly} />

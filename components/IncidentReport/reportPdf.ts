@@ -184,7 +184,7 @@ export async function generateIncidentReportPdf(opts: {
       ensure(16); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20); doc.text(`${tr('Blessé', 'Injured')} #${i + 1} — ${p.name || '—'}`, M, y); y += 13;
       rowKV(tr('Poste', 'Position'), p.jobTitle);
       rowKV(tr('Employeur', 'Employer'), p.company);
-      rowKV(tr('Type de blessure', 'Injury type'), p.injuryType);
+      rowKV(tr('Type de blessure', 'Injury type'), p.injuryType === 'Autre' && p.injuryTypeOther ? `${tr('Autre', 'Other')} — ${p.injuryTypeOther}` : p.injuryType);
       rowKV(tr('Traitement médical', 'Medical treatment'), p.medicalTreatment ? lbl(TREATMENT, p.medicalTreatment) : '');
       if (p.injuryDescription) rowKV(tr('Description', 'Description'), p.injuryDescription);
       if (p.lostTime) rowKV(tr('Arrêt de travail', 'Lost time'), `${p.lostTimeDays || 0} ${tr('jour(s)', 'day(s)')}`);
