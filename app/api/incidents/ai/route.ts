@@ -78,15 +78,20 @@ export async function POST(req: NextRequest) {
   } else return NextResponse.json({ error: 'Action inconnue' }, { status: 400 });
 
   try {
+    // ⚠️ Pas de préremplissage du message assistant (« { ») : certains modèles Anthropic le refusent
+    // (« does not support assistant message prefill »). La conversation se termine par un message USER ;
+    // on impose le JSON par la consigne système et on l'extrait via parseJson (tolérant).
+    if (expectJson) system += lang === 'fr'
+      ? "\nRéponds UNIQUEMENT avec l'objet JSON demandé, sans texte avant ni après, sans bloc de code."
+      : "\nReply ONLY with the requested JSON object, no text before or after, no code fences.";
     const messages: any[] = [{ role: 'user', content: prompt }];
-    if (expectJson) messages.push({ role: 'assistant', content: '{' });   // préremplissage → JSON robuste
     const resp = await anthropicMessages(apiKey, { max_tokens, system, messages });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();
     if (tenant) { try { const cost = aiCallCostCents((process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'), data?.usage); if (cost > 0) await recordAiUsage(tenant, 'accidents', cost, { feature: action }); } catch {} }
     let out = extractText(data);
     if (expectJson) {
-      const obj = parseJson(out.startsWith('{') ? out : '{' + out);
+      const obj = parseJson(out);
       return NextResponse.json(obj || {});
     }
     return NextResponse.json({ result: out });

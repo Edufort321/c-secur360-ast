@@ -1146,6 +1146,35 @@ function genReportNumber(type: IncidentType) {
   return `${prefix}-${year}-${seq}`;
 }
 
+// Contexte COMPLET du rapport pour l'IA (5 pourquoi / recommandations) — agrège TOUS les onglets déjà
+// remplis. ⚠️ Loi 25 : aucune donnée nominative (pas de noms de blessés/témoins) — seulement la nature
+// des blessures, le mécanisme et les circonstances.
+function buildIncidentAiContext(rep: IncidentReportData): string {
+  const L: string[] = [];
+  L.push(`Type d'événement: ${rep.incidentType}`);
+  if (rep.severityLevel) L.push(`Gravité: ${rep.severityLevel}/5`);
+  if (rep.incidentDate) L.push(`Date/heure: ${rep.incidentDate} ${rep.incidentTime || ''}`.trim());
+  const lieu = [rep.address, rep.department, rep.exactLocation].filter(Boolean).join(' — ');
+  if (lieu) L.push(`Lieu: ${lieu}`);
+  if (rep.weatherConditions) L.push(`Conditions météo: ${rep.weatherConditions}`);
+  if (rep.lighting) L.push(`Éclairage: ${rep.lighting}`);
+  if (rep.workType) L.push(`Type de travail au moment: ${rep.workType}`);
+  if (rep.description) L.push(`Narration de l'incident: ${rep.description}`);
+  if (rep.immediateAction) L.push(`Action immédiate prise: ${rep.immediateAction}`);
+  if (rep.contributingFactors?.length) L.push(`Facteurs contributifs cochés: ${rep.contributingFactors.join(', ')}`);
+  (rep.injuredPersons || []).forEach((p, i) => {
+    const t = p.injuryType === 'Autre' ? (p.injuryTypeOther || 'Autre') : p.injuryType;
+    const inj = [t, (p.bodyRegions || []).length ? `zones: ${(p.bodyRegions || []).join('/')}` : '', p.medicalTreatment, p.lostTime ? `arrêt ${p.lostTimeDays || 0} j` : '', p.restricted ? 'travail restreint' : '', p.fatality ? 'DÉCÈS' : '', p.injuryDescription].filter(Boolean).join(' · ');
+    if (inj) L.push(`Blessé ${i + 1}: ${inj}`);
+  });
+  (rep.witnesses || []).forEach((w, i) => { if (w.statement) L.push(`Déclaration témoin ${i + 1}: ${w.statement}`); });
+  if (rep.vehicleInvolved && rep.vehicle) { const v = [rep.vehicle.collisionType, rep.vehicle.damageDescription].filter(Boolean).join(' — '); if (v) L.push(`Véhicule impliqué: ${v}`); }
+  if (rep.propertyDamageInvolved && rep.propertyDamage) { const d = [rep.propertyDamage.description, rep.propertyDamage.estimatedCost ? `coût estimé ${rep.propertyDamage.estimatedCost}` : ''].filter(Boolean).join(' — '); if (d) L.push(`Dommages matériels: ${d}`); }
+  if (rep.immediateCauses) L.push(`Causes immédiates (déjà saisies): ${rep.immediateCauses}`);
+  if (rep.basicCauses) L.push(`Causes fondamentales (déjà saisies): ${rep.basicCauses}`);
+  return L.join('\n');
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function IncidentReportForm({
@@ -2322,18 +2351,8 @@ function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lan
   const [whyMsg, setWhyMsg] = useState<string | null>(null);
   async function fillFiveWhys() {
     setWhyBusy(true); setWhyMsg(null);
-    const injuries = (report.injuredPersons || []).map(p => `${p.injuryType || ''} (${(p.bodyRegions || []).join(', ')})`).filter(s => s.trim()).join('; ');
-    const ctx = [
-      `Type: ${report.incidentType}`,
-      report.workType && `Travail: ${report.workType}`,
-      report.description && `Narration: ${report.description}`,
-      report.immediateAction && `Action immédiate: ${report.immediateAction}`,
-      injuries && `Blessures: ${injuries}`,
-      (report.contributingFactors || []).length && `Facteurs: ${report.contributingFactors.join(', ')}`,
-      report.immediateCauses && `Causes immédiates: ${report.immediateCauses}`,
-      report.basicCauses && `Causes fondamentales: ${report.basicCauses}`,
-    ].filter(Boolean).join('\n');
-    if (!report.description && !report.immediateCauses) { setWhyMsg(tl(lang, 'Renseignez d’abord la narration ou les causes.')); setWhyBusy(false); return; }
+    const ctx = buildIncidentAiContext(report);   // tient compte de TOUS les onglets remplis
+    if (!report.description && !report.immediateCauses && !(report.injuredPersons || []).length) { setWhyMsg(tl(lang, 'Renseignez d’abord la narration, les blessures ou les causes.')); setWhyBusy(false); return; }
     try {
       const { whys, rootCause } = await aiFiveWhys(ctx, lang);
       if (!whys.length) { setWhyMsg(tl(lang, 'Aucune suggestion.')); }
@@ -2534,18 +2553,10 @@ function ActionsSection({ report, onChange, readOnly, personnelList = [] }: {
   // Recommandations IA : construit le contexte de l'incident puis ajoute les actions suggérées.
   async function suggestActions() {
     setAiBusy(true); setAiMsg(null);
-    const injuries = (report.injuredPersons || []).map(p => `${p.injuryType || ''} (${(p.bodyRegions || []).join(', ')})`).filter(s => s.trim()).join('; ');
     const whys = (report.whyAnalysis || []).map(w => w.answer).filter(Boolean).join(' → ');
-    const ctx = [
-      `Type: ${report.incidentType}`,
-      report.workType && `Travail: ${report.workType}`,
-      report.description && `Narration: ${report.description}`,
-      report.immediateAction && `Action immédiate: ${report.immediateAction}`,
-      injuries && `Blessures: ${injuries}`,
-      (report.contributingFactors || []).length && `Facteurs: ${report.contributingFactors.join(', ')}`,
-      whys && `5 pourquoi: ${whys}`,
-      report.rootCause && `Cause racine: ${report.rootCause}`,
-    ].filter(Boolean).join('\n');
+    const ctx = buildIncidentAiContext(report)     // tient compte de TOUS les onglets remplis
+      + (whys ? `\n5 pourquoi: ${whys}` : '')
+      + (report.rootCause ? `\nCause racine: ${report.rootCause}` : '');
     try {
       const { actions } = await aiRecommend(ctx, lang);
       if (!actions.length) { setAiMsg(tl(lang, 'Aucune suggestion.')); }
