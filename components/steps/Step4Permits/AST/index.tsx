@@ -221,7 +221,8 @@ export function computeCompletion(ast: ASTPermit): number {
   if (ast.ppeRequirements.some(p => p.required)) score++;
   if (ast.participants.length > 0) score++;
   if (ast.participants.length > 0 && ast.participants.every(p => p.acknowledged)) score++;
-  return Math.round((score / 9) * 100);
+  // Score MAX = 10 (jobSteps vaut 2). Diviseur = 10 (était 9 → plafonnait à 111 %). Garde-fou 0–100.
+  return Math.max(0, Math.min(100, Math.round((score / 10) * 100)));
 }
 
 function getRiskColor(score: number): string {
