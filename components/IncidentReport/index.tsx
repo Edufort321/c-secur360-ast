@@ -8,7 +8,7 @@ import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
   CheckSquare, Scale, PenLine, ArrowLeft, Save, Send, Plus,
   Trash2, ChevronDown, ChevronUp, AlertTriangle, Shield,
-  RotateCcw, CheckCircle, Clock, Car, Building2, Activity, Printer, ClipboardCheck,
+  RotateCcw, CheckCircle, Clock, Car, Building2, Activity, Printer, ClipboardCheck, Sparkles, Loader2, Languages,
 } from 'lucide-react';
 import { useLanguage, type Lang } from '@/contexts/LanguageContext';
 import {
@@ -17,6 +17,8 @@ import {
   type IncidentAction, type IncidentActionStatus,
 } from '@/lib/incidentActions';
 import { assessCnesst, cnesstFromReport, cnesstNotes, CNESST_REASON_LABEL } from '@/lib/sst/cnesstObligations';
+import { AiTextTools } from './AiTextTools';
+import { aiRecommend, aiTranslateFields } from '@/lib/incidentAi';
 import { BODY_REGION_LABELS } from '@/lib/hse/bodyRegions';
 import BodyMap, { BODY_REGIONS, FACE_REGIONS, HAND_L_REGIONS, HAND_R_REGIONS, FOOT_L_REGIONS, FOOT_R_REGIONS } from './BodyMap';
 
@@ -1346,15 +1348,44 @@ export default function IncidentReportForm({
 
   // Rapport PDF PRO (jsPDF) — même socle que le DGA / rapport terrain (logo, couleur de marque, pieds de
   // page). Couvre tout le rapport (blessés + zones, témoins, véhicule, 5-pourquoi, photos, CAPA, signatures).
-  async function printReport() {
-    const typeLabel = report.incidentType === 'near_miss' ? (lang === 'fr' ? 'Passé proche' : 'Near miss')
-      : ({ accident: ['Accident de travail', 'Workplace accident'], vehicle: ['Accident de véhicule', 'Vehicle accident'], property: ['Dommages matériels', 'Property damage'], medical: ['Maladie professionnelle', 'Occupational illness'] }[report.incidentType] || ['Incident', 'Incident'])[lang === 'fr' ? 0 : 1];
+  const [pdfLang, setPdfLang] = useState<Lang | null>(null);  // langue d'export en cours (spinner)
+  async function printReport(target?: Lang) {
+    const outLang: Lang = target || lang;
+    const typeLabel = report.incidentType === 'near_miss' ? (outLang === 'fr' ? 'Passé proche' : 'Near miss')
+      : ({ accident: ['Accident de travail', 'Workplace accident'], vehicle: ['Accident de véhicule', 'Vehicle accident'], property: ['Dommages matériels', 'Property damage'], medical: ['Maladie professionnelle', 'Occupational illness'] }[report.incidentType] || ['Incident', 'Incident'])[outLang === 'fr' ? 0 : 1];
+    setPdfLang(outLang);
     try {
+      let out = report;
+      // Traduction IA si la langue d'export diffère de la langue de saisie (champs texte libres).
+      if (target && target !== lang) out = await translateReportFields(report, target);
       const { generateIncidentReportPdf } = await import('./reportPdf');
-      await generateIncidentReportPdf({ report, reportNumber, lang, typeLabel, tenant, logoUrl: null });
+      await generateIncidentReportPdf({ report: out, reportNumber, lang: outLang, typeLabel, tenant, logoUrl: null });
     } catch (e: any) {
       alert((lang === 'fr' ? 'Échec de la génération du PDF : ' : 'PDF generation failed: ') + (e?.message || ''));
-    }
+    } finally { setPdfLang(null); }
+  }
+  // Traduit les champs de texte LIBRE du rapport vers `target` (noms/chiffres inchangés). Best-effort.
+  async function translateReportFields(rep: IncidentReportData, target: Lang): Promise<IncidentReportData> {
+    const flat: Record<string, string> = {};
+    const put = (k: string, v?: string) => { if (v && v.trim()) flat[k] = v; };
+    put('description', rep.description); put('immediateAction', rep.immediateAction); put('workType', rep.workType);
+    put('rootCause', rep.rootCause); put('immediateCauses', rep.immediateCauses); put('basicCauses', rep.basicCauses);
+    (rep.whyAnalysis || []).forEach((w, i) => put(`why_${i}`, w.answer));
+    (rep.correctiveActions || []).forEach((a, i) => put(`ca_${i}`, a.description));
+    (rep.injuredPersons || []).forEach((p, i) => { put(`inj_${i}`, p.injuryDescription); });
+    (rep.witnesses || []).forEach((w, i) => put(`wit_${i}`, w.statement));
+    let tr: Record<string, string> = {};
+    try { tr = await aiTranslateFields(flat, target); } catch { return rep; }
+    const g = (k: string, fb?: string) => (tr[k] != null && tr[k] !== '' ? tr[k] : (fb || ''));
+    return {
+      ...rep,
+      description: g('description', rep.description), immediateAction: g('immediateAction', rep.immediateAction), workType: g('workType', rep.workType),
+      rootCause: g('rootCause', rep.rootCause), immediateCauses: g('immediateCauses', rep.immediateCauses), basicCauses: g('basicCauses', rep.basicCauses),
+      whyAnalysis: (rep.whyAnalysis || []).map((w, i) => ({ ...w, answer: g(`why_${i}`, w.answer) })),
+      correctiveActions: (rep.correctiveActions || []).map((a, i) => ({ ...a, description: g(`ca_${i}`, a.description) })),
+      injuredPersons: (rep.injuredPersons || []).map((p, i) => ({ ...p, injuryDescription: g(`inj_${i}`, p.injuryDescription) })),
+      witnesses: (rep.witnesses || []).map((w, i) => ({ ...w, statement: g(`wit_${i}`, w.statement) })),
+    };
   }
 
   return (
@@ -1392,12 +1423,23 @@ export default function IncidentReportForm({
             {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} />{tr.saved}</span>}
 
             <button
-              onClick={printReport}
+              onClick={() => printReport()}
+              disabled={pdfLang !== null}
               title={tr.pr.btn}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:border-gray-400 text-gray-600"
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:border-gray-400 text-gray-600 disabled:opacity-50"
             >
-              <Printer size={15} />
+              {pdfLang === lang ? <Loader2 size={15} className="animate-spin" /> : <Printer size={15} />}
               <span className="hidden sm:inline">{tr.pr.btn}</span>
+            </button>
+            {/* Export traduit IA dans l'autre langue */}
+            <button
+              onClick={() => printReport(lang === 'fr' ? 'en' : 'fr')}
+              disabled={pdfLang !== null}
+              title={lang === 'fr' ? 'Exporter en anglais (traduction IA)' : 'Exporter en français (traduction IA)'}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-indigo-300 rounded-lg hover:bg-indigo-50 text-indigo-700 disabled:opacity-50"
+            >
+              {pdfLang && pdfLang !== lang ? <Loader2 size={15} className="animate-spin" /> : <Languages size={15} />}
+              <span className="hidden sm:inline">{lang === 'fr' ? 'PDF EN' : 'PDF FR'}</span>
             </button>
 
             {!readOnly && (
@@ -2001,6 +2043,7 @@ function DescriptionSection({ report, onChange, readOnly }: {
             readOnly={readOnly}
             rows={6}
           />
+          <AiTextTools value={report.description} onChange={v => up('description', v)} lang={lang} readOnly={readOnly} />
         </Field>
         <Field label={t.d.immediate}>
           <Textarea
@@ -2010,6 +2053,7 @@ function DescriptionSection({ report, onChange, readOnly }: {
             readOnly={readOnly}
             rows={3}
           />
+          <AiTextTools value={report.immediateAction} onChange={v => up('immediateAction', v)} lang={lang} readOnly={readOnly} />
         </Field>
       </Card>
 
@@ -2335,6 +2379,8 @@ function ActionsSection({ report, onChange, readOnly, personnelList = [] }: {
 
   const { lang } = useLanguage();
   const t = TR[lang];
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState<string | null>(null);
   const statusOpts = [
     { value: 'pending',     label: tl(lang, 'En attente') },
     { value: 'in_progress', label: tl(lang, 'En cours') },
@@ -2347,6 +2393,29 @@ function ActionsSection({ report, onChange, readOnly, personnelList = [] }: {
     completed:   'bg-green-100 text-green-700',
   };
 
+  // Recommandations IA : construit le contexte de l'incident puis ajoute les actions suggérées.
+  async function suggestActions() {
+    setAiBusy(true); setAiMsg(null);
+    const injuries = (report.injuredPersons || []).map(p => `${p.injuryType || ''} (${(p.bodyRegions || []).join(', ')})`).filter(s => s.trim()).join('; ');
+    const whys = (report.whyAnalysis || []).map(w => w.answer).filter(Boolean).join(' → ');
+    const ctx = [
+      `Type: ${report.incidentType}`,
+      report.workType && `Travail: ${report.workType}`,
+      report.description && `Narration: ${report.description}`,
+      report.immediateAction && `Action immédiate: ${report.immediateAction}`,
+      injuries && `Blessures: ${injuries}`,
+      (report.contributingFactors || []).length && `Facteurs: ${report.contributingFactors.join(', ')}`,
+      whys && `5 pourquoi: ${whys}`,
+      report.rootCause && `Cause racine: ${report.rootCause}`,
+    ].filter(Boolean).join('\n');
+    try {
+      const { actions } = await aiRecommend(ctx, lang);
+      if (!actions.length) { setAiMsg(tl(lang, 'Aucune suggestion.')); }
+      else onChange(r => ({ ...r, correctiveActions: [...r.correctiveActions, ...actions.map(a => ({ ...emptyAction(), description: a.description }))] }));
+    } catch (e: any) { setAiMsg((lang === 'fr' ? 'IA : ' : 'AI: ') + (e?.message || '')); }
+    finally { setAiBusy(false); }
+  }
+
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
@@ -2355,15 +2424,26 @@ function ActionsSection({ report, onChange, readOnly, personnelList = [] }: {
           {t.ac.title}
         </h2>
         {!readOnly && (
-          <button
-            onClick={() => onChange(r => ({ ...r, correctiveActions: [...r.correctiveActions, emptyAction()] }))}
-            className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg"
-          >
-            <Plus size={14} />
-            {t.ac.add}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={suggestActions} disabled={aiBusy}
+              className="flex items-center gap-1.5 text-sm text-indigo-700 border border-indigo-300 hover:bg-indigo-50 px-3 py-1.5 rounded-lg disabled:opacity-50"
+              title={tl(lang, 'Suggérer des actions correctives selon la hiérarchie des moyens de maîtrise')}
+            >
+              {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {tl(lang, 'Recommandations IA')}
+            </button>
+            <button
+              onClick={() => onChange(r => ({ ...r, correctiveActions: [...r.correctiveActions, emptyAction()] }))}
+              className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg"
+            >
+              <Plus size={14} />
+              {t.ac.add}
+            </button>
+          </div>
         )}
       </div>
+      {aiMsg && <p className="mb-2 text-xs text-gray-500">{aiMsg}</p>}
 
       {report.correctiveActions.length === 0 && (
         <p className="text-sm text-gray-400 text-center py-4">{t.ac.none}</p>
