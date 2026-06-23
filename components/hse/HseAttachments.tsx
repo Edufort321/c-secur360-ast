@@ -16,6 +16,10 @@ export function HseAttachments({ tenant, entityType, entityId, canHr, projectId,
   const [sensitive, setSensitive] = useState(false);
   const [linkables, setLinkables] = useState<LinkableDoc[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Hyperlien externe libre (SharePoint, Drive, site web…) — sans téléverser de fichier.
+  const [showLink, setShowLink] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkName, setLinkName] = useState('');
 
   async function load() {
     setLoading(true);
@@ -45,6 +49,15 @@ export function HseAttachments({ tenant, entityType, entityId, canHr, projectId,
   async function openLinkables() {
     setLinkables(await findLinkableDocuments(tenant, { projectId }));
   }
+  async function addHyperlink() {
+    let url = linkUrl.trim(); if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;   // tolère un lien collé sans schéma
+    setBusy(true); setErr(null);
+    const { error } = await linkExistingDocument(tenant, { entity_type: entityType, entity_id: entityId, file_name: (linkName.trim() || url), file_url: url, source_module: 'url', source_ref_id: url });
+    if (error) setErr(error);
+    else { setLinkUrl(''); setLinkName(''); setShowLink(false); await load(); }
+    setBusy(false);
+  }
   async function link(d: LinkableDoc) {
     setBusy(true);
     await linkExistingDocument(tenant, { entity_type: entityType, entity_id: entityId, file_name: d.file_name, file_url: d.file_url, source_module: d.source_module, source_ref_id: d.source_ref_id });
@@ -63,7 +76,8 @@ export function HseAttachments({ tenant, entityType, entityId, canHr, projectId,
               <FileText size={13} className="shrink-0 text-gray-400" />
               {a.url ? <a href={a.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-blue-600 hover:underline">{a.file_name}</a> : <span className="flex-1 truncate">{a.file_name}</span>}
               {a.sensitive && <span className="inline-flex items-center gap-0.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"><ShieldAlert size={10} /> {tr('santé', 'health')}</span>}
-              {a.source_module && a.source_module !== 'upload' && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-700">{tr('lié', 'linked')}</span>}
+              {a.source_module === 'url' && <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">{tr('lien', 'link')}</span>}
+              {a.source_module && a.source_module !== 'upload' && a.source_module !== 'url' && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-700">{tr('lié', 'linked')}</span>}
               <button onClick={() => remove(a.id)} className="text-gray-300 hover:text-rose-600"><Trash2 size={13} /></button>
             </div>
           ))}
@@ -76,8 +90,20 @@ export function HseAttachments({ tenant, entityType, entityId, canHr, projectId,
           <input type="file" className="hidden" disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = ''; }} />
         </label>
         <button onClick={openLinkables} className={`${btn} border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-gray-600`}><Link2 size={13} /> {tr('Lier un document existant', 'Link existing document')}</button>
+        <button onClick={() => setShowLink(v => !v)} className={`${btn} border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-gray-600`}><Link2 size={13} /> {tr('Ajouter un hyperlien', 'Add hyperlink')}</button>
         {canHr && <label className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700"><input type="checkbox" checked={sensitive} onChange={e => setSensitive(e.target.checked)} className="accent-amber-600" /> {tr('marquer santé (sensible)', 'mark as health (sensitive)')}</label>}
       </div>
+      {showLink && (
+        <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+          <label className="text-[11px] font-semibold text-gray-500">{tr('URL du document', 'Document URL')}
+            <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addHyperlink(); }} placeholder="https://…  (SharePoint, Drive, site…)" className="mt-0.5 w-72 rounded-lg border border-gray-200 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-900" />
+          </label>
+          <label className="text-[11px] font-semibold text-gray-500">{tr('Nom (optionnel)', 'Name (optional)')}
+            <input value={linkName} onChange={e => setLinkName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addHyperlink(); }} placeholder={tr('ex. FDS fournisseur', 'e.g. supplier SDS')} className="mt-0.5 w-44 rounded-lg border border-gray-200 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-900" />
+          </label>
+          <button onClick={addHyperlink} disabled={busy || !linkUrl.trim()} className={`${btn} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-500/30 dark:bg-blue-500/10`}>{busy ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} {tr('Ajouter', 'Add')}</button>
+        </div>
+      )}
       {linkables && (
         <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
           <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Documents existants (aucune copie créée)', 'Existing documents (no copy created)')}</div>
