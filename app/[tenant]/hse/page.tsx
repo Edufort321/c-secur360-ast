@@ -267,10 +267,12 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
   // accident que de jours d'existence). Une date d'incident incohérente (future ou antérieure à la
   // création du tenant) ne doit JAMAIS gonfler ni fausser le compteur.
   const ageDays = startMs != null ? Math.max(0, Math.floor((nowMs - startMs) / 86400000)) : null;
+  // Règle Eric : le compteur repart à 0 dès qu'un événement est ENREGISTRÉ (peu importe la date d'incident
+  // saisie, qui peut être antérieure). On se base donc sur la date d'ENREGISTREMENT (created_at), repli sur
+  // occurred_at si absente (items du feed non encore mirrorés), bornée à [création tenant, aujourd'hui].
   const ltiTimes = (incidents || []).filter((i: any) => i.is_lost_time)
-    .map((i: any) => new Date(i.occurred_at).getTime())
+    .map((i: any) => new Date(i.created_at || i.occurred_at).getTime())
     .filter((t: number) => !isNaN(t))
-    // borne chaque date entre [création du tenant, aujourd'hui] → pas de date aberrante.
     .map((t: number) => Math.min(nowMs, startMs != null ? Math.max(startMs, t) : t));
   const lastLti = ltiTimes.length ? Math.max(...ltiTimes) : null;
   let daysSinceLti: number | null = lastLti != null ? Math.max(0, Math.floor((nowMs - lastLti) / 86400000)) : ageDays;

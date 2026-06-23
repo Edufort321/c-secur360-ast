@@ -58,14 +58,17 @@ export async function GET(req: NextRequest) {
     supabaseAdmin.from('near_miss_events').select('incident_date, created_at').eq('tenant_id', tenant).then(r => r, () => ({ data: [] as any[] })),
   ]);
 
-  const dateOf = (r: any): string | null => dOnly(r?.data?.incidentDate) || dOnly(r?.created_at);
+  // Règle Eric : le compteur « jours sans … » repart à 0 dès qu'un événement est ENREGISTRÉ (peu importe
+  // la date d'incident saisie, qui peut être antérieure à la création du tenant). On utilise donc la date
+  // d'ENREGISTREMENT (created_at) en priorité, repli sur la date d'incident.
+  const dateOf = (r: any): string | null => dOnly(r?.created_at) || dOnly(r?.data?.incidentDate);
   const accidents: string[] = [];
   const nearMiss: string[] = [];
   for (const r of (reports || []) as any[]) {
     const d = dateOf(r); if (!d) continue;
     if (r.incident_type === 'near_miss') nearMiss.push(d); else accidents.push(d); // accident/vehicle/property/medical = incident réel
   }
-  for (const e of (nm || []) as any[]) { const d = dOnly(e.incident_date) || dOnly(e.created_at); if (d) nearMiss.push(d); }
+  for (const e of (nm || []) as any[]) { const d = dOnly(e.created_at) || dOnly(e.incident_date); if (d) nearMiss.push(d); }
 
   const inYear = (arr: string[]) => arr.filter(d => d.slice(0, 4) === String(year)).length;
   const lastOf = (arr: string[]) => arr.length ? arr.slice().sort().slice(-1)[0] : null;
