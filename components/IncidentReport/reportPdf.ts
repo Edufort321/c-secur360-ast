@@ -131,7 +131,7 @@ export async function generateIncidentReportPdf(opts: {
 
   // Titre de document façon DGA (drawTitle : titre gras + sous-titre gris).
   y = drawTitle(doc, y, tr("Rapport d'incident / accident", 'Incident / accident report'),
-    `${opts.typeLabel} · ${tr('Gravité', 'Severity')} ${rep.severityLevel ?? '—'}/5 · ${tr('Date', 'Date')} ${rep.incidentDate || '—'} ${rep.incidentTime || ''}`,
+    `${opts.typeLabel} · ${tr('Gravité', 'Severity')} ${rep.severityLevel ?? '—'}/5 · ${tr('Date', 'Date')} ${rep.incidentDate || '—'} ${rep.incidentTime || ''}${(rep.revisionNumber || 1) > 1 ? ` · ${tr('Révision', 'Revision')} ${rep.revisionNumber}` : ''}`,
     accent, titleSize, subtitleSize);
 
   // ── Bloc VERDICT CNESST (équivalent du « Condition 4 » du DGA) : déclarabilité auto LSST art. 62.

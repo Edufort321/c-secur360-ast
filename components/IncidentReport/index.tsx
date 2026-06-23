@@ -148,6 +148,9 @@ interface IncidentReportData {
   managementName: string;
   managementDate: string;
   managementSigned: boolean;
+  // Révisions : version courante (1 = original) + instantanés figés des versions approuvées précédentes.
+  revisionNumber?: number;
+  revisions?: Array<{ version: number; finalizedAt: string; finalizedBy?: string; snapshot: any }>;
 }
 
 export interface IncidentReportFormProps {
@@ -1164,6 +1167,7 @@ export default function IncidentReportForm({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [status, setStatus] = useState<IncidentStatus>('draft');
+  const [showVersions, setShowVersions] = useState(false);
   const [submitConfirm, setSubmitConfirm] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const readOnly = status === 'submitted' || status === 'closed';
@@ -1248,7 +1252,7 @@ export default function IncidentReportForm({
     saveTimer.current = setTimeout(() => doSave(data, false), 2000);
   }
 
-  async function doSave(data: IncidentReportData, submit: boolean) {
+  async function doSave(data: IncidentReportData, submit: boolean, forceStatus?: IncidentStatus) {
     // NB : l'enregistrement passe par la route serveur /api/incidents/data (fetch) — PAS par le client
     // `supabase`. On ne bloque donc PAS sur la présence du client anon (sinon échec silencieux).
     setSaving(true);
@@ -1258,7 +1262,7 @@ export default function IncidentReportForm({
       report_number: reportNumber,
       incident_type: data.incidentType,
       province: data.province,
-      status: submit ? 'submitted' : status,
+      status: submit ? 'submitted' : (forceStatus ?? status),
       site_id: siteId ?? null,
       ast_permit_number: astPermitNumber ?? null,
       personnel_id: personnelId ?? null,
@@ -1299,6 +1303,29 @@ export default function IncidentReportForm({
         body: JSON.stringify({ action: 'reset', incidentType: type, tenant }),
       });
     } catch { /* ignore */ }
+  }
+
+  // ── Révisions ───────────────────────────────────────────────────────────────
+  // Rouvre un rapport approuvé/finalisé pour révision : fige la version courante dans l'historique
+  // (instantané immuable), incrémente le n° de révision, et repasse le rapport en brouillon éditable.
+  async function startRevision() {
+    const curVer = report.revisionNumber || 1;
+    const { revisions: _omit, ...snapshot } = report;                       // instantané SANS l'historique
+    const revisions = [...(report.revisions || []), {
+      version: curVer,
+      finalizedAt: report.managementDate || report.reportedDate || new Date().toISOString(),
+      finalizedBy: report.managementName || report.hseReviewerName || report.supervisorName || report.reportedBy || '',
+      snapshot,
+    }];
+    const next: IncidentReportData = {
+      ...report, revisions, revisionNumber: curVer + 1,
+      // La nouvelle version repart non signée (les approbations doivent être re-données).
+      supervisorSigned: false, hseReviewerSigned: false, managementSigned: false,
+    };
+    setReport(next);
+    setStatus('draft');
+    setSection('general');
+    await doSave(next, false, 'draft');
   }
 
   const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode }[] = [
@@ -1410,6 +1437,12 @@ export default function IncidentReportForm({
                   {report.incidentType === 'near_miss' ? tl(lang, 'Passé proche') : report.incidentType.toUpperCase()}
                 </span>
                 <span className="text-xs text-gray-400">{reportNumber}</span>
+                {(report.revisionNumber || 1) > 1 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full border border-indigo-300 bg-indigo-50 font-semibold text-indigo-700">{lang === 'fr' ? 'Rév.' : 'Rev.'} {report.revisionNumber}</span>
+                )}
+                {(report.revisions?.length || 0) > 0 && (
+                  <button onClick={() => setShowVersions(true)} className="text-xs px-2 py-0.5 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50">{lang === 'fr' ? 'Versions' : 'Versions'} ({report.revisions!.length})</button>
+                )}
               </div>
               <div className="text-xs text-gray-400 mt-0.5">
                 {status === 'draft' && tr.draft}
@@ -1442,6 +1475,16 @@ export default function IncidentReportForm({
               {pdfLang && pdfLang !== lang ? <Loader2 size={15} className="animate-spin" /> : <Languages size={15} />}
               <span className="hidden sm:inline">{lang === 'fr' ? 'PDF EN' : 'PDF FR'}</span>
             </button>
+
+            {readOnly && (
+              <button
+                onClick={() => { if (confirm(lang === 'fr' ? 'Ouvrir une nouvelle révision ? La version approuvée actuelle sera archivée et le rapport repassera en brouillon éditable.' : 'Open a new revision? The current approved version will be archived and the report will return to editable draft.')) startRevision(); }}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-amber-300 bg-amber-50 rounded-lg hover:bg-amber-100 text-amber-700 font-medium"
+              >
+                <RotateCcw size={15} />
+                {lang === 'fr' ? 'Réviser' : 'Revise'}
+              </button>
+            )}
 
             {!readOnly && (
               <>
@@ -1483,6 +1526,38 @@ export default function IncidentReportForm({
           </div>
         </div>
       </div>
+
+      {/* Modale Historique des versions (révisions figées) */}
+      {showVersions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowVersions(false)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{lang === 'fr' ? 'Historique des versions' : 'Version history'}</h3>
+              <button onClick={() => setShowVersions(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="mb-3 text-xs text-gray-500">{lang === 'fr' ? 'Chaque révision approuvée est archivée (lecture seule). La version courante est en cours.' : 'Each approved revision is archived (read-only). The current version is in progress.'}</p>
+            <ul className="space-y-2">
+              {(report.revisions || []).slice().reverse().map(rev => (
+                <li key={rev.version} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+                  <div>
+                    <span className="font-semibold">{lang === 'fr' ? 'Révision' : 'Revision'} {rev.version}</span>
+                    <span className="ml-2 text-xs text-gray-500">{(rev.finalizedAt || '').slice(0, 10)}{rev.finalizedBy ? ' · ' + rev.finalizedBy : ''}</span>
+                  </div>
+                  <button
+                    onClick={async () => { try { const { generateIncidentReportPdf } = await import('./reportPdf'); await generateIncidentReportPdf({ report: rev.snapshot, reportNumber: `${reportNumber}-v${rev.version}`, lang, typeLabel: typeLabels[report.incidentType], tenant, logoUrl: null }); } catch (e: any) { alert((lang === 'fr' ? 'Échec PDF : ' : 'PDF failed: ') + (e?.message || '')); } }}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600"
+                  >
+                    <Printer size={12} /> PDF
+                  </button>
+                </li>
+              ))}
+              <li className="flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm dark:border-indigo-500/30 dark:bg-indigo-500/10">
+                <span className="font-semibold text-indigo-700 dark:text-indigo-300">{lang === 'fr' ? 'Version courante' : 'Current version'} — {lang === 'fr' ? 'Rév.' : 'Rev.'} {report.revisionNumber || 1} {status === 'submitted' ? (lang === 'fr' ? '(approuvée)' : '(approved)') : (lang === 'fr' ? '(en cours)' : '(in progress)')}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Verdict CNESST — déclarabilité auto (LSST art. 62), l'équivalent SST du « Condition 4 » du DGA */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4">
