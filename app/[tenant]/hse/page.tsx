@@ -17,9 +17,8 @@ import {
 import { computeMonthlyKpi, computeAggregateKpi, formatDeadlineDelay } from '@/lib/hse/kpi';
 import { resolveKpiHours, monthOverridePeriod, type HoursBreakdown } from '@/lib/hse/hoursSource';
 import { proactiveFeedLive } from '@/lib/hse/proactiveFeed';
-import { getSafetyMeetings, saveSafetyMeeting, deleteSafetyMeeting, type HseSafetyMeeting } from '@/lib/hse/safetyMeetings';
-import { EntitySearch } from '@/components/ui/EntitySearch';
-import { useTenantDirectory } from '@/lib/useTenantDirectory';
+import { getSafetyMeetings, deleteSafetyMeeting, type HseSafetyMeeting } from '@/lib/hse/safetyMeetings';
+import CauserieEditor, { blankMeeting } from '@/components/hse/CauserieEditor';
 import { HseKpiCharts } from '@/components/hse/HseKpiCharts';
 import { HseInjuryDonut } from '@/components/hse/HseInjuryDonut';
 import { HseAiInsights } from '@/components/hse/HseAiInsights';
@@ -193,7 +192,7 @@ export default function HsePage() {
               }} onDeleteHours={async (id: string) => { await deleteHoursWorked(tenant, id); await reloadHours(); }} settings={settings} />}
             {tab === 'incidents' && <IncidentsTab tr={tr} card={card} tenant={tenant} incidents={incidents} deadlines={deadlines} configured={!!settings?.framework_id} canHr={canHr} userEmail={userEmail} onSaved={async () => { setIncidents(await getIncidents(tenant)); setDeadlines(await getOpenDeadlines(tenant)); }} onComplete={async (id: string) => { await completeDeadline(tenant, id, userEmail); setDeadlines(await getOpenDeadlines(tenant)); }} />}
             {tab === 'registers' && <RegistersTab tr={tr} card={card} tenant={tenant} regTypes={regTypes} tenantRegs={tenantRegs} canHr={canHr} userEmail={userEmail} />}
-            {tab === 'meetings' && <MeetingsTab tr={tr} card={card} tenant={tenant} userEmail={userEmail} />}
+            {tab === 'meetings' && <MeetingsTab tr={tr} card={card} tenant={tenant} userEmail={userEmail} lang={lang} />}
             {tab === 'config' && <ConfigTab tr={tr} card={card} tenant={tenant} frameworks={frameworks} regTypes={regTypes} tenantRegs={tenantRegs} settings={settings} onSaved={loadAll} setNotice={setNotice} />}
             {tab === 'audit' && <AuditTab tr={tr} card={card} tenant={tenant} EN={EN} />}
           </>
@@ -513,50 +512,40 @@ function IncidentsTab({ tr, card, tenant, incidents, deadlines, configured, canH
 }
 
 // ── CAUSERIES (TBM) & OBSERVATIONS (BBS) — indicateurs leading ────────────────────────────────────────
-function MeetingsTab({ tr, card, tenant, userEmail }: any) {
+function MeetingsTab({ tr, card, tenant, userEmail, lang }: any) {
   const [rows, setRows] = useState<HseSafetyMeeting[]>([]);
-  const [f, setF] = useState<HseSafetyMeeting | null>(null);
-  const [busy, setBusy] = useState(false);
-  const { projects } = useTenantDirectory(tenant);   // recherche dynamique du lieu/chantier (saisie libre permise)
-  const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
+  const [edit, setEdit] = useState<HseSafetyMeeting | null>(null);   // causerie en édition (null = liste)
   const load = async () => setRows(await getSafetyMeetings(tenant));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
-  const blank = (): HseSafetyMeeting => ({ kind: 'tbm', meeting_date: today(), location: '', topic: '', attendees: '', notes: '' });
-  async function submit() {
-    if (!f) return; setBusy(true);
-    const r = await saveSafetyMeeting(tenant, { ...f, created_by: userEmail || null });
-    setBusy(false);
-    if (r.error) return; setF(null); await load();
-  }
   const kindLabel = (k: string) => (k === 'observation' ? tr('Observation', 'Observation') : tr('Causerie (TBM)', 'Toolbox (TBM)'));
+  const mediaCount = (m: any) => (Array.isArray(m.media) ? m.media.length : 0);
+  const partCount = (m: any) => (Array.isArray(m.participants) && m.participants.length ? m.participants.length : (m.attendees ? String(m.attendees).split(',').filter((s: string) => s.trim()).length : 0));
+
+  if (edit) {
+    return (
+      <CauserieEditor tenant={tenant} value={edit} userEmail={userEmail} lang={lang === 'en' ? 'en' : 'fr'}
+        onSaved={async () => { setEdit(null); await load(); }} onCancel={() => setEdit(null)} />
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10">{tr('Les causeries et observations nourrissent automatiquement les indicateurs proactifs (leading) du tableau de bord.', 'Toolbox talks and observations automatically feed the dashboard proactive (leading) indicators.')}</div>
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10">{tr('Les causeries et observations nourrissent automatiquement les indicateurs proactifs (leading) du tableau de bord. Ajoutez autant de participants et de points que nécessaire, et enregistrez la séance (vocal/vidéo) ou liez un enregistrement Teams.', 'Toolbox talks and observations automatically feed the dashboard proactive (leading) indicators. Add as many attendees and topics as needed, and record the session (voice/video) or link a Teams recording.')}</div>
 
-      {!f ? <button onClick={() => setF(blank())} className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button> : (
-        <div className={card}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-gray-500">{tr('Type', 'Type')}<select value={f.kind} onChange={e => setF({ ...f, kind: e.target.value as any })} className={inp}><option value="tbm">{tr('Causerie sécurité (TBM)', 'Toolbox talk (TBM)')}</option><option value="observation">{tr('Observation sécurité', 'Safety observation')}</option></select></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={f.meeting_date} onChange={e => setF({ ...f, meeting_date: e.target.value })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Lieu / chantier', 'Location / site')}<div className="mt-1"><EntitySearch value={f.location || ''} onText={v => setF({ ...f, location: v })} onPick={o => setF({ ...f, location: o.label })} options={projects} placeholder={tr('Chantier ou lieu…', 'Site or location…')} /></div></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Sujet', 'Topic')}<input value={f.topic || ''} onChange={e => setF({ ...f, topic: e.target.value })} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Participants', 'Attendees')}<input value={f.attendees || ''} onChange={e => setF({ ...f, attendees: e.target.value })} placeholder={tr('noms ou nombre', 'names or count')} className={inp} /></label>
-            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<textarea value={f.notes || ''} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className={inp} /></label>
-          </div>
-          <div className="mt-3 flex justify-end gap-2"><button onClick={() => setF(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button><button onClick={submit} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? <Loader2 size={15} className="animate-spin" /> : null} {tr('Enregistrer', 'Save')}</button></div>
-        </div>
-      )}
+      <button onClick={() => setEdit(blankMeeting())} className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Nouvelle causerie', 'New talk')}</button>
 
       <div className={`${card} overflow-x-auto`}>
         <h3 className="mb-2 text-sm font-bold">{tr('Historique', 'History')} ({rows.length})</h3>
         {rows.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune causerie ni observation.', 'No talk or observation yet.')}</p> : (
-          <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date', 'Date')}</th><th>{tr('Type', 'Type')}</th><th>{tr('Lieu', 'Location')}</th><th>{tr('Sujet', 'Topic')}</th><th>{tr('Participants', 'Attendees')}</th><th></th></tr></thead>
+          <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date', 'Date')}</th><th>{tr('Type', 'Type')}</th><th>{tr('Lieu', 'Location')}</th><th>{tr('Sujet', 'Topic')}</th><th>{tr('Particip.', 'Attend.')}</th><th>{tr('Médias', 'Media')}</th><th></th></tr></thead>
             <tbody>{rows.map((m: any) => (
-              <tr key={m.id} className="border-t border-gray-50 dark:border-gray-700/50">
+              <tr key={m.id} className="cursor-pointer border-t border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30" onClick={() => setEdit(m)}>
                 <td className="py-1">{(m.meeting_date || '').slice(0, 10)}</td>
                 <td><span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${m.kind === 'observation' ? 'bg-violet-100 text-violet-700' : 'bg-blue-100 text-blue-700'}`}>{kindLabel(m.kind)}</span></td>
-                <td className="text-gray-500">{m.location || '—'}</td><td className="text-gray-500">{m.topic || '—'}</td><td className="text-gray-500">{m.attendees || '—'}</td>
-                <td className="text-right"><button onClick={async () => { await deleteSafetyMeeting(tenant, m.id); await load(); }} className="text-rose-500 hover:text-rose-700"><Trash2 size={14} /></button></td>
+                <td className="text-gray-500">{m.location || '—'}</td><td className="text-gray-500">{m.topic || '—'}</td>
+                <td className="text-gray-500">{partCount(m) || '—'}</td>
+                <td className="text-gray-500">{mediaCount(m) > 0 ? `🎬 ${mediaCount(m)}` : '—'}</td>
+                <td className="text-right" onClick={e => e.stopPropagation()}><button onClick={async () => { await deleteSafetyMeeting(tenant, m.id); await load(); }} className="text-rose-500 hover:text-rose-700"><Trash2 size={14} /></button></td>
               </tr>
             ))}</tbody>
           </table>
