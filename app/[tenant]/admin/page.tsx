@@ -3025,7 +3025,8 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
         // Enregistre le NIVEAU d'accès fin (8 niveaux) sur la fiche — c'est lui qui pilote les permissions.
         await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'profile', tenant, id: selected.id, patch: { niveauAcces: form.niveau } }) }).catch(() => {});
         writeLocalPwd(selected.id, form.password);
-        setPersonnel(list => list.map(pp => pp.id === selected.id ? { ...pp, niveauAcces: form.niveau } : pp));
+        // Met à jour l'EMAIL local de la fiche aussi → le badge « ✓ compte » apparaît immédiatement.
+        setPersonnel(list => list.map(pp => pp.id === selected.id ? { ...pp, niveauAcces: form.niveau, email: form.email, access_password: form.password } : pp));
       }
       setSelected(s => s ? { ...s, access_password: form.password, email: form.email, niveauAcces: form.niveau } : s);
       setNotice(tr('Compte créé ✓ — niveau d’accès, courriel et mot de passe enregistrés dans la fiche.', 'Account created ✓ — access level, email and password saved to the record.'));
@@ -3047,7 +3048,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
         await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', tenant,id: selected.id, password: form.password, email: form.email }) });
         await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'profile', tenant, id: selected.id, patch: { niveauAcces: form.niveau } }) }).catch(() => {});
         writeLocalPwd(selected.id, form.password);
-        setPersonnel(list => list.map(pp => pp.id === selected.id ? { ...pp, niveauAcces: form.niveau } : pp));
+        setPersonnel(list => list.map(pp => pp.id === selected.id ? { ...pp, niveauAcces: form.niveau, email: form.email, access_password: form.password } : pp));
       }
       setSelected(s => s ? { ...s, access_password: form.password, email: form.email, niveauAcces: form.niveau } : s);
       setNotice(tr('Accès mis à jour ✓ — niveau et mot de passe enregistrés dans la fiche.', 'Access updated ✓ — level and password saved to the record.'));
@@ -3068,34 +3069,8 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
 
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   // Changer mot de passe d'un compte existant
-  const [pwdEditFor, setPwdEditFor] = useState<UserAccount | null>(null);
-  const [pwdEditValue, setPwdEditValue] = useState('');
-  const [pwdEditShow, setPwdEditShow] = useState(true);
-  const [pwdEditCopied, setPwdEditCopied] = useState(false);
-  function startPwdEdit(u: UserAccount) {
-    setPwdEditFor(u);
-    setPwdEditValue(generatePassword(u.name || u.email.split('@')[0]));
-    setPwdEditShow(true);
-    setPwdEditCopied(false);
-  }
-  async function savePwdEdit() {
-    if (!pwdEditFor || !pwdEditValue.trim()) return;
-    setBusy(true);
-    try {
-      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pwdEditFor.id, password: pwdEditValue }) });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Erreur');
-      // Conserve le nouveau mot de passe dans la fiche (base + repli local par id du personnel).
-      await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ kind: 'access', tenant,email_match: pwdEditFor.email, password: pwdEditValue }) });
-      const matchPers = personnel.find(p => (p.email || '').toLowerCase() === (pwdEditFor.email || '').toLowerCase());
-      if (matchPers?.id) writeLocalPwd(matchPers.id, pwdEditValue);
-      setNotice(tr(`Mot de passe mis à jour pour ${pwdEditFor.email} ✓`, `Password updated for ${pwdEditFor.email} ✓`));
-      // Copie auto dans le presse-papier
-      navigator.clipboard.writeText(pwdEditValue).catch(() => {});
-      setPwdEditCopied(true);
-      setTimeout(() => { setPwdEditFor(null); setPwdEditValue(''); setPwdEditCopied(false); }, 3000);
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
-  }
+  // (Le générateur de mot de passe inline de « Comptes existants » a été retiré — doublon source de
+  // conflits. Le mot de passe se gère UNIQUEMENT via la fiche : sélectionner l'employé → générateur.)
 
   async function deleteUser(u: UserAccount) {
     setBusy(true);
@@ -3260,10 +3235,6 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                       {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   )}
-                  <button onClick={() => startPwdEdit(u)} title={tr('Changer mot de passe', 'Change password')}
-                    className="text-[11px] rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 px-2 py-0.5 font-semibold shrink-0">
-                    🔑
-                  </button>
                   <button onClick={() => toggleActive(u)} title={u.is_active ? tr('Suspendre le compte (connexion bloquée)', 'Suspend account (login blocked)') : tr('Réactiver le compte', 'Reactivate account')}
                     className={`text-[10px] font-semibold rounded-full px-2 py-0.5 shrink-0 ${u.is_active ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
                     {u.is_active ? tr('Suspendre', 'Suspend') : tr('Réactiver', 'Reactivate')}
@@ -3282,31 +3253,6 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                     </button>
                   )}
                 </div>
-
-                {/* Panneau changement mot de passe inline */}
-                {pwdEditFor?.id === u.id && (
-                  <div className="border-t border-gray-100 dark:border-gray-700 p-2 bg-blue-50/40 dark:bg-blue-500/5 space-y-2">
-                    <p className="text-[10px] text-gray-500">{tr('Nouveau mot de passe (5 lettres + 3 chiffres + 2 spéciaux)', 'New password (5 letters + 3 digits + 2 specials)')}</p>
-                    <div className="flex gap-1.5">
-                      <input
-                        type={pwdEditShow ? 'text' : 'password'}
-                        value={pwdEditValue}
-                        onChange={e => setPwdEditValue(e.target.value)}
-                        className="flex-1 rounded border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 px-2 py-1 text-xs font-mono tracking-wider"
-                      />
-                      <button onClick={() => setPwdEditShow(v => !v)} className="rounded border border-gray-300 dark:border-gray-600 px-2 text-xs">{pwdEditShow ? '🙈' : '👁'}</button>
-                      <button onClick={() => setPwdEditValue(generatePassword(u.name || u.email.split('@')[0]))} title={tr('Régénérer', 'Regenerate')} className="rounded border border-gray-300 dark:border-gray-600 px-2 text-xs">↻</button>
-                      <button onClick={() => { navigator.clipboard.writeText(pwdEditValue); setPwdEditCopied(true); setTimeout(() => setPwdEditCopied(false), 1500); }} className="rounded border border-gray-300 dark:border-gray-600 px-2 text-xs">📋</button>
-                    </div>
-                    {pwdEditCopied && <p className="text-[10px] text-emerald-600">✓ {tr('Copié dans le presse-papier', 'Copied to clipboard')}</p>}
-                    <div className="flex gap-1.5 justify-end">
-                      <button onClick={() => { setPwdEditFor(null); setPwdEditValue(''); }} className="text-[10px] text-gray-400 hover:text-gray-600 px-2">{tr('Annuler', 'Cancel')}</button>
-                      <button onClick={savePwdEdit} disabled={busy || !pwdEditValue.trim()} className="rounded bg-blue-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-blue-700 disabled:opacity-60">
-                        {busy ? <Loader2 size={10} className="animate-spin" /> : tr('Mettre à jour', 'Update')}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
             {users.length === 0 && <p className="text-xs text-gray-400 py-2 text-center">{tr('Aucun compte créé.', 'No accounts.')}</p>}
