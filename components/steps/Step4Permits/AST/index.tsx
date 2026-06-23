@@ -2940,11 +2940,21 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
 // Rend une fiche AST sur le document courant (en haut de la page courante).
 async function renderAstSection(
   doc: { [k: string]: any }, autoTable: (doc: any, opts: any) => void,
-  ast: ASTPermit, language: Language, logoDataUrl?: string | null,
+  ast: ASTPermit, language: Language, logoDataUrl?: string | null, tenant?: string,
 ) {
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
-  const NAVY: [number, number, number] = [17, 24, 39]; // titres/encre (gray-900)
-  // Palette façon DGA : filet GRIS fin, en-têtes de table CLAIRS à texte foncé (pas de bandeau plein).
+  // Couleur d'accent depuis Admin › Modèles PDF (module 'ast') — unifie les couleurs comme DGA. Repli
+  // sobre (encre foncée / gris) si non personnalisé. Best-effort.
+  let adminAccent: [number, number, number] | null = null;
+  if (tenant) {
+    try {
+      const { getPdfStyles, resolveKnobs, hexToRgb, DEFAULT_ACCENT } = await import('@/lib/pdfStyle');
+      const k = resolveKnobs(await getPdfStyles(tenant), 'ast');
+      if (k.accent && k.accent.toLowerCase() !== DEFAULT_ACCENT.toLowerCase()) adminAccent = hexToRgb(k.accent);
+    } catch { /* défaut sobre */ }
+  }
+  const NAVY: [number, number, number] = adminAccent || [17, 24, 39]; // titres/en-tête (accent admin sinon encre)
+  // Séparateurs de table TOUJOURS gris clair (sobriété DGA) ; l'accent ne teinte que titres + filet d'en-tête.
   const RULE: [number, number, number] = [214, 217, 222];
   const HEAD_BG: [number, number, number] = [243, 244, 246];
   const INK: [number, number, number] = [31, 41, 55];
@@ -2982,7 +2992,7 @@ async function renderAstSection(
     // Métadonnées à DROITE (façon DGA) : date de génération + statut.
     doc.setFontSize(8); doc.setTextColor(110); doc.setFont('helvetica', 'normal');
     doc.text(`${tr('Généré le', 'Generated')} ${new Date().toISOString().slice(0, 10)}`, pageW - margin, 12, { align: 'right' });
-    doc.setDrawColor(RULE[0], RULE[1], RULE[2]); doc.setLineWidth(0.4);
+    const hr = adminAccent || RULE; doc.setDrawColor(hr[0], hr[1], hr[2]); doc.setLineWidth(adminAccent ? 0.6 : 0.4);
     doc.line(margin, HEADER_H - 4, pageW - margin, HEADER_H - 4);
     doc.setTextColor(0, 0, 0);
   };
@@ -3242,23 +3252,23 @@ async function renderAstSection(
   doc.text(tr('Date : ____________________', 'Date: ____________________'), margin, y);
 }
 
-async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: string | null) {
+async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: string | null, tenant?: string) {
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default;
   const doc = new jsPDF('p', 'mm', 'a4');
-  await renderAstSection(doc as { [k: string]: any }, autoTable as unknown as (d: any, o: any) => void, ast, language, logoDataUrl);
+  await renderAstSection(doc as { [k: string]: any }, autoTable as unknown as (d: any, o: any) => void, ast, language, logoDataUrl, tenant);
   doc.save(`${ast.permit_number}.pdf`);
 }
 
 // Export en lot : plusieurs AST dans un seul PDF (une fiche par page).
-export async function generateAstsPdf(asts: ASTPermit[], language: Language, logoDataUrl?: string | null) {
+export async function generateAstsPdf(asts: ASTPermit[], language: Language, logoDataUrl?: string | null, tenant?: string) {
   if (asts.length === 0) return;
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default;
   const doc = new jsPDF('p', 'mm', 'a4');
   for (let i = 0; i < asts.length; i++) {
     if (i > 0) doc.addPage();
-    await renderAstSection(doc as { [k: string]: any }, autoTable as unknown as (d: any, o: any) => void, asts[i], language, logoDataUrl);
+    await renderAstSection(doc as { [k: string]: any }, autoTable as unknown as (d: any, o: any) => void, asts[i], language, logoDataUrl, tenant);
   }
   doc.save(asts.length === 1 ? `${asts[0].permit_number}.pdf` : `AST-export-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
@@ -3305,7 +3315,7 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
 
   const downloadPdf = async () => {
     setPdfBusy(true);
-    try { await generateAstPdf(ast, language, logoDataUrl); }
+    try { await generateAstPdf(ast, language, logoDataUrl, tenant); }
     catch { alert(tr('Échec de la génération du PDF.', 'PDF generation failed.')); }
     finally { setPdfBusy(false); }
   };

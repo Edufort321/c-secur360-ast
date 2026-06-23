@@ -290,7 +290,7 @@ export default function ASTListPage() {
     setExporting(true);
     try {
       const list = filtered.filter(r => selected.has(r.permit_number)).map(r => r.data as unknown as ASTPermit);
-      await generateAstsPdf(list, lang, logoDataUrl);
+      await generateAstsPdf(list, lang, logoDataUrl, tenant);
     } catch {
       alert(tr('Échec de la génération du PDF.', 'PDF generation failed.'));
     } finally {
