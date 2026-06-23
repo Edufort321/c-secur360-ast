@@ -1180,8 +1180,15 @@ export default function IncidentReportForm({
     if (supabase) {
       supabase.from('vehicles').select('id, name, make, model, license_plate').eq('tenant_id', tenant).eq('active', true).order('name')
         .then(({ data }) => setVehicleList((data || []).map((v: any) => ({ id: v.id, name: v.name || [v.make, v.model].filter(Boolean).join(' '), make: v.make, model: v.model, plate: v.license_plate }))), () => {});
+      // Nom employeur par défaut = nom de l'entreprise du tenant. Cascade robuste : company_settings →
+      // tenants.name → slug (toujours une valeur, pour que l'« Employeur » se remplisse à la sélection).
       supabase.from('company_settings').select('*').eq('tenant_id', tenant).maybeSingle()
-        .then(({ data }) => { const c: any = data || {}; setCompanyName(c.legal_name || c.company_name || c.name || ''); }, () => {});
+        .then(({ data }) => {
+          const c: any = data || {}; const n = c.legal_name || c.company_name || c.name || '';
+          if (n) { setCompanyName(n); return; }
+          supabase.from('tenants').select('companyName, name').eq('id', tenant).maybeSingle()
+            .then(({ data: td }) => setCompanyName(((td as any)?.companyName) || ((td as any)?.name) || tenant), () => setCompanyName(tenant));
+        }, () => setCompanyName(tenant));
     }
   }, [tenant]);
 
