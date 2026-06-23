@@ -704,7 +704,7 @@ function AuditTab({ tr, card, tenant, EN }: any) {
     <div className={`${card} overflow-x-auto`}>
       <h3 className="mb-1 text-sm font-bold">{tr('Journal d’audit (immuable)', 'Audit log (immutable)')}</h3>
       <p className="mb-3 text-[11px] text-gray-400">{tr('Traçabilité SST : qui a créé / modifié / clôturé quoi et quand. Alimenté automatiquement, non modifiable.', 'OHS traceability: who created / modified / closed what and when. Auto-populated, tamper-proof.')}</p>
-      {rows.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune entrée (appliquez la migration 254).', 'No entry (apply migration 254).')}</p> : (
+      {rows.length === 0 ? <p className="text-sm text-gray-400">{tr('Aucune entrée pour le moment.', 'No entry yet.')}</p> : (
         <table className="w-full text-sm"><thead><tr className="text-left text-xs text-gray-400"><th className="py-1">{tr('Date/heure', 'Date/time')}</th><th>{tr('Objet', 'Object')}</th><th>{tr('Action', 'Action')}</th><th>{tr('Détail', 'Detail')}</th><th>{tr('Par', 'By')}</th></tr></thead>
           <tbody>{rows.map(r => { const op = OP_LBL[r.operation] || { fr: r.operation, en: r.operation, cls: '' }; return (
             <tr key={r.id} className="border-t border-gray-50 dark:border-gray-700/50">

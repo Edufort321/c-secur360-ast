@@ -7,7 +7,7 @@
 // Donnée opérationnelle (pas de donnée santé). La saisie libre reste permise (sous-traitants/tiers).
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Plus, Trash2, Loader2, Mic, MicOff, Video, Square, Link2, Radio, FileAudio, FileVideo, X, Save, FileDown, Sparkles,
+  Plus, Trash2, Loader2, Mic, MicOff, Video, Square, Link2, Radio, FileAudio, FileVideo, X, Save, FileDown, Sparkles, PenLine,
 } from 'lucide-react';
 import { EntitySearch, type EntityOption } from '@/components/ui/EntitySearch';
 import { useTenantDirectory } from '@/lib/useTenantDirectory';
@@ -16,6 +16,7 @@ import {
   type HseSafetyMeeting, type HseParticipant, type HsePoint, type HseMedia,
 } from '@/lib/hse/safetyMeetings';
 import { generateCauseriePdf } from '@/lib/hse/causeriePdf';
+import { SignaturePad } from '@/components/ui/SignaturePad';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -33,6 +34,7 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
   const [f, setF] = useState<HseSafetyMeeting>({ ...blankMeeting(), ...value, participants: value.participants || [], points: value.points || [], media: value.media || [] });
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [sigOpen, setSigOpen] = useState<number | null>(null);   // participant dont le pad de signature est ouvert
   const inp = 'mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900';
   const lbl = 'text-xs font-semibold text-gray-500';
 
@@ -65,7 +67,11 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
         const tr = e.results[i][0].transcript;
         if (e.results[i].isFinal) finalTxt += tr + ' '; else interim += tr;
       }
-      if (finalTxt) baseTranscript.current = (baseTranscript.current + ' ' + finalTxt).trim();
+      if (finalTxt.trim()) {
+        // Chaque segment finalisé est HORODATÉ sur sa propre ligne ([HH:MM]).
+        const ts = new Date().toLocaleTimeString(fr ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' });
+        baseTranscript.current = (baseTranscript.current + `\n[${ts}] ` + finalTxt.trim()).trim();
+      }
       setF(p => ({ ...p, transcript: (baseTranscript.current + (interim ? ' ' + interim : '')).trim() }));
     };
     r.onerror = () => { setDictating(false); };
@@ -201,11 +207,21 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
         </div>
         <div className="space-y-2">
           {parts.map((p, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div className="flex-1"><EntitySearch value={p.name} onText={v => upPart(i, { name: v })} onPick={(o: EntityOption) => upPart(i, { name: o.label, role: o.sub || p.role })} options={personnel} placeholder={t('Nom du participant…', 'Attendee name…')} /></div>
-              <input value={p.role || ''} onChange={e => upPart(i, { role: e.target.value })} placeholder={t('Poste', 'Role')} className="w-32 rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900" />
-              <label className="flex items-center gap-1 text-xs text-gray-500" title={t('Présent', 'Present')}><input type="checkbox" checked={p.present !== false} onChange={e => upPart(i, { present: e.target.checked })} /> {t('Présent', 'Present')}</label>
-              <button onClick={() => delPart(i)} className="text-rose-500 hover:text-rose-700"><Trash2 size={15} /></button>
+            <div key={i} className="rounded-lg border border-gray-100 p-1.5 dark:border-gray-700/50">
+              <div className="flex items-center gap-2">
+                <div className="flex-1"><EntitySearch value={p.name} onText={v => upPart(i, { name: v })} onPick={(o: EntityOption) => upPart(i, { name: o.label, role: o.sub || p.role })} options={personnel} placeholder={t('Nom du participant…', 'Attendee name…')} /></div>
+                <input value={p.role || ''} onChange={e => upPart(i, { role: e.target.value })} placeholder={t('Poste', 'Role')} className="w-32 rounded-lg border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900" />
+                <label className="flex items-center gap-1 text-xs text-gray-500" title={t('Présent', 'Present')}><input type="checkbox" checked={p.present !== false} onChange={e => upPart(i, { present: e.target.checked })} /> {t('Présent', 'Present')}</label>
+                <button onClick={() => setSigOpen(sigOpen === i ? null : i)} className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${p.signature ? 'border-green-300 bg-green-50 text-green-700 dark:border-green-500/40 dark:bg-green-500/10' : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600'}`}>
+                  <PenLine size={12} /> {p.signature ? t('Signé', 'Signed') : t('Signer', 'Sign')}
+                </button>
+                <button onClick={() => delPart(i)} className="text-rose-500 hover:text-rose-700"><Trash2 size={15} /></button>
+              </div>
+              {sigOpen === i && (
+                <div className="mt-2 max-w-sm">
+                  <SignaturePad value={p.signature || ''} onChange={dataUrl => upPart(i, { signature: dataUrl })} label={t('Signature de ', 'Signature of ') + (p.name || `#${i + 1}`)} />
+                </div>
+              )}
             </div>
           ))}
           {parts.length === 0 && <p className="text-xs text-gray-400">{t('Aucun participant — cliquez « Ajouter un participant ».', 'No attendee yet — click “Add attendee”.')}</p>}
