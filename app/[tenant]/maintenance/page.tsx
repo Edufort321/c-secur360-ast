@@ -13,7 +13,7 @@ import { getServiceClients, getServiceEquipment, getLastInspections, type SClien
 import { RESULT_META } from '@/lib/inspectionForms';
 // Onglet « Rapport de Maintenance » = MÊME moteur que Rapport terrain (gabarits + rapports + import IA +
 // brouillons + transfert/partage), scopé doc_type='maintenance'. Client-only (localStorage/window).
-const RapportsApp = dynamic<{ docType?: string }>(() => import('@/components/rapports/RapportsApp') as any, { ssr: false });
+const RapportsApp = dynamic<{ docType?: string; embedded?: boolean }>(() => import('@/components/rapports/RapportsApp') as any, { ssr: false });
 
 // Module Maintenance — flux unique et LÉGER : on part d'un GABARIT (modèle « Rapport d'inspection »),
 // on l'assigne à un ÉQUIPEMENT (avec QR + récurrence), on lance une inspection, et le TABLEAU DE BORD
@@ -111,7 +111,7 @@ export default function MaintenancePage() {
 
         {/* ── RAPPORT DE MAINTENANCE : moteur COMPLET du Rapport terrain (gabarits identiques, import IA,
               brouillons, transfert/partage), scopé doc_type='maintenance'. ── */}
-        {tab === 'gabarits' && <RapportsApp docType="maintenance" />}
+        {tab === 'gabarits' && <RapportsApp docType="maintenance" embedded />}
 
         {/* ── CLIENTS & ÉQUIPEMENTS (rattachement sur sélection + lancer une inspection) ── */}
         {tab === 'clients' && <ClientTree tenant={tenant} tr={(fr) => fr} />}

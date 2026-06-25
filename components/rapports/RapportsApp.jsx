@@ -916,8 +916,11 @@ async function pdfFileToText(file, maxPages=20){
 
 //  APP
 // ============================================================
-export default function App({ docType } = {}){
+export default function App({ docType, embedded } = {}){
   // Le même moteur sert Rapport terrain (défaut) et Maintenance d'équipement (docType='maintenance').
+  // `embedded` = monté DANS un autre module (ex. onglet « Rapport de Maintenance ») : on masque le
+  // branding + la structure de décompte interne (bandeau de statuts, dashboard anomalies) pour ne
+  // PAS dupliquer le tableau de bord de l'hôte. On garde uniquement les FORMULAIRES (gabarits, import, édition).
   __rptDocType = (docType === "maintenance") ? "maintenance" : "rapport";
   const [db,setDb]=useState([]);
   const [loaded,setLoaded]=useState(false);
@@ -1237,14 +1240,16 @@ export default function App({ docType } = {}){
   return (
     <div style={S.page} className="app-page">
       <style>{CSS}</style>
-      <header style={S.header} className="screen-only">
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
-          {logo && <img src={logo} alt="" style={{maxHeight:42,maxWidth:120,objectFit:"contain"}}/>}
-          <div>
-            <div style={S.kicker}>{t("tagline").toUpperCase()}</div>
-            <div style={S.h1}>{t("appName")}</div>
+      <header style={{...S.header,...(embedded?{marginBottom:8,paddingBottom:0,borderBottom:"none"}:{})}} className="screen-only">
+        {!embedded ? (
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            {logo && <img src={logo} alt="" style={{maxHeight:42,maxWidth:120,objectFit:"contain"}}/>}
+            <div>
+              <div style={S.kicker}>{t("tagline").toUpperCase()}</div>
+              <div style={S.h1}>{t("appName")}</div>
+            </div>
           </div>
-        </div>
+        ) : <div/>}
         <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
           {/* FR/EN retiré : la langue suit le header principal du site (cs-lang). */}
           {(!online || pendingN>0) && (
@@ -1332,7 +1337,7 @@ export default function App({ docType } = {}){
             <button style={{...S.tab,...(tab==="templates"?S.tabOn:{})}} onClick={()=>setTab("templates")}>{t("tabTemplates")}</button>
           </div>
           {tab==="reports" ? (
-            <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+            <ListView db={filtered} all={db} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} embedded={embedded}
               onOpen={(id)=>{setSelId(id);setView("editor");}} onOpenAnomDash={()=>setShowAnomDash(true)} onNew={newReport} onImport={handleImport} onHandwriting={(file)=>setHwImport({file,tplId:"",query:""})} onPhotos={()=>setPhotoCap({photos:[],tplId:""})} customTpls={customTpls} onDelete={deleteReport} onDuplicate={duplicateReport}/>
           ) : (
             <TemplatesView custom={customTpls} onImportPdf={importPdfAsTemplate} onDelete={deleteTemplate} onUse={(tplId)=>newReport(tplId)} onEdit={editTemplate} onHide={hideDefaultTpl} onRestore={restoreDefaultTpls} hiddenCount={hiddenTpls.length}/>
@@ -1376,7 +1381,7 @@ function collectFindings(report){
 }
 function collectAllFindings(list){ return (list||[]).flatMap(collectFindings); }
 
-function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onOpenAnomDash, onNew, onImport, onHandwriting, onPhotos, customTpls, onDelete, onDuplicate }){
+function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onOpen, onOpenAnomDash, onNew, onImport, onHandwriting, onPhotos, customTpls, onDelete, onDuplicate, embedded }){
   const anomTotal=collectAllFindings(all).length;
   const [showTpl,setShowTpl]=useState(false);
   const [rView,setRView]=useState("gallery"); // galerie (cartes) | grille (lignes compactes)
@@ -1436,7 +1441,9 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
 
   return (
     <div>
-      {/* Bandeau de statistiques. Sur mobile : 5 colonnes compactes sur UNE seule ligne. */}
+      {/* Bandeau de statistiques (structure de DÉCOMPTE par statut). Masqué en mode `embedded` :
+          l'hôte (ex. Tableau de bord Maintenance) porte déjà le décompte — on évite le doublon. */}
+      {!embedded && (
       <div style={{display:"grid",gridTemplateColumns:narrow?"repeat(5,1fr)":"repeat(auto-fit,minmax(min(100%,110px),1fr))",gap:narrow?5:10,marginBottom:16}}>
         {[["all",t("filterAll"),counts.all,"#1e293b"], ...STATUSES.map(s=>[s.id,t(s.key),counts[s.id],s.color])].map(([k,lbl,c,col])=>(
           <button key={k} onClick={()=>setStatusFilter(k)} style={{textAlign:narrow?"center":"left",cursor:"pointer",background:"#fff",border:statusFilter===k?`2px solid ${col}`:"1px solid #e2e8f0",borderRadius:narrow?9:12,padding:narrow?"7px 3px":"14px 16px",boxShadow:"0 1px 2px rgba(0,0,0,.04)",minWidth:0}}>
@@ -1445,6 +1452,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
           </button>
         ))}
       </div>
+      )}
 
       {/* Actions : Importer ▾ · (Anomalies) · + Nouveau — UNE seule ligne (icônes compactes sur mobile) */}
       <div style={{display:"flex",gap:narrow?6:8,alignItems:"center",flexWrap:narrow?"nowrap":"wrap",marginBottom:16}}>
@@ -1462,7 +1470,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
             </div>
           )}
         </div>
-        {anomTotal>0 && <button style={{...S.btnGhost,borderColor:"#e3a0a0",color:"#9d0208",flexShrink:0,...(narrow?{padding:"9px 12px"}:{})}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations":"Toutes les anomalies et recommandations"}>⚠ {anomTotal}</button>}
+        {!embedded && anomTotal>0 && <button style={{...S.btnGhost,borderColor:"#e3a0a0",color:"#9d0208",flexShrink:0,...(narrow?{padding:"9px 12px"}:{})}} onClick={onOpenAnomDash} title={LANG==="en"?"All anomalies & recommendations":"Toutes les anomalies et recommandations"}>⚠ {anomTotal}</button>}
         <button style={{...S.btnPrimary,flexShrink:0,...(narrow?{padding:"9px 14px"}:{})}} onClick={()=>setShowTpl(true)}>+{narrow?"":` ${t("newReport")}`}</button>
       </div>
 
