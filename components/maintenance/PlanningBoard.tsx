@@ -3,9 +3,11 @@
 // proche au plus loin, filtres dynamiques (période, source, statut, client), KPI dûs/en retard, et bouton
 // « Prévenir le client » (courriel manuel — adresse résolue serveur). Sources : maintenance + DGA.
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, CalendarClock, AlertTriangle, Clock, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Loader2, CalendarClock, AlertTriangle, Clock, Mail, RefreshCw, CheckCircle2, ClipboardCheck, X } from 'lucide-react';
 import { getPlannedItems, type PlannedItem } from '@/lib/maintenancePlanning';
-import { markSheetDone } from '@/lib/serviceTree';
+import { markSheetDone, getServiceEquipment, type SEquip } from '@/lib/serviceTree';
+import { getGabarits, type Gabarit } from '@/lib/maintGabarits';
+import MaintInspectFill from '@/components/maintenance/MaintInspectFill';
 
 type Tr = (fr: string, en: string) => string;
 const INP = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900';
@@ -21,9 +23,19 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
   const [notifying, setNotifying] = useState<string | null>(null);
   const [doneBusy, setDoneBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
+  // Inspection depuis la planification (même flux que l'arbre : équipement → gabarit → MaintInspectFill).
+  const [equipMap, setEquipMap] = useState<Record<string, SEquip>>({});
+  const [gabarits, setGabarits] = useState<Gabarit[]>([]);
+  const [picker, setPicker] = useState<SEquip | null>(null);
+  const [fill, setFill] = useState<{ gabarit: Gabarit; equipment: SEquip } | null>(null);
 
   async function reload() { setLoading(true); try { setItems(await getPlannedItems(tenant)); } catch { setItems([]); } setLoading(false); }
-  useEffect(() => { reload(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tenant]);
+  useEffect(() => {
+    reload();
+    getServiceEquipment(tenant).then(list => setEquipMap(Object.fromEntries(list.map(e => [e.id, e])))).catch(() => {});
+    getGabarits(tenant).then(setGabarits, () => {});
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [tenant]);
 
   const clients = useMemo(() => {
     const m = new Map<string, string>();
@@ -118,6 +130,7 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
                       <td className="px-3 py-2 text-gray-400">{i.source === 'dga' ? 'DGA' : tr('Maint.', 'Maint.')}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-1.5">
+                          {i.source === 'maintenance' && i.equipment_id && equipMap[i.equipment_id] && <button onClick={() => setPicker(equipMap[i.equipment_id!])} disabled={!gabarits.length} title={!gabarits.length ? tr('Créez d’abord un gabarit', 'Create a template first') : tr('Lancer une inspection', 'Start inspection')} className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-2 py-1 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50"><ClipboardCheck size={12} /> {tr('Inspecter', 'Inspect')}</button>}
                           {i.source === 'maintenance' && <button onClick={() => markDone(i)} disabled={doneBusy === i.key} title={tr('Marquer comme effectuée (recalcule la prochaine échéance)', 'Mark done (recomputes next due)')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-500/40 dark:text-emerald-300">{doneBusy === i.key ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} {tr('Fait', 'Done')}</button>}
                           {i.client_id && <button onClick={() => notifyClient(i)} disabled={notifying === i.client_id} title={tr('Prévenir le client (courriel)', 'Notify client (email)')} className="inline-flex items-center gap-1 rounded-lg border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-500/40 dark:text-blue-300">{notifying === i.client_id ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />} {tr('Prévenir', 'Notify')}</button>}
                         </div>
@@ -128,7 +141,30 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
               </table>
             </div>
           )}
-      <p className="text-[11px] text-gray-400">{tr('Trié du plus proche au plus loin. « Fait » avance l’échéance récurrente. « Prévenir » envoie un courriel au client. Un digest automatique quotidien est disponible (Système › Notifications).', 'Sorted nearest first. "Done" advances the recurring due date. "Notify" emails the client. A daily auto digest is available (System › Notifications).')}</p>
+      <p className="text-[11px] text-gray-400">{tr('Trié du plus proche au plus loin. « Inspecter » remplit un gabarit (avance l’échéance). « Fait » avance l’échéance récurrente. « Prévenir » envoie un courriel au client. Un digest automatique quotidien est disponible (Système › Notifications).', 'Sorted nearest first. "Inspect" fills a template (advances the due date). "Done" advances the recurring due date. "Notify" emails the client. A daily auto digest is available (System › Notifications).')}</p>
+
+      {/* Sélecteur de GABARIT avant l'inspection (depuis la planification) */}
+      {picker && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setPicker(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-bold text-gray-900 dark:text-white">{tr('Choisir le gabarit', 'Choose the template')}</h3><button onClick={() => setPicker(null)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button></div>
+            <p className="mb-2 text-xs text-gray-500">{picker.name}</p>
+            <div className="space-y-2">
+              {gabarits.map(g => (
+                <button key={g.id} onClick={() => { setFill({ gabarit: g, equipment: picker }); setPicker(null); }} className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm hover:bg-orange-50 dark:border-gray-700 dark:hover:bg-orange-500/10">
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{g.name}</span>
+                  <span className="text-[11px] text-gray-400">{g.blocks.length} {tr('bloc(s)', 'block(s)')}</span>
+                </button>
+              ))}
+              {gabarits.length === 0 && <p className="text-xs text-gray-400">{tr('Aucun gabarit. Créez-en un dans l’onglet « Rapport de Maintenance ».', 'No template. Create one in the "Maintenance Report" tab.')}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remplissage de l'inspection — avance l'échéance à la sauvegarde (upsertEquipmentSchedule interne) */}
+      {fill && <MaintInspectFill tenant={tenant} tr={tr} gabarit={fill.gabarit} equipment={fill.equipment} clientId={fill.equipment.client_id}
+        onClose={() => setFill(null)} onSaved={() => { setFill(null); reload(); }} />}
     </div>
   );
 }
