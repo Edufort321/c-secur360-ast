@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X, QrCode, Pencil, Trash2, Bell, MapPin, Tag, Download, History } from 'lucide-react';
 import {
   getServiceClients, createServiceClient, getServiceEquipment, setEquipmentClient, getLastInspections, getClientProjectCounts,
-  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment, getSiteNames, getEquipmentHistory, upsertEquipmentSchedule,
+  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment, getSiteNames, getEquipmentHistory, upsertEquipmentSchedule, updateClientNotify,
   type SClient, type SEquip, type LastInsp, type EquipInput, type HistItem,
 } from '@/lib/serviceTree';
 import { getSitesTree, type SiteNode } from '@/lib/sites';
@@ -46,6 +46,7 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
   const [qrPrint, setQrPrint] = useState<SEquip[] | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [hist, setHist] = useState<{ equipment: SEquip; items: HistItem[] | null } | null>(null);
+  const [clientCfg, setClientCfg] = useState<{ client: SClient; email: string; auto: boolean } | null>(null);
   // Niveaux de regroupement actifs SOUS chaque client (ordre fixe Site → Emplacement → Type).
   const [levels, setLevels] = useState<Set<LevelId>>(new Set<LevelId>(['site', 'location', 'type']));
   const activeLevels = useMemo<LevelId[]>(() => (['site', 'location', 'type'] as LevelId[]).filter(l => levels.has(l)), [levels]);
@@ -104,6 +105,14 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
     setHist({ equipment: e, items: null });
     const items = await getEquipmentHistory(tenant, e.id);
     setHist({ equipment: e, items });
+  }
+  async function saveClientCfg() {
+    if (!clientCfg) return;
+    setBusy(true);
+    const r = await updateClientNotify(tenant, clientCfg.client.id, clientCfg.email || null, clientCfg.auto);
+    setBusy(false);
+    if (r.error) { alert(r.error); return; }
+    setClientCfg(null); reload();
   }
 
   if (fill) {
@@ -208,15 +217,19 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
             const items = byClient(c.id); const isOpen = open.has(c.id);
             return (
               <div key={c.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                <button onClick={() => toggle(c.id)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                  {isOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
-                  <Building2 size={15} className="text-slate-500" />
-                  <span className="font-bold text-gray-800 dark:text-gray-100">{c.name}</span>
-                  <span className="ml-auto flex items-center gap-1.5">
+                <div className="flex w-full items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                  <button onClick={() => toggle(c.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    {isOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
+                    <Building2 size={15} className="text-slate-500" />
+                    <span className="truncate font-bold text-gray-800 dark:text-gray-100">{c.name}</span>
+                    {c.autoNotify && <Bell size={12} className="shrink-0 text-emerald-500" aria-label={tr('Notification auto activée', 'Auto-notify on')} />}
+                  </button>
+                  <span className="flex items-center gap-1.5">
                     {projCounts[c.id] > 0 && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">{projCounts[c.id]} {tr('projet(s)', 'project(s)')}</span>}
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-gray-700">{items.length} {tr('équip.', 'equip.')}</span>
+                    <button onClick={() => setClientCfg({ client: c, email: c.alertEmail || '', auto: !!c.autoNotify })} title={tr('Notifications du client', 'Client notifications')} className="rounded-lg border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50 dark:border-gray-600"><Bell size={13} /></button>
                   </span>
-                </button>
+                </div>
                 {isOpen && (items.length ? <GroupedEquip list={items} levelsToUse={activeLevels} pathKey={c.id} depth={0} /> : <div className="px-3 py-3 text-xs text-gray-400">{tr('Aucun équipement. Crée-en un (« Nouvel équipement »), rattache-en depuis « non assignés » ou importe depuis un autre module.', 'No equipment. Create one, assign from "unassigned" or import from another module.')}</div>)}
               </div>
             );
@@ -298,6 +311,27 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
 
       {/* Impression QR (multi-format, comme l'inventaire) */}
       {qrPrint && <EquipmentQrPrint tenant={tenant} items={qrPrint} tr={tr} onClose={() => setQrPrint(null)} />}
+
+      {/* Réglages de notification d'un CLIENT (courriel + opt-in auto) */}
+      {clientCfg && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setClientCfg(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-bold text-gray-900 dark:text-white">{tr('Notifications', 'Notifications')} — {clientCfg.client.name}</h3><button onClick={() => setClientCfg(null)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button></div>
+            <label className="block text-xs font-semibold text-gray-500">{tr('Courriel d’alerte du client', 'Client alert email')}
+              <input value={clientCfg.email} onChange={e => setClientCfg(cc => cc && ({ ...cc, email: e.target.value }))} placeholder="client@…" className="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+            </label>
+            <label className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+              <input type="checkbox" checked={clientCfg.auto} onChange={e => setClientCfg(cc => cc && ({ ...cc, auto: e.target.checked }))} />
+              <Bell size={14} className="text-emerald-500" /> {tr('Prévenir automatiquement à l’approche des échéances', 'Auto-notify when maintenance is due')}
+            </label>
+            <p className="mt-1.5 text-[11px] text-gray-400">{tr('Désactivé par défaut (consentement requis). Le client reçoit un courriel listant ses équipements à planifier.', 'Off by default (consent required). The client gets an email listing their equipment due for maintenance.')}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setClientCfg(null)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:border-gray-600 dark:text-gray-300">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={saveClientCfg} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : null} {tr('Enregistrer', 'Save')}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hub d'import SÉLECTIF d'équipements depuis d'autres modules (DGA, Rapport terrain, inspections legacy) */}
       {importOpen && <ImportEquipmentPanel tenant={tenant} tr={tr} clients={clients} sites={sites} existing={equip}

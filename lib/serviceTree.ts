@@ -4,7 +4,7 @@
 import { supabase } from '@/lib/supabase';
 import { getSitesTree } from '@/lib/sites';
 
-export type SClient = { id: string; name: string; active?: boolean };
+export type SClient = { id: string; name: string; active?: boolean; alertEmail?: string | null; autoNotify?: boolean };
 export type SEquip = {
   id: string; name: string; type?: string | null; serial?: string | null; location?: string | null;
   client_id?: string | null; site_id?: string | null; brand?: string | null; model?: string | null; frequency?: string | null;
@@ -21,9 +21,24 @@ export type EquipInput = {
 };
 
 export async function getServiceClients(tenant: string): Promise<SClient[]> {
-  const { data, error } = await supabase.from('clients').select('id, name, active').eq('tenant_id', tenant).order('name');
+  // select('*') : résilient si maintenance_alert_email (230) / maintenance_auto_notify (266) absents.
+  const { data, error } = await supabase.from('clients').select('*').eq('tenant_id', tenant).order('name');
   if (error) return [];
-  return (data as any[]).map(c => ({ id: c.id, name: c.name || '(client)', active: c.active !== false }));
+  return (data as any[]).map(c => ({
+    id: c.id, name: c.name || '(client)', active: c.active !== false,
+    alertEmail: c.maintenance_alert_email ?? c.email ?? null, autoNotify: c.maintenance_auto_notify === true,
+  }));
+}
+
+/** MAJ courriel d'alerte + opt-in de notification auto d'un client (module Maintenance). */
+export async function updateClientNotify(tenant: string, clientId: string, alertEmail: string | null, autoNotify: boolean): Promise<{ error?: string }> {
+  const row: Record<string, any> = { maintenance_alert_email: alertEmail || null, maintenance_auto_notify: autoNotify };
+  let { error } = await supabase.from('clients').update(row).eq('tenant_id', tenant).eq('id', clientId);
+  if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
+    // Repli si maintenance_auto_notify (266) pas encore appliqué.
+    ({ error } = await supabase.from('clients').update({ maintenance_alert_email: alertEmail || null }).eq('tenant_id', tenant).eq('id', clientId));
+  }
+  return { error: error?.message };
 }
 
 export async function createServiceClient(tenant: string, name: string): Promise<{ id?: string; error?: string }> {
