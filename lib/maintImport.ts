@@ -4,9 +4,9 @@
 // On CRÉE des fiches `equipment` (avec provenance source/source_id, migration 264) et, quand le module
 // d'origine porte un lien (ex. dga_dossiers.equipment_id), on le RELIE pour faire remonter ses rapports.
 import { supabase } from '@/lib/supabase';
-import { createServiceEquipment, type SEquip } from '@/lib/serviceTree';
+import { createServiceEquipment, updateServiceEquipment, type SEquip, type EquipInput } from '@/lib/serviceTree';
 
-export type ImportSource = 'dga' | 'vehicle' | 'planner' | 'rapport';
+export type ImportSource = 'dga' | 'vehicle' | 'planner' | 'rapport' | 'existing';
 
 export type SourceMeta = { id: ImportSource; fr: string; en: string; descFr: string; descEn: string };
 export const IMPORT_SOURCES: SourceMeta[] = [
@@ -14,6 +14,7 @@ export const IMPORT_SOURCES: SourceMeta[] = [
   { id: 'vehicle', fr: 'Véhicules / Flotte', en: 'Vehicles / Fleet', descFr: 'Véhicules du tenant (marque, modèle, plaque) comme équipements à entretenir.', descEn: 'Tenant vehicles (make, model, plate) as maintainable equipment.' },
   { id: 'planner', fr: 'Planificateur (équipements)', en: 'Planner (equipment)', descFr: 'Équipements du planificateur — le site rattaché est conservé automatiquement.', descEn: 'Planner equipment — the linked site is preserved automatically.' },
   { id: 'rapport', fr: 'Rapport terrain', en: 'Field reports', descFr: 'Équipements nommés dans les rapports terrain (listes d’inspection).', descEn: 'Equipment named in field reports (inspection lists).' },
+  { id: 'existing', fr: 'Équipements existants (autres modules)', en: 'Existing equipment (other modules)', descFr: 'Fiches du registre `equipment` créées ailleurs (inspections, AST…) — les revendique pour la maintenance, sans doublon.', descEn: 'Equipment created elsewhere (inspections, JSA…) — claims them for maintenance, no duplicate.' },
 ];
 
 export type Candidate = {
@@ -84,6 +85,23 @@ export async function getCandidates(tenant: string, source: ImportSource, existi
     });
   }
 
+  if (source === 'existing') {
+    // Fiches du registre `equipment` créées par d'AUTRES modules (source null) — non encore en maintenance.
+    const { data, error } = await supabase.from('equipment')
+      .select('id, equipment_name, equipment_serial, equipment_type, equipment_location, site_id')
+      .eq('tenant_id', tenant).is('source', null).order('equipment_name');
+    if (error || !data) return [];
+    return (data as any[]).map(e => {
+      const name = (e.equipment_name || e.equipment_serial || e.equipment_type || 'Équipement').trim();
+      return {
+        source: 'existing' as const, sourceId: e.id, name,
+        serial: e.equipment_serial || null, type: e.equipment_type || null,
+        location: e.equipment_location || null, siteId: e.site_id || null, clientHint: null,
+        alreadyImported: false, // par définition (source null = pas encore revendiqué)
+      };
+    });
+  }
+
   if (source === 'planner') {
     const { data, error } = await supabase
       .from('planner_equipements')
@@ -135,6 +153,15 @@ export async function importCandidates(tenant: string, cands: Candidate[], targe
   const errors: string[] = [];
   let count = 0;
   for (const c of cands) {
+    // « Équipements existants » : la fiche est DÉJÀ dans `equipment` → on la REVENDIQUE (update), pas de doublon.
+    if (c.source === 'existing') {
+      const claim: EquipInput = { source: 'maintenance' };       // omettre client/site = préserve l'existant
+      if (target.clientId) claim.client_id = target.clientId;
+      if (target.siteId) claim.site_id = target.siteId;
+      const { error } = await updateServiceEquipment(tenant, c.sourceId, claim);
+      if (error) { errors.push(`${c.name}: ${error}`); continue; }
+      count++; continue;
+    }
     const { id, error } = await createServiceEquipment(tenant, {
       name: c.name, serial: c.serial || '', type: c.type || 'Équipement',
       brand: c.brand || '', model: c.model || '', location: c.location || '',
