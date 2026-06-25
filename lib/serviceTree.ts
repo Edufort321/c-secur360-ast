@@ -112,6 +112,61 @@ export async function deleteServiceEquipment(tenant: string, id: string): Promis
   return { error: error?.message };
 }
 
+// Une entrée d'historique unifié d'un équipement (inspection maintenance, legacy ou rapport DGA).
+export type HistItem = {
+  kind: 'maintenance' | 'inspection' | 'dga';
+  date: string;            // AAAA-MM-JJ
+  result?: string | null;  // clé RESULT_META (badge couleur)
+  title?: string | null;
+  detail?: string | null;
+  dossierId?: string | null; // DGA : pour ouvrir le dossier
+};
+
+/** Historique UNIFIÉ d'un équipement : inspections (rapports maintenance + legacy) + mesures DGA
+ *  (si l'équipement est relié à un dossier). Trié du plus récent au plus ancien. */
+export async function getEquipmentHistory(tenant: string, equipmentId: string): Promise<HistItem[]> {
+  const out: HistItem[] = [];
+  // 1. Legacy inspection_submissions.
+  try {
+    const { data } = await supabase.from('inspection_submissions')
+      .select('overall_result, anomalies_count, created_at, template_name')
+      .eq('tenant_id', tenant).eq('equipment_id', equipmentId).order('created_at', { ascending: false }).limit(200);
+    for (const r of ((data as any[]) || [])) out.push({
+      kind: 'inspection', date: (r.created_at || '').slice(0, 10), result: r.overall_result,
+      title: r.template_name || 'Inspection', detail: r.anomalies_count ? `${r.anomalies_count} anomalie(s)` : null,
+    });
+  } catch { /* table absente */ }
+  // 2. Rapports maintenance (moteur unique) — filtrés par equipment_id côté client.
+  try {
+    const resp = await fetch(`/api/rapports/data?kind=reports&docType=maintenance&tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' });
+    const j = await resp.json().catch(() => ({}));
+    for (const row of (Array.isArray(j.items) ? j.items : [])) {
+      const d = row.data || {};
+      if (d.equipment_id !== equipmentId) continue;
+      out.push({
+        kind: 'maintenance', date: (d.performed_at || row.updated_at || '').slice(0, 10), result: d.overall_result,
+        title: row.title || row.num || 'Maintenance', detail: d.anomalies_count ? `${d.anomalies_count} anomalie(s)` : null,
+      });
+    }
+  } catch { /* hors ligne */ }
+  // 3. DGA : dossiers reliés → mesures (condition IEEE → résultat).
+  try {
+    const { data: dos } = await supabase.from('dga_dossiers').select('id, ident').eq('tenant_id', tenant).eq('equipment_id', equipmentId);
+    const dosIds = ((dos as any[]) || []).map(d => d.id);
+    if (dosIds.length) {
+      const { data: ms } = await supabase.from('dga_measures')
+        .select('dossier_id, sample_date, condition, fault, duval').eq('tenant_id', tenant).in('dossier_id', dosIds)
+        .order('sample_date', { ascending: false }).limit(200);
+      for (const m of ((ms as any[]) || [])) out.push({
+        kind: 'dga', date: (m.sample_date || '').slice(0, 10), result: dgaConditionResult(m.condition),
+        title: 'Analyse DGA', detail: [m.fault, m.duval ? `Duval ${m.duval}` : null].filter(Boolean).join(' · ') || null,
+        dossierId: m.dossier_id,
+      });
+    }
+  } catch { /* DGA absent */ }
+  return out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
 /** Nombre de PROJETS par client (lien maintenance ↔ projets via projects.end_client_id). */
 export async function getClientProjectCounts(tenant: string): Promise<Record<string, number>> {
   const { data, error } = await supabase.from('projects').select('end_client_id').eq('tenant_id', tenant);

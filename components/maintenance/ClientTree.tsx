@@ -4,11 +4,11 @@
 // équipements (nom, # série, marque, modèle, récurrence, alertes QR), on imprime leur QR (multi-format,
 // comme l'inventaire), on rattache/déplace, et on lance une INSPECTION depuis un GABARIT existant.
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X, QrCode, Pencil, Trash2, Bell, MapPin, Tag, Download } from 'lucide-react';
+import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X, QrCode, Pencil, Trash2, Bell, MapPin, Tag, Download, History } from 'lucide-react';
 import {
   getServiceClients, createServiceClient, getServiceEquipment, setEquipmentClient, getLastInspections, getClientProjectCounts,
-  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment, getSiteNames,
-  type SClient, type SEquip, type LastInsp, type EquipInput,
+  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment, getSiteNames, getEquipmentHistory,
+  type SClient, type SEquip, type LastInsp, type EquipInput, type HistItem,
 } from '@/lib/serviceTree';
 import { getSitesTree, type SiteNode } from '@/lib/sites';
 import { RESULT_META } from '@/lib/inspectionForms';
@@ -45,6 +45,7 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
   const [equipForm, setEquipForm] = useState<EquipDraft | null>(null);
   const [qrPrint, setQrPrint] = useState<SEquip[] | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [hist, setHist] = useState<{ equipment: SEquip; items: HistItem[] | null } | null>(null);
   // Niveaux de regroupement actifs SOUS chaque client (ordre fixe Site → Emplacement → Type).
   const [levels, setLevels] = useState<Set<LevelId>>(new Set<LevelId>(['site', 'location', 'type']));
   const activeLevels = useMemo<LevelId[]>(() => (['site', 'location', 'type'] as LevelId[]).filter(l => levels.has(l)), [levels]);
@@ -96,6 +97,11 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
     if (!window.confirm(tr(`Supprimer « ${e.name} » ?`, `Delete "${e.name}"?`))) return;
     await deleteServiceEquipment(tenant, e.id); reload();
   }
+  async function openHist(e: SEquip) {
+    setHist({ equipment: e, items: null });
+    const items = await getEquipmentHistory(tenant, e.id);
+    setHist({ equipment: e, items });
+  }
 
   if (fill) {
     return <MaintInspectFill tenant={tenant} tr={tr} gabarit={fill.gabarit} equipment={fill.equipment} clientId={fill.equipment.client_id}
@@ -125,6 +131,7 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
           <option value="">{tr('— non assigné —', '— unassigned —')}</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <button onClick={() => openHist(e)} title={tr('Historique (inspections + DGA)', 'History (inspections + DGA)')} className="rounded-lg border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50 dark:border-gray-600"><History size={14} /></button>
         <button onClick={() => setQrPrint([e])} title={tr('Imprimer le QR', 'Print QR')} className="rounded-lg border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50 dark:border-gray-600"><QrCode size={14} /></button>
         <button onClick={() => setEquipForm({ id: e.id, type: e.type || '', name: e.name, serial: e.serial || '', brand: e.brand || '', model: e.model || '', location: e.location || '', frequency: e.frequency || '', public_alerts: !!e.public_alerts, client_id: e.client_id, site_id: e.site_id })} title={tr('Modifier', 'Edit')} className="rounded-lg border border-gray-300 p-1.5 text-gray-500 hover:bg-gray-50 dark:border-gray-600"><Pencil size={14} /></button>
         <button onClick={() => removeEquip(e)} title={tr('Supprimer', 'Delete')} className="rounded-lg border border-gray-300 p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:border-gray-600"><Trash2 size={14} /></button>
@@ -291,6 +298,44 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
       {/* Hub d'import SÉLECTIF d'équipements depuis d'autres modules (DGA, Rapport terrain, inspections legacy) */}
       {importOpen && <ImportEquipmentPanel tenant={tenant} tr={tr} clients={clients} sites={sites} existing={equip}
         onClose={() => setImportOpen(false)} onImported={() => { setImportOpen(false); reload(); }} />}
+
+      {/* Historique UNIFIÉ d'un équipement (inspections maintenance/legacy + mesures DGA) */}
+      {hist && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4" onClick={() => setHist(null)}>
+          <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 dark:border-gray-700">
+              <h3 className="flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white"><History size={17} className="text-orange-600" /> {tr('Historique', 'History')} — {hist.equipment.name}</h3>
+              <button onClick={() => setHist(null)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              {hist.items === null ? (
+                <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div>
+              ) : hist.items.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-400">{tr('Aucun historique. Lance une inspection ou relie un dossier DGA.', 'No history. Run an inspection or link a DGA dossier.')}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {hist.items.map((h, i) => {
+                    const rm = h.result ? RESULT_META[h.result as keyof typeof RESULT_META] : null;
+                    const kindLabel = h.kind === 'dga' ? 'DGA' : h.kind === 'maintenance' ? tr('Maintenance', 'Maintenance') : tr('Inspection', 'Inspection');
+                    const kindColor = h.kind === 'dga' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300';
+                    return (
+                      <div key={i} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm dark:border-gray-700">
+                        <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${kindColor}`}>{kindLabel}</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-100">{h.title}</span>
+                        {h.detail && <span className="text-xs text-gray-400">· {h.detail}</span>}
+                        <span className="ml-auto flex items-center gap-2">
+                          {rm && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resBadge(rm.color)}`}>{tr(rm.fr, rm.en)}</span>}
+                          <span className="text-xs text-gray-400">{h.date || '—'}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
