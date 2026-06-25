@@ -6,12 +6,13 @@
 import { supabase } from '@/lib/supabase';
 import { createServiceEquipment, type SEquip } from '@/lib/serviceTree';
 
-export type ImportSource = 'dga' | 'vehicle' | 'rapport';
+export type ImportSource = 'dga' | 'vehicle' | 'planner' | 'rapport';
 
 export type SourceMeta = { id: ImportSource; fr: string; en: string; descFr: string; descEn: string };
 export const IMPORT_SOURCES: SourceMeta[] = [
   { id: 'dga', fr: 'DGA (transformateurs)', en: 'DGA (transformers)', descFr: 'Dossiers d’analyse d’huile — relie aussi les rapports DGA à l’équipement.', descEn: 'Oil analysis dossiers — also links DGA reports to the equipment.' },
   { id: 'vehicle', fr: 'Véhicules / Flotte', en: 'Vehicles / Fleet', descFr: 'Véhicules du tenant (marque, modèle, plaque) comme équipements à entretenir.', descEn: 'Tenant vehicles (make, model, plate) as maintainable equipment.' },
+  { id: 'planner', fr: 'Planificateur (équipements)', en: 'Planner (equipment)', descFr: 'Équipements du planificateur — le site rattaché est conservé automatiquement.', descEn: 'Planner equipment — the linked site is preserved automatically.' },
   { id: 'rapport', fr: 'Rapport terrain', en: 'Field reports', descFr: 'Équipements nommés dans les rapports terrain (listes d’inspection).', descEn: 'Equipment named in field reports (inspection lists).' },
 ];
 
@@ -24,6 +25,7 @@ export type Candidate = {
   brand?: string | null;
   model?: string | null;
   location?: string | null;
+  siteId?: string | null;       // site d'origine (planner_succursales) à préserver si présent
   clientHint?: string | null;   // nom de client/localisation deviné (affichage)
   alreadyImported: boolean;
 };
@@ -82,6 +84,24 @@ export async function getCandidates(tenant: string, source: ImportSource, existi
     });
   }
 
+  if (source === 'planner') {
+    const { data, error } = await supabase
+      .from('planner_equipements')
+      .select('id, name, type, serial_number, site_id, is_active')
+      .eq('tenant_id', tenant)
+      .order('name');
+    if (error || !data) return [];
+    return (data as any[]).map(p => {
+      const name = (p.name || 'Équipement').trim();
+      return {
+        source: 'planner' as const, sourceId: p.id, name,
+        serial: p.serial_number || null, type: p.type || null, siteId: p.site_id || null,
+        location: null, clientHint: null,
+        alreadyImported: isImported('planner', p.id, name, p.serial_number),
+      };
+    });
+  }
+
   // Rapport terrain : équipements DISTINCTS nommés dans les rapports (titres de listes d'inspection
   // + champ `equipment` des annotations). Lecture via la route serveur (table fermée à l'anon).
   try {
@@ -118,7 +138,7 @@ export async function importCandidates(tenant: string, cands: Candidate[], targe
     const { id, error } = await createServiceEquipment(tenant, {
       name: c.name, serial: c.serial || '', type: c.type || 'Équipement',
       brand: c.brand || '', model: c.model || '', location: c.location || '',
-      client_id: target.clientId || null, site_id: target.siteId || null,
+      client_id: target.clientId || null, site_id: target.siteId || c.siteId || null,
       source: c.source, source_id: c.sourceId,
     });
     if (error || !id) { errors.push(`${c.name}: ${error || 'échec'}`); continue; }

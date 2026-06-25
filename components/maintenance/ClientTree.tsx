@@ -121,6 +121,7 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
           {(e.brand || e.model) ? <span className="text-gray-400"> · {[e.brand, e.model].filter(Boolean).join(' ')}</span> : ''}
           {e.source === 'dga' && <span className="ml-1.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" title={tr('Relié à un dossier DGA — ses rapports remontent ici', 'Linked to a DGA dossier — its reports surface here')}>DGA</span>}
           {e.source === 'vehicle' && <span className="ml-1.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title={tr('Importé de la flotte de véhicules', 'Imported from the vehicle fleet')}>VÉH</span>}
+          {e.source === 'planner' && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Importé du planificateur', 'Imported from the planner')}>PLN</span>}
           {e.source === 'rapport' && <span className="ml-1.5 rounded-full bg-sky-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-sky-700 dark:bg-sky-900/30 dark:text-sky-300" title={tr('Importé d’un rapport terrain', 'Imported from a field report')}>RT</span>}
           {e.public_alerts && <Bell size={12} className="ml-1 inline text-orange-500" />}
         </span>

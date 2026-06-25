@@ -94,6 +94,7 @@ export default function ImportEquipmentPanel({ tenant, tr, clients, sites, exist
                     ])}
                   </select>
                 </label>
+                {source === 'planner' && <p className="text-[11px] text-gray-400 sm:col-span-2">{tr('Astuce : laisse « Site » vide pour conserver le site d’origine de chaque équipement du planificateur.', 'Tip: leave “Site” empty to keep each planner equipment’s original site.')}</p>}
               </div>
 
               {loading ? (
