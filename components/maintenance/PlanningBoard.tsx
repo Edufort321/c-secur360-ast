@@ -3,8 +3,9 @@
 // proche au plus loin, filtres dynamiques (période, source, statut, client), KPI dûs/en retard, et bouton
 // « Prévenir le client » (courriel manuel — adresse résolue serveur). Sources : maintenance + DGA.
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, CalendarClock, AlertTriangle, Clock, Mail, RefreshCw } from 'lucide-react';
+import { Loader2, CalendarClock, AlertTriangle, Clock, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { getPlannedItems, type PlannedItem } from '@/lib/maintenancePlanning';
+import { markSheetDone } from '@/lib/serviceTree';
 
 type Tr = (fr: string, en: string) => string;
 const INP = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900';
@@ -18,6 +19,7 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
   const [status, setStatus] = useState<'all' | 'overdue' | 'soon'>('all');
   const [clientId, setClientId] = useState('');
   const [notifying, setNotifying] = useState<string | null>(null);
+  const [doneBusy, setDoneBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
 
   async function reload() { setLoading(true); try { setItems(await getPlannedItems(tenant)); } catch { setItems([]); } setLoading(false); }
@@ -54,6 +56,16 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
       setMsg(r.ok ? `✓ ${tr('Client prévenu', 'Client notified')} (${j.to})` : (j.error || tr('Envoi impossible.', 'Send failed.')));
     } catch { setMsg(tr('Erreur réseau.', 'Network error.')); }
     finally { setNotifying(null); }
+  }
+
+  async function markDone(it: PlannedItem) {
+    if (it.source !== 'maintenance') return;
+    setDoneBusy(it.key); setMsg('');
+    const r = await markSheetDone(tenant, it.source_id);
+    setDoneBusy(null);
+    if (r.error) { setMsg(r.error); return; }
+    setMsg(tr('✓ Échéance marquée faite — prochaine recalculée.', '✓ Marked done — next date recalculated.'));
+    reload();
   }
 
   const badge = (s: string) => s === 'overdue' ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' : s === 'soon' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
@@ -104,8 +116,11 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
                       <td className="px-3 py-2 text-gray-500">{i.equipment_name || '—'}</td>
                       <td className="px-3 py-2 text-gray-500">{i.client_name || '—'}</td>
                       <td className="px-3 py-2 text-gray-400">{i.source === 'dga' ? 'DGA' : tr('Maint.', 'Maint.')}</td>
-                      <td className="px-3 py-2 text-right">
-                        {i.client_id && <button onClick={() => notifyClient(i)} disabled={notifying === i.client_id} title={tr('Prévenir le client (courriel)', 'Notify client (email)')} className="inline-flex items-center gap-1 rounded-lg border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-500/40 dark:text-blue-300">{notifying === i.client_id ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />} {tr('Prévenir', 'Notify')}</button>}
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {i.source === 'maintenance' && <button onClick={() => markDone(i)} disabled={doneBusy === i.key} title={tr('Marquer comme effectuée (recalcule la prochaine échéance)', 'Mark done (recomputes next due)')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-500/40 dark:text-emerald-300">{doneBusy === i.key ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} {tr('Fait', 'Done')}</button>}
+                          {i.client_id && <button onClick={() => notifyClient(i)} disabled={notifying === i.client_id} title={tr('Prévenir le client (courriel)', 'Notify client (email)')} className="inline-flex items-center gap-1 rounded-lg border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-500/40 dark:text-blue-300">{notifying === i.client_id ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />} {tr('Prévenir', 'Notify')}</button>}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -113,7 +128,7 @@ export default function PlanningBoard({ tenant, tr }: { tenant: string; tr: Tr }
               </table>
             </div>
           )}
-      <p className="text-[11px] text-gray-400">{tr('Trié du plus proche au plus loin. « Prévenir » envoie un courriel à l’adresse d’alerte du client (ou son courriel). Envoi automatique (cron) à venir.', 'Sorted nearest first. "Notify" emails the client alert address. Auto (cron) coming.')}</p>
+      <p className="text-[11px] text-gray-400">{tr('Trié du plus proche au plus loin. « Fait » avance l’échéance récurrente. « Prévenir » envoie un courriel au client. Un digest automatique quotidien est disponible (Système › Notifications).', 'Sorted nearest first. "Done" advances the recurring due date. "Notify" emails the client. A daily auto digest is available (System › Notifications).')}</p>
     </div>
   );
 }

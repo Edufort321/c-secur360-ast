@@ -223,6 +223,18 @@ export async function getEquipmentHistory(tenant: string, equipmentId: string): 
   return out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 }
 
+/** Marque une échéance (maintenance_sheet) comme EFFECTUÉE aujourd'hui et recalcule la prochaine
+ *  selon sa récurrence. Utilisé par le bouton « Fait » de la planification. */
+export async function markSheetDone(tenant: string, sheetId: string): Promise<{ error?: string }> {
+  const { data: row } = await supabase.from('maintenance_sheets').select('frequency').eq('tenant_id', tenant).eq('id', sheetId).maybeSingle();
+  const freq = (row as any)?.frequency || null;
+  const today = new Date().toISOString().slice(0, 10);
+  const days = freq ? FREQ_DAYS[freq] : 0;
+  const patch: Record<string, any> = { last_done_at: today, next_due_at: days ? addDays(today, days) : null, updated_at: new Date().toISOString() };
+  const { error } = await supabase.from('maintenance_sheets').update(patch).eq('tenant_id', tenant).eq('id', sheetId);
+  return { error: error?.message };
+}
+
 /** Nombre de PROJETS par client (lien maintenance ↔ projets via projects.end_client_id). */
 export async function getClientProjectCounts(tenant: string): Promise<Record<string, number>> {
   const { data, error } = await supabase.from('projects').select('end_client_id').eq('tenant_id', tenant);
