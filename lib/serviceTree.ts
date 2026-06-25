@@ -112,6 +112,38 @@ export async function deleteServiceEquipment(tenant: string, id: string): Promis
   return { error: error?.message };
 }
 
+// Récurrence → nombre de jours (échéances de maintenance).
+export const FREQ_DAYS: Record<string, number> = {
+  quotidien: 1, hebdomadaire: 7, mensuel: 30, trimestriel: 91, semestriel: 182, annuel: 365,
+};
+const addDays = (iso: string, n: number) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+/** Crée/MAJ l'ÉCHÉANCE de maintenance d'un équipement à partir de sa récurrence (maintenance_sheets) :
+ *  next_due_at = (last_done ou aujourd'hui) + intervalle. Sans récurrence → désactive l'échéance.
+ *  Une seule feuille d'« échéance auto » par équipement (réutilisée). Best-effort. */
+export async function upsertEquipmentSchedule(tenant: string, equipmentId: string, frequency?: string | null, lastDoneISO?: string | null): Promise<void> {
+  if (!equipmentId) return;
+  try {
+    const { data: rows } = await supabase.from('maintenance_sheets').select('id').eq('tenant_id', tenant).eq('equipment_id', equipmentId).order('created_at').limit(1);
+    const existingId = (rows as any[])?.[0]?.id || null;
+    const days = frequency ? FREQ_DAYS[frequency] : 0;
+    if (!days) { // plus de récurrence → on désactive l'échéance existante
+      if (existingId) await supabase.from('maintenance_sheets').update({ active: false, next_due_at: null, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', existingId);
+      return;
+    }
+    const base = (lastDoneISO || new Date().toISOString()).slice(0, 10);
+    const next = addDays(base, days);
+    const eqName = (await supabase.from('equipment').select('equipment_name').eq('tenant_id', tenant).eq('id', equipmentId).maybeSingle()).data as any;
+    const row: Record<string, any> = {
+      tenant_id: tenant, equipment_id: equipmentId, frequency, next_due_at: next, active: true,
+      name: eqName?.equipment_name ? `Échéance — ${eqName.equipment_name}` : 'Échéance de maintenance', updated_at: new Date().toISOString(),
+    };
+    if (lastDoneISO) row.last_done_at = base;
+    if (existingId) await supabase.from('maintenance_sheets').update(row).eq('tenant_id', tenant).eq('id', existingId);
+    else await supabase.from('maintenance_sheets').insert(row);
+  } catch { /* best-effort */ }
+}
+
 // Une entrée d'historique unifié d'un équipement (inspection maintenance, legacy ou rapport DGA).
 export type HistItem = {
   kind: 'maintenance' | 'inspection' | 'dga';

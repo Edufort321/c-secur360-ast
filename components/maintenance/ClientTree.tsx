@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, ChevronRight, ChevronDown, ClipboardCheck, Building2, X, QrCode, Pencil, Trash2, Bell, MapPin, Tag, Download, History } from 'lucide-react';
 import {
   getServiceClients, createServiceClient, getServiceEquipment, setEquipmentClient, getLastInspections, getClientProjectCounts,
-  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment, getSiteNames, getEquipmentHistory,
+  createServiceEquipment, updateServiceEquipment, deleteServiceEquipment, getSiteNames, getEquipmentHistory, upsertEquipmentSchedule,
   type SClient, type SEquip, type LastInsp, type EquipInput, type HistItem,
 } from '@/lib/serviceTree';
 import { getSitesTree, type SiteNode } from '@/lib/sites';
@@ -89,8 +89,11 @@ export default function ClientTree({ tenant, tr }: { tenant: string; tr: Tr }) {
     if (!(equipForm.name || '').trim() && !(equipForm.serial || '').trim()) { alert(tr('Nom ou # série requis.', 'Name or serial required.')); return; }
     setBusy(true);
     const r = equipForm.id ? await updateServiceEquipment(tenant, equipForm.id, equipForm) : await createServiceEquipment(tenant, equipForm);
+    if (r.error) { setBusy(false); alert(r.error); return; }
+    // Récurrence → crée/MAJ l'échéance de maintenance (planification + digest).
+    const eqId = equipForm.id || (r as any).id;
+    if (eqId) await upsertEquipmentSchedule(tenant, eqId, equipForm.frequency || null);
     setBusy(false);
-    if (r.error) { alert(r.error); return; }
     setEquipForm(null); reload();
   }
   async function removeEquip(e: SEquip) {

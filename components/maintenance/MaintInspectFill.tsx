@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, X, AlertTriangle, Check, Camera, Link2 } from 'lucide-react';
 import type { Gabarit } from '@/lib/maintGabarits';
-import type { SEquip } from '@/lib/serviceTree';
+import { upsertEquipmentSchedule, type SEquip } from '@/lib/serviceTree';
 import { getProjectsLite, type ProjectLite } from '@/lib/projectChain';
 
 type Tr = (fr: string, en: string) => string;
@@ -80,6 +80,8 @@ export default function MaintInspectFill({
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg(tr('Erreur : ', 'Error: ') + (j.error || r.status)); setBusy(false); return; }
+      // Inspection faite → MAJ l'échéance récurrente de l'équipement (dernière faite = aujourd'hui).
+      if (equipment.frequency) await upsertEquipmentSchedule(tenant, equipment.id, equipment.frequency, new Date().toISOString());
       onSaved();
     } catch (e: any) { setMsg(tr('Erreur réseau : ', 'Network error: ') + (e?.message || '')); setBusy(false); }
   }
