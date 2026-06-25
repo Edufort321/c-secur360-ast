@@ -49,8 +49,15 @@ export async function createServiceClient(tenant: string, name: string): Promise
 }
 
 export async function getServiceEquipment(tenant: string): Promise<SEquip[]> {
-  // select('*') = résilient si les colonnes marque/modèle/récurrence (mig 234) ne sont pas encore appliquées.
-  const { data, error } = await supabase.from('equipment').select('*').eq('tenant_id', tenant).order('equipment_name');
+  // IMPORTANT : la Maintenance ne montre QUE les équipements qu'elle POSSÈDE (source non nulle :
+  // 'maintenance' = créé ici, ou 'dga'/'vehicle'/'planner'/'rapport' = importé). On n'aspire PLUS
+  // toute la table `equipment` partagée (sinon les équipements d'autres modules apparaissent seuls).
+  // select('*') = résilient si les colonnes récentes (mig 234) ne sont pas encore appliquées.
+  let { data, error } = await supabase.from('equipment').select('*').eq('tenant_id', tenant).not('source', 'is', null).order('equipment_name');
+  if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
+    // Repli si la colonne `source` (264) n'est pas encore appliquée — on ne casse pas l'écran.
+    ({ data, error } = await supabase.from('equipment').select('*').eq('tenant_id', tenant).order('equipment_name'));
+  }
   if (error) return [];
   return (data as any[]).map(e => ({
     id: e.id, name: e.equipment_name || e.equipment_serial || e.equipment_type || 'Équipement',
@@ -105,7 +112,9 @@ function stripOptional(row: Record<string, any>): Record<string, any> {
 }
 
 export async function createServiceEquipment(tenant: string, input: EquipInput): Promise<{ id?: string; error?: string }> {
-  const row = { tenant_id: tenant, ...equipRow({ type: input.type || 'Équipement', ...input }) };
+  // Marque la PROPRIÉTÉ maintenance : import → source fourni ; création manuelle → 'maintenance'.
+  const owned: EquipInput = { type: input.type || 'Équipement', ...input, source: input.source ?? 'maintenance' };
+  const row = { tenant_id: tenant, ...equipRow(owned) };
   let { data, error } = await supabase.from('equipment').insert(row).select('id').single();
   if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
     ({ data, error } = await supabase.from('equipment').insert(stripOptional(row)).select('id').single());
