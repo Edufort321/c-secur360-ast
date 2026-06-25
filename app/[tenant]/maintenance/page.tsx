@@ -3,11 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
-import { Wrench, LayoutDashboard, ClipboardList, Building2, Settings, AlertTriangle, Loader2, CheckCircle, Phone, Save, Package, FileText, CalendarClock } from 'lucide-react';
+import { Wrench, LayoutDashboard, ClipboardList, Building2, Settings, AlertTriangle, Loader2, CheckCircle, Phone, Save, Package, FileText, CalendarClock, ClipboardCheck } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import ClientTree from '@/components/maintenance/ClientTree';
 import PlanningBoard from '@/components/maintenance/PlanningBoard';
 import ProjectChainPanel from '@/components/maintenance/ProjectChainPanel';
+import InspectLauncher from '@/components/maintenance/InspectLauncher';
 import { supabase } from '@/lib/supabase';
 import { getServiceClients, getServiceEquipment, getLastInspections, type SClient, type SEquip, type LastInsp } from '@/lib/serviceTree';
 import { RESULT_META } from '@/lib/inspectionForms';
@@ -27,6 +28,8 @@ export default function MaintenancePage() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [chainProject, setChainProject] = useState<string | null>(null);
+  // Inspection lancée depuis un signalement QR (Système) — résout l'alerte une fois faite.
+  const [inspectFor, setInspectFor] = useState<{ equipment: SEquip; alertId: string } | null>(null);
 
   // Données de tableau de bord (lecture seule, sources canoniques des autres modules).
   const [equipment, setEquipment] = useState<SEquip[]>([]);
@@ -146,6 +149,9 @@ export default function MaintenancePage() {
                         <span className="ml-2 text-gray-600 dark:text-gray-300">{a.description}</span>
                         <div className="text-[11px] text-gray-400">{new Date(a.created_at).toLocaleString('fr-CA')}{a.reporter_name ? ` · ${a.reporter_name}` : ''}{a.reporter_phone ? ` · ${a.reporter_phone}` : ''}</div>
                       </div>
+                      {a.status !== 'resolved' && a.equipment_id && (
+                        <button onClick={() => setInspectFor({ equipment: equipment.find(e => e.id === a.equipment_id) || { id: a.equipment_id, name: a.equipment_name || 'Équipement', client_id: null }, alertId: a.id })} title="Lancer une inspection sur cet équipement (résout l'alerte)" className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-orange-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-700"><ClipboardCheck size={12} /> Inspecter</button>
+                      )}
                       {a.status !== 'resolved'
                         ? <button onClick={() => resolveAlert(a.id)} className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700">Résolu</button>
                         : <span className="shrink-0 text-xs font-semibold text-emerald-600">✓ Résolu</span>}
@@ -242,6 +248,11 @@ export default function MaintenancePage() {
 
       {/* Panneau de chaîne soumission ↔ temps réel ↔ facturation */}
       {chainProject && <ProjectChainPanel tenant={tenant} projectId={chainProject} tr={(fr) => fr} onClose={() => setChainProject(null)} />}
+
+      {/* Inspection lancée depuis un signalement QR → à la sauvegarde, on résout l'alerte. */}
+      {inspectFor && <InspectLauncher tenant={tenant} tr={(fr) => fr} equipment={inspectFor.equipment}
+        onClose={() => setInspectFor(null)}
+        onSaved={async () => { await resolveAlert(inspectFor.alertId); setInspectFor(null); }} />}
     </div>
   );
 }
