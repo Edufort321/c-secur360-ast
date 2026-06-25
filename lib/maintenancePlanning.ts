@@ -17,13 +17,15 @@ const today = () => new Date().toISOString().slice(0, 10);
 const daysBetween = (d: string) => Math.round((new Date(d + 'T00:00:00').getTime() - new Date(today() + 'T00:00:00').getTime()) / 86400000);
 const statusOf = (days: number): PlanStatus => (days < 0 ? 'overdue' : days <= 30 ? 'soon' : 'ok');
 
-/** Agrège toutes les échéances de maintenance/inspection à venir (ou en retard) du tenant. */
-export async function getPlannedItems(tenant: string): Promise<PlannedItem[]> {
+/** Agrège toutes les échéances de maintenance/inspection à venir (ou en retard) du tenant.
+ *  `client` = client Supabase à utiliser (anon par défaut côté navigateur ; passer `supabaseAdmin`
+ *  depuis un cron/route serveur car les tables sont en RLS et le cron n'a pas de session). */
+export async function getPlannedItems(tenant: string, client: any = supabase): Promise<PlannedItem[]> {
   const [sheetsRes, dgaRes, eqRes, clientsRes] = await Promise.all([
-    supabase.from('maintenance_sheets').select('id, name, equipment_id, next_due_at').eq('tenant_id', tenant),
-    supabase.from('dga_dossiers').select('id, ident, serie, extra').eq('tenant_id', tenant),
-    supabase.from('equipment').select('id, equipment_name, equipment_serial, equipment_type, client_id, site_id').eq('tenant_id', tenant),
-    supabase.from('clients').select('*').eq('tenant_id', tenant), // '*' : résilient si maintenance_alert_email (230) pas encore là
+    client.from('maintenance_sheets').select('id, name, equipment_id, next_due_at').eq('tenant_id', tenant),
+    client.from('dga_dossiers').select('id, ident, serie, extra').eq('tenant_id', tenant),
+    client.from('equipment').select('id, equipment_name, equipment_serial, equipment_type, client_id, site_id').eq('tenant_id', tenant),
+    client.from('clients').select('*').eq('tenant_id', tenant), // '*' : résilient si maintenance_alert_email (230) pas encore là
   ]);
   const eqMap = new Map<string, any>(((eqRes.data as any[]) || []).map(e => [e.id, e]));
   const clMap = new Map<string, any>(((clientsRes.data as any[]) || []).map(c => [c.id, c]));

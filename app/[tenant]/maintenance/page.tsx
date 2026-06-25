@@ -36,7 +36,7 @@ export default function MaintenancePage() {
 
   // Système : alertes publiques (scan QR) + numéro de support du tenant.
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [support, setSupport] = useState<{ phone: string; email: string }>({ phone: '', email: '' });
+  const [support, setSupport] = useState<{ phone: string; email: string; reminderEmail: string; remindersEnabled: boolean; reminderDays: number; scanEmailEnabled: boolean }>({ phone: '', email: '', reminderEmail: '', remindersEnabled: false, reminderDays: 14, scanEmailEnabled: true });
   const [supportBusy, setSupportBusy] = useState(false);
 
   async function load() {
@@ -55,8 +55,14 @@ export default function MaintenancePage() {
         setAlerts(al || []);
       } catch { /* table absente (migration 215) */ }
       try {
-        const { data: cs } = await supabase.from('company_settings').select('support_phone, support_email').eq('tenant_id', tenant).maybeSingle();
-        if (cs) setSupport({ phone: (cs as any).support_phone || '', email: (cs as any).support_email || '' });
+        const { data: cs } = await supabase.from('company_settings').select('*').eq('tenant_id', tenant).maybeSingle();
+        if (cs) setSupport({
+          phone: (cs as any).support_phone || '', email: (cs as any).support_email || '',
+          reminderEmail: (cs as any).maintenance_reminder_email || '',
+          remindersEnabled: (cs as any).maintenance_reminders_enabled === true,
+          reminderDays: Number((cs as any).maintenance_reminder_days) > 0 ? Number((cs as any).maintenance_reminder_days) : 14,
+          scanEmailEnabled: (cs as any).maintenance_scan_email_enabled !== false,
+        });
       } catch { /* ignore */ }
     } catch (e: any) { setNotice(e?.message || 'Erreur de chargement.'); }
     finally { setLoading(false); }
@@ -70,9 +76,16 @@ export default function MaintenancePage() {
   async function saveSupport() {
     setSupportBusy(true); setNotice(null);
     try {
-      const { error } = await supabase.from('company_settings').upsert({ tenant_id: tenant, support_phone: support.phone || null, support_email: support.email || null, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' });
+      const { error } = await supabase.from('company_settings').upsert({
+        tenant_id: tenant, support_phone: support.phone || null, support_email: support.email || null,
+        maintenance_reminder_email: support.reminderEmail || null,
+        maintenance_reminders_enabled: support.remindersEnabled,
+        maintenance_reminder_days: support.reminderDays || 14,
+        maintenance_scan_email_enabled: support.scanEmailEnabled,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'tenant_id' });
       if (error) throw error;
-      setNotice('Numéro de support enregistré ✓');
+      setNotice('Réglages de notification enregistrés ✓');
     } catch (e: any) { setNotice('Erreur (migration 215 ?) : ' + (e?.message || 'DB')); }
     finally { setSupportBusy(false); }
   }
@@ -146,6 +159,29 @@ export default function MaintenancePage() {
                 </label>
                 <label className="text-xs font-semibold text-orange-800 dark:text-orange-200"><span className="mb-1 block">Courriel de support</span>
                   <input value={support.email} onChange={e => setSupport(s => ({ ...s, email: e.target.value }))} placeholder="support@…" className="rounded-lg border border-orange-300 bg-white px-2 py-1.5 text-sm dark:border-orange-700 dark:bg-gray-800" />
+                </label>
+                <button onClick={saveSupport} disabled={supportBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{supportBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer</button>
+              </div>
+            </div>
+
+            {/* Notifications automatiques (digest d'échéances + demande de service au scan QR) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-200"><CalendarClock size={15} className="text-orange-600" /> Notifications automatiques</h3>
+              <p className="mb-3 text-xs text-slate-500">Le destinataire opérateur est le <strong>courriel d'alerte de maintenance</strong> ci-dessous (à défaut, le courriel de support).</p>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300"><span className="mb-1 block">Courriel d'alerte (opérateur)</span>
+                  <input value={support.reminderEmail} onChange={e => setSupport(s => ({ ...s, reminderEmail: e.target.value }))} placeholder="maintenance@…" className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <input type="checkbox" checked={support.remindersEnabled} onChange={e => setSupport(s => ({ ...s, remindersEnabled: e.target.checked }))} />
+                  Digest quotidien des échéances
+                </label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300"><span className="mb-1 block">Horizon « à venir » (jours)</span>
+                  <input type="number" min={1} max={365} value={support.reminderDays} onChange={e => setSupport(s => ({ ...s, reminderDays: Math.max(1, Math.min(365, Number(e.target.value) || 14)) }))} className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <input type="checkbox" checked={support.scanEmailEnabled} onChange={e => setSupport(s => ({ ...s, scanEmailEnabled: e.target.checked }))} />
+                  Courriel auto sur scan QR (demande de service)
                 </label>
                 <button onClick={saveSupport} disabled={supportBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50">{supportBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer</button>
               </div>

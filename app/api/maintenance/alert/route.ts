@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { notify } from '@/lib/notify';
 
 // Alerte de maintenance PUBLIQUE (scan QR par un externe, SANS login). On vérifie côté serveur que
 // l'équipement autorise les alertes publiques (equipment.public_alerts_enabled) avant d'insérer.
@@ -32,13 +33,38 @@ export async function POST(req: NextRequest) {
     if (!eq) return NextResponse.json({ error: 'Équipement introuvable.' }, { status: 404 });
     if (!(eq as any).public_alerts_enabled) return NextResponse.json({ error: 'Les alertes publiques sont désactivées pour cet équipement.' }, { status: 403 });
 
+    const reporterName = String(body.reporter_name || '').slice(0, 120) || null;
+    const reporterPhone = String(body.reporter_phone || '').slice(0, 40) || null;
     const { error } = await supabaseAdmin.from('maintenance_alerts').insert({
       tenant_id: tenant, equipment_id: equipmentId, equipment_name: (eq as any).equipment_name || null,
-      alert_type: alertType, reporter_name: String(body.reporter_name || '').slice(0, 120) || null,
-      reporter_phone: String(body.reporter_phone || '').slice(0, 40) || null,
+      alert_type: alertType, reporter_name: reporterName, reporter_phone: reporterPhone,
       description: description.slice(0, 2000), status: 'new',
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Demande de service AUTO à l'opérateur (best-effort — n'échoue jamais l'alerte).
+    try {
+      const { data: cs } = await supabaseAdmin.from('company_settings')
+        .select('support_email, maintenance_reminder_email, maintenance_scan_email_enabled')
+        .eq('tenant_id', tenant).maybeSingle();
+      const to = (cs as any)?.maintenance_reminder_email || (cs as any)?.support_email || null;
+      const enabled = (cs as any)?.maintenance_scan_email_enabled !== false; // défaut = activé
+      if (enabled && to) {
+        const typeLabel = alertType === 'bris' ? 'Bris' : alertType === 'maintenance' ? 'Maintenance' : 'Autre';
+        const lines = [
+          `Type : ${typeLabel}`,
+          `Équipement : ${(eq as any).equipment_name || equipmentId}`,
+          `Problème : ${description.slice(0, 2000)}`,
+          reporterName ? `Signalé par : ${reporterName}${reporterPhone ? ` (${reporterPhone})` : ''}` : null,
+        ].filter(Boolean).join('\n');
+        await notify({
+          tenant, title: `Demande de service — ${typeLabel} signalé par scan QR`, body: lines,
+          severity: alertType === 'bris' ? 'critical' : 'warning', category: 'maintenance',
+          channels: ['email', 'in_app'], email: to,
+        });
+      }
+    } catch { /* best-effort */ }
+
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur serveur' }, { status: 500 });
