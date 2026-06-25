@@ -2,19 +2,22 @@
 // Une compagnie de service regroupe ses équipements à vérifier par client. Clients = table `clients`
 // (admin) ou créés custom ici. Rattachement via equipment.client_id (migration 228).
 import { supabase } from '@/lib/supabase';
+import { getSitesTree } from '@/lib/sites';
 
 export type SClient = { id: string; name: string; active?: boolean };
 export type SEquip = {
   id: string; name: string; type?: string | null; serial?: string | null; location?: string | null;
-  client_id?: string | null; brand?: string | null; model?: string | null; frequency?: string | null;
+  client_id?: string | null; site_id?: string | null; brand?: string | null; model?: string | null; frequency?: string | null;
   public_alerts?: boolean; default_gabarit_id?: string | null;
+  source?: string | null; source_id?: string | null;
 };
 export type LastInsp = { result?: string; date?: string; anomalies?: number };
 
 // Champs d'une fiche équipement (création/édition depuis le module Maintenance).
 export type EquipInput = {
   type?: string; name?: string; serial?: string; brand?: string; model?: string;
-  location?: string; frequency?: string; public_alerts?: boolean; client_id?: string | null; default_gabarit_id?: string | null;
+  location?: string; frequency?: string; public_alerts?: boolean; client_id?: string | null; site_id?: string | null; default_gabarit_id?: string | null;
+  source?: string | null; source_id?: string | null;
 };
 
 export async function getServiceClients(tenant: string): Promise<SClient[]> {
@@ -37,9 +40,24 @@ export async function getServiceEquipment(tenant: string): Promise<SEquip[]> {
   return (data as any[]).map(e => ({
     id: e.id, name: e.equipment_name || e.equipment_serial || e.equipment_type || 'Équipement',
     type: e.equipment_type, serial: e.equipment_serial, location: e.equipment_location, client_id: e.client_id,
+    site_id: e.site_id ?? null,
     brand: e.equipment_brand ?? null, model: e.equipment_model ?? null, frequency: e.inspection_frequency ?? null,
     public_alerts: e.public_alerts_enabled === true, default_gabarit_id: e.default_gabarit_id ?? null,
+    source: e.source ?? null, source_id: e.source_id ?? null,
   }));
+}
+
+/** Table id→nom des sites ET départements (planner_succursales), pour l'arborescence Client→Site. */
+export async function getSiteNames(tenant: string): Promise<Record<string, string>> {
+  const map: Record<string, string> = {};
+  try {
+    const tree = await getSitesTree(tenant);
+    for (const s of tree) {
+      map[s.id] = s.name;
+      for (const d of s.departments) map[d.id] = `${s.name} · ${d.name}`;
+    }
+  } catch { /* table absente */ }
+  return map;
 }
 
 export async function setEquipmentClient(tenant: string, equipmentId: string, clientId: string | null): Promise<{ error?: string }> {
@@ -59,11 +77,14 @@ function equipRow(input: EquipInput): Record<string, any> {
   if (input.frequency !== undefined) row.inspection_frequency = input.frequency || null;
   if (input.public_alerts !== undefined) row.public_alerts_enabled = !!input.public_alerts;
   if (input.client_id !== undefined) row.client_id = input.client_id || null;
+  if (input.site_id !== undefined) row.site_id = input.site_id || null;
   if (input.default_gabarit_id !== undefined) row.default_gabarit_id = input.default_gabarit_id || null;
+  if (input.source !== undefined) row.source = input.source || null;
+  if (input.source_id !== undefined) row.source_id = input.source_id || null;
   return row;
 }
 // Colonnes potentiellement absentes (selon migrations appliquées) — retirées au repli.
-const OPTIONAL_EQUIP_COLS = ['equipment_brand', 'equipment_model', 'public_alerts_enabled', 'default_gabarit_id', 'client_id'];
+const OPTIONAL_EQUIP_COLS = ['equipment_brand', 'equipment_model', 'public_alerts_enabled', 'default_gabarit_id', 'client_id', 'source', 'source_id'];
 function stripOptional(row: Record<string, any>): Record<string, any> {
   const r = { ...row }; for (const c of OPTIONAL_EQUIP_COLS) delete r[c]; return r;
 }
@@ -100,9 +121,18 @@ export async function getClientProjectCounts(tenant: string): Promise<Record<str
   return m;
 }
 
+// Condition DGA (IEEE, 1=bon → 4=critique) → clé de résultat RESULT_META (badge couleur).
+function dgaConditionResult(condition?: number | null): string {
+  if (condition === 4) return 'retrait';
+  if (condition === 3) return 'non_conforme';
+  if (condition === 2) return 'conditionnel';
+  return 'conforme';
+}
+
 /** Dernière inspection par équipement (résultat + date). Fusionne le moteur UNIQUE (rapports
- *  docType='maintenance', via la route serveur car la table est fermée à l'anon) et l'historique
- *  legacy (inspection_submissions). La plus récente l'emporte. */
+ *  docType='maintenance', via la route serveur car la table est fermée à l'anon), l'historique
+ *  legacy (inspection_submissions) ET les rapports DGA (équipements reliés à un dossier DGA :
+ *  dernière mesure → condition IEEE). La plus récente l'emporte. */
 export async function getLastInspections(tenant: string): Promise<Record<string, LastInsp>> {
   const map: Record<string, LastInsp> = {};
   const consider = (eid: string | undefined, li: LastInsp) => {
@@ -125,5 +155,19 @@ export async function getLastInspections(tenant: string): Promise<Record<string,
       consider(d.equipment_id, { result: d.overall_result, date: (d.performed_at || row.updated_at || '').slice(0, 10), anomalies: d.anomalies_count });
     }
   } catch { /* hors ligne / non authentifié */ }
+  // 3. DGA : équipements reliés à un dossier DGA → dernière mesure (condition IEEE → résultat).
+  try {
+    const { data: dos } = await supabase.from('dga_dossiers').select('id, equipment_id').eq('tenant_id', tenant).not('equipment_id', 'is', null);
+    const link: Record<string, string> = {}; // dossier_id → equipment_id
+    for (const d of ((dos as any[]) || [])) if (d.equipment_id) link[d.id] = d.equipment_id;
+    if (Object.keys(link).length) {
+      const { data: ms } = await supabase.from('dga_measures').select('dossier_id, sample_date, condition').eq('tenant_id', tenant).order('sample_date', { ascending: false });
+      const best: Record<string, any> = {}; // dossier_id → mesure la plus récente
+      for (const m of ((ms as any[]) || [])) { if (link[m.dossier_id] && !best[m.dossier_id]) best[m.dossier_id] = m; }
+      for (const [did, m] of Object.entries(best)) {
+        consider(link[did], { result: dgaConditionResult((m as any).condition), date: ((m as any).sample_date || '').slice(0, 10) });
+      }
+    }
+  } catch { /* DGA absent */ }
   return map;
 }
