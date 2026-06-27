@@ -464,7 +464,7 @@ export default function AdminPage() {
 
         {tab === 'demarrage' && <OnboardingWizard tenant={tenant} tr={tr} canEdit={!!perms.manageAll} goTab={(k) => setTab(k as TabKey)} />}
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
-        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} perms={perms} baseAdminMode={baseAdminMode} />}
+        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} perms={perms} baseAdminMode={baseAdminMode} selfLevel={niveauAcces} />}
         {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
@@ -2924,7 +2924,10 @@ function suggestEmail(fullName: string, tenant: string): string {
   return `${local}@${tenant}.ca`;
 }
 
-function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: string, e: string) => string; canReveal: boolean }) {
+function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr: (f: string, e: string) => string; canReveal: boolean; selfLevel?: AccessLevel }) {
+  // Anti-escalade : on ne propose jamais d'attribuer un niveau SUPÉRIEUR au sien (le serveur l'impose aussi).
+  const selfTier = ACCESS_LEVELS.find(l => l.value === selfLevel)?.tier ?? 8;
+  const grantableLevels = ACCESS_LEVELS.filter(l => l.tier <= selfTier);
   type Personnel = { id: string; name: string; email: string; niveauAcces?: string; access_password?: string };
   type UserAccount = { id: string; email: string; name: string; role: string; is_active: boolean; site_id?: string | null };
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
@@ -3156,7 +3159,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
             <div>
               <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Niveau d’accès', 'Access level')}</label>
               <select className={inp2} value={form.niveau} onChange={e => { const niveau = e.target.value as AccessLevel; setForm(f => ({ ...f, niveau, role: NIVEAU_TO_ROLE[niveau] || 'user' })); }}>
-                {ACCESS_LEVELS.map(l => <option key={l.value} value={l.value}>{l.emoji} {l.tier}. {tr(l.label_fr, l.label_en)}</option>)}
+                {grantableLevels.map(l => <option key={l.value} value={l.value}>{l.emoji} {l.tier}. {tr(l.label_fr, l.label_en)}</option>)}
               </select>
               <p className="mt-1 text-[10px] leading-snug text-gray-400">{tr(ACCESS_LEVELS.find(l => l.value === form.niveau)?.desc_fr || '', ACCESS_LEVELS.find(l => l.value === form.niveau)?.desc_en || '')}</p>
             </div>
@@ -4027,7 +4030,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
   );
 }
 
-function Employes({ tenant, tr, perms, baseAdminMode }: { tenant: string; tr: (f: string, e: string) => string; perms: typeof PERMS[AccessLevel]; baseAdminMode?: boolean }) {
+function Employes({ tenant, tr, perms, baseAdminMode, selfLevel }: { tenant: string; tr: (f: string, e: string) => string; perms: typeof PERMS[AccessLevel]; baseAdminMode?: boolean; selfLevel?: AccessLevel }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'sousclasses' | 'comptes' | 'taches'>('personnel');
   const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclass_ids?: string[] }[]>([]);
@@ -4082,7 +4085,7 @@ function Employes({ tenant, tr, perms, baseAdminMode }: { tenant: string; tr: (f
       {subTab === 'personnel'   && <PersonnelPlanner    tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} sharedSubclasses={sharedSubclasses} postesTick={postesTick} perms={perms} />}
       {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} sharedSubclasses={sharedSubclasses} onPostesChanged={reloadPostes} goToSubclasses={() => setSubTab('sousclasses')} perms={perms} />}
       {subTab === 'sousclasses' && <SousClassesPlanner tenant={tenant} tr={tr} inp={inp} onSubclassesChanged={reloadSubclasses} />}
-      {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} canReveal={perms.viewSalary} />}
+      {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} canReveal={perms.viewSalary} selfLevel={selfLevel} />}
       {subTab === 'taches'      && <RecurringTasksPlanner tenant={tenant} tr={tr} inp={inp} />}
     </div>
   );

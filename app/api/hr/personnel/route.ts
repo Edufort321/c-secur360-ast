@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveAccess, canHr, canAuth, effectiveTenant, effectiveLevelFor } from '@/lib/hrAccess';
+import { tierFromLevel } from '@/lib/permissions';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Accès SERVEUR aux champs SENSIBLES de planner_personnel : mots de passe d'accès (canAuth) et
@@ -66,6 +67,11 @@ export async function PATCH(req: NextRequest) {
     if (!body.id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
     const patch: any = { ...(body.patch || {}) }; delete patch.id; delete patch.tenant_id;
     delete patch.access_password; delete patch.current_salary; // champs ultra-sensibles via leurs kinds dédiés
+    // Anti-escalade de privilèges : on ne peut PAS attribuer un niveau d'accès SUPÉRIEUR au sien
+    // (sinon un « admin de base » s'attribuerait super_user et contournerait sa restriction).
+    if (patch.niveauAcces && tierFromLevel(String(patch.niveauAcces)) > tierFromLevel(level)) {
+      return NextResponse.json({ error: 'Vous ne pouvez pas attribuer un niveau d’accès supérieur au vôtre.' }, { status: 403 });
+    }
     let { data, error } = await supabaseAdmin.from('planner_personnel').update(patch).eq('id', body.id).eq('tenant_id', tenant).select();
     if (error && /(next_evaluation_date|hire_date)/i.test(error.message || '')) { const { next_evaluation_date, hire_date, ...b2 } = patch; ({ data, error } = await supabaseAdmin.from('planner_personnel').update(b2).eq('id', body.id).eq('tenant_id', tenant).select()); }
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
