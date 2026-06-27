@@ -79,6 +79,7 @@ const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-C
 function useCurrentAccess(tenant: string) {
   const [niveauAcces, setNiveauAcces] = useState<AccessLevel>('super_user');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [adminBase, setAdminBase] = useState(false); // tenant en mode « admin de base » (267)
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
@@ -94,12 +95,13 @@ function useCurrentAccess(tenant: string) {
         const acc = accRes.ok ? await accRes.json() : null;
         if (acc?.level) setNiveauAcces(acc.level as AccessLevel);
         else if (me?.role === 'user') setNiveauAcces('consultation');
+        if (acc?.adminBase) setAdminBase(true);
       } catch { /* session indispo → garde le défaut */ }
       setLoading(false);
     })();
   }, [tenant]);
   const perms = PERMS[niveauAcces] || PERMS.consultation;
-  return { niveauAcces, perms, loading, userEmail };
+  return { niveauAcces, perms, loading, userEmail, adminBase };
 }
 
 // ─── Niveaux d'accès & matrice de permissions ───────────────────────────────
@@ -297,7 +299,7 @@ export default function AdminPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Facturation depuis un PROJET : ?invoiceProject=<id> (lien « Facturer » de la page projet) → ouvre une facture préremplie.
   const [initialInvoiceProject] = useState<string | null>(() => { if (typeof window === 'undefined') return null; return new URLSearchParams(window.location.search).get('invoiceProject'); });
-  const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
+  const { perms, niveauAcces, userEmail, adminBase } = useCurrentAccess(tenant);
   // Structure d'accès par onglet (configurable par tenant, table tenant_permissions). {} avant chargement = défauts.
   const [tabPerms, setTabPerms] = useState<PermMap>({});
   useEffect(() => { if (tenant) getTenantPermissions(tenant).then(setTabPerms).catch(() => {}); }, [tenant]);
@@ -349,8 +351,14 @@ export default function AdminPage() {
     { k: 'finance', label: tr('Finances', 'Finance'),                    icon: Layers },
     { k: 'systeme', label: tr('Système', 'System'),                      icon: Settings },
   ];
+  // Mode « admin de base » (tenant.admin_base, 267) : l'admin du tenant (≠ super_user) est réduit aux
+  // fonctions de base — Organisation & RH : Sites + Employés & Accès. Le super_user garde l'admin complet.
+  const baseAdminMode = adminBase && niveauAcces !== 'super_user';
+  const BASE_ADMIN_TABS: TabKey[] = ['sitesdepts', 'employes'];
   // Accès par onglet : structure configurable (tenant_permissions) ; défauts = ancien gating `need`.
-  const tabs = allTabs.filter(t => canViewAdminTab(tabPerms, t.k, niveauAcces));
+  const tabs = allTabs
+    .filter(t => canViewAdminTab(tabPerms, t.k, niveauAcces))
+    .filter(t => !baseAdminMode || BASE_ADMIN_TABS.includes(t.k));
 
   const activeTab = tabs.find(t => t.k === tab);
   const activeGroup: GroupKey = activeTab?.group || 'org';
@@ -456,7 +464,7 @@ export default function AdminPage() {
 
         {tab === 'demarrage' && <OnboardingWizard tenant={tenant} tr={tr} canEdit={!!perms.manageAll} goTab={(k) => setTab(k as TabKey)} />}
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
-        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} perms={perms} />}
+        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} perms={perms} baseAdminMode={baseAdminMode} />}
         {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
@@ -4019,7 +4027,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
   );
 }
 
-function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: string) => string; perms: typeof PERMS[AccessLevel] }) {
+function Employes({ tenant, tr, perms, baseAdminMode }: { tenant: string; tr: (f: string, e: string) => string; perms: typeof PERMS[AccessLevel]; baseAdminMode?: boolean }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'sousclasses' | 'comptes' | 'taches'>('personnel');
   const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclass_ids?: string[] }[]>([]);
@@ -4061,7 +4069,7 @@ function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: st
           { k: 'sousclasses', label: tr('Sous-classes',              'Sub-classes'),       icon: Wrench },
           { k: 'comptes',     label: tr('Comptes d\'accès',          'Access accounts'),    icon: UserCog },
           { k: 'taches',      label: tr('Tâches récurrentes',        'Recurring tasks'),    icon: Timer },
-        ].map(x => {
+        ].filter(x => !baseAdminMode || ['personnel', 'postes', 'comptes'].includes(x.k)).map(x => {
           const Icon = x.icon as any;
           return (
             <button key={x.k} onClick={() => setSubTab(x.k as any)}

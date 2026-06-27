@@ -111,6 +111,7 @@ export default function AdminDashboard() {
     currentProvince: '',
     billable: true,
     vendor_id: '',
+    adminBase: false,
   });
 
   useEffect(() => {
@@ -174,6 +175,7 @@ export default function AdminDashboard() {
             status: t.archived ? 'archived' : (t.isActive === false ? 'suspended' : 'active'),
             archived: t.archived === true,
             billable: t.billable !== false,
+            adminBase: t.admin_base === true,
             vendor_id: t.vendor_id || null,
             payState: st.status, nextBilling: st.nextBilling, daysUntil: st.daysUntilBilling,
             lastActivity: (t.createdAt || '').split('T')[0] || '',
@@ -188,6 +190,20 @@ export default function AdminDashboard() {
     } catch { /* ignore */ }
     // Demandes d'ajustement de forfait IA en attente (carte rouge « ajustement token requis »).
     try { const r = await fetch('/api/admin/ai-requests'); const d = await r.json(); if (Array.isArray(d.requested)) setAiReq({ requested: d.requested, exhausted: Array.isArray(d.exhausted) ? d.exhausted : [] }); } catch { /* ignore */ }
+  };
+  // Bascule « Admin de base » sur un tenant existant (PATCH /api/admin/tenants).
+  const toggleAdminBase = async (client: any) => {
+    const next = !client.adminBase;
+    const msg = next
+      ? `Activer l'« Admin de base » pour ${client.name} ?\nSon admin ne verra QUE Sites, Personnel, Postes et Comptes d'accès.`
+      : `Repasser ${client.name} en admin COMPLET ?`;
+    if (!window.confirm(msg)) return;
+    try {
+      const res = await fetch('/api/admin/tenants', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: client.id, adminBase: next }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Échec');
+      loadTenants();
+    } catch (e: any) { alert('Erreur : ' + (e?.message || 'inconnue')); }
   };
   const loadVendors = async () => {
     try {
@@ -231,6 +247,7 @@ export default function AdminDashboard() {
           adminPassword: tempPassword,
           billable: newClient.billable,
           vendor_id: newClient.vendor_id || undefined,
+          adminBase: newClient.adminBase,
         }),
       });
       const data = await res.json();
@@ -238,7 +255,7 @@ export default function AdminDashboard() {
       const billableNote = newClient.billable ? '' : '\nMode: DÉMO (non-facturable)';
       const vendorNote = newClient.vendor_id ? `\nVendeur: ${vendors.find(v => v.id === newClient.vendor_id)?.name || ''}` : '';
       alert(`Client créé !\n\nNom: ${newClient.name}\nPortail: /${data.id}/modules\nAdmin: ${newClient.email}\nMot de passe temporaire: ${tempPassword}${billableNote}${vendorNote}`);
-      setNewClient({ name: '', subdomain: '', plan: 'Professional', email: '', phone: '', tempPassword: '', provinces: [], currentProvince: '', billable: true, vendor_id: '' });
+      setNewClient({ name: '', subdomain: '', plan: 'Professional', email: '', phone: '', tempPassword: '', provinces: [], currentProvince: '', billable: true, vendor_id: '', adminBase: false });
       setShowCreateClient(false);
       loadTenants();
     } catch (err: any) {
@@ -598,6 +615,12 @@ export default function AdminDashboard() {
                       <div>
                         <p style={{ margin: '0 0 4px 0', fontWeight: '600' }}>{client.name}</p>
                         <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>/{client.subdomain}</p>
+                        <button
+                          onClick={() => toggleAdminBase(client)}
+                          title="Basculer entre admin complet et admin de base (Sites, Personnel, Postes, Accès)"
+                          style={{ display: 'inline-block', marginTop: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', border: '1px solid', borderColor: (client as any).adminBase ? '#bfdbfe' : '#e5e7eb', background: (client as any).adminBase ? '#dbeafe' : '#f8fafc', color: (client as any).adminBase ? '#1d4ed8' : '#64748b' }}>
+                          {(client as any).adminBase ? '🔒 Admin de base' : '⚙️ Admin complet'}
+                        </button>
                         {(aiReq.requested.includes(client.subdomain) || aiReq.exhausted.includes(client.subdomain)) && (
                           <span style={{ display: 'inline-block', marginTop: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: '#fee2e2', color: '#b91c1c' }}>
                             🔴 {aiReq.requested.includes(client.subdomain) ? 'Ajustement token requis' : 'Forfait IA épuisé'}
@@ -1043,6 +1066,27 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Admin de base : restreint l'admin du tenant aux fonctions de base (Sites, Personnel, Postes, Accès) */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                    Niveau d'admin du tenant
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '11px 14px', border: '2px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#111827' }}>
+                    <input
+                      type="checkbox"
+                      checked={newClient.adminBase}
+                      onChange={e => setNewClient(prev => ({ ...prev, adminBase: e.target.checked }))}
+                      style={{ width: '18px', height: '18px', accentColor: '#2563eb', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: newClient.adminBase ? '#1d4ed8' : '#64748b' }}>
+                      {newClient.adminBase ? 'Admin de base (accès limité)' : 'Admin complet'}
+                    </span>
+                  </label>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#6b7280' }}>
+                    Coché : l'admin du tenant ne voit que Organisation &amp; RH (Sites, Personnel, Postes, Comptes d'accès).
+                  </p>
+                </div>
+
                 <div>
                   <label style={{
                     display: 'block',
@@ -1109,6 +1153,7 @@ export default function AdminDashboard() {
                         currentProvince: '',
                         billable: true,
                         vendor_id: '',
+                        adminBase: false,
                       });
                     }}
                     style={{

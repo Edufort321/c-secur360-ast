@@ -46,18 +46,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
-    const { subdomain, companyName, adminEmail, adminPassword, modules, billable, vendor_id } = await req.json();
+    const { subdomain, companyName, adminEmail, adminPassword, modules, billable, vendor_id, adminBase } = await req.json();
     if (!subdomain || !companyName) {
       return NextResponse.json({ error: 'subdomain et companyName requis' }, { status: 400 });
     }
     const id = String(subdomain).toLowerCase().trim().replace(/[^a-z0-9-]/g, '');
     if (!id) return NextResponse.json({ error: 'sous-domaine invalide' }, { status: 400 });
 
-    // 1) Tenant
-    const { error: te } = await supabaseAdmin.from('tenants').insert({
-      id, subdomain: id, companyName, plan: 'basic', isActive: true,
-      ...(vendor_id ? { vendor_id } : {}),
-    });
+    // 1) Tenant. admin_base (267) = admin du tenant réduit aux fonctions de base. Repli si colonne absente.
+    const baseRow: any = { id, subdomain: id, companyName, plan: 'basic', isActive: true, ...(vendor_id ? { vendor_id } : {}) };
+    let { error: te } = await supabaseAdmin.from('tenants').insert({ ...baseRow, admin_base: !!adminBase });
+    if (te && /column .* does not exist|schema cache/i.test(te.message || '')) {
+      ({ error: te } = await supabaseAdmin.from('tenants').insert(baseRow));
+    }
     if (te) throw te;
 
     // 2) Modules (activés = fournis, sinon tous ceux du catalogue)
@@ -133,6 +134,18 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
   }
+}
+
+// PATCH → modifie des réglages d'un tenant existant (pour l'instant : admin_base).
+// body: { id, adminBase }
+export async function PATCH(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
+  let body: any = {}; try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+  const id = String(body.id || '').trim();
+  if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
+  const { error } = await supabaseAdmin.from('tenants').update({ admin_base: !!body.adminBase }).eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }
 
 // DELETE /api/admin/tenants?id=xxx → supprime un tenant (sauf cerdia) + données liées
