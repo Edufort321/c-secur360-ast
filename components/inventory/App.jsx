@@ -4709,7 +4709,7 @@ function AppContent() {
                 />
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button
                 variant="secondary"
                 icon={RefreshCw}
@@ -4880,7 +4880,49 @@ function AppContent() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('movements.history')}</h2>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* MOBILE (< lg) : liste de cartes — le tableau à 7 colonnes déborde sur téléphone. */}
+        <div className="lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
+          {filteredMovements.map((movement) => (
+            <div key={movement.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-gray-900 dark:text-white">{movement.itemName}</p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(movement.date || movement.timestamp).toLocaleDateString('fr-FR', {
+                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`
+                    inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                    ${movement.type === 'entry' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                    ${movement.type === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
+                    ${movement.type === 'adjustment' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                    ${movement.type === 'transfer' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                  `}>
+                    {t(`movements.types.${movement.type}`)}
+                  </span>
+                  <span className="font-mono text-sm font-bold text-gray-900 dark:text-white">{movement.quantity}</span>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <span className="truncate">{movement.user}</span>
+                {movement.projectCode && (
+                  <span className="inline-flex shrink-0 items-center rounded-md bg-purple-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                    {movement.projectCode}
+                  </span>
+                )}
+              </div>
+              {movement.reason && (
+                <p className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{movement.reason}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* DESKTOP (lg+) : tableau complet, inchangé. */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
@@ -5015,17 +5057,17 @@ function AppContent() {
           <div className="space-y-4">
             <div className="p-6 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl">
               <p className="text-sm text-red-800 dark:text-red-400 mb-1">{t('reports.totalCost')}</p>
-              <p className="text-4xl font-bold text-red-900 dark:text-red-300">${dashboardStats.totalCostValue.toFixed(2)}</p>
+              <p className="text-2xl sm:text-4xl font-bold text-red-900 dark:text-red-300">${dashboardStats.totalCostValue.toFixed(2)}</p>
             </div>
 
             <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl">
               <p className="text-sm text-green-800 dark:text-green-400 mb-1">{t('reports.totalSale')}</p>
-              <p className="text-4xl font-bold text-green-900 dark:text-green-300">${dashboardStats.totalSellValue.toFixed(2)}</p>
+              <p className="text-2xl sm:text-4xl font-bold text-green-900 dark:text-green-300">${dashboardStats.totalSellValue.toFixed(2)}</p>
             </div>
 
             <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl">
               <p className="text-sm text-purple-800 dark:text-purple-400 mb-1">{t('reports.potentialProfit')}</p>
-              <p className="text-4xl font-bold text-purple-900 dark:text-purple-300">${dashboardStats.margin.toFixed(2)}</p>
+              <p className="text-2xl sm:text-4xl font-bold text-purple-900 dark:text-purple-300">${dashboardStats.margin.toFixed(2)}</p>
               <p className="text-sm text-purple-600 dark:text-purple-400 mt-2 font-semibold">
                 +{dashboardStats.marginPercent.toFixed(1)}% marge
               </p>
@@ -5104,7 +5146,7 @@ function AppContent() {
 
         {/* À COMMANDER */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
             <h2 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white"><ShoppingCart size={18} className="text-orange-500" /> {fr ? 'À commander' : 'To reorder'} <span className="text-sm font-normal text-gray-400">({a.reorder.length})</span></h2>
             <button onClick={exportReorder} disabled={!a.reorder.length} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"><FileSpreadsheet size={15} /> {fr ? 'Exporter' : 'Export'}</button>
           </div>
@@ -5420,9 +5462,9 @@ function AppContent() {
     return (
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('alerts.management')}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('alerts.management')}</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               {filteredAlerts.length} alerte{filteredAlerts.length > 1 ? 's' : ''} de stock
             </p>
@@ -5530,7 +5572,7 @@ function AppContent() {
                   Tout désélectionner
                 </Button>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant="secondary"
                   icon={ShoppingCart}
@@ -5588,7 +5630,70 @@ function AppContent() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* MOBILE (< lg) : liste de cartes — le tableau à 9 colonnes déborde sur téléphone.
+                    Un seul scroll vertical, mêmes données et mêmes handlers que le tableau. */}
+                <div className="lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                  {deptAlerts.map((item) => {
+                    const qtyToOrder = getOrderQty(item);
+                    const totalCost = qtyToOrder * item.costPrice;
+                    const isSelected = selectedItems.includes(item.id);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-4 transition-colors ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}
+                        onClick={() => toggleItemSelection(item.id)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleItemSelection(item.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-slate-600 focus:ring-orange-500"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-gray-900 dark:text-white">{item.name}</p>
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                              <span className="font-mono">{item.code}</span>
+                              {item.category ? ` · ${item.category}` : ''}
+                            </p>
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                              {item.supplier || t('common.notSpecified')}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold ${
+                            item.quantity === 0
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                              : 'bg-slate-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                          }`}>
+                            {item.quantity}
+                          </span>
+                        </div>
+                        <div className="mt-3 flex items-end justify-between gap-3">
+                          <div className="min-w-0 flex-1 text-xs text-gray-600 dark:text-gray-400">
+                            <p>{t('articles.minMax')}: {item.minQuantity} / {item.maxQuantity}</p>
+                            <p className="mt-0.5">{t('common.unitPrice')}: ${item.costPrice.toFixed(2)} · {t('articles.totalCost')}: <span className="font-bold text-gray-900 dark:text-white">${totalCost.toFixed(2)}</span></p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="mb-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('alerts.toOrder')}</p>
+                            <input
+                              type="number" min="0"
+                              value={orderQty[item.id] !== undefined ? orderQty[item.id] : suggestedQty(item)}
+                              onChange={(e) => setOrderQty(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-20 rounded-lg border-2 border-green-300 bg-green-50 px-2 py-1 text-center text-sm font-bold text-green-800 focus:border-green-500 focus:outline-none dark:border-green-700 dark:bg-green-900/20 dark:text-green-300"
+                              title={language === 'fr' ? 'Quantité à commander (ajustable)' : 'Quantity to order (adjustable)'}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* DESKTOP (lg+) : tableau complet, inchangé. */}
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>

@@ -417,17 +417,17 @@ const DashboardView = React.memo(({
 
       {/* Alertes stock bas - Vue condensée */}
       {dashboardStats.lowStock > 0 && (
-        <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-l-4 border-red-600 p-6 rounded-xl shadow-lg">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="flex-shrink-0 p-3 bg-red-100 dark:bg-red-900/40 rounded-lg">
-                <AlertTriangle size={28} className="text-red-600" />
+        <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-l-4 border-red-600 p-4 sm:p-6 rounded-xl shadow-lg">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className="flex-shrink-0 p-2.5 sm:p-3 bg-red-100 dark:bg-red-900/40 rounded-lg">
+                <AlertTriangle size={24} className="text-red-600" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-red-900 dark:text-red-400 mb-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-xl font-bold text-red-900 dark:text-red-400 mb-1.5">
                   {t('dashboard.alerts')} {t('common.lowStock')}
                 </h3>
-                <p className="text-red-800 dark:text-red-300 mb-4">
+                <p className="text-sm sm:text-base text-red-800 dark:text-red-300 mb-3 sm:mb-4">
                   {dashboardStats.lowStock} {t('common.article')}{dashboardStats.lowStock > 1 ? 's' : ''} {dashboardStats.lowStock > 1 ? t('common.requiresRestockingPlural') : t('common.requiresRestocking')}
                 </p>
 
@@ -467,13 +467,13 @@ const DashboardView = React.memo(({
               </div>
             </div>
 
-            {/* Bouton pour ouvrir la vue complète */}
+            {/* Bouton pour ouvrir la vue complète — pleine largeur sur mobile (sinon il s'étire mal). */}
             <div className="flex-shrink-0">
               <Button
                 variant="primary"
                 icon={ExternalLink}
                 onClick={() => setView('alerts')}
-                className="whitespace-nowrap"
+                className="w-full sm:w-auto justify-center whitespace-nowrap"
               >
                 {t('alerts.manage')}
               </Button>
@@ -655,17 +655,17 @@ const DashboardView = React.memo(({
         if (itemsNeedingPriceUpdate.length === 0) return null;
 
         return (
-          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-l-4 border-yellow-600 p-6 rounded-xl shadow-lg">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="flex-shrink-0 p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg">
-                  <DollarSign size={28} className="text-yellow-600" />
+          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-l-4 border-yellow-600 p-4 sm:p-6 rounded-xl shadow-lg">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                <div className="flex-shrink-0 p-2.5 sm:p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg">
+                  <DollarSign size={24} className="text-yellow-600" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-yellow-900 dark:text-yellow-400 mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-xl font-bold text-yellow-900 dark:text-yellow-400 mb-1.5">
                     Mise à jour des prix requise
                   </h3>
-                  <p className="text-yellow-800 dark:text-yellow-300 mb-3">
+                  <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-300 mb-3">
                     {itemsNeedingPriceUpdate.length} article{itemsNeedingPriceUpdate.length > 1 ? 's' : ''} nécessite{itemsNeedingPriceUpdate.length > 1 ? 'nt' : ''} une révision des prix
                   </p>
 
@@ -698,7 +698,7 @@ const DashboardView = React.memo(({
                   variant="primary"
                   icon={Settings}
                   onClick={() => setView('admin')}
-                  className="whitespace-nowrap"
+                  className="w-full sm:w-auto justify-center whitespace-nowrap"
                 >
                   Gérer les prix
                 </Button>
