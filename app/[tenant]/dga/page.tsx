@@ -495,6 +495,12 @@ export default function DgaPage() {
       const eq = mapEquip(rawEq);
       const measuresN = (t.measurements || []).map(mapMeasure).sort((a: Measure, b: Measure) => String(a.sample_date).localeCompare(String(b.sample_date)));
       const match = matchDossier(dossiers, { serialNo: rawEq.serialNo, identification: rawEq.identification, equipment: rawEq.equipment });
+      // # DE SÉRIE = source première : une correspondance par série est SÛRE (fusion confiante).
+      // Une correspondance par identification seule (série absente ou différente) est SUGGÉRÉE :
+      // on propose la fusion mais l'utilisateur confirme (ou crée un nouveau dossier).
+      const normId = (s: any) => (s || '').toString().trim().toLowerCase();
+      const incSerial = normId(rawEq.serialNo);
+      const matchBy: 'serial' | 'name' | null = match ? (incSerial && normId((match as any).serie) === incSerial ? 'serial' : 'name') : null;
       let newMeasures = measuresN, dupCount = 0;
       if (match?.id) { const existing = new Set((measuresByDossier[match.id] || []).filter(m => m.sample_date).map(m => m.sample_date)); newMeasures = measuresN.filter((m: Measure) => !existing.has(m.sample_date)); dupCount = measuresN.length - newMeasures.length; }
       // Conflits de NOM : même n° de série mais libellé différent -> on demandera quel nom garder.
@@ -502,7 +508,7 @@ export default function DgaPage() {
         const ex = String((match as any)[f.key] || '').trim(); const nw = String((eq as any)[f.key] || '').trim();
         return (ex && nw && ex.toLowerCase() !== nw.toLowerCase()) ? { key: f.key, label: tr(f.fr, f.en), existing: ex, incoming: nw } : null;
       }).filter(Boolean) : [];
-      return { rawEq, eq, measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create', conflicts, useNew: {} as Record<string, boolean> };
+      return { rawEq, eq, measures: measuresN, match, matchBy, newMeasures, dupCount, mode: match ? 'merge' : 'create', conflicts, useNew: {} as Record<string, boolean> };
     });
   }
 
@@ -882,10 +888,16 @@ function ImportPreview({ tr, lang, importPreview, setImportPreview, applyImport 
                   </div>
                 )}
               </div>
-              {it.match && merging && <div className="mb-2 text-xs text-emerald-700 dark:text-emerald-300">🔗 {tr('Fusion avec', 'Merge with')} <b>{it.match.ident}</b> — <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span className="text-amber-600"> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}</div>}
+              {it.match && merging && (it.matchBy === 'name' ? (
+                <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                  💡 {tr('Fusion suggérée avec', 'Suggested merge with')} <b>{it.match.ident}</b> — {tr('même identification, n° de série absent. Confirmez ou choisissez « Créer ».', 'same identification, serial number missing. Confirm or choose “Create”.')} <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}
+                </div>
+              ) : (
+                <div className="mb-2 text-xs text-emerald-700 dark:text-emerald-300">🔗 {tr('Fusion avec', 'Merge with')} <b>{it.match.ident}</b> <span className="text-emerald-600">(✓ {tr('n° de série', 'serial no.')})</span> — <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span className="text-amber-600"> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}</div>
+              ))}
               {merging && (it.conflicts || []).length > 0 && (
                 <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
-                  <div className="mb-1 text-[11px] font-bold text-amber-800 dark:text-amber-300">⚠ {tr('Le n° de série correspond, mais ces noms diffèrent — choisis lequel garder :', 'Serial matches, but these names differ — choose which to keep:')}</div>
+                  <div className="mb-1 text-[11px] font-bold text-amber-800 dark:text-amber-300">⚠ {tr('Le dossier correspond, mais ces libellés diffèrent — choisis lequel garder :', 'The record matches, but these labels differ — choose which to keep:')}</div>
                   {(it.conflicts || []).map((c: any) => { const useNew = !!it.useNew?.[c.key]; return (
                     <div key={c.key} className="flex flex-wrap items-center gap-2 py-0.5 text-[11px]">
                       <span className="font-semibold text-gray-600 dark:text-gray-300">{c.label} :</span>
