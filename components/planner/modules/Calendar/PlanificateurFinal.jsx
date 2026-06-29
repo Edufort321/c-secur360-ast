@@ -60,8 +60,9 @@ export function PlanificateurFinal({
     const [calendarMode, setCalendarMode] = useState(_initMobile ? 'month' : 'grid');
     const [monthCursor, setMonthCursor] = useState(new Date()); // mois affiché en vue 'month'
     const [selectedCalDay, setSelectedCalDay] = useState(null); // 'YYYY-MM-DD' du jour cliqué
-    // MOBILE -> seulement les événements de l'utilisateur connecté ; DESKTOP -> tout (vue planification).
-    const [mineOnly, setMineOnly] = useState(_initMobile); // basculable via le filtre
+    // Par défaut : TOUT le planning (sinon un admin/coordo sans tâche assignée voit un écran vide).
+    // Le bouton « Mes tâches » permet à un technicien de filtrer sur ses propres événements.
+    const [mineOnly, setMineOnly] = useState(false); // basculable via le filtre
     const [controleOnly, setControleOnly] = useState(false); // R9 : n'afficher que les mandats a controler
 
     // R9 — Contrôle intelligent : un mandat est « à contrôler » si l'effectif/les heures/les dates
@@ -848,7 +849,7 @@ export function PlanificateurFinal({
                 <div className="flex flex-col lg:flex-row gap-2 lg:gap-4">
                     {/* Statistiques + Actions rapides */}
                     <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
-                        <div className="flex-1">
+                        <div className="hidden sm:block flex-1">
                             <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                                 {jobs.length} {tr('événements', 'events')} · {personnel.length} {tr('techniciens', 'technicians')} · {equipements.length} {tr('équipements', 'equipment')}
                             </p>
@@ -858,8 +859,8 @@ export function PlanificateurFinal({
                         </div>
                         {/* Actions rapides */}
                         <div className="flex flex-wrap gap-2">
-                            {/* Bascule Grille (ressources) / Mois (calendrier classique) — masquee en mobile (dans le hamburger) */}
-                            <div className="hidden md:flex items-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                            {/* Bascule Grille (ressources) / Mois (calendrier classique) — visible aussi en mobile. */}
+                            <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                                 <button onClick={() => setCalendarMode('grid')}
                                     className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📊 Grille</button>
                                 <button onClick={() => setCalendarMode('month')}
@@ -1536,6 +1537,10 @@ export function PlanificateurFinal({
                                 ⚠️ {tr('À contrôler', 'To control')}
                             </button>
                         </div>
+                        {/* Liste VERTICALE des journées de la période (équivalent vertical de la grille horizontale
+                            desktop) : on déroule jour par jour, même les journées sans tâche, pour scroller le
+                            calendrier de l'utilisateur. */}
+                        <div className="max-h-[calc(100vh-210px)] space-y-2 overflow-y-auto pr-0.5">
                         {(() => {
                             const myId = utilisateurConnecte?.id;
                             const evMatch = (job) => {
@@ -1545,34 +1550,41 @@ export function PlanificateurFinal({
                                 const okControle = !controleOnly || jobNeedsControl(job);
                                 return okB && okS && okMine && okControle;
                             };
-                            const byDay = {};
-                            (jobs || []).filter(evMatch).forEach(j => {
-                                const d = (j.dateDebut || j.dateFin || '').split('T')[0];
-                                if (!d) return;
-                                (byDay[d] = byDay[d] || []).push(j);
+                            const dayJobs = (ds) => (jobs || []).filter(j => {
+                                if (!evMatch(j)) return false;
+                                const deb = (j.dateDebut || j.dateFin || '').split('T')[0];
+                                const fin = (j.dateFin || j.dateDebut || '').split('T')[0] || deb;
+                                return deb && deb <= ds && ds <= fin;
                             });
-                            const days = Object.keys(byDay).sort();
-                            if (days.length === 0) {
-                                return <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 text-center text-sm text-gray-400 dark:text-gray-500">{mineOnly ? tr('Aucune tâche pour vous.', 'No task for you.') : tr('Aucun événement planifié.', 'No event scheduled.')}</div>;
-                            }
-                            return days.map(d => (
-                                <div key={d} className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                    <div className="border-b border-gray-100 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 text-xs font-bold capitalize text-gray-600 dark:text-gray-300">
-                                        {new Date(`${d}T12:00:00`).toLocaleDateString(currentLanguage === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', day: 'numeric', month: 'long' })} · {byDay[d].length} {tr('évén.', 'evt')}
+                            return continuousDays.map((day) => {
+                                const ds = day.fullDate;
+                                const evs = dayJobs(ds).slice().sort((a, b) => (a.heureDebut || '').localeCompare(b.heureDebut || ''));
+                                return (
+                                    <div key={ds} className={`overflow-hidden rounded-lg border ${day.isToday ? 'border-blue-400 dark:border-blue-500' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800`}>
+                                        <div className={`flex items-center justify-between px-3 py-1.5 text-xs font-bold capitalize ${day.isToday ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : day.isWeekend ? 'bg-gray-100 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400' : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300'}`}>
+                                            <span>{day.dayNameFull} {day.dayNumber} {day.monthName}{day.isToday ? ` · ${tr("aujourd'hui", 'today')}` : ''}</span>
+                                            {evs.length > 0 && <span className="rounded-full bg-blue-600 px-1.5 text-[10px] font-bold leading-4 text-white">{evs.length}</span>}
+                                        </div>
+                                        {evs.length > 0 ? (
+                                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                                {evs.map(j => (
+                                                    <button key={j.id} type="button" onClick={() => setSelectedJob(j)}
+                                                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                                                        {jobNeedsControl(j) && <span className="shrink-0" title={jobControlReasons(j).join(' · ')}>⚠️</span>}
+                                                        <span className="shrink-0 text-xs font-bold text-blue-700 dark:text-blue-400">{j.numeroJob || `Job-${j.id}`}</span>
+                                                        <span className="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{j.client || j.nom || '—'}</span>
+                                                        <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{j.heureDebut || '08:00'}–{j.heureFin || '17:00'}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="px-3 py-1.5 text-center text-xs text-gray-300 dark:text-gray-600">—</div>
+                                        )}
                                     </div>
-                                    <div className="divide-y divide-gray-100">
-                                        {byDay[d].slice().sort((a, b) => (a.heureDebut || '').localeCompare(b.heureDebut || '')).map(j => (
-                                            <button key={j.id} type="button" onClick={() => setSelectedJob(j)}
-                                                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50">
-                                                <span className="shrink-0 text-xs font-bold text-blue-700">{j.numeroJob || `Job-${j.id}`}</span>
-                                                <span className="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{j.client || j.nom || '—'}</span>
-                                                <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{j.heureDebut || '08:00'}–{j.heureFin || '17:00'}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ));
+                                );
+                            });
                         })()}
+                        </div>
                     </div>
 
                     {/* Dashboard résumé en haut de la vue globale */}
