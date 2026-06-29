@@ -208,6 +208,41 @@ const ArticlesView = React.memo(({
   // État pour les lignes expandables
   const [expandedRows, setExpandedRows] = useState(new Set());
 
+  // PERFORMANCE — fenêtrage : galerie ET liste rendaient TOUS les articles d'un coup (des milliers
+  // de tuiles/lignes DOM = lent). On rend ~60 éléments puis on en ajoute au scroll (sans
+  // virtualisation). Reset à chaque changement de filtre/recherche/tri (identité du tableau source).
+  const STEP = 60;
+  // Galerie : source = filteredItems (1 tuile par article).
+  const [galleryVisible, setGalleryVisible] = React.useState(STEP);
+  React.useEffect(() => { setGalleryVisible(STEP); }, [filteredItems]);
+  const galleryItems = React.useMemo(() => filteredItems.slice(0, galleryVisible), [filteredItems, galleryVisible]);
+  const onGalleryScroll = React.useCallback((e) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 500) {
+      setGalleryVisible(c => (c < filteredItems.length ? c + STEP : c));
+    }
+  }, [filteredItems.length]);
+  // Liste : on aplatit les articles multi-emplacement -> 1 ligne par succursale/département. Le
+  // tableau source du fenêtrage est donc flatRows (peut être plus grand que filteredItems).
+  const flatRows = React.useMemo(() => {
+    const rows = [];
+    filteredItems.forEach(item => {
+      const locs = (item.isMultiLocation && Array.isArray(item.locations) && item.locations.length) ? item.locations : null;
+      if (locs) locs.forEach((loc, i) => rows.push({ item, loc, key: `${item.id}::${i}` }));
+      else rows.push({ item, loc: null, key: item.id });
+    });
+    return rows;
+  }, [filteredItems]);
+  const [listVisible, setListVisible] = React.useState(STEP);
+  React.useEffect(() => { setListVisible(STEP); }, [flatRows]);
+  const listRows = React.useMemo(() => flatRows.slice(0, listVisible), [flatRows, listVisible]);
+  const onListScroll = React.useCallback((e) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 500) {
+      setListVisible(c => (c < flatRows.length ? c + STEP : c));
+    }
+  }, [flatRows.length]);
+
   // Emplacements pour le filtre = unités de stockage créées dans l'Administration (ex. A, CITERNE,
   // G-H), filtrées par le département sélectionné s'il y a lieu. Repli : adresses des articles.
   const locationOptions = useMemo(() => {
@@ -614,8 +649,8 @@ const ArticlesView = React.memo(({
       {/* Vue Grille */}
       {articleViewMode !== 'list' && (
         // GALERIE : cartes compactes à HAUTEUR FIXE, grille qui remplit la largeur (2 col mobile -> 5 desktop).
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-          {filteredItems.map(item => {
+        <div onScroll={onGalleryScroll} className="grid max-h-[70vh] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          {galleryItems.map(item => {
             const qty = item.quantity ?? 0;
             const low = item.minQuantity != null && qty <= item.minQuantity;
             const locTxt = item.isMultiLocation && item.locations
@@ -658,24 +693,20 @@ const ArticlesView = React.memo(({
 
       {/* Vue Liste */}
       {articleViewMode === 'list' && (() => {
-        // UNE LIGNE PAR EMPLACEMENT : on aplatit les articles multi-emplacement -> chaque
-        // succursale/département du même article devient sa propre ligne (avec SA quantité). On
-        // peut ainsi voir d'un coup d'œil où il y a du stock (et la recherche par succursale aide).
-        const flatRows = [];
-        filteredItems.forEach(item => {
-          const locs = (item.isMultiLocation && Array.isArray(item.locations) && item.locations.length) ? item.locations : null;
-          if (locs) locs.forEach((loc, i) => flatRows.push({ item, loc, key: `${item.id}::${i}` }));
-          else flatRows.push({ item, loc: null, key: item.id });
-        });
+        // UNE LIGNE PAR EMPLACEMENT : flatRows (mémoïsé en haut du composant) aplatit les articles
+        // multi-emplacement -> chaque succursale/département devient sa propre ligne (avec SA
+        // quantité). On rend seulement listRows (fenêtré) ; le reste se charge au scroll.
         return (
         // LISTE compacte en lignes (responsive, mobile-friendly) — remplace le tableau large.
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 dark:border-gray-700">
             <input type="checkbox" checked={selectedItems.length === filteredItems.length && filteredItems.length > 0} onChange={toggleAllItems} className="h-4 w-4 rounded accent-slate-700" />
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{flatRows.length} {flatRows.length > 1 ? 'lignes' : 'ligne'} · {filteredItems.length} {t('common.article')}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              {listRows.length < flatRows.length ? `${listRows.length} / ${flatRows.length}` : flatRows.length} {flatRows.length > 1 ? 'lignes' : 'ligne'} · {filteredItems.length} {t('common.article')}
+            </span>
           </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {flatRows.map(({ item, loc, key }) => {
+          <div onScroll={onListScroll} className="max-h-[70vh] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
+            {listRows.map(({ item, loc, key }) => {
               const lqty = (loc ? loc.quantity : item.quantity) ?? 0;
               const lmin = loc && loc.minQuantity != null ? loc.minQuantity : item.minQuantity;
               const llow = lmin != null && lqty <= lmin;

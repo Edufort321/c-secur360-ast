@@ -4544,6 +4544,20 @@ function AppContent() {
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const [filteredMovements, setFilteredMovements] = useState(movements);
 
+    // PERFORMANCE — fenêtrage : l'historique rendait TOUS les mouvements d'un coup (potentiellement
+    // des milliers de lignes DOM). On rend ~60 entrées puis on en ajoute au scroll. Reset à chaque
+    // changement de filtre/recherche (identité de filteredMovements).
+    const STEP = 60;
+    const [movVisible, setMovVisible] = React.useState(STEP);
+    React.useEffect(() => { setMovVisible(STEP); }, [filteredMovements]);
+    const visibleMovements = React.useMemo(() => filteredMovements.slice(0, movVisible), [filteredMovements, movVisible]);
+    const onMovScroll = React.useCallback((e) => {
+      const el = e.currentTarget;
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 500) {
+        setMovVisible(c => (c < filteredMovements.length ? c + STEP : c));
+      }
+    }, [filteredMovements.length]);
+
     // Filtrer les mouvements selon tous les critères
     useEffect(() => {
       let filtered = [...movements];
@@ -4881,8 +4895,8 @@ function AppContent() {
         </div>
 
         {/* MOBILE (< lg) : liste de cartes — le tableau à 7 colonnes déborde sur téléphone. */}
-        <div className="lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
-          {filteredMovements.map((movement) => (
+        <div onScroll={onMovScroll} className="lg:hidden max-h-[70vh] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
+          {visibleMovements.map((movement) => (
             <div key={movement.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -4921,10 +4935,10 @@ function AppContent() {
           ))}
         </div>
 
-        {/* DESKTOP (lg+) : tableau complet, inchangé. */}
-        <div className="hidden lg:block overflow-x-auto">
+        {/* DESKTOP (lg+) : tableau complet. Scroll vertical borné + en-têtes collantes. */}
+        <div onScroll={onMovScroll} className="hidden lg:block max-h-[70vh] overflow-x-auto overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900">
+            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('movements.date')}</th>
                 <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('movements.type')}</th>
@@ -4936,7 +4950,7 @@ function AppContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredMovements.map((movement, index) => (
+              {visibleMovements.map((movement, index) => (
                 <tr
                   key={movement.id}
                   className={`
@@ -5251,6 +5265,19 @@ function AppContent() {
       if (selectedSupplier !== 'all' && item.supplier !== selectedSupplier) return false;
       return true;
     });
+
+    // PERFORMANCE — fenêtrage : on ne rend qu'un sous-ensemble des alertes (cartes + tableau) puis on
+    // en ajoute au scroll. `filteredAlerts` est recalculé à chaque rendu (nouvelle identité), donc on
+    // réinitialise le compteur sur les ENTRÉES du filtre (items + sélections), pas sur le tableau.
+    const STEP = 60;
+    const [alertVisible, setAlertVisible] = React.useState(STEP);
+    React.useEffect(() => { setAlertVisible(STEP); }, [items, selectedDepartment, selectedSupplier]);
+    const onAlertScroll = React.useCallback((e) => {
+      const el = e.currentTarget;
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 500) {
+        setAlertVisible(c => (c < filteredAlerts.length ? c + STEP : c));
+      }
+    }, [filteredAlerts.length]);
 
     // Get unique suppliers from alerts
     const suppliers = [...new Set(alerts.map(item => item.supplier).filter(Boolean))];
@@ -5611,6 +5638,9 @@ function AppContent() {
         <div className="space-y-6">
           {Object.entries(alertsByDepartment).map(([deptName, deptAlerts]) => {
             const dept = departments.find(d => d.name === deptName);
+            // Fenêtrage : on ne rend que les premières lignes (compteur partagé de la vue) ; la
+            // sélection « tout cocher » continue d'agir sur l'ensemble (deptAlerts complet).
+            const visibleDeptAlerts = deptAlerts.slice(0, alertVisible);
 
             return (
               <div key={deptName} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
@@ -5632,8 +5662,8 @@ function AppContent() {
 
                 {/* MOBILE (< lg) : liste de cartes — le tableau à 9 colonnes déborde sur téléphone.
                     Un seul scroll vertical, mêmes données et mêmes handlers que le tableau. */}
-                <div className="lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                  {deptAlerts.map((item) => {
+                <div onScroll={onAlertScroll} className="lg:hidden max-h-[70vh] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
+                  {visibleDeptAlerts.map((item) => {
                     const qtyToOrder = getOrderQty(item);
                     const totalCost = qtyToOrder * item.costPrice;
                     const isSelected = selectedItems.includes(item.id);
@@ -5692,10 +5722,10 @@ function AppContent() {
                   })}
                 </div>
 
-                {/* DESKTOP (lg+) : tableau complet, inchangé. */}
-                <div className="hidden lg:block overflow-x-auto">
+                {/* DESKTOP (lg+) : tableau complet. Scroll vertical borné + en-têtes collantes. */}
+                <div onScroll={onAlertScroll} className="hidden lg:block max-h-[70vh] overflow-x-auto overflow-y-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
+                    <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th className="px-4 py-3 text-left">
                           <input
@@ -5722,7 +5752,7 @@ function AppContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {deptAlerts.map((item, index) => {
+                      {visibleDeptAlerts.map((item, index) => {
                         const qtyToOrder = getOrderQty(item);
                         const totalCost = qtyToOrder * item.costPrice;
 

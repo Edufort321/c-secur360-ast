@@ -235,6 +235,21 @@ const DashboardView = React.memo(({
   setCurrentPage,
   filteredItems
 }) => {
+  // PERFORMANCE — fenêtrage : on ne rend qu'un sous-ensemble de la liste (la table/les cartes
+  // chargeaient TOUS les articles d'un coup → des milliers de lignes DOM = lent sur mobile). On rend
+  // ~60 lignes puis on en ajoute au scroll (sans dépendance de virtualisation). Reset à chaque
+  // changement de tri/filtre/recherche (identité de sortedItems).
+  const STEP = 60;
+  const [visibleCount, setVisibleCount] = React.useState(STEP);
+  React.useEffect(() => { setVisibleCount(STEP); }, [sortedItems]);
+  const visibleItems = React.useMemo(() => sortedItems.slice(0, visibleCount), [sortedItems, visibleCount]);
+  const onListScroll = React.useCallback((e) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 500) {
+      setVisibleCount(c => (c < sortedItems.length ? c + STEP : c));
+    }
+  }, [sortedItems.length]);
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -725,8 +740,8 @@ const DashboardView = React.memo(({
 
         {/* MOBILE (< lg) : liste de cartes — le tableau à 8 colonnes est illisible sur petit écran.
             Un SEUL scroll vertical, pas de défilement horizontal. */}
-        <div className="lg:hidden max-h-[70vh] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
-          {sortedItems.map((item) => (
+        <div onScroll={onListScroll} className="lg:hidden max-h-[70vh] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
+          {visibleItems.map((item) => (
             <div key={item.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -767,7 +782,7 @@ const DashboardView = React.memo(({
         {/* DESKTOP (lg+) : tableau. `table-fixed` + largeurs de colonnes + troncature → les textes
             longs n'étirent plus les colonnes (plus de scroll horizontal). Un seul scroll vertical,
             en-têtes collantes. */}
-        <div className="hidden max-h-[70vh] overflow-y-auto lg:block">
+        <div onScroll={onListScroll} className="hidden max-h-[70vh] overflow-y-auto lg:block">
           <table className="w-full table-fixed">
             <colgroup>
               <col className="w-28" />
@@ -824,7 +839,7 @@ const DashboardView = React.memo(({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {sortedItems.map((item, index) => (
+              {visibleItems.map((item, index) => (
                 <tr
                   key={item.id}
                   className={`
@@ -907,10 +922,12 @@ const DashboardView = React.memo(({
           </table>
         </div>
 
-        {/* Compteur (remplace la pagination) : tout défile, on affine via recherche/filtres. */}
+        {/* Compteur : fenêtrage actif → on indique ce qui est affiché vs le total (le reste se charge au scroll). */}
         {sortedItems.length > 0 && (
           <div className="border-t border-gray-200 p-3 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-            {sortedItems.length} {sortedItems.length > 1 ? 'articles' : 'article'} {filteredItems.length !== items.length ? '(filtrés)' : ''}
+            {visibleCount < sortedItems.length
+              ? `${Math.min(visibleCount, sortedItems.length)} / ${sortedItems.length} ${sortedItems.length > 1 ? 'articles' : 'article'} ${filteredItems.length !== items.length ? '(filtrés) ' : ''}· ${t('common.scrollForMore') || 'défilez pour voir plus'}`
+              : `${sortedItems.length} ${sortedItems.length > 1 ? 'articles' : 'article'} ${filteredItems.length !== items.length ? '(filtrés)' : ''}`}
           </div>
         )}
 
