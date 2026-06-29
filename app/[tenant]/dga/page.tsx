@@ -419,77 +419,98 @@ export default function DgaPage() {
     return Array.isArray(j.transformers) && j.transformers.length ? j.transformers : (j.equipment ? [{ equipment: j.equipment, measurements: j.measurements }] : []);
   }
 
-  // Fusionne les transformateurs venant de plusieurs lots (un même transfo peut être coupé entre 2 pages).
+  // Fusionne les transformateurs venant de plusieurs lots/fichiers (un même transfo peut être coupé
+  // entre 2 pages, ou réparti sur plusieurs feuilles/fichiers). Clé = n° de série, puis n° d'équipement,
+  // identification, description. Insensible à la casse/espaces.
   function mergeTransformers(list: any[]): any[] {
     const byKey = new Map<string, any>();
-    let anon = 0;
+    const anonGroups: any[] = []; // lots SANS identité (pages d'en-tête manquant : que des mesures)
     for (const t of list) {
       const eq = t?.equipment || {};
-      const key = String(eq.serialNo || eq.equipNo || eq.identification || eq.description || `__${anon++}`).trim().toLowerCase();
-      if (!byKey.has(key)) byKey.set(key, { equipment: { ...eq }, measurements: [...(t?.measurements || [])] });
+      const key = String(eq.serialNo || eq.equipNo || eq.identification || eq.description || '').trim().toLowerCase();
+      const grp = { equipment: { ...eq }, measurements: [...(t?.measurements || [])] };
+      if (!key) { anonGroups.push(grp); continue; }
+      if (!byKey.has(key)) byKey.set(key, grp);
       else {
         const g = byKey.get(key);
         g.measurements.push(...(t?.measurements || []));
         for (const [k, v] of Object.entries(eq)) { if (v != null && g.equipment[k] == null) g.equipment[k] = v; } // complète les trous
       }
     }
-    for (const g of byKey.values()) {
+    const identified = [...byKey.values()];
+    // Pages « orphelines » (en-tête absent, que des mesures) : si UN SEUL transfo est identifié dans
+    // tout l'import, on lui rattache leurs mesures (même transfo dont le n° de série n'est pas répété
+    // sur chaque page). Sinon (0 ou plusieurs transfos identifiés), on les garde séparées par prudence.
+    if (anonGroups.length && identified.length === 1) {
+      for (const a of anonGroups) identified[0].measurements.push(...a.measurements);
+    } else if (anonGroups.length) {
+      identified.push(...anonGroups);
+    }
+    for (const g of identified) {
       const seen = new Set<string>();
       g.measurements = g.measurements.filter((m: any) => { const d = String(m?.date || JSON.stringify(m)); if (seen.has(d)) return false; seen.add(d); return true; });
     }
-    return [...byKey.values()];
+    return identified;
+  }
+
+  // Extraction d'UN fichier -> transformateurs (déjà FUSIONNÉS par n° de série au sein du fichier,
+  // entre les lots). Ne construit PAS encore les items : permet de fusionner aussi ENTRE fichiers.
+  async function extractTransformersFromFile(file: File): Promise<any[]> {
+    if (isSpreadsheet(file.name, file.type) && !isPdf(file.name, file.type)) {
+      // Export Excel/CSV LIMS (InsideView / Morgan Schaffer) : mappage DIRECT, sans IA.
+      const parsed = parseLimsBuffer(new Uint8Array(await file.arrayBuffer()));
+      if (!parsed || !parsed.transformers.length) throw new Error(tr('Fichier Excel/CSV non reconnu comme un export DGA (InsideView/LIMS).', 'Excel/CSV file not recognized as a DGA export (InsideView/LIMS).'));
+      return parsed.transformers;
+    }
+    // 1) Découpe le PDF en lots (sous la limite plateforme), comme l'import Excel inventaire.
+    const blobs = await splitPdfForUpload(file);
+    setImportProgress({ done: 0, total: blobs.length });
+    // 2) Traite les lots en parallèle (pool de 2), avec progression.
+    const results: any[] = new Array(blobs.length);
+    let nextIdx = 0, done = 0;
+    const worker = async () => {
+      while (nextIdx < blobs.length) {
+        const idx = nextIdx++;
+        results[idx] = await extractBatch(blobs[idx], blobs.length, idx);
+        done++; setImportProgress({ done, total: blobs.length });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(2, blobs.length) }, () => worker()));
+    // 3) Fusionne tous les transformateurs de tous les lots (par n° de série).
+    const all: any[] = [];
+    results.forEach(r => { if (Array.isArray(r)) all.push(...r); });
+    return mergeTransformers(all);
+  }
+
+  // Construit les items de prévisualisation à partir de transformateurs (déjà fusionnés par n° de
+  // série). Un transformateur = un item ; les feuilles d'un même n° de série sont déjà assemblées.
+  function buildItemsFromTransformers(transformers: any[]): any[] {
+    const NAME_FIELDS: { key: keyof Dossier; fr: string; en: string }[] = [
+      { key: 'company', fr: 'Compagnie', en: 'Company' },
+      { key: 'ident', fr: 'Équipement', en: 'Equipment' },
+      { key: 'client', fr: 'Localisation', en: 'Location' },
+    ];
+    return transformers.map((t: any) => {
+      const rawEq = t.equipment || {};
+      const eq = mapEquip(rawEq);
+      const measuresN = (t.measurements || []).map(mapMeasure).sort((a: Measure, b: Measure) => String(a.sample_date).localeCompare(String(b.sample_date)));
+      const match = matchDossier(dossiers, { serialNo: rawEq.serialNo, identification: rawEq.identification, equipment: rawEq.equipment });
+      let newMeasures = measuresN, dupCount = 0;
+      if (match?.id) { const existing = new Set((measuresByDossier[match.id] || []).filter(m => m.sample_date).map(m => m.sample_date)); newMeasures = measuresN.filter((m: Measure) => !existing.has(m.sample_date)); dupCount = measuresN.length - newMeasures.length; }
+      // Conflits de NOM : même n° de série mais libellé différent -> on demandera quel nom garder.
+      const conflicts = match ? NAME_FIELDS.map(f => {
+        const ex = String((match as any)[f.key] || '').trim(); const nw = String((eq as any)[f.key] || '').trim();
+        return (ex && nw && ex.toLowerCase() !== nw.toLowerCase()) ? { key: f.key, label: tr(f.fr, f.en), existing: ex, incoming: nw } : null;
+      }).filter(Boolean) : [];
+      return { rawEq, eq, measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create', conflicts, useNew: {} as Record<string, boolean> };
+    });
   }
 
   // Extraction d'UN fichier -> items de prévisualisation (sans toucher à l'état UI). Réutilisé en lot.
   async function extractItemsFromFile(file: File): Promise<any[]> {
-      let transformers: any[];
-      if (isSpreadsheet(file.name, file.type) && !isPdf(file.name, file.type)) {
-        // Export Excel/CSV LIMS (InsideView / Morgan Schaffer) : mappage DIRECT, sans IA.
-        const parsed = parseLimsBuffer(new Uint8Array(await file.arrayBuffer()));
-        if (!parsed || !parsed.transformers.length) throw new Error(tr('Fichier Excel/CSV non reconnu comme un export DGA (InsideView/LIMS).', 'Excel/CSV file not recognized as a DGA export (InsideView/LIMS).'));
-        transformers = parsed.transformers;
-      } else {
-        // 1) Découpe le PDF en lots (sous la limite plateforme), comme l'import Excel inventaire.
-        const blobs = await splitPdfForUpload(file);
-        setImportProgress({ done: 0, total: blobs.length });
-        // 2) Traite les lots en parallèle (pool de 2), avec progression.
-        const results: any[] = new Array(blobs.length);
-        let nextIdx = 0, done = 0;
-        const worker = async () => {
-          while (nextIdx < blobs.length) {
-            const idx = nextIdx++;
-            results[idx] = await extractBatch(blobs[idx], blobs.length, idx);
-            done++; setImportProgress({ done, total: blobs.length });
-          }
-        };
-        await Promise.all(Array.from({ length: Math.min(2, blobs.length) }, () => worker()));
-        // 3) Fusionne tous les transformateurs de tous les lots.
-        const all: any[] = [];
-        results.forEach(r => { if (Array.isArray(r)) all.push(...r); });
-        transformers = mergeTransformers(all);
-      }
-      if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le fichier.', 'No transformer detected in the file.'));
-      // Un PDF peut contenir PLUSIEURS transformateurs -> un item par transformateur (séparés).
-      const NAME_FIELDS: { key: keyof Dossier; fr: string; en: string }[] = [
-        { key: 'company', fr: 'Compagnie', en: 'Company' },
-        { key: 'ident', fr: 'Équipement', en: 'Equipment' },
-        { key: 'client', fr: 'Localisation', en: 'Location' },
-      ];
-      const items = transformers.map((t: any) => {
-        const rawEq = t.equipment || {};
-        const eq = mapEquip(rawEq);
-        const measuresN = (t.measurements || []).map(mapMeasure).sort((a: Measure, b: Measure) => String(a.sample_date).localeCompare(String(b.sample_date)));
-        const match = matchDossier(dossiers, { serialNo: rawEq.serialNo, identification: rawEq.identification, equipment: rawEq.equipment });
-        let newMeasures = measuresN, dupCount = 0;
-        if (match?.id) { const existing = new Set((measuresByDossier[match.id] || []).filter(m => m.sample_date).map(m => m.sample_date)); newMeasures = measuresN.filter((m: Measure) => !existing.has(m.sample_date)); dupCount = measuresN.length - newMeasures.length; }
-        // Conflits de NOM : même n° de série mais libellé différent -> on demandera quel nom garder.
-        const conflicts = match ? NAME_FIELDS.map(f => {
-          const ex = String((match as any)[f.key] || '').trim(); const nw = String((eq as any)[f.key] || '').trim();
-          return (ex && nw && ex.toLowerCase() !== nw.toLowerCase()) ? { key: f.key, label: tr(f.fr, f.en), existing: ex, incoming: nw } : null;
-        }).filter(Boolean) : [];
-        return { rawEq, eq, measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create', conflicts, useNew: {} as Record<string, boolean> };
-      });
-      return items;
+    const transformers = await extractTransformersFromFile(file);
+    if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le fichier.', 'No transformer detected in the file.'));
+    return buildItemsFromTransformers(transformers);
   }
 
   async function handleImport(file: File) {
@@ -500,23 +521,27 @@ export default function DgaPage() {
     finally { setImporting(false); setImportProgress(null); }
   }
 
-  // Import de PLUSIEURS fichiers d'un coup : on extrait chacun et on FUSIONNE tous les items dans une
-  // seule prévisualisation (« Tout importer »). Un fichier en erreur n'arrête pas les autres.
+  // Import de PLUSIEURS fichiers d'un coup (ex. une feuille de labo par fichier pour un MÊME transfo).
+  // On extrait chaque fichier puis on FUSIONNE les transformateurs PAR N° DE SÉRIE à travers TOUS les
+  // fichiers : plusieurs feuilles d'un même transformateur s'assemblent en un seul rapport (au lieu
+  // d'un transfo par feuille). Un fichier en erreur n'arrête pas les autres.
   async function handleImportFiles(files: File[]) {
     const list = (files || []).filter(Boolean);
     if (!list.length) return;
     if (list.length === 1) return handleImport(list[0]);
     setImporting(true); setImportErr(null); setNotice(null); setImportProgress({ done: 0, total: list.length });
-    const allItems: any[] = []; const errs: string[] = [];
+    const allTransformers: any[] = []; const errs: string[] = [];
     for (let i = 0; i < list.length; i++) {
-      try { allItems.push(...await extractItemsFromFile(list[i])); }
+      try { allTransformers.push(...await extractTransformersFromFile(list[i])); }
       catch (e: any) { errs.push(`${list[i].name}: ${e?.message || e}`); }
       setImportProgress({ done: i + 1, total: list.length });
     }
     setImporting(false); setImportProgress(null);
-    if (!allItems.length) { setImportErr(errs.join(' · ') || tr('Aucun transformateur détecté.', 'No transformer detected.')); return; }
+    // FUSION inter-fichiers par n° de série (puis n° d'équipement / identification / description).
+    const merged = mergeTransformers(allTransformers);
+    if (!merged.length) { setImportErr(errs.join(' · ') || tr('Aucun transformateur détecté.', 'No transformer detected.')); return; }
     if (errs.length) setNotice(tr(`⚠️ ${errs.length} fichier(s) en erreur : ${errs.slice(0, 3).join(' · ')}`, `⚠️ ${errs.length} file(s) failed: ${errs.slice(0, 3).join(' · ')}`));
-    setImportPreview({ items: allItems });
+    setImportPreview({ items: buildItemsFromTransformers(merged) });
   }
   async function applyImport() {
     const items: any[] = importPreview?.items || [];
