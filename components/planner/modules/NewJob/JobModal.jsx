@@ -3061,21 +3061,21 @@ export function JobModal({
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
                     {/* Header */}
-                    <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700 rounded-t-xl">
+                    <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-t-xl">
                         <div className="flex items-center gap-4">
                             <Logo size="normal" showText={true} />
                             <div>
-                                <h2 className="text-xl font-bold text-white">
+                                <h2 className="text-xl font-bold text-gray-900">
                                     {job ? 'Modifier le mandat' : 'Nouveau mandat'}
                                 </h2>
-                                <p className="text-gray-300 text-sm">
+                                <p className="text-gray-600 text-sm">
                                     Planification des travaux C-Secur360
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 dark:text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg p-2 transition-colors"
+                            className="text-gray-400 dark:text-gray-500 hover:text-gray-900 hover:bg-gray-300 rounded-lg p-2 transition-colors"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -4974,13 +4974,13 @@ export function JobModal({
                             <div className={`${ganttFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-800 overflow-auto p-6' : 'h-full overflow-y-auto p-6'}`}>
                                 <div className="space-y-6">
                                     {/* Header Gantt */}
-                                    <div className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg">
+                                    <div className="flex items-center gap-4 p-4 bg-gray-200 rounded-lg">
                                         <Logo size="normal" showText={false} />
                                         <div className="flex-1">
-                                            <h3 className="text-lg font-bold text-white flex items-center">
+                                            <h3 className="text-lg font-bold text-gray-900 flex items-center">
                                                 📊 Diagramme de Gantt et Timeline
                                             </h3>
-                                            <p className="text-sm text-gray-300">
+                                            <p className="text-sm text-gray-600">
                                                 Planification temporelle ({formData.etapes.length} tâches, {getTotalProjectHours()}h total)
                                             </p>
                                         </div>
@@ -5597,13 +5597,13 @@ export function JobModal({
                             <div className="h-full overflow-y-auto p-6">
                                 <div className="space-y-6">
                                     {/* Header Ressources */}
-                                    <div className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg">
+                                    <div className="flex items-center gap-4 p-4 bg-gray-200 rounded-lg">
                                         <Logo size="normal" showText={false} />
                                         <div>
-                                            <h3 className="text-lg font-bold text-white flex items-center">
+                                            <h3 className="text-lg font-bold text-gray-900 flex items-center">
                                                 👥 Gestion des Ressources
                                             </h3>
-                                            <p className="text-sm text-gray-300">
+                                            <p className="text-sm text-gray-600">
                                                 Assignment du personnel et des équipements
                                             </p>
                                         </div>
@@ -7401,13 +7401,13 @@ export function JobModal({
                             <div className="h-full overflow-y-auto p-6">
                                 <div className="space-y-6">
                                     {/* Header Fichiers */}
-                                    <div className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg">
+                                    <div className="flex items-center gap-4 p-4 bg-gray-200 rounded-lg">
                                         <Logo size="normal" showText={false} />
                                         <div>
-                                            <h3 className="text-lg font-bold text-white flex items-center">
+                                            <h3 className="text-lg font-bold text-gray-900 flex items-center">
                                                 📁 Gestion des Documents
                                             </h3>
-                                            <p className="text-sm text-gray-300">
+                                            <p className="text-sm text-gray-600">
                                                 Fichiers, photos et documents du projet
                                             </p>
                                         </div>
@@ -7485,13 +7485,13 @@ export function JobModal({
                             <div className="h-full overflow-y-auto p-6">
                                 <div className="space-y-6">
                                     {/* Header Récurrence */}
-                                    <div className="flex items-center gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700 rounded-lg">
+                                    <div className="flex items-center gap-4 px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-lg">
                                         <div className="text-4xl">🔄</div>
                                         <div>
-                                            <h3 className="text-lg font-bold text-white flex items-center">
+                                            <h3 className="text-lg font-bold text-gray-900 flex items-center">
                                                 Récurrence des Tâches
                                             </h3>
-                                            <p className="text-sm text-gray-300">
+                                            <p className="text-sm text-gray-600">
                                                 Configuration des tâches récurrentes et programmation automatique
                                             </p>
                                         </div>
@@ -7862,13 +7862,13 @@ export function JobModal({
                             <div className="h-full overflow-y-auto p-6">
                                 <div className="space-y-6">
                                     {/* Header Mode avancé */}
-                                    <div className="flex items-center gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700 rounded-lg">
+                                    <div className="flex items-center gap-4 px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-lg">
                                         <div className="text-4xl">⚙️</div>
                                         <div>
-                                            <h3 className="text-lg font-bold text-white flex items-center">
+                                            <h3 className="text-lg font-bold text-gray-900 flex items-center">
                                                 {L('Mode avancé — horaires & affectations', 'Advanced mode — schedules & assignments')}
                                             </h3>
-                                            <p className="text-sm text-gray-300">
+                                            <p className="text-sm text-gray-600">
                                                 {L('Optimisation IA, horaires personnalisés par jour/employé et détection des conflits', 'AI optimization, per-day/per-employee schedules and conflict detection')}
                                             </p>
                                         </div>

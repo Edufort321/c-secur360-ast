@@ -457,20 +457,20 @@ export function EquipementModal({
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b bg-gray-900">
+                <div className="flex items-center justify-between p-6 border-b bg-gray-200">
                     <div className="flex items-center gap-4">
                         <Logo size="normal" showText={false} />
                         <div>
-                            <h2 className="text-xl font-bold text-white flex items-center">
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center">
                                 <Icon name="wrench" className="mr-2" size={24} />
                                 {equipement ? tr("Modifier l'Équipement", 'Edit Equipment') : tr('Nouvel Équipement', 'New Equipment')}
                             </h2>
-                            <p className="text-sm text-gray-300">{tr('Gestion des équipements C-Secur360', 'C-Secur360 equipment management')}</p>
+                            <p className="text-sm text-gray-600">{tr('Gestion des équipements C-Secur360', 'C-Secur360 equipment management')}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all"
+                        className="text-gray-900 hover:bg-gray-300 p-2 rounded-lg transition-all"
                     >
                         <Icon name="close" size={24} />
                     </button>

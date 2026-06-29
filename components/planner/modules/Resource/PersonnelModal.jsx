@@ -323,20 +323,20 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b bg-gray-900">
+                <div className="flex items-center justify-between p-6 border-b bg-gray-200">
                     <div className="flex items-center gap-4">
                         <Logo size="normal" showText={false} />
                         <div>
-                            <h2 className="text-xl font-bold text-white flex items-center">
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center">
                                 <Icon name="user" className="mr-2" size={24} />
                                 {personnel ? t('personnel.modifyPersonnel') : t('personnel.newPersonnel')}
                             </h2>
-                            <p className="text-sm text-gray-300">{t('personnel.managementC-Secur360')}</p>
+                            <p className="text-sm text-gray-600">{t('personnel.managementC-Secur360')}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all"
+                        className="text-gray-900 hover:bg-gray-300 p-2 rounded-lg transition-all"
                     >
                         <Icon name="close" size={24} />
                     </button>

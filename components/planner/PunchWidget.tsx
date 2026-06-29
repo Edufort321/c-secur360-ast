@@ -60,25 +60,25 @@ export default function PunchWidget({ tenant }: { tenant: string }) {
   const clock = `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '12px auto', padding: '0 16px' }}>
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 14, padding: 14, background: open ? '#ecfdf5' : '#fff', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 700, color: '#111827' }}>⏱ Poinçon</span>
+    <div style={{ maxWidth: 1100, margin: '6px auto', padding: '0 12px' }}>
+      <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '6px 10px', background: open ? '#ecfdf5' : '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 700, color: '#111827', fontSize: 13 }}>⏱ Poinçon</span>
         {open ? (
           <>
-            <span style={{ color: '#065f46' }}>En cours{open.project_number ? ` · projet ${open.project_number}` : ''} — <b style={{ fontFamily: 'monospace' }}>{clock}</b></span>
-            <button onClick={punchOut} disabled={busy} style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}>Poinçon sortie</button>
+            <span style={{ color: '#065f46', fontSize: 13 }}>En cours{open.project_number ? ` · projet ${open.project_number}` : ''} — <b style={{ fontFamily: 'monospace' }}>{clock}</b></span>
+            <button onClick={punchOut} disabled={busy} style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Poinçon sortie</button>
           </>
         ) : (
           <>
-            <select value={pick} onChange={e => setPick(e.target.value)} style={{ flex: 1, minWidth: 220, border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px' }}>
+            <select value={pick} onChange={e => setPick(e.target.value)} style={{ flex: 1, minWidth: 180, border: '1px solid #d1d5db', borderRadius: 8, padding: '6px 8px', fontSize: 13 }}>
               <option value="">— Choisir ma tâche planifiée du jour —</option>
               {jobs.map(j => <option key={j.id} value={j.id}>{j.title}{j.project_number ? ` · ${j.project_number}` : ''}</option>)}
             </select>
-            <button onClick={punchIn} disabled={busy || !pick} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: pick ? 'pointer' : 'not-allowed', opacity: pick ? 1 : 0.6 }}>Poinçon entrée</button>
+            <button onClick={punchIn} disabled={busy || !pick} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 13, cursor: pick ? 'pointer' : 'not-allowed', opacity: pick ? 1 : 0.6 }}>Poinçon entrée</button>
           </>
         )}
       </div>
-      {msg && <p style={{ fontSize: 13, color: msg.startsWith('Erreur') ? '#dc2626' : '#059669', margin: '6px 4px 0' }}>{msg}</p>}
+      {msg && <p style={{ fontSize: 12, color: msg.startsWith('Erreur') ? '#dc2626' : '#059669', margin: '4px 4px 0' }}>{msg}</p>}
     </div>
   );
 }

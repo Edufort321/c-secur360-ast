@@ -160,12 +160,12 @@ export function UserLoginModal({
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[95vh] flex flex-col">
                         {/* Header noir comme le principal */}
-                        <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-900 rounded-t-xl">
+                        <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-200 rounded-t-xl">
                             <div className="flex items-center gap-4">
                                 <Logo size="normal" showText={false} />
                                 <div>
-                                    <h2 className="text-xl font-bold text-white">Connexion C-Secur360</h2>
-                                    <p className="text-sm text-gray-300">Version 6.7 - Authentification sécurisée</p>
+                                    <h2 className="text-xl font-bold text-gray-900">Connexion C-Secur360</h2>
+                                    <p className="text-sm text-gray-600">Version 6.7 - Authentification sécurisée</p>
                                 </div>
                             </div>
                         </div>

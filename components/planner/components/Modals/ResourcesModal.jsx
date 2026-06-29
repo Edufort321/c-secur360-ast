@@ -293,17 +293,17 @@ export function ResourcesModal({
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col">
                         {/* Header noir comme le principal */}
-                        <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-900 rounded-t-xl">
+                        <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-200 rounded-t-xl">
                             <div className="flex items-center gap-4">
                                 <Logo size="normal" showText={false} />
                                 <div>
-                                    <h2 className="text-xl font-bold text-white">{t('admin.resource.title')}</h2>
-                                    <p className="text-sm text-gray-300">{t('admin.resource.subtitle')}</p>
+                                    <h2 className="text-xl font-bold text-gray-900">{t('admin.resource.title')}</h2>
+                                    <p className="text-sm text-gray-600">{t('admin.resource.subtitle')}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={handleClose}
-                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300 rounded-lg transition-colors"
                                 title={t('action.close')}
                             >
                                 <Icon name="close" size={20} />

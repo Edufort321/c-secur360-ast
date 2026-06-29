@@ -1,199 +1,108 @@
-// ============== CONTEXTE THÈME VERSION ORIGINALE ==============
-// Reproduction exacte du système thème nuit/jour de la version originale
+// ============== CONTEXTE THÈME DU PLANIFICATEUR ==============
+// Le planner SUIT désormais le thème GLOBAL de l'app (un seul bouton Jour/Nuit
+// dans le PortalHeader pilote tout). Avant, ce contexte avait sa propre détection
+// « thème système » → sur un OS en mode sombre (fréquent sur mobile), il forçait
+// `theme-nuit` indépendamment du bouton du header : impossible d'avoir le mode jour.
+//
+// Source de vérité = la classe `.dark` posée sur <html> par `contexts/ThemeContext.tsx`
+// (clé localStorage `cs-theme`). On l'observe en direct et on applique
+// `theme-nuit`/`theme-jour` sur le conteneur `.planner-app`.
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const ThemeContext = createContext();
 
-export function ThemeProvider({ children }) {
-    // État du thème (jour/nuit)
-    const [isDarkMode, setIsDarkMode] = useState(false);
-    const [isSystemTheme, setIsSystemTheme] = useState(true);
+const GLOBAL_KEY = 'cs-theme'; // clé du thème global (contexts/ThemeContext.tsx)
 
-    // Préférences utilisateur
+// Lit l'état sombre depuis le thème global (classe .dark sur <html>, repli localStorage).
+function readGlobalDark() {
+    if (typeof document === 'undefined') return false;
+    if (document.documentElement.classList.contains('dark')) return true;
+    try {
+        return localStorage.getItem(GLOBAL_KEY) === 'dark';
+    } catch {
+        return false;
+    }
+}
+
+export function ThemeProvider({ children }) {
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    // Préférences d'accessibilité (indépendantes du thème jour/nuit)
     const [userPreferences, setUserPreferences] = useState({
-        autoSwitch: false,
-        switchTime: {
-            darkModeStart: '18:00',
-            lightModeStart: '06:00'
-        },
         reducedMotion: false,
         highContrast: false,
         compactMode: false
     });
 
-    // Chargement des préférences + sync avec l'app principale (storage events)
-    const syncTheme = () => {
-        const savedTheme = localStorage.getItem('c-secur360-theme');
-        if (savedTheme) {
-            try {
-                const themeData = JSON.parse(savedTheme);
-                setIsDarkMode(themeData.isDarkMode ?? false);
-                setIsSystemTheme(themeData.isSystemTheme ?? true);
-            } catch {
-                // Valeur héritée de l'app hôte (ex: "light" / "dark") — pas du JSON
-                setIsDarkMode(savedTheme === 'dark');
-                setIsSystemTheme(false);
-            }
-        } else {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            setIsDarkMode(prefersDark);
-        }
-    };
-
+    // Suit le thème global : lecture initiale + observation en direct de la classe .dark
     useEffect(() => {
-        const savedPreferences = localStorage.getItem('c-secur360-theme-preferences');
-        syncTheme();
+        setIsDarkMode(readGlobalDark());
 
-        if (savedPreferences) {
-            try {
-                setUserPreferences(JSON.parse(savedPreferences));
-            } catch { /* valeur corrompue, garder les défauts */ }
-        }
+        const obs = new MutationObserver(() => setIsDarkMode(readGlobalDark()));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
-        window.addEventListener('storage', syncTheme);
-        return () => window.removeEventListener('storage', syncTheme);
+        // Synchronisation inter-onglets (storage events) sur la clé globale
+        const onStorage = (e) => { if (!e || e.key === GLOBAL_KEY) setIsDarkMode(readGlobalDark()); };
+        window.addEventListener('storage', onStorage);
+
+        // Préférences d'accessibilité persistées
+        try {
+            const saved = localStorage.getItem('c-secur360-theme-preferences');
+            if (saved) setUserPreferences(prev => ({ ...prev, ...JSON.parse(saved) }));
+        } catch { /* valeur corrompue, garder les défauts */ }
+
+        return () => { obs.disconnect(); window.removeEventListener('storage', onStorage); };
     }, []);
 
-    // Écoute des changements du thème système
-    useEffect(() => {
-        if (isSystemTheme) {
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-            const handleChange = (e) => {
-                setIsDarkMode(e.matches);
-            };
-
-            mediaQuery.addEventListener('change', handleChange);
-            setIsDarkMode(mediaQuery.matches);
-
-            return () => mediaQuery.removeEventListener('change', handleChange);
-        }
-    }, [isSystemTheme]);
-
-    // Commutation automatique selon l'heure
-    useEffect(() => {
-        if (userPreferences.autoSwitch && !isSystemTheme) {
-            const checkTime = () => {
-                const now = new Date();
-                const currentTime = now.getHours() * 60 + now.getMinutes();
-
-                const [darkHour, darkMin] = userPreferences.switchTime.darkModeStart.split(':').map(Number);
-                const [lightHour, lightMin] = userPreferences.switchTime.lightModeStart.split(':').map(Number);
-
-                const darkTime = darkHour * 60 + darkMin;
-                const lightTime = lightHour * 60 + lightMin;
-
-                let shouldBeDark;
-                if (darkTime < lightTime) {
-                    // Exemple: 18:00 à 06:00 (nuit normale)
-                    shouldBeDark = currentTime >= darkTime || currentTime < lightTime;
-                } else {
-                    // Exemple: 22:00 à 05:00 (nuit tardive)
-                    shouldBeDark = currentTime >= darkTime && currentTime < lightTime;
-                }
-
-                if (shouldBeDark !== isDarkMode) {
-                    setIsDarkMode(shouldBeDark);
-                }
-            };
-
-            checkTime();
-            const interval = setInterval(checkTime, 60000); // Vérifier chaque minute
-
-            return () => clearInterval(interval);
-        }
-    }, [userPreferences.autoSwitch, userPreferences.switchTime, isDarkMode, isSystemTheme]);
-
-    // Application du thème au conteneur .planner-app uniquement (pas au <html> global)
+    // Application au conteneur .planner-app uniquement (pas au <html> global)
     useEffect(() => {
         const root = document.querySelector('.planner-app') || document.documentElement;
-
-        if (isDarkMode) {
-            root.classList.add('theme-nuit');
-            root.classList.remove('theme-jour');
-        } else {
-            root.classList.add('theme-jour');
-            root.classList.remove('theme-nuit');
-        }
-
-        // Classes additionnelles pour les préférences
-        if (userPreferences.reducedMotion) {
-            root.classList.add('reduced-motion');
-        } else {
-            root.classList.remove('reduced-motion');
-        }
-
-        if (userPreferences.highContrast) {
-            root.classList.add('high-contrast');
-        } else {
-            root.classList.remove('high-contrast');
-        }
-
-        if (userPreferences.compactMode) {
-            root.classList.add('compact-mode');
-        } else {
-            root.classList.remove('compact-mode');
-        }
+        root.classList.toggle('theme-nuit', isDarkMode);
+        root.classList.toggle('theme-jour', !isDarkMode);
+        root.classList.toggle('reduced-motion', !!userPreferences.reducedMotion);
+        root.classList.toggle('high-contrast', !!userPreferences.highContrast);
+        root.classList.toggle('compact-mode', !!userPreferences.compactMode);
     }, [isDarkMode, userPreferences]);
 
-    // Sauvegarde des préférences
+    // Sauvegarde des préférences d'accessibilité
     useEffect(() => {
-        localStorage.setItem('c-secur360-theme', JSON.stringify({
-            isDarkMode,
-            isSystemTheme
-        }));
-    }, [isDarkMode, isSystemTheme]);
-
-    useEffect(() => {
-        localStorage.setItem('c-secur360-theme-preferences', JSON.stringify(userPreferences));
+        try {
+            localStorage.setItem('c-secur360-theme-preferences', JSON.stringify(userPreferences));
+        } catch { /* ignore */ }
     }, [userPreferences]);
 
-    // Fonctions de contrôle
-    const toggleTheme = () => {
-        setIsSystemTheme(false);
-        setIsDarkMode(!isDarkMode);
-    };
-
-    const setTheme = (dark) => {
-        setIsSystemTheme(false);
+    // Bascule = pilote le thème GLOBAL (cohérent avec le bouton Jour/Nuit du header).
+    const applyGlobal = useCallback((dark) => {
+        try {
+            const r = document.documentElement;
+            r.classList.toggle('dark', dark);
+            r.setAttribute('data-theme', dark ? 'dark' : 'light');
+            localStorage.setItem(GLOBAL_KEY, dark ? 'dark' : 'light');
+        } catch { /* ignore */ }
         setIsDarkMode(dark);
-    };
+    }, []);
 
-    const useSystemTheme = () => {
-        setIsSystemTheme(true);
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setIsDarkMode(prefersDark);
-    };
+    const toggleTheme = useCallback(() => applyGlobal(!isDarkMode), [applyGlobal, isDarkMode]);
+    const setTheme = useCallback((dark) => applyGlobal(dark), [applyGlobal]);
+    const useSystemTheme = useCallback(() => {
+        const prefersDark = typeof window !== 'undefined'
+            && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyGlobal(prefersDark);
+    }, [applyGlobal]);
 
-    const updatePreferences = (newPreferences) => {
-        setUserPreferences(prev => ({
-            ...prev,
-            ...newPreferences
-        }));
-    };
+    const updatePreferences = useCallback((newPreferences) => {
+        setUserPreferences(prev => ({ ...prev, ...newPreferences }));
+    }, []);
 
-    // Obtenir le nom du thème actuel
-    const getThemeName = () => {
-        if (isSystemTheme) {
-            return 'Système';
-        }
-        return isDarkMode ? 'Nuit' : 'Jour';
-    };
+    // Le planner suit le thème global → plus de mode « système » distinct.
+    const getThemeName = () => (isDarkMode ? 'Nuit' : 'Jour');
+    const getThemeIcon = () => (isDarkMode ? 'moon' : 'sun');
 
-    // Obtenir l'icône du thème
-    const getThemeIcon = () => {
-        if (isSystemTheme) {
-            return 'desktop';
-        }
-        return isDarkMode ? 'moon' : 'sun';
-    };
-
-    // Valeurs du contexte
     const value = {
         // État
         isDarkMode,
-        isSystemTheme,
+        isSystemTheme: false,
         userPreferences,
 
         // Fonctions
