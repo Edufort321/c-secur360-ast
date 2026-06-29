@@ -125,7 +125,7 @@ export function PlanificateurFinal({
 
     // État pour le menu hamburger
     const [showFilterMenu, setShowFilterMenu] = useState(false);
-    const [activeFilterTab, setActiveFilterTab] = useState('type'); // 'type', 'bureau', 'poste', 'vue'
+    const [activeFilterTab, setActiveFilterTab] = useState('actions'); // 'actions', 'type', 'bureau', 'poste', 'vue'
 
     // État pour le mode de couleur
     const [colorMode, setColorMode] = useState('succursale'); // 'succursale' ou 'priorite'
@@ -866,15 +866,16 @@ export function PlanificateurFinal({
                                 <button onClick={() => setCalendarMode('month')}
                                     className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📅 Mois</button>
                             </div>
+                            {/* Créer/Congés : visibles desktop ; sur mobile → onglet « Actions » du hamburger. */}
                             {onCreateEvent && (
                                 <button onClick={onCreateEvent}
-                                    className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                                    className="hidden lg:flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
                                     <Icon name="plus" size={13} /> {tr('Créer événement', 'Create event')}
                                 </button>
                             )}
                             {onManageConges && (
                                 <button onClick={onManageConges}
-                                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    className="hidden lg:flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <Icon name="calendar" size={13} /> {tr('Congés', 'Time off')}
                                 </button>
                             )}
@@ -883,8 +884,8 @@ export function PlanificateurFinal({
                     </div>
 
 
-                    {/* Navigation temporelle */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    {/* Navigation temporelle : visible desktop ; sur mobile → onglet « Actions » du hamburger. */}
+                    <div className="hidden lg:flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => navigateWeeks(-1)}
                             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-200"
@@ -1016,6 +1017,12 @@ export function PlanificateurFinal({
                                                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                     {t('filter.filtersAndOptions')}
                                                 </h3>
+                                                {/* Recherche (mobile — l'inline est masqué < lg) */}
+                                                <div className="relative mt-3 lg:hidden">
+                                                    <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                                                    <input type="text" placeholder={t('form.searchPlaceholder')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                                                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600" />
+                                                </div>
                                             </div>
 
                                             {/* (Bouton Créer événement retiré — déjà dans la barre du haut ;
@@ -1024,6 +1031,7 @@ export function PlanificateurFinal({
                                             {/* Onglets */}
                                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
                                                 {[
+                                                    { key: 'actions', label: tr('Actions', 'Actions'), icon: '➕' },
                                                     { key: 'type', label: t ? t('filter.type') : 'Type', icon: '🔍' },
                                                     { key: 'bureau', label: 'Site', icon: '🏢' },
                                                     { key: 'poste', label: t ? t('filter.position') : 'Poste', icon: '👔' },
@@ -1046,6 +1054,39 @@ export function PlanificateurFinal({
 
                                             {/* Contenu des onglets */}
                                             <div className="min-h-[200px]">
+                                                {/* Onglet Actions (Créer / Congés / Navigation) — regroupe les fonctions
+                                                    autrefois éparpillées dans la barre du haut (mobile propre). */}
+                                                {activeFilterTab === 'actions' && (
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Actions rapides', 'Quick actions')}</label>
+                                                            {onCreateEvent && (
+                                                                <button onClick={() => { onCreateEvent(); setShowFilterMenu(false); }}
+                                                                    className="flex w-full items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                                                                    <Icon name="plus" size={14} /> {tr('Créer événement', 'Create event')}
+                                                                </button>
+                                                            )}
+                                                            {onManageConges && (
+                                                                <button onClick={() => { onManageConges(); setShowFilterMenu(false); }}
+                                                                    className="flex w-full items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                                    <Icon name="calendar" size={14} /> {tr('Congés', 'Time off')}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Navigation', 'Navigation')}</label>
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => navigateWeeks(-1)} className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">←</button>
+                                                                <button onClick={goToToday} className="flex-1 rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600">{t('calendar.today')}</button>
+                                                                <button onClick={() => navigateWeeks(1)} className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">→</button>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <input type="date" value={quickDate} onChange={(e) => setQuickDate(e.target.value)} className="flex-1 px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600" />
+                                                                <button onClick={handleQuickDateGo} className="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600">{tr('Aller', 'Go')}</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {/* Onglet Type de vue */}
                                                 {activeFilterTab === 'type' && (
                                                     <div className="space-y-2">
@@ -1267,8 +1308,8 @@ export function PlanificateurFinal({
                             )}
                         </div>
 
-                        {/* Recherche */}
-                        <div className="relative flex-1 max-w-md">
+                        {/* Recherche : visible desktop ; sur mobile → dans l'en-tête du hamburger. */}
+                        <div className="hidden lg:block relative flex-1 max-w-md">
                             <Icon
                                 name="search"
                                 size={18}
