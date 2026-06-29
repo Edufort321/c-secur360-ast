@@ -5623,9 +5623,11 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
     setSites(rows.filter(r => !r.parent_id).map(s => ({ _key: s.id, id: s.id, initName: s.name, initCode: s.code || '', initAddr: s.address || '' })));
     setDepts(rows.filter(r =>  r.parent_id).map(d => ({ _dKey: d.id, id: d.id, initName: d.name, initCode: d.code || '', initAddr: d.address || '', siteKey: d.parent_id })));
     setLoadKey(k => k + 1);
-    // Limite de sites de l'abonnement (Infinity si la colonne n'existe pas encore)
-    const { data: t, error: tErr } = await supabase.from('tenants').select('max_sites').eq('subdomain', tenant).maybeSingle();
-    setMaxSites(tErr ? Infinity : (t?.max_sites != null ? Number(t.max_sites) : 1));
+    // Limite de sites de l'abonnement. La colonne tenants.max_sites peut ne pas exister (migration 078
+    // non appliquée) → on lit '*' pour ÉVITER un 400 sur une colonne absente. Sans valeur explicite =>
+    // AUCUNE limite (Infinity), surtout pas 1 (ne jamais bloquer la création de sites par défaut).
+    const { data: t, error: tErr } = await supabase.from('tenants').select('*').eq('subdomain', tenant).maybeSingle();
+    setMaxSites(tErr || (t as any)?.max_sites == null ? Infinity : Number((t as any).max_sites));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
