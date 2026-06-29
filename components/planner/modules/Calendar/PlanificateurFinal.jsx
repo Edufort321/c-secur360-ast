@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '../../components/UI/Icon';
+import PunchWidget from '../../PunchWidget';
 import { JobModal } from '../NewJob/JobModal';
 import { AnalyticsDashboard } from '../../components/Analytics/AnalyticsDashboard';
 import { BUREAU_COLORS } from '@/components/planner/config/constants.js';
@@ -35,6 +36,7 @@ export function PlanificateurFinal({
     onCreateEvent,
     onManageConges,
     onManageResources,
+    tenant = '',
 }) {
     // Hook de traduction
     const { t, currentLanguage } = useLanguage();
@@ -1058,6 +1060,13 @@ export function PlanificateurFinal({
                                                     autrefois éparpillées dans la barre du haut (mobile propre). */}
                                                 {activeFilterTab === 'actions' && (
                                                     <div className="space-y-4">
+                                                        {/* Poinçon intégré au hamburger (composant autonome PunchWidget). */}
+                                                        {tenant && (
+                                                            <div className="space-y-1">
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">⏱ {tr('Poinçon', 'Time clock')}</label>
+                                                                <PunchWidget tenant={tenant} />
+                                                            </div>
+                                                        )}
                                                         <div className="space-y-2">
                                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Actions rapides', 'Quick actions')}</label>
                                                             {onCreateEvent && (

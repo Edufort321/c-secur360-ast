@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
-import PunchWidget from '@/components/planner/PunchWidget';
 
 const PlannerApp = dynamic(() => import('@/components/planner/App'), {
   ssr: false,
@@ -16,7 +15,7 @@ export default function PlanificateurPage() {
   const tenant = (params?.tenant as string) || '';
   return (
     <div className="planner-app">
-      <PunchWidget tenant={tenant} />
+      {/* Le Poinçon est désormais intégré dans le menu hamburger du planificateur (onglet « Actions »). */}
       <PlannerApp tenant={tenant} />
     </div>
   );

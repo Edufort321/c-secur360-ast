@@ -147,6 +147,7 @@ function AppContent({ tenant = '' }) { // ISOLATION : pas de repli 'cerdia' (con
                 onCreateEvent={() => setShowCreateEvent(true)}
                 onManageConges={() => setShowCongesManagement(true)}
                 onManageResources={() => setShowResourcesManagement(true)}
+                tenant={tenant}
             />
 
             {showCreateEvent && (
