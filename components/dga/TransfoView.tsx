@@ -80,6 +80,24 @@ export function TransfoView(props: {
   const extra = dossier.extra || {};
 
   const data = measures; // déjà triées asc par date
+  // ÉTAT COMPLET du transformateur « à la date » du relevé idx : chaque paramètre absent du relevé
+  // sélectionné est complété par le relevé ANTÉRIEUR le plus récent qui le possède (jamais une valeur
+  // future). Un relevé partiel (ex. diélectrique seul) n'efface donc PAS le portrait gaz/huile/furannes
+  // existant → l'analyse (sévérité, Duval, ratios, huile, furannes) tient compte de TOUT l'historique,
+  // pas seulement du dernier point. Le tableau historique, lui, affiche toujours les valeurs réelles par date.
+  const stateAsOf = (rows: any[], idx: number): any => {
+    const sel = rows[idx] || rows[rows.length - 1] || {};
+    const c: any = { ...sel, oil_quality: { ...(sel.oil_quality || {}) } };
+    const GAS_KEYS = ['h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2', 'o2', 'n2', 'tdcg'];
+    const fillBack = (get: (m: any) => any, set: (v: any) => void) => {
+      for (let j = idx - 1; j >= 0; j--) { const v = get(rows[j]); if (v != null) { set(v); return; } }
+    };
+    for (const k of GAS_KEYS) { if (c[k] == null) fillBack(m => m[k], v => { c[k] = v; }); }
+    for (const f of [...(OIL_FIELDS as any[]), ...(FURAN_FIELDS as any[])]) {
+      if (c.oil_quality[f.key] == null) fillBack(m => m.oil_quality?.[f.key], v => { c.oil_quality[f.key] = v; });
+    }
+    return c;
+  };
   const [selIdx, setSelIdx] = useState(Math.max(0, data.length - 1));
   const [visible, setVisible] = useState<Record<string, boolean>>(() => COMBUSTIBLE.reduce((a, k) => ({ ...a, [k]: true }), {}));
   const [showExport, setShowExport] = useState(false);
@@ -138,7 +156,7 @@ export function TransfoView(props: {
   // Note globale par défaut (recalculée ici pour rester AVANT tout retour anticipé — règles des hooks).
   useEffect(() => {
     if (!data.length) { setGlobalNote(''); return; }
-    const c = data[selIdx] || data[data.length - 1];
+    const c = stateAsOf(data, selIdx);
     const z = duvalZone(duvalPct({ ch4: +(c.ch4 || 0), c2h4: +(c.c2h4 || 0), c2h2: +(c.c2h2 || 0) }), lang);
     const oe = evalOil(c.oil_quality || {}, dossier.kv, lang);
     const f2 = numOrNull(c.oil_quality?.f_2fal);
@@ -171,8 +189,8 @@ export function TransfoView(props: {
     );
   }
 
-  const cur = data[selIdx] || data[data.length - 1];
-  const prev = selIdx > 0 ? data[selIdx - 1] : null;
+  const cur = stateAsOf(data, selIdx);
+  const prev = selIdx > 0 ? stateAsOf(data, selIdx - 1) : null;
   const zone = duvalZone(duvalPct({ ch4: +(cur.ch4 || 0), c2h4: +(cur.c2h4 || 0), c2h2: +(cur.c2h2 || 0) }), lang);
   const worst = worstCondition(cur);
   const isOltc = !!dossier.extra?.is_oltc;
@@ -180,14 +198,9 @@ export function TransfoView(props: {
   const c2h2Series = data.map(m => ({ date: m.sample_date as string, value: +(m.c2h2 || 0) }));
   const { items, reco } = interpret(cur as any, prev as any, zone, worst, lang, isOltc, c2h2Series);
   const oilEval = evalOil(cur.oil_quality || {}, dossier.kv, lang);
-  // Furanes (saisie en ppb → furanInterpret attend des ppm = ppb/1000). Les furannes sont mesurés
-  // MOINS souvent que les gaz : si le relevé courant n'a pas de 2-FAL, on prend le DERNIER relevé qui
-  // en a un (sinon « furanes non disponibles » à tort alors qu'ils existent sur un autre relevé).
-  const furanMeasure: any = numOrNull(cur.oil_quality?.f_2fal) != null
-    ? cur
-    : ([...data].filter((m: any) => numOrNull(m.oil_quality?.f_2fal) != null)
-        .sort((a: any, b: any) => String(b.sample_date).localeCompare(String(a.sample_date)))[0] || cur);
-  const fal2ppb = numOrNull(furanMeasure.oil_quality?.f_2fal);
+  // Furanes (saisie en ppb → furanInterpret attend des ppm = ppb/1000). `cur` étant l'état complet à
+  // la date (cf. stateAsOf), le 2-FAL provient automatiquement du dernier relevé qui en contient.
+  const fal2ppb = numOrNull(cur.oil_quality?.f_2fal);
   const furan = furanInterpret(fal2ppb != null ? fal2ppb / 1000 : null, lang);
   const hasOil = OIL_FIELDS.some(f => cur.oil_quality?.[f.key] != null) || FURAN_FIELDS.some(f => cur.oil_quality?.[f.key] != null);
   const trendA = trendAnalysis(data.map(m => ({ date: m.sample_date, c2h2: +(m.c2h2 || 0), tdcg: +(m.tdcg || 0) })), lang);
@@ -704,7 +717,7 @@ export function TransfoView(props: {
                 <div className="text-center">
                   <div className="text-3xl font-extrabold" style={{ color: furan.lvl === 'poor' ? '#9d0208' : furan.lvl === 'fair' ? '#c0651a' : '#2a9d8f' }}>DP ≈ {furan.dp}</div>
                   <div className="mt-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200">{furan.state}</div>
-                  <div className="mt-0.5 text-[11px] text-gray-400">2-FAL = {fal2ppb} ppb · {tr('estimation Chendong', 'Chendong estimate')}{furanMeasure !== cur && furanMeasure.sample_date ? ` · ${tr('relevé du', 'sample of')} ${furanMeasure.sample_date}` : ''}</div>
+                  <div className="mt-0.5 text-[11px] text-gray-400">2-FAL = {fal2ppb} ppb · {tr('estimation Chendong', 'Chendong estimate')}</div>
                 </div>
               </section>
             )}
