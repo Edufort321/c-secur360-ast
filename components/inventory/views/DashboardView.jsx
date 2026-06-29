@@ -82,10 +82,10 @@ const StatCard = ({ icon: Icon, title, value, subtitle, color = 'blue', trend })
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
       <div className={`h-1 bg-gradient-to-r ${colors[color]}`}></div>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-3 rounded-lg ${iconColors[color]} group-hover:scale-110 transition-transform duration-300`}>
-            <Icon size={24} />
+      <div className="p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className={`p-2.5 sm:p-3 rounded-lg ${iconColors[color]} group-hover:scale-110 transition-transform duration-300`}>
+            <Icon size={22} />
           </div>
           {trend && (
             <span className={`text-sm font-semibold ${trend.startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>
@@ -93,8 +93,8 @@ const StatCard = ({ icon: Icon, title, value, subtitle, color = 'blue', trend })
             </span>
           )}
         </div>
-        <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">{title}</h3>
-        <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
+        <h3 className="truncate text-gray-600 dark:text-gray-400 text-sm font-medium mb-1" title={title}>{title}</h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
         {subtitle && (
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{subtitle}</p>
         )}
@@ -372,7 +372,7 @@ const DashboardView = React.memo(({
       )}
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Package}
           title={t('dashboard.totalArticles')}
@@ -571,11 +571,11 @@ const DashboardView = React.memo(({
 
             return (
               <div key={category.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${category.color || 'bg-gray-400'}`}></div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{category.name}</h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">({categoryItems.length} articles)</span>
+                <div className="flex items-center justify-between mb-3 gap-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className={`shrink-0 w-3 h-3 rounded-full ${category.color || 'bg-gray-400'}`}></div>
+                    <h4 className="truncate font-semibold text-gray-900 dark:text-white" title={category.name}>{category.name}</h4>
+                    <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400">({categoryItems.length} articles)</span>
                   </div>
                 </div>
 
@@ -672,14 +672,14 @@ const DashboardView = React.memo(({
                   <div className="space-y-2">
                     {itemsNeedingPriceUpdate.slice(0, 5).map(item => (
                       <div key={item.id} className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">{item.name}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-gray-900 dark:text-white" title={item.name}>{item.name}</p>
+                            <p className="truncate text-sm text-gray-600 dark:text-gray-400">
                               {t('administration.lastUpdate')}: {new Date(item.lastPriceUpdate).toLocaleDateString('fr-FR')}
                             </p>
                           </div>
-                          <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded-full">
+                          <span className="shrink-0 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded-full">
                             {item.priceUpdateInterval === 'custom' ? `${item.customPriceInterval} mois` : `${item.priceUpdateInterval} mois`}
                           </span>
                         </div>
@@ -710,9 +710,9 @@ const DashboardView = React.memo(({
 
       {/* Tableau professionnel */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('articles.articleList')}</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{t('articles.articleList')}</h2>
           </div>
 
           <SearchInput
@@ -723,52 +723,104 @@ const DashboardView = React.memo(({
           />
         </div>
 
-        {/* Défilement de TOUS les articles (plus de pagination) : on affine via la recherche/les
-            filtres. En-têtes collantes pour rester visibles en scrollant. */}
-        <div className="overflow-auto max-h-[70vh]">
-          <table className="w-full">
+        {/* MOBILE (< lg) : liste de cartes — le tableau à 8 colonnes est illisible sur petit écran.
+            Un SEUL scroll vertical, pas de défilement horizontal. */}
+        <div className="lg:hidden max-h-[70vh] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
+          {sortedItems.map((item) => (
+            <div key={item.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-gray-900 dark:text-white">{item.name}</p>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                    <span className="font-mono">{item.code}</span>{item.location ? ` · ${item.location}` : ''}
+                  </p>
+                </div>
+                <StatusBadge quantity={item.quantity} minQuantity={item.minQuantity} maxQuantity={item.maxQuantity} t={t} />
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                <span className="inline-flex min-w-0 items-center gap-1"><Tag size={12} className="shrink-0" /><span className="truncate">{item.category || '—'}</span></span>
+                {item.department && <span className="truncate">· {item.department}</span>}
+              </div>
+              <div className="mt-2 flex items-end justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <ProgressBar value={item.quantity} max={item.maxQuantity} showLabel={false} />
+                  <p className="mt-1 font-mono text-xs text-gray-600 dark:text-gray-400">{item.quantity} / {item.maxQuantity} {item.unit}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-semibold text-green-600">${(item.salePrice * item.quantity).toFixed(2)}</p>
+                  <p className="text-[11px] text-gray-500">${item.salePrice.toFixed(2)}/u</p>
+                </div>
+              </div>
+              <div className="mt-1 flex justify-end">
+                <ActionButtons
+                  onEdit={() => { setEditingItem(item); setShowItemForm(true); }}
+                  onDelete={() => deleteItem(item.id)}
+                  onView={() => { setSelectedItemForView(item); setShowViewModal(true); }}
+                  onShare={() => { setSelectedItemForShare(item); setShowShareModal(true); }}
+                  t={t}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* DESKTOP (lg+) : tableau. `table-fixed` + largeurs de colonnes + troncature → les textes
+            longs n'étirent plus les colonnes (plus de scroll horizontal). Un seul scroll vertical,
+            en-têtes collantes. */}
+        <div className="hidden max-h-[70vh] overflow-y-auto lg:block">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-28" />
+              <col />
+              <col className="w-44" />
+              <col className="w-36" />
+              <col className="w-40" />
+              <col className="w-32" />
+              <col className="w-28" />
+              <col className="w-24" />
+            </colgroup>
             <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-4 text-left">
+                <th className="px-4 py-4 text-left">
                   <button
                     onClick={() => handleSort('code')}
                     className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white hover:text-slate-600 transition-colors"
                   >
                     Code
-                    <ArrowUpDown size={14} />
+                    <ArrowUpDown size={14} className="shrink-0" />
                   </button>
                 </th>
-                <th className="px-6 py-4 text-left">
+                <th className="px-4 py-4 text-left">
                   <button
                     onClick={() => handleSort('name')}
                     className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white hover:text-slate-600 transition-colors"
                   >
                     Article
-                    <ArrowUpDown size={14} />
+                    <ArrowUpDown size={14} className="shrink-0" />
                   </button>
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('common.category')}</th>
-                <th className="px-6 py-4 text-left">
+                <th className="px-4 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('common.category')}</th>
+                <th className="px-4 py-4 text-left">
                   <button
                     onClick={() => handleSort('department')}
                     className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white hover:text-slate-600 transition-colors"
                   >
                     {t('common.department')}
-                    <ArrowUpDown size={14} />
+                    <ArrowUpDown size={14} className="shrink-0" />
                   </button>
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('common.stock')}</th>
-                <th className="px-6 py-4 text-left">
+                <th className="px-4 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('common.stock')}</th>
+                <th className="px-4 py-4 text-left">
                   <button
                     onClick={() => handleSort('salePrice')}
                     className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white hover:text-slate-600 transition-colors"
                   >
                     Valeur
-                    <ArrowUpDown size={14} />
+                    <ArrowUpDown size={14} className="shrink-0" />
                   </button>
                 </th>
-                <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('common.status')}</th>
-                <th className="px-6 py-4 text-center font-semibold text-gray-900 dark:text-white">{t('articles.actions')}</th>
+                <th className="px-4 py-4 text-left font-semibold text-gray-900 dark:text-white">{t('common.status')}</th>
+                <th className="px-4 py-4 text-center font-semibold text-gray-900 dark:text-white">{t('articles.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -780,48 +832,48 @@ const DashboardView = React.memo(({
                     hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors
                   `}
                 >
-                  <td className="px-6 py-4">
-                    <span className="font-mono text-sm text-gray-900 dark:text-white font-medium">
+                  <td className="px-4 py-4">
+                    <span className="block truncate font-mono text-sm text-gray-900 dark:text-white font-medium" title={item.code}>
                       {item.code}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">{item.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{item.location}</p>
+                  <td className="px-4 py-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-white" title={item.name}>{item.name}</p>
+                      <p className="truncate text-sm text-gray-500 dark:text-gray-400" title={item.location}>{item.location}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center gap-1 text-sm text-gray-900 dark:text-white font-medium">
-                        <Tag size={14} />
-                        {item.category}
+                  <td className="px-4 py-4">
+                    <div className="min-w-0 space-y-1">
+                      <span className="flex min-w-0 items-center gap-1 text-sm text-gray-900 dark:text-white font-medium" title={item.category}>
+                        <Tag size={14} className="shrink-0" />
+                        <span className="truncate">{item.category}</span>
                       </span>
                       {item.subcategory && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 pl-5">
+                        <p className="truncate pl-5 text-xs text-gray-500 dark:text-gray-400" title={item.subcategory}>
                           {item.subcategory}
                         </p>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900 dark:text-white font-medium">
+                  <td className="px-4 py-4">
+                    <span className="block truncate text-sm text-gray-900 dark:text-white font-medium" title={item.department || '-'}>
                       {item.department || '-'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="w-32">
+                  <td className="px-4 py-4">
+                    <div>
                       <ProgressBar value={item.quantity} max={item.maxQuantity} showLabel={false} />
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 font-mono">
                         {item.quantity} / {item.maxQuantity} {item.unit}
                       </p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="font-semibold text-green-600">${(item.salePrice * item.quantity).toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">${item.salePrice.toFixed(2)} / unité</p>
+                  <td className="px-4 py-4">
+                    <p className="truncate font-semibold text-green-600">${(item.salePrice * item.quantity).toFixed(2)}</p>
+                    <p className="truncate text-xs text-gray-500">${item.salePrice.toFixed(2)} / unité</p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <StatusBadge
                       quantity={item.quantity}
                       minQuantity={item.minQuantity}
@@ -829,7 +881,7 @@ const DashboardView = React.memo(({
                       t={t}
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <div className="flex items-center justify-center">
                       <ActionButtons
                         onEdit={() => {
