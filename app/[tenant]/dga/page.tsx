@@ -446,9 +446,19 @@ export default function DgaPage() {
     } else if (anonGroups.length) {
       identified.push(...anonGroups);
     }
+    // Mesures de MÊME DATE venant de feuilles différentes (ex. une feuille GAZ + une feuille
+    // FURANNES/qualité d'huile au même prélèvement) : on FUSIONNE leurs champs au lieu d'en jeter une
+    // (sinon les furannes/huile disparaissaient). Les mesures sans date sont conservées telles quelles.
     for (const g of identified) {
-      const seen = new Set<string>();
-      g.measurements = g.measurements.filter((m: any) => { const d = String(m?.date || JSON.stringify(m)); if (seen.has(d)) return false; seen.add(d); return true; });
+      const byDate = new Map<string, any>();
+      const noDate: any[] = [];
+      for (const m of g.measurements) {
+        const d = m?.date ? String(m.date).trim() : '';
+        if (!d) { noDate.push(m); continue; }
+        if (!byDate.has(d)) byDate.set(d, { ...m });
+        else { const ex = byDate.get(d); for (const [k, v] of Object.entries(m)) { if (v != null && v !== '' && (ex[k] == null || ex[k] === '')) ex[k] = v; } }
+      }
+      g.measurements = [...byDate.values(), ...noDate];
     }
     return identified;
   }

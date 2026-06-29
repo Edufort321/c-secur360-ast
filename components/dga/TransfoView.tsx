@@ -180,8 +180,14 @@ export function TransfoView(props: {
   const c2h2Series = data.map(m => ({ date: m.sample_date as string, value: +(m.c2h2 || 0) }));
   const { items, reco } = interpret(cur as any, prev as any, zone, worst, lang, isOltc, c2h2Series);
   const oilEval = evalOil(cur.oil_quality || {}, dossier.kv, lang);
-  // Furanes : saisie en ppb (prototype) → furanInterpret attend des ppm (= ppb/1000).
-  const fal2ppb = numOrNull(cur.oil_quality?.f_2fal);
+  // Furanes (saisie en ppb → furanInterpret attend des ppm = ppb/1000). Les furannes sont mesurés
+  // MOINS souvent que les gaz : si le relevé courant n'a pas de 2-FAL, on prend le DERNIER relevé qui
+  // en a un (sinon « furanes non disponibles » à tort alors qu'ils existent sur un autre relevé).
+  const furanMeasure: any = numOrNull(cur.oil_quality?.f_2fal) != null
+    ? cur
+    : ([...data].filter((m: any) => numOrNull(m.oil_quality?.f_2fal) != null)
+        .sort((a: any, b: any) => String(b.sample_date).localeCompare(String(a.sample_date)))[0] || cur);
+  const fal2ppb = numOrNull(furanMeasure.oil_quality?.f_2fal);
   const furan = furanInterpret(fal2ppb != null ? fal2ppb / 1000 : null, lang);
   const hasOil = OIL_FIELDS.some(f => cur.oil_quality?.[f.key] != null) || FURAN_FIELDS.some(f => cur.oil_quality?.[f.key] != null);
   const trendA = trendAnalysis(data.map(m => ({ date: m.sample_date, c2h2: +(m.c2h2 || 0), tdcg: +(m.tdcg || 0) })), lang);
@@ -698,7 +704,7 @@ export function TransfoView(props: {
                 <div className="text-center">
                   <div className="text-3xl font-extrabold" style={{ color: furan.lvl === 'poor' ? '#9d0208' : furan.lvl === 'fair' ? '#c0651a' : '#2a9d8f' }}>DP ≈ {furan.dp}</div>
                   <div className="mt-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200">{furan.state}</div>
-                  <div className="mt-0.5 text-[11px] text-gray-400">2-FAL = {fal2ppb} ppb · {tr('estimation Chendong', 'Chendong estimate')}</div>
+                  <div className="mt-0.5 text-[11px] text-gray-400">2-FAL = {fal2ppb} ppb · {tr('estimation Chendong', 'Chendong estimate')}{furanMeasure !== cur && furanMeasure.sample_date ? ` · ${tr('relevé du', 'sample of')} ${furanMeasure.sample_date}` : ''}</div>
                 </div>
               </section>
             )}

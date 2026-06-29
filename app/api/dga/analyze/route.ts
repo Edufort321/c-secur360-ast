@@ -7,7 +7,9 @@ import { anthropicMessages, resolveAnthropicModel } from '@/lib/anthropicModel';
 // Rogers, Doernenburg, qualité d'huile, furannes/DP, tendances). Proxy serveur (clé non exposée).
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+// L'analyse experte (gros prompt normatif + historique complet des mesures) peut dépasser 60 s →
+// 504 Gateway Timeout. On aligne sur la route /extract (300 s) pour laisser le temps à l'appel IA.
+export const maxDuration = 300;
 
 const KNOWLEDGE = `Tu es un ingénieur senior expert en diagnostic et maintenance de transformateurs de puissance (DGA, physico-chimie de l'huile, essais électriques, localisation de défaut). Mobilise TOUTE ta connaissance experte des normes et de la pratique de l'industrie — IEEE, IEC, NETA, ASTM, CIGRE — pas seulement les seuils ci-dessous.
 Base tes conclusions sur les normes ET sur la TENDANCE dans le temps (taux de génération), pas seulement la dernière valeur.
