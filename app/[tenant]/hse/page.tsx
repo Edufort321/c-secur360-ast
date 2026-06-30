@@ -279,6 +279,19 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
   if (daysSinceLti != null && ageDays != null) daysSinceLti = Math.min(daysSinceLti, ageDays);   // plafond = âge tenant
   const ltiStreakFromStart = lastLti == null && startMs != null;
 
+  // COHÉRENCE : on privilégie la valeur du safety-board — MÊME source que l'onglet « Incidents & accidents »
+  // (incident_reports + date de DÉCLARATION), métrique distincte « avec arrêt » (lost-time). Évite l'écart
+  // avec la table miroir hse_incident. Repli sur le calcul local ci-dessus si l'API est indisponible.
+  const [boardLti, setBoardLti] = useState<number | null>(null);
+  useEffect(() => {
+    if (!tenant) return;
+    fetch(`/api/incidents/safety-board?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
+      .then((r: any) => (r.ok ? r.json() : null))
+      .then((j: any) => { if (j?.ok && typeof j.daysSinceLostTime === 'number') setBoardLti(j.daysSinceLostTime); })
+      .catch(() => {});
+  }, [tenant]);
+  const ltiDays: number | null = boardLti != null ? boardLti : daysSinceLti;
+
   // Qualité de données : mois avec incidents mais 0 heure (taux faussés).
   const monthsNoHours = (kpiRows || []).filter((r: any) => r.hours <= 0 && (r.recordableCount > 0 || r.nearMissCount > 0 || r.ltiCount > 0)).map((r: any) => r.month);
 
@@ -318,8 +331,8 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
         <div className="flex items-end justify-between">
           <div><div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident avec arrêt', 'Days without a lost-time injury')}</div>
-            <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{daysSinceLti == null ? '—' : daysSinceLti}</div></div>
-          <div className="text-right text-[11px] text-gray-400">{daysSinceLti == null ? tr('Aucune donnée.', 'No data.') : ltiStreakFromStart ? tr('Aucun accident avec arrêt — depuis le début.', 'No lost-time injury — since inception.') : tr('Depuis le dernier accident avec arrêt.', 'Since the last lost-time injury.')}</div>
+            <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{ltiDays == null ? '—' : ltiDays}</div></div>
+          <div className="text-right text-[11px] text-gray-400">{ltiDays == null ? tr('Aucune donnée.', 'No data.') : (boardLti == null && ltiStreakFromStart) ? tr('Aucun accident avec arrêt — depuis le début.', 'No lost-time injury — since inception.') : tr('Depuis le dernier accident avec arrêt (source : déclarations).', 'Since the last lost-time injury (source: declarations).')}</div>
         </div>
       </div>
 

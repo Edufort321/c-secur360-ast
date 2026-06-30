@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveAccess, effectiveTenant } from '@/lib/hrAccess';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { classifyReport } from '@/lib/hse/incidentClassify';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
 
   // Incidents (accidents) + passés proches : incident_reports (par type) + table near_miss_events (héritée).
   const [{ data: reports }, { data: nm }] = await Promise.all([
-    supabaseAdmin.from('incident_reports').select('incident_type, data, created_at, submitted_at').eq('tenant_id', tenant),
+    supabaseAdmin.from('incident_reports').select('id, incident_type, data, created_at, submitted_at, status').eq('tenant_id', tenant),
     supabaseAdmin.from('near_miss_events').select('incident_date, created_at').eq('tenant_id', tenant).then(r => r, () => ({ data: [] as any[] })),
   ]);
 
@@ -65,9 +66,18 @@ export async function GET(req: NextRequest) {
   const dateOf = (r: any): string | null => dOnly(r?.submitted_at) || dOnly(r?.created_at) || dOnly(r?.data?.incidentDate);
   const accidents: string[] = [];
   const nearMiss: string[] = [];
+  // « Jours sans accident AVEC ARRÊT » (LTI) = MÊME source (incident_reports), métrique DISTINCTE :
+  // sous-ensemble lost-time, dérivé par classifyReport (data.injuredPersons[].lostTime). Déclarés
+  // seulement (pas brouillon), même date de déclaration. Évite l'écart avec la table miroir hse_incident.
+  const lostTime: string[] = [];
   for (const r of (reports || []) as any[]) {
     const d = dateOf(r); if (!d) continue;
-    if (r.incident_type === 'near_miss') nearMiss.push(d); else accidents.push(d); // accident/vehicle/property/medical = incident réel
+    if (r.incident_type === 'near_miss') { nearMiss.push(d); continue; }
+    accidents.push(d); // accident/vehicle/property/medical = incident réel
+    if (String(r.status || 'draft') !== 'draft') {
+      try { if (classifyReport({ id: r.id, incident_type: r.incident_type, data: r.data, created_at: r.created_at, status: r.status }).is_lost_time) lostTime.push(d); }
+      catch { /* classification best-effort */ }
+    }
   }
   for (const e of (nm || []) as any[]) { const d = dOnly(e.created_at) || dOnly(e.incident_date); if (d) nearMiss.push(d); }
 
@@ -76,19 +86,23 @@ export async function GET(req: NextRequest) {
 
   const lastAccident = lastOf(accidents);
   const lastNearMiss = lastOf(nearMiss);
+  const lastLostTime = lastOf(lostTime);
   // « Jours sans » = depuis le PLUS RÉCENT entre le dernier événement de ce type et le plancher du type
-  // (réinit. par type, sinon création du tenant).
+  // (réinit. par type, sinon création du tenant). LTI = plancher création tenant (pas de réinit. dédiée).
   const accidentBaseline = lastAccident && lastAccident > accFloor ? lastAccident : accFloor;
   const nearMissBaseline = lastNearMiss && lastNearMiss > nmFloor ? lastNearMiss : nmFloor;
+  const lostTimeBaseline = lastLostTime && lastLostTime > tenantStart ? lastLostTime : tenantStart;
 
   return NextResponse.json({
     ok: true, year, baseline, today: todayIso,
     accidentsYTD: inYear(accidents), nearMissYTD: inYear(nearMiss),
     accidentsTotal: accidents.length, nearMissTotal: nearMiss.length,
-    lastAccidentDate: lastAccident, lastNearMissDate: lastNearMiss,
+    lostTimeTotal: lostTime.length, lostTimeYTD: inYear(lostTime),
+    lastAccidentDate: lastAccident, lastNearMissDate: lastNearMiss, lastLostTimeDate: lastLostTime,
     accFloor, nmFloor,
     daysSinceAccident: daysBetween(accidentBaseline, todayIso),
     daysSinceNearMiss: daysBetween(nearMissBaseline, todayIso),
+    daysSinceLostTime: daysBetween(lostTimeBaseline, todayIso),
   });
 }
 
