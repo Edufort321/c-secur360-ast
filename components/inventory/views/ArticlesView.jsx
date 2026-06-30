@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import SearchInput from '../components/SearchInput';
+import MobileActionsMenu from '../components/MobileActionsMenu';
 import { getScanUrl } from '../config/app';
 import { useLanguage } from '../contexts/LanguageContext';
 import { downloadCsv } from '@/lib/csv';
@@ -363,6 +364,23 @@ const ArticlesView = React.memo(({
     };
   }, [showPrintDropdown]);
 
+  // Actions regroupées dans un ☰ sur mobile (« comme le planner ») ; sur desktop, les boutons restent visibles.
+  const STALE_MS = 90 * 86400000;
+  const staleItems = (filteredItems || []).filter(it => { const ts = it.lastPriceUpdate ? new Date(it.lastPriceUpdate).getTime() : 0; return !ts || (Date.now() - ts) > STALE_MS; });
+  const mobileActions = [
+    { key: 'add', label: t('articles.addArticle'), icon: Plus, onClick: () => setShowItemForm(true), variant: 'primary' },
+    { key: 'import', label: 'Importer du catalogue', icon: Layers, onClick: () => importFromCatalogue && importFromCatalogue(), hidden: !importFromCatalogue },
+    { key: 'po', label: poBusy ? (language === 'fr' ? 'Création…' : 'Creating…') : (language === 'fr' ? 'Bon de commande' : 'Purchase order'), icon: ShoppingCart, onClick: () => createPurchaseOrder(), hidden: poTier < 4 },
+    { key: 'export', label: language === 'fr' ? 'Exporter CSV' : 'Export CSV', icon: Download, onClick: () => exportArticlesCsv() },
+    { key: 'priceai', label: selectedItems.length ? (language === 'fr' ? `Prix IA (${selectedItems.length})` : `AI price (${selectedItems.length})`) : (language === 'fr' ? 'Prix IA — tout' : 'AI price — all'), icon: Zap, onClick: () => onPriceAssistant(selectedItems.length ? filteredItems.filter(it => selectedItems.includes(it.id)) : filteredItems), hidden: !onPriceAssistant },
+    { key: 'priceai-stale', label: language === 'fr' ? `Périmés >3 mois (${staleItems.length})` : `Stale >3mo (${staleItems.length})`, icon: Zap, onClick: () => onPriceAssistant(staleItems), hidden: !onPriceAssistant || !!selectedItems.length },
+    { key: 'print-sheets', label: t('actions.printCompleteSheets'), icon: FileText, onClick: () => printCurrentView(), hidden: selectedItems.length === 0 },
+    { key: 'print-labels', label: t('actions.printLabels'), icon: Tag, onClick: () => handlePrint(), hidden: selectedItems.length === 0 },
+    { key: 'delete', label: selectedItems.length > 0 ? `${t('actions.delete')} (${selectedItems.length})` : t('actions.delete'), icon: Trash2, onClick: () => deleteSelectedItems(), variant: 'danger', hidden: !deleteSelectedItems || selectedItems.length === 0 },
+    { key: 'view', label: articleViewMode === 'list' ? t('articles.gridView') : t('articles.listView'), icon: articleViewMode === 'list' ? Grid : List, onClick: () => setArticleViewMode(articleViewMode === 'list' ? 'grid' : 'list') },
+    { key: 'filters', label: `${t('actions.filters')}${(filters.category || filters.department || filters.status || filters.location) ? ` (${[filters.category, filters.department, filters.status, filters.location].filter(Boolean).length})` : ''}`, icon: Filter, onClick: () => setShowFilters(!showFilters), active: showFilters },
+  ];
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -373,7 +391,9 @@ const ArticlesView = React.memo(({
             {activeFilterCount > 0 && <span className="ml-2 text-slate-600 font-semibold hidden sm:inline">• {activeFilterCount} filtre{activeFilterCount > 1 ? 's' : ''} actif{activeFilterCount > 1 ? 's' : ''} (Dashboard)</span>}
           </p>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        {/* Mobile : toutes les actions dans le menu ☰. */}
+        <MobileActionsMenu className="lg:hidden shrink-0" items={mobileActions} />
+        <div className="hidden lg:flex items-center gap-2 sm:gap-3 flex-wrap">
           <div className="relative" ref={printDropdownRef}>
             <button
               onClick={() => setShowPrintDropdown(!showPrintDropdown)}
@@ -514,8 +534,8 @@ const ArticlesView = React.memo(({
               />
             </div>
 
-            {/* Sélecteur de vue : Galerie (cartes compactes) / Liste (tableau) — style AST */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+            {/* Sélecteur de vue : Galerie (cartes compactes) / Liste (tableau) — style AST. Desktop seulement (mobile : dans le menu ☰). */}
+            <div className="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
               <button
                 onClick={() => setArticleViewMode('grid')}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
@@ -541,8 +561,8 @@ const ArticlesView = React.memo(({
             </div>
           </div>
 
-          {/* Bouton Hamburger pour les filtres */}
-          <div className="flex justify-end">
+          {/* Bouton Hamburger pour les filtres — desktop seulement (mobile : dans le menu ☰). */}
+          <div className="hidden lg:flex justify-end">
             <Button
               variant={showFilters ? "primary" : "secondary"}
               icon={Filter}

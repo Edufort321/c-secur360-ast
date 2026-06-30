@@ -69,6 +69,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SearchInput from './components/SearchInput';
+import MobileActionsMenu from './components/MobileActionsMenu';
 
 // Vues
 import DashboardView from './views/DashboardView';
@@ -4723,7 +4724,16 @@ function AppContent() {
                 />
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
+            {/* Mobile : actions regroupées dans le menu ☰. */}
+            <MobileActionsMenu
+              className="lg:hidden"
+              items={[
+                { key: 'refresh', label: language === 'fr' ? 'Actualiser' : 'Refresh', icon: RefreshCw, onClick: () => refreshFromCloud() },
+                { key: 'print', label: t('movements.print'), icon: Printer, onClick: () => printReport(), hidden: filteredMovements.length === 0 },
+                { key: 'export', label: t('movements.exportExcel'), icon: FileSpreadsheet, onClick: () => exportToExcel(), variant: 'primary', hidden: filteredMovements.length === 0 },
+              ]}
+            />
+            <div className="hidden lg:flex flex-wrap gap-3">
               <Button
                 variant="secondary"
                 icon={RefreshCw}
@@ -5582,7 +5592,23 @@ function AppContent() {
         {/* Action Bar */}
         {filteredAlerts.length > 0 && (
           <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl shadow-lg p-4 border-2 border-orange-200 dark:border-orange-800">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Mobile : actions regroupées dans le menu ☰ (la case « Inclure les prix » reste visible). */}
+            <div className="flex w-full items-center justify-between gap-3 lg:hidden">
+              <MobileActionsMenu
+                items={[
+                  { key: 'selectAll', label: 'Tout sélectionner', icon: CheckSquare, onClick: () => selectAll(), hidden: selectedItems.length === filteredAlerts.length },
+                  { key: 'deselectAll', label: 'Tout désélectionner', icon: XCircle, onClick: () => deselectAll(), hidden: selectedItems.length === 0 },
+                  { key: 'generateOrder', label: `${t('alerts.generateOrder')} (${selectedItems.length})`, icon: ShoppingCart, onClick: () => generateOrder(), hidden: selectedItems.length === 0 },
+                  { key: 'sendEmail', label: `${t('alerts.sendOrderEmail')} (${selectedItems.length})`, icon: Mail, onClick: () => sendOrderEmail(), variant: 'primary', hidden: selectedItems.length === 0 },
+                  { key: 'printPO', label: language === 'fr' ? `Bon de commande PDF${selectedItems.length ? ` (${selectedItems.length})` : ''}` : `Purchase order PDF${selectedItems.length ? ` (${selectedItems.length})` : ''}`, icon: FileText, onClick: () => printPurchaseOrder() },
+                ]}
+              />
+              <label className="flex items-center gap-1.5 px-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+                <input type="checkbox" checked={poWithPrices} onChange={(e) => setPoWithPrices(e.target.checked)} className="h-4 w-4 rounded accent-slate-700" />
+                {language === 'fr' ? 'Inclure les prix' : 'Include prices'}
+              </label>
+            </div>
+            <div className="hidden lg:flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Button
                   variant="secondary"

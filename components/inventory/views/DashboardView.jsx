@@ -20,6 +20,7 @@ import {
   Trash2
 } from 'lucide-react';
 import SearchInput from '../components/SearchInput';
+import MobileActionsMenu from '../components/MobileActionsMenu';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // Composants UI importés depuis App.jsx
@@ -250,27 +251,38 @@ const DashboardView = React.memo(({
     }
   }, [sortedItems.length]);
 
+  // Actions regroupées dans un ☰ sur mobile (« comme le planner ») ; sur desktop, les boutons restent visibles.
+  const nbFilters = [dashboardFilters.category, dashboardFilters.subcategory, dashboardFilters.department, dashboardFilters.status, dashboardFilters.location].filter(Boolean).length;
+  const dashActions = [
+    { key: 'add', label: t('articles.addArticle'), icon: Plus, onClick: () => setShowItemForm(true), variant: 'primary' },
+    { key: 'filters', label: `${t('actions.filters')}${nbFilters ? ` (${nbFilters})` : ''}`, icon: Filter, onClick: () => setShowDashboardFilters(!showDashboardFilters), active: showDashboardFilters },
+    { key: 'print', label: t('actions.print'), icon: Printer, onClick: () => printCurrentView && printCurrentView() },
+  ];
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+      <div className="flex flex-row items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('dashboard.title')}</h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('dashboard.inventoryOverview')}</p>
         </div>
-        <Button variant="primary" icon={Plus} onClick={() => setShowItemForm(true)} className="whitespace-nowrap">
-          <span className="hidden sm:inline">{t('articles.addArticle')}</span>
-          <span className="sm:hidden">{t('actions.add')}</span>
-        </Button>
+        {/* Desktop : bouton Ajouter visible. Mobile : tout dans le menu ☰. */}
+        <div className="hidden lg:block shrink-0">
+          <Button variant="primary" icon={Plus} onClick={() => setShowItemForm(true)} className="whitespace-nowrap">
+            {t('articles.addArticle')}
+          </Button>
+        </div>
+        <MobileActionsMenu className="lg:hidden shrink-0" items={dashActions} />
       </div>
 
-      {/* Bouton Hamburger pour les filtres */}
-      <div className="flex justify-end">
+      {/* Bouton Filtres — desktop seulement (sur mobile : dans le menu ☰). */}
+      <div className="hidden lg:flex justify-end">
         <Button
           variant={showDashboardFilters ? "primary" : "secondary"}
           icon={Filter}
           onClick={() => setShowDashboardFilters(!showDashboardFilters)}
         >
-          {t('actions.filters')} {(dashboardFilters.category || dashboardFilters.subcategory || dashboardFilters.department || dashboardFilters.status || dashboardFilters.location) && `(${[dashboardFilters.category, dashboardFilters.subcategory, dashboardFilters.department, dashboardFilters.status, dashboardFilters.location].filter(Boolean).length})`}
+          {t('actions.filters')} {nbFilters > 0 && `(${nbFilters})`}
         </Button>
       </div>
 
