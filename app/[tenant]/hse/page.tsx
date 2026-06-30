@@ -1,7 +1,7 @@
 'use client';
 // Module HSE (Santé & sécurité) — registres réglementaires + incidents/échéances + KPI (LTIFR/TRIR).
 // Données : lib/hse/data ; calculs purs : lib/hse/kpi. Juridictions CANADIENNES (fédéral + provinces/territoires), bilingue FR/EN.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2, ShieldCheck, AlertTriangle, ClipboardList, Settings, Plus, Check, Download, Trash2, Lock, Paperclip, History, MessageSquare } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -266,13 +266,20 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
   // (jours sans accident + jours sans passé proche), via le safety-board (incident_reports + date de
   // DÉCLARATION) — une seule source de vérité, pas le « avec arrêt » (LTI) ni le miroir hse_incident.
   const [board, setBoard] = useState<any | null>(null);
-  useEffect(() => {
+  const loadBoard = useCallback(() => {
     if (!tenant) return;
     fetch(`/api/incidents/safety-board?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
       .then((r: any) => (r.ok ? r.json() : null))
       .then((j: any) => { if (j?.ok) setBoard(j); })
       .catch(() => {});
   }, [tenant]);
+  useEffect(() => { loadBoard(); }, [loadBoard]);
+  // Réinitialisation PAR TYPE (le reset vit désormais ici, avec le compteur, pas dans l'onglet Incidents).
+  const resetCounter = async (type: 'accident' | 'near_miss') => {
+    const label = type === 'accident' ? tr('« jours sans accident »', '“days without accident”') : tr('« jours sans passé proche »', '“days without near-miss”');
+    if (typeof window !== 'undefined' && !window.confirm(tr(`Réinitialiser le compteur ${label} à 0 aujourd’hui ?`, `Reset the ${label} counter to 0 today?`))) return;
+    try { await fetch('/api/incidents/safety-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type, tenant }) }); loadBoard(); } catch { /* ignore */ }
+  };
 
   // Qualité de données : mois avec incidents mais 0 heure (taux faussés).
   const monthsNoHours = (kpiRows || []).filter((r: any) => r.hours <= 0 && (r.recordableCount > 0 || r.nearMissCount > 0 || r.ltiCount > 0)).map((r: any) => r.month);
@@ -310,17 +317,28 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       <TrainingExpiryBanner tr={tr} tenant={tenant} canHr={canHr} />
 
       {/* Compteurs « jours sans … » — MÊME source que l'onglet « Incidents & accidents » (safety-board).
-          Un seul compteur de référence : accident + passé proche, partagé entre dashboard et onglet. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident', 'Days without accident')}</div>
-          <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{board?.daysSinceAccident ?? '—'}</div>
-          <div className="text-[11px] text-gray-400">{board?.lastAccidentDate ? tr(`Depuis le dernier accident déclaré (${board.lastAccidentDate}).`, `Since the last declared accident (${board.lastAccidentDate}).`) : tr('Aucun accident — depuis le début de l’abonnement.', 'No accident — since subscription start.')}</div>
+          Seul endroit des compteurs (retirés de l'onglet) + réinit. par type + Diffuser (plein écran). */}
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          <a href={`/${tenant}/accidents/affichage`} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200">📺 {tr('Diffuser (plein écran)', 'Broadcast (fullscreen)')}</a>
         </div>
-        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white px-5 py-4 dark:border-sky-500/30 dark:from-sky-500/10 dark:to-transparent">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">{tr('Jours sans passé proche', 'Days without near-miss')}</div>
-          <div className="text-4xl font-black text-sky-600 dark:text-sky-400">{board?.daysSinceNearMiss ?? '—'}</div>
-          <div className="text-[11px] text-gray-400">{board?.lastNearMissDate ? tr(`Depuis le dernier passé proche déclaré (${board.lastNearMissDate}).`, `Since the last declared near-miss (${board.lastNearMissDate}).`) : tr('Aucun passé proche — depuis le début de l’abonnement.', 'No near-miss — since subscription start.')}</div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
+            <div className="flex items-start justify-between gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident', 'Days without accident')}</div>
+              <button onClick={() => resetCounter('accident')} title={tr('Réinitialiser à 0 aujourd’hui', 'Reset to 0 today')} className="shrink-0 rounded-md border border-emerald-300 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:text-emerald-300">↺ {tr('Réinit.', 'Reset')}</button>
+            </div>
+            <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{board?.daysSinceAccident ?? '—'}</div>
+            <div className="text-[11px] text-gray-400">{board?.lastAccidentDate ? tr(`Depuis le dernier accident déclaré (${board.lastAccidentDate}).`, `Since the last declared accident (${board.lastAccidentDate}).`) : tr('Aucun accident — depuis le début de l’abonnement.', 'No accident — since subscription start.')}</div>
+          </div>
+          <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white px-5 py-4 dark:border-sky-500/30 dark:from-sky-500/10 dark:to-transparent">
+            <div className="flex items-start justify-between gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">{tr('Jours sans passé proche', 'Days without near-miss')}</div>
+              <button onClick={() => resetCounter('near_miss')} title={tr('Réinitialiser à 0 aujourd’hui', 'Reset to 0 today')} className="shrink-0 rounded-md border border-sky-300 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-500/40 dark:text-sky-300">↺ {tr('Réinit.', 'Reset')}</button>
+            </div>
+            <div className="text-4xl font-black text-sky-600 dark:text-sky-400">{board?.daysSinceNearMiss ?? '—'}</div>
+            <div className="text-[11px] text-gray-400">{board?.lastNearMissDate ? tr(`Depuis le dernier passé proche déclaré (${board.lastNearMissDate}).`, `Since the last declared near-miss (${board.lastNearMissDate}).`) : tr('Aucun passé proche — depuis le début de l’abonnement.', 'No near-miss — since subscription start.')}</div>
+          </div>
         </div>
       </div>
 

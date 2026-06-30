@@ -127,17 +127,11 @@ export default function AccidentsPanel({ tenant }: { tenant: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Barre d'actions */}
+      {/* Barre d'actions. Les compteurs « jours sans … » + le bouton Diffuser ont été DÉPLACÉS au
+          tableau de bord HSE (demande Eric : un seul endroit pour les compteurs). */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Link href={`/${tenant}/accidents/affichage`} title={t.broadcast} className="flex items-center gap-1.5 text-sm px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg font-medium dark:border-slate-600 dark:text-slate-200"><Monitor size={15} />{t.broadcast}</Link>
         <button onClick={() => newReport('near_miss')} className="flex items-center gap-1.5 text-sm px-3 py-2 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-lg font-medium"><Shield size={15} />{t.nearMiss}</button>
         <button onClick={() => newReport('accident')} className="flex items-center gap-1.5 text-sm px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"><Plus size={15} />{t.newReport}</button>
-      </div>
-
-      {/* Compteurs de jours */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <DaySafetyCounter label={t.daysAccident} daysOverride={board?.daysSinceAccident ?? null} lastDate={board?.lastAccidentDate ?? counter?.last_accident_date ?? null} recordDays={counter?.accident_record_days ?? 0} color="green" onReset={() => setResetConfirm('accident')} />
-        <DaySafetyCounter label={t.daysNearMiss} daysOverride={board?.daysSinceNearMiss ?? null} lastDate={board?.lastNearMissDate ?? counter?.last_near_miss_date ?? null} recordDays={counter?.near_miss_record_days ?? 0} color="orange" onReset={() => setResetConfirm('near_miss')} />
       </div>
 
       {/* Modale de réinitialisation */}

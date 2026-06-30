@@ -33,7 +33,7 @@ function AccesInner() {
   const router = useRouter();
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
 
   const [rows, setRows] = useState<ASTRow[]>([]);
   const [loading, setLoading] = useState(true);

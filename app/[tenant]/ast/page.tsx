@@ -59,7 +59,7 @@ const STATUS: Record<PermitStatus, { label: string; cls: string; icon: React.Ele
 
 export default function ASTListPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const { siteId } = useSite(); // sélecteur de site global (en-tête)
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);

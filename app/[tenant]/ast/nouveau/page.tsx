@@ -40,7 +40,7 @@ function NouvelASTInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { lang } = useLanguage();
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const [province, setProvince] = useState<ProvinceCode>('QC');
 
   // P4 : préremplissage depuis le planificateur (lieu, client, dates, personnel) avant travaux.

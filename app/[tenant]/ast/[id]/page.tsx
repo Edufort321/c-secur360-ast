@@ -24,7 +24,7 @@ export default function ASTDetailPage() {
   const params  = useParams();
   const router  = useRouter();
   const { lang } = useLanguage();
-  const tenant  = (params?.tenant as string) || 'demo';
+  const tenant  = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const id      = params?.id as string;
   const ent = useEntitlements(tenant);
   const hasIncidents = !ent || ent.includes('accidents') || ent.includes('near_miss');
