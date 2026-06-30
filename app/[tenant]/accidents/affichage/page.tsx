@@ -24,11 +24,13 @@ export default function SafetyDisplayPage() {
   const [updated, setUpdated] = useState<string>('');
 
   const load = useCallback(() => {
-    fetch('/api/incidents/safety-board', { credentials: 'include' })
+    // Passer le tenant de la PAGE (sinon, pour un super_admin, l'API retombe sur le tenant de SESSION
+    // → « jours sans accident » divergent de l'onglet Accidents qui, lui, passe ?tenant=).
+    fetch(`/api/incidents/safety-board?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
       .then(r => (r.ok ? r.json() : null))
       .then(j => { if (j?.ok) { setB(j); setUpdated(new Date().toLocaleTimeString(lang === 'en' ? 'en-CA' : 'fr-CA')); } })
       .catch(() => {});
-  }, [lang]);
+  }, [lang, tenant]);
 
   useEffect(() => {
     load();

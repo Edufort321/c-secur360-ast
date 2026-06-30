@@ -11,24 +11,26 @@ type Board = {
   daysSinceAccident: number; daysSinceNearMiss: number; lastAccidentDate: string | null; lastNearMissDate: string | null;
 };
 
-export function SafetyBoard({ lang = 'fr', variant = 'card', pinned = false, onTogglePin }: {
-  lang?: 'fr' | 'en'; variant?: 'card' | 'strip'; pinned?: boolean; onTogglePin?: () => void;
+export function SafetyBoard({ lang = 'fr', variant = 'card', pinned = false, onTogglePin, tenant = '' }: {
+  lang?: 'fr' | 'en'; variant?: 'card' | 'strip'; pinned?: boolean; onTogglePin?: () => void; tenant?: string;
 }) {
   const [b, setB] = useState<Board | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
   const tr = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  // Passer le tenant de la PAGE (sinon l'API retombe sur le tenant de session pour un super_admin).
+  const qs = tenant ? `?tenant=${encodeURIComponent(tenant)}` : '';
   function load() {
-    fetch('/api/incidents/safety-board', { credentials: 'include' })
+    fetch(`/api/incidents/safety-board${qs}`, { credentials: 'include' })
       .then(r => (r.ok ? r.json() : null))
       .then(j => { if (j?.ok) setB(j); })
       .catch(() => {});
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [tenant]); // eslint-disable-line react-hooks/exhaustive-deps
   async function reset(type: 'accident' | 'near_miss') {
     const label = type === 'accident' ? tr('« jours sans accident »', '“days without accident”') : tr('« jours sans passé proche »', '“days without near-miss”');
     if (!window.confirm(tr(`Êtes-vous certain de réinitialiser le compteur ${label} à 0 aujourd’hui ? (ce type seulement)`, `Are you sure you want to reset the ${label} counter to 0 today? (this type only)`))) return;
     setResetting(type);
-    try { await fetch('/api/incidents/safety-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type }) }); load(); }
+    try { await fetch('/api/incidents/safety-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ type, tenant }) }); load(); }
     catch { /* ignore */ } finally { setResetting(null); }
   }
   if (!b) return null;
