@@ -54,14 +54,15 @@ export async function GET(req: NextRequest) {
 
   // Incidents (accidents) + passés proches : incident_reports (par type) + table near_miss_events (héritée).
   const [{ data: reports }, { data: nm }] = await Promise.all([
-    supabaseAdmin.from('incident_reports').select('incident_type, data, created_at').eq('tenant_id', tenant),
+    supabaseAdmin.from('incident_reports').select('incident_type, data, created_at, submitted_at').eq('tenant_id', tenant),
     supabaseAdmin.from('near_miss_events').select('incident_date, created_at').eq('tenant_id', tenant).then(r => r, () => ({ data: [] as any[] })),
   ]);
 
-  // Règle Eric : le compteur « jours sans … » repart à 0 dès qu'un événement est ENREGISTRÉ (peu importe
-  // la date d'incident saisie, qui peut être antérieure à la création du tenant). On utilise donc la date
-  // d'ENREGISTREMENT (created_at) en priorité, repli sur la date d'incident.
-  const dateOf = (r: any): string | null => dOnly(r?.created_at) || dOnly(r?.data?.incidentDate);
+  // Règle Eric : le compteur « jours sans … » repart à 0 dès qu'un événement est DÉCLARÉ. La date qui fait
+  // foi est donc la date de DÉCLARATION (submitted_at) — pas la création du brouillon (created_at, qui peut
+  // être antérieure d'un ou plusieurs jours). Repli : created_at (déclarations héritées sans submitted_at),
+  // puis date d'incident saisie. Ex. brouillon créé le 28, déclaré le 29 → compteur = 0 le 29, pas 1.
+  const dateOf = (r: any): string | null => dOnly(r?.submitted_at) || dOnly(r?.created_at) || dOnly(r?.data?.incidentDate);
   const accidents: string[] = [];
   const nearMiss: string[] = [];
   for (const r of (reports || []) as any[]) {
