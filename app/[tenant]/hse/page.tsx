@@ -259,38 +259,20 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
   const [h, setH] = useState({ period_start: '', period_end: '', hours: '', note: '' });
   const Stat = ({ v, l, c }: any) => <div className={card}><div className="text-[11px] font-semibold uppercase text-gray-400">{l}</div><div className={`text-2xl font-extrabold ${c}`}>{v}</div></div>;
 
-  // Jours sans accident avec arrêt (affichage chantier). Source = miroirs Accidents (vraies données).
-  // Sans LTI enregistré, on affiche la séquence DEPUIS LE DÉBUT du tenant (plancher), comme le dashboard.
-  const startMs = tenantStart ? new Date(tenantStart).getTime() : null;
-  const nowMs = Date.now();
-  // Âge du tenant = plafond ABSOLU d'un compteur « jours sans … » (impossible d'avoir plus de jours sans
-  // accident que de jours d'existence). Une date d'incident incohérente (future ou antérieure à la
-  // création du tenant) ne doit JAMAIS gonfler ni fausser le compteur.
-  const ageDays = startMs != null ? Math.max(0, Math.floor((nowMs - startMs) / 86400000)) : null;
-  // Règle Eric : le compteur repart à 0 dès qu'un événement est ENREGISTRÉ (peu importe la date d'incident
-  // saisie, qui peut être antérieure). On se base donc sur la date d'ENREGISTREMENT (created_at), repli sur
-  // occurred_at si absente (items du feed non encore mirrorés), bornée à [création tenant, aujourd'hui].
-  const ltiTimes = (incidents || []).filter((i: any) => i.is_lost_time)
-    .map((i: any) => new Date(i.created_at || i.occurred_at).getTime())
-    .filter((t: number) => !isNaN(t))
-    .map((t: number) => Math.min(nowMs, startMs != null ? Math.max(startMs, t) : t));
-  const lastLti = ltiTimes.length ? Math.max(...ltiTimes) : null;
-  let daysSinceLti: number | null = lastLti != null ? Math.max(0, Math.floor((nowMs - lastLti) / 86400000)) : ageDays;
-  if (daysSinceLti != null && ageDays != null) daysSinceLti = Math.min(daysSinceLti, ageDays);   // plafond = âge tenant
-  const ltiStreakFromStart = lastLti == null && startMs != null;
+  // Les compteurs « jours sans … » du tableau de bord proviennent du safety-board (cf. plus bas),
+  // MÊME source que l'onglet « Incidents & accidents » — plus de calcul local depuis le miroir hse_incident.
 
-  // COHÉRENCE : on privilégie la valeur du safety-board — MÊME source que l'onglet « Incidents & accidents »
-  // (incident_reports + date de DÉCLARATION), métrique distincte « avec arrêt » (lost-time). Évite l'écart
-  // avec la table miroir hse_incident. Repli sur le calcul local ci-dessus si l'API est indisponible.
-  const [boardLti, setBoardLti] = useState<number | null>(null);
+  // Demande Eric : le tableau de bord affiche LE MÊME compteur que l'onglet « Incidents & accidents »
+  // (jours sans accident + jours sans passé proche), via le safety-board (incident_reports + date de
+  // DÉCLARATION) — une seule source de vérité, pas le « avec arrêt » (LTI) ni le miroir hse_incident.
+  const [board, setBoard] = useState<any | null>(null);
   useEffect(() => {
     if (!tenant) return;
     fetch(`/api/incidents/safety-board?tenant=${encodeURIComponent(tenant)}`, { credentials: 'include' })
       .then((r: any) => (r.ok ? r.json() : null))
-      .then((j: any) => { if (j?.ok && typeof j.daysSinceLostTime === 'number') setBoardLti(j.daysSinceLostTime); })
+      .then((j: any) => { if (j?.ok) setBoard(j); })
       .catch(() => {});
   }, [tenant]);
-  const ltiDays: number | null = boardLti != null ? boardLti : daysSinceLti;
 
   // Qualité de données : mois avec incidents mais 0 heure (taux faussés).
   const monthsNoHours = (kpiRows || []).filter((r: any) => r.hours <= 0 && (r.recordableCount > 0 || r.nearMissCount > 0 || r.ltiCount > 0)).map((r: any) => r.month);
@@ -327,12 +309,18 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       <FdsComplianceBanner tr={tr} tenant={tenant} />
       <TrainingExpiryBanner tr={tr} tenant={tenant} canHr={canHr} />
 
-      {/* Compteur jours sans accident avec arrêt (affichage chantier) */}
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
-        <div className="flex items-end justify-between">
-          <div><div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident avec arrêt', 'Days without a lost-time injury')}</div>
-            <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{ltiDays == null ? '—' : ltiDays}</div></div>
-          <div className="text-right text-[11px] text-gray-400">{ltiDays == null ? tr('Aucune donnée.', 'No data.') : (boardLti == null && ltiStreakFromStart) ? tr('Aucun accident avec arrêt — depuis le début.', 'No lost-time injury — since inception.') : tr('Depuis le dernier accident avec arrêt (source : déclarations).', 'Since the last lost-time injury (source: declarations).')}</div>
+      {/* Compteurs « jours sans … » — MÊME source que l'onglet « Incidents & accidents » (safety-board).
+          Un seul compteur de référence : accident + passé proche, partagé entre dashboard et onglet. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{tr('Jours sans accident', 'Days without accident')}</div>
+          <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{board?.daysSinceAccident ?? '—'}</div>
+          <div className="text-[11px] text-gray-400">{board?.lastAccidentDate ? tr(`Depuis le dernier accident déclaré (${board.lastAccidentDate}).`, `Since the last declared accident (${board.lastAccidentDate}).`) : tr('Aucun accident — depuis le début de l’abonnement.', 'No accident — since subscription start.')}</div>
+        </div>
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white px-5 py-4 dark:border-sky-500/30 dark:from-sky-500/10 dark:to-transparent">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">{tr('Jours sans passé proche', 'Days without near-miss')}</div>
+          <div className="text-4xl font-black text-sky-600 dark:text-sky-400">{board?.daysSinceNearMiss ?? '—'}</div>
+          <div className="text-[11px] text-gray-400">{board?.lastNearMissDate ? tr(`Depuis le dernier passé proche déclaré (${board.lastNearMissDate}).`, `Since the last declared near-miss (${board.lastNearMissDate}).`) : tr('Aucun passé proche — depuis le début de l’abonnement.', 'No near-miss — since subscription start.')}</div>
         </div>
       </div>
 
