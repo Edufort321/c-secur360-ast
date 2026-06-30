@@ -4322,6 +4322,10 @@ export default function ASTPermit({
     setSaveStatus('saving');
     try {
       const payload = { ...data, updated_at: new Date().toISOString() };
+      // % de remplissage CALCULÉ et PERSISTÉ à chaque sauvegarde (avant, validation.percentage restait à 0
+      // → toutes les stats du tableau de bord AST « remplissage moyen / remplis à 100 % / barres » à 0 %).
+      const pct = computeCompletion(payload);
+      payload.validation = { percentage: pct, isComplete: pct >= 100 };
       if (supabase) {
         const { error } = await supabase.from('ast_permits').upsert({
           permit_number: payload.permit_number,

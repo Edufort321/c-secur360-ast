@@ -13,8 +13,16 @@ import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { generateAstsPdf } from '@/components/steps/Step4Permits/AST';
+import { generateAstsPdf, computeCompletion } from '@/components/steps/Step4Permits/AST';
 import type { ASTPermit } from '@/components/steps/Step4Permits/AST';
+
+// % de remplissage : valeur PERSISTÉE si présente (>0), sinon RECALCULÉE à la volée (AST enregistrées
+// avant que persistAst ne sauvegarde validation.percentage → évite un affichage à 0 % trompeur).
+const fillPct = (r: any): number => {
+  const p = r?.data?.validation?.percentage;
+  if (typeof p === 'number' && p > 0) return p;
+  try { return computeCompletion(r?.data); } catch { return 0; }
+};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
@@ -209,9 +217,9 @@ export default function ASTListPage() {
     const scope = period === 'all' ? rows : rows.filter(r => inPeriod(rowDate(r), period));
     const completed = scope.filter(r => r.data?.status === 'completed').length;
     const avgFill = scope.length
-      ? Math.round(scope.reduce((s, r) => s + (r.data?.validation?.percentage ?? 0), 0) / scope.length)
+      ? Math.round(scope.reduce((s, r) => s + fillPct(r), 0) / scope.length)
       : 0;
-    const fullyFilled = scope.filter(r => (r.data?.validation?.percentage ?? 0) >= 100).length;
+    const fullyFilled = scope.filter(r => fillPct(r) >= 100).length;
     return {
       total:      scope.length,
       active:     scope.filter(r => r.data?.status === 'active').length,
@@ -550,7 +558,7 @@ export default function ASTListPage() {
               const status = (r.data?.status || 'draft') as PermitStatus;
               const st     = STATUS[status] || STATUS.draft;
               const StatusIcon = st.icon;
-              const pct    = r.data?.validation?.percentage ?? 0;
+              const pct    = fillPct(r);
               const date   = rowDate(r).toLocaleDateString(dateLocale);
               const isSel  = selected.has(r.permit_number);
 
@@ -642,7 +650,7 @@ export default function ASTListPage() {
                   const ti     = r.data?.taskInfo;
                   const status = (r.data?.status || 'draft') as PermitStatus;
                   const st     = STATUS[status] || STATUS.draft;
-                  const pct    = r.data?.validation?.percentage ?? 0;
+                  const pct    = fillPct(r);
                   const date   = rowDate(r).toLocaleDateString(dateLocale);
                   const isSel  = selected.has(r.permit_number);
                   return (
