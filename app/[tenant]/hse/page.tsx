@@ -402,7 +402,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
       <HseInjuryDonut tenant={tenant} lang={EN ? 'en' : 'fr'} card={card} />
 
       {/* Graphiques KPI (meilleures pratiques : tendances + pyramide Heinrich + leading/lagging) */}
-      <HseKpiCharts rows={viewRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} />
+      <HseKpiCharts rows={viewRows} incidents={incidents} proactive={proactive} targets={{ ltifr: settings?.target_ltifr ?? null, trir: settings?.target_trir ?? null, severityRate: settings?.target_severity ?? null }} lang={EN ? 'en' : 'fr'} rateBase={rateBase} />
 
       {/* Analyse IA des tendances (à la demande, agrégats anonymisés — Loi 25). */}
       <HseAiInsights tenant={tenant} lang={EN ? 'en' : 'fr'} card={card} />
