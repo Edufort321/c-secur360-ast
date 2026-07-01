@@ -85,7 +85,7 @@ const money = (n: number) => `${n.toLocaleString('fr-CA', { minimumFractionDigit
 function LogbookInner() {
   const params       = useParams();
   const searchParams = useSearchParams();
-  const tenant       = (params?.tenant as string) || 'demo';
+  const tenant       = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
 
   const [vehicles,      setVehicles]     = useState<Vehicle[]>([]);
   const [entries,       setEntries]      = useState<LogEntry[]>([]);
@@ -241,7 +241,8 @@ function LogbookInner() {
         updated_at: new Date().toISOString(),
       };
       if (e.id) {
-        await supabase.from('vehicle_logbook').update(row).eq('id', e.id);
+        // Isolation : UPDATE TOUJOURS scopé tenant + employé (RLS permissive → sinon écriture inter-tenant).
+        await supabase.from('vehicle_logbook').update(row).eq('tenant_id', tenant).eq('employee_id', employeeId).eq('id', e.id);
       } else {
         const { data } = await supabase.from('vehicle_logbook')
           .upsert(row, { onConflict: 'tenant_id,employee_id,vehicle_id,week_start' })
@@ -313,7 +314,7 @@ function LogbookInner() {
 
   const hasDirty = entries.some(e => e.dirty);
   const years    = useMemo(() => {
-    const y = new Set(annualData.map(e => new Date(e.week_start).getFullYear()));
+    const y = new Set(annualData.map(e => new Date(e.week_start + 'T00:00:00').getFullYear())); // heure LOCALE (évite le décalage UTC d'année au 1er janvier)
     y.add(new Date().getFullYear());
     return [...y].sort((a, b) => b - a);
   }, [annualData]);
