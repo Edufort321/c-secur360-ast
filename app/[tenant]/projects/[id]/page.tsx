@@ -121,9 +121,10 @@ export default function ProjectDetailPage() {
     let active = true;
     (async () => {
       try {
-        const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
+        // Isolation tenant : lecture par UUID SANS filtre = fuite financière inter-tenant (RLS permissive).
+        const { data, error } = await supabase.from('projects').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle();
         if (error) throw error;
-        if (active) setP(data);
+        if (active) setP(data || null);
       } catch {
         if (active) setP(null);
       } finally {
@@ -237,7 +238,7 @@ export default function ProjectDetailPage() {
         let byPerson: { name: string; hrs: number }[] = [];
         const tsIds = Object.keys(byTs);
         if (tsIds.length) {
-          const { data: sheets } = await supabase.from('timesheets').select('id, employee_name').in('id', tsIds);
+          const { data: sheets } = await supabase.from('timesheets').select('id, employee_name').eq('tenant_id', tenant).in('id', tsIds);
           const nameOf: Record<string, string> = Object.fromEntries((sheets || []).map((s: any) => [s.id, s.employee_name || '—']));
           const agg: Record<string, number> = {};
           tsIds.forEach(tid => { const nm = nameOf[tid] || '—'; agg[nm] = (agg[nm] || 0) + byTs[tid]; });

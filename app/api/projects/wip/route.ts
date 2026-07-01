@@ -64,7 +64,9 @@ export async function GET(req: NextRequest) {
     } catch { /* inventaire absent -> ignore */ }
   }
   const materielMissingPrice = Object.values(missing);
-  const actuals = { ...base, materielInventaire, materielBillable: Math.round(materielBillable * 100) / 100, materielMissingPrice, total: base.total + materielInventaire };
+  // Le matériel d'inventaire consommé fait partie du COÛT réel : l'ajouter à `total` ET à `costReal`
+  // (coût chargé) — sinon la marge du CoûtsTab (basée sur costReal) était surévaluée.
+  const actuals = { ...base, materielInventaire, materielBillable: Math.round(materielBillable * 100) / 100, materielMissingPrice, total: base.total + materielInventaire, costReal: (Number(base.costReal) || 0) + materielInventaire };
 
   // Persiste le coût réel dans projects.actuals -> l'écart/marge deviennent vrais partout.
   try {

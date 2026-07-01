@@ -8,7 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 export default function TauxRedirect() {
   const params = useParams();
   const router = useRouter();
-  const tenant = (params?.tenant as string) || 'cerdia';
-  useEffect(() => { router.replace(`/${tenant}/admin/taux`); }, [tenant, router]);
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'cerdia' (contamination inter-tenant)
+  useEffect(() => { if (tenant) router.replace(`/${tenant}/admin/taux`); }, [tenant, router]);
   return null;
 }

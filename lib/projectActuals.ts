@@ -40,7 +40,7 @@ export async function computeProjectActuals(tenant: string, projectId: string): 
   // Le poinçon (ou une feuille) peut renseigner SOIT project_id (UUID), SOIT seulement project_number
   // (si la tâche planifiée n'a pas de project_id). On agrège donc sur project_id OU project_number.
   let projectNumber = '';
-  try { const { data: p } = await supabase.from('projects').select('project_number').eq('id', projectId).maybeSingle(); projectNumber = (p?.project_number || '').trim(); } catch { /* ignore */ }
+  try { const { data: p } = await supabase.from('projects').select('project_number').eq('tenant_id', tenant).eq('id', projectId).maybeSingle(); projectNumber = (p?.project_number || '').trim(); } catch { /* ignore */ }
   // 1. Lignes de temps pointées sur ce projet (par id ou par numéro)
   const orFilter = projectNumber ? `project_id.eq.${projectId},project_number.eq.${projectNumber}` : `project_id.eq.${projectId}`;
   const { data: ents } = await supabase
@@ -57,6 +57,7 @@ export async function computeProjectActuals(tenant: string, projectId: string): 
     const { data: exps } = await supabase
       .from('timesheet_expenses')
       .select('id, date, category, description, supplier, total, reimbursable, project_id')
+      .eq('tenant_id', tenant)
       .eq('project_id', projectId);
     for (const x of (exps || []) as any[]) {
       const t = Number(x.total) || 0;
