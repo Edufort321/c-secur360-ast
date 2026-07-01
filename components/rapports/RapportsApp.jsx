@@ -1029,7 +1029,7 @@ export default function App({ docType, embedded } = {}){
   const sel = db.find(r=>r.id===selId)||null;
 
   function newReport(tplId){
-    const r={ id:"r_"+Date.now(), title:"", client:"", location:"", projectNo:"", date:new Date().toISOString().slice(0,10),
+    const r={ id:"r_"+Date.now()+"_"+Math.random().toString(36).slice(2,7), title:"", client:"", location:"", projectNo:"", date:new Date().toISOString().slice(0,10),
       template:tplId, num:tplNumOf(tplId, customTpls), status:"in_progress", version:1, createdFrom:null, blocks:blocksForTemplate(tplId), annotations:[], cover:{show:true,subtitle:""}, updatedAt:Date.now() };
     persist([r,...db]); pushReport(r); setSelId(r.id); setView("editor");
   }
@@ -1037,7 +1037,7 @@ export default function App({ docType, embedded } = {}){
   // « Enregistrer le gabarit » réécrira ensuite ce gabarit (voir saveTemplateFromReport).
   function editTemplate(tplId){
     const tpl=customTpls.find(c=>c.id===tplId); if(!tpl) return;
-    const r={ id:"r_"+Date.now(), title:tpl.name||"", client:"", location:"", projectNo:"",
+    const r={ id:"r_"+Date.now()+"_"+Math.random().toString(36).slice(2,7), title:tpl.name||"", client:"", location:"", projectNo:"",
       date:new Date().toISOString().slice(0,10), template:tplId, num:tpl.num||tplNumOf(tplId,customTpls),
       status:"in_progress", version:1, createdFrom:null, createdFromTpl:tplId,
       blocks:JSON.parse(JSON.stringify(tpl.blocks||[])).map(b=>({...b,id:bid()})), annotations:[], cover:{show:false,subtitle:""}, updatedAt:Date.now() };
@@ -1087,7 +1087,7 @@ export default function App({ docType, embedded } = {}){
   function duplicateReport(id, asVersion){
     const src=db.find(r=>r.id===id); if(!src)return;
     const copy=JSON.parse(JSON.stringify(src));
-    copy.id="r_"+Date.now(); copy.updatedAt=Date.now();
+    copy.id="r_"+Date.now()+"_"+Math.random().toString(36).slice(2,7); copy.updatedAt=Date.now();
     if(asVersion){ copy.version=(src.version||1)+1; copy.createdFrom=src.title||src.id; copy.status="in_progress"; }
     else { copy.version=1; copy.createdFrom=src.title||src.id; copy.title=(src.title||"")+" (copie)"; }
     persist([copy,...db]); pushReport(copy); setSelId(copy.id); setView("editor");
@@ -1140,7 +1140,7 @@ export default function App({ docType, embedded } = {}){
     // restent archivées (bloc pdfpage) mais MASQUÉES à l'impression (showOriginal=false). Le rapport
     // ne déborde que si l'utilisateur ajoute des sections/anomalies/photos par-dessus.
     const srcBlocks=(ip.blocks.length?ip.blocks:tplBlocks(ip.template)).map(b=> b.type==="pdfpage"?b:{...b,newPage:false});
-    const r={ id:"r_"+Date.now(), title:ip.title, client:ip.client, location:ip.location, projectNo:ip.projectNo,
+    const r={ id:"r_"+Date.now()+"_"+Math.random().toString(36).slice(2,7), title:ip.title, client:ip.client, location:ip.location, projectNo:ip.projectNo,
       date:new Date().toISOString().slice(0,10), template:ip.template, status:"in_progress", version:1, createdFrom:"import",
       num:tplNumOf(ip.template, customTpls),
       blocks: srcBlocks, annotations:[], cover:{show:false,subtitle:""}, sourceText:ip.sourceText||"",
@@ -1868,7 +1868,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
       if(cancelled) return;
       let chan;
       try{
-        chan=supabase.channel("rapport:"+report.id,{ config:{ presence:{ key:me.id } } });
+        // Canal NAMESPACÉ PAR TENANT : sans le tenant, quiconque connaît l'UUID d'un rapport pouvait
+        // s'abonner et recevoir le contenu diffusé en direct (presence/broadcast non gated par la RLS).
+        chan=supabase.channel("rapport:"+__rptTenant()+":"+report.id,{ config:{ presence:{ key:me.id } } });
         chan.on("presence",{event:"sync"},()=>{
           const st=chan.presenceState(); const list=[];
           Object.keys(st||{}).forEach(k=>{ const m=(st[k]&&st[k][0])||{}; if(m.id && m.id!==me.id) list.push(m); });
