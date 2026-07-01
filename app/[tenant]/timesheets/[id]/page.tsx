@@ -81,13 +81,14 @@ function NumCell({ value, disabled, step, onCommit }: { value: number; disabled?
 // Écriture TOLÉRANTE : si une colonne n'existe pas dans le schéma Supabase (migrations incomplètes),
 // on la retire du payload et on réessaie -> l'enregistrement persiste ce que le schéma supporte au
 // lieu d'échouer en bloc (et, avec le DELETE-puis-INSERT, de perdre les lignes).
-async function writeStripRetry(table: string, op: 'insert' | 'update' | 'upsert', payload: any, eq?: { col: string; val: any }, keep: string[] = []): Promise<{ error?: string }> {
+async function writeStripRetry(table: string, op: 'insert' | 'update' | 'upsert', payload: any, eq?: { col: string; val: any }, keep: string[] = [], eq2?: { col: string; val: any }): Promise<{ error?: string }> {
   let body: any = Array.isArray(payload) ? payload.map((r: any) => ({ ...r })) : { ...payload };
   for (let guard = 0; guard < 18; guard++) {
     let q: any = op === 'insert' ? supabase.from(table).insert(body)
       : op === 'upsert' ? supabase.from(table).upsert(body, { onConflict: 'id' })
       : supabase.from(table).update(body);
     if (op === 'update' && eq) q = q.eq(eq.col, eq.val);
+    if (op === 'update' && eq2) q = q.eq(eq2.col, eq2.val); // 2e prédicat (ex. tenant_id) — isolation sur UPDATE
     const { error } = await q;
     if (!error) return {};
     const m = (error.message || '').match(/column "?([a-z_0-9]+)"?.*does not exist|could not find the '([a-z_0-9]+)'|'([a-z_0-9]+)' column/i);
@@ -116,7 +117,7 @@ function newEntry(date: string): Entry {
 export default function TimesheetDetailPage() {
   const params  = useParams();
   const router  = useRouter();
-  const tenant  = (params?.tenant as string) || 'demo';
+  const tenant  = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const sheetId = params?.id as string;
 
   const [sheet, setSheet]       = useState<Sheet | null>(null);
@@ -194,8 +195,8 @@ export default function TimesheetDetailPage() {
       const meJson = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
       const me = meJson?.user; const isSup = !!me && (me.role === 'client_admin' || me.role === 'super_admin');
       const [{ data: sh }, { data: ents }, { data: r }, { data: p }, { data: v }, { data: s }] = await Promise.all([
-        supabase.from('timesheets').select('*').eq('id', sheetId).single(),
-        supabase.from('timesheet_entries').select('*').eq('timesheet_id', sheetId).order('date'),
+        supabase.from('timesheets').select('*').eq('tenant_id', tenant).eq('id', sheetId).maybeSingle(),
+        supabase.from('timesheet_entries').select('*').eq('tenant_id', tenant).eq('timesheet_id', sheetId).order('date'),
         supabase.from('labor_rates').select('code,rate_regular,rate_overtime,rate_premium').eq('tenant_id', tenant).order('code'),
         supabase.from('projects').select('id,project_number,title,client_name').eq('tenant_id', tenant).order('created_at', { ascending: false }),
         supabase.from('vehicles').select('id,name,make,model,type').eq('tenant_id', tenant).eq('active', true),
@@ -206,7 +207,10 @@ export default function TimesheetDetailPage() {
       // celle d'un autre, en LECTURE SEULE (approbation) — SAUF en mode admin (?admin=1) où l'admin
       // peut éditer la feuille au nom de l'employé (gestion centralisée Admin › Feuilles de temps). Sinon refusé.
       const adminEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('admin') === '1';
-      if (sh && me && String(sh.employee_id) !== String(me.id)) {
+      // FAIL-CLOSED : sans identité confirmée (auth/me échoue), on REFUSE (avant : la feuille s'ouvrait éditable).
+      if (!me) { setForbidden(true); setLoading(false); return; }
+      // Le tenant est déjà imposé par le filtre de la requête (sh = null si feuille d'un autre tenant).
+      if (sh && String(sh.employee_id) !== String(me.id)) {
         if (!isSup) { setForbidden(true); setLoading(false); return; }
         if (!adminEdit) setNotOwner(true);
       }
@@ -267,7 +271,7 @@ export default function TimesheetDetailPage() {
 
         // Dépenses avec reçu (migration 108 ; ignore si table absente)
         try {
-          const { data: exps } = await supabase.from('timesheet_expenses').select('*').eq('timesheet_id', sheetId).order('date');
+          const { data: exps } = await supabase.from('timesheet_expenses').select('*').eq('tenant_id', tenant).eq('timesheet_id', sheetId).order('date');
           setExpenses((exps || []).map((x: any) => ({
             id: x.id, date: x.date || sh.period_start, category: x.category || 'autre', supplier: x.supplier || '',
             description: x.description || '', subtotal: Number(x.subtotal) || 0, gst: Number(x.gst) || 0, qst: Number(x.qst) || 0,
@@ -641,7 +645,7 @@ export default function TimesheetDetailPage() {
         if (ins.error) throw new Error('Enregistrement des lignes : ' + ins.error);
       }
       const keepIds = rows.map(r => r.id);
-      let delQ: any = supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
+      let delQ: any = supabase.from('timesheet_entries').delete().eq('tenant_id', tenant).eq('timesheet_id', sheetId);
       if (keepIds.length) delQ = delQ.not('id', 'in', `(${keepIds.join(',')})`);
       const { error: delErr } = await delQ;
       if (delErr) throw new Error('Nettoyage des lignes : ' + delErr.message);
@@ -649,7 +653,7 @@ export default function TimesheetDetailPage() {
       // (project_id/number, recurring_task) -> remontée à la facturation du projet. strip-retry pour
       // tolérer un schéma incomplet (migration 158).
       try {
-        await supabase.from('timesheet_expenses').delete().eq('timesheet_id', sheetId);
+        await supabase.from('timesheet_expenses').delete().eq('tenant_id', tenant).eq('timesheet_id', sheetId);
         const expToInsert = expenses.filter(x => Number(x.total) > 0 || (x.description && x.description.trim()) || x.receipt_url);
         if (expToInsert.length) {
           const entryById: Record<string, Entry> = {}; entries.forEach(en => { entryById[en.id] = en; });
@@ -679,7 +683,7 @@ export default function TimesheetDetailPage() {
         updated_at: new Date().toISOString(),
       };
       if (submit) { update.status = 'submitted'; update.submitted_at = new Date().toISOString(); }
-      const up = await writeStripRetry('timesheets', 'update', update, { col: 'id', val: sheetId });
+      const up = await writeStripRetry('timesheets', 'update', update, { col: 'id', val: sheetId }, [], { col: 'tenant_id', val: tenant });
       if (up.error) throw new Error('Enregistrement des totaux : ' + up.error);
       lastSavedSig.current = currentSig(); // baseline après écriture réussie
       if (silent) { setLastAutoSaved(new Date()); }

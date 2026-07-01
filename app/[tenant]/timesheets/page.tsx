@@ -81,7 +81,7 @@ function generatePeriods(year: number): { week: number; start: string; end: stri
 
 export default function TimesheetsPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const { siteId } = useSite(); // sélecteur de site global (en-tête)
 
   const [sheets, setSheets] = useState<Sheet[]>([]);

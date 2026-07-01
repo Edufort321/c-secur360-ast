@@ -74,9 +74,12 @@ export async function POST(req: NextRequest) {
       sheet = ins.data;
     }
     if (sheet && hours > 0) {
-      // Un seul enregistrement par jour (contrainte timesheet_entries) -> on CUMULE les heures du jour.
-      const { data: ex } = await supabaseAdmin.from('timesheet_entries').select('id, hrs_regular, project_id, project_number')
-        .eq('timesheet_id', sheet.id).eq('tenant_id', tenant).eq('date', today).maybeSingle();
+      // On CUMULE les heures du jour sur une ligne existante. L'éditeur pouvant avoir PLUSIEURS lignes
+      // le même jour (projets/tâches différents), `maybeSingle()` plantait (« multiple rows ») → 500 au
+      // poinçon sortie. On prend la 1re ligne du jour via limit(1).
+      const { data: exRows } = await supabaseAdmin.from('timesheet_entries').select('id, hrs_regular, project_id, project_number')
+        .eq('timesheet_id', sheet.id).eq('tenant_id', tenant).eq('date', today).order('id').limit(1);
+      const ex = (exRows || [])[0];
       // project_number est NOT NULL en base (defaut '') -> on coalesce a '' (un NULL ferait echouer
       // l'insertion en SILENCE = le temps ne remontait pas sur la feuille). project_id est nullable.
       let wErr: any = null;
