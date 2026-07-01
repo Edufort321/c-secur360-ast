@@ -46,9 +46,13 @@ export async function getPersonnel(tenant: string): Promise<Personnel[]> {
   return (data || []) as Personnel[];
 }
 
-export async function getConges(tenant: string): Promise<Conge[]> {
-  const { data, error } = await supabase.from('planner_conges')
-    .select('*').eq('tenant_id', tenant).order('start_date', { ascending: false });
+// personnelId : si fourni, ne renvoie QUE les congés de cette personne. CONFIDENTIALITÉ (Loi 25) — un
+// employé non-approbateur ne doit pas recevoir dans son navigateur les congés (motifs médicaux, fichiers
+// justificatifs) de ses collègues. Les approbateurs (RH/superviseur) appellent sans personnelId = tous.
+export async function getConges(tenant: string, personnelId?: string): Promise<Conge[]> {
+  let q = supabase.from('planner_conges').select('*').eq('tenant_id', tenant);
+  if (personnelId) q = q.eq('personnel_id', personnelId);
+  const { data, error } = await q.order('start_date', { ascending: false });
   if (error) throw error;
   return (data || []) as Conge[];
 }

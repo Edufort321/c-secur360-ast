@@ -3,7 +3,7 @@
 // #72 — Module Congés (self-service). Nouvelle route autonome, hors components/planner/**.
 // Réutilise la table planner_conges (data partagée avec le planner). L'employé fait une demande,
 // le superviseur (client_admin/super_admin) approuve ou refuse. Temps réel + bilingue FR/EN.
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, X, Check, Trash2, Loader2, CalendarDays, Clock, Send, ArrowLeft, Users } from 'lucide-react';
@@ -28,7 +28,7 @@ const STATUS = {
 
 export default function CongesPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const { lang } = useLanguage();
   const L = (fr: string, en: string) => (lang === 'en' ? en : fr);
 
@@ -89,15 +89,27 @@ export default function CongesPage() {
     catch (e: any) { setNotice(e?.message); }
   }
 
+  // CONFIDENTIALITÉ (Loi 25) : un approbateur (superviseur/poste désigné) reçoit TOUS les congés ; un
+  // employé ordinaire ne reçoit que les SIENS (sinon son navigateur recevait les motifs médicaux et
+  // fichiers justificatifs de tous ses collègues).
+  const refetchConges = useCallback(() => {
+    if (isApprover) getConges(tenant).then(setConges).catch(() => {});
+    else if (myPerson) getConges(tenant, myPerson.id).then(setConges).catch(() => {});
+    else setConges([]);
+  }, [tenant, isApprover, myPerson]);
+
   async function load() {
     try {
-      const [pers, cgs, pos] = await Promise.all([getPersonnel(tenant), getConges(tenant), getPostes(tenant).catch(() => [])]);
-      setPersonnel(pers); setConges(cgs); setPostes(pos);
+      const [pers, pos] = await Promise.all([getPersonnel(tenant), getPostes(tenant).catch(() => [])]);
+      setPersonnel(pers); setPostes(pos);
+      refetchConges();
     } catch { setNotice(L('Exécutez la migration 128, puis rechargez.', 'Run migration 128, then reload.')); }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
-  useRealtime(['planner_conges'], tenant, () => { getConges(tenant).then(setConges).catch(() => { /* noop */ }); });
+  // Re-scope dès que le statut d'approbateur ou l'identité est connu (chargés en asynchrone).
+  useEffect(() => { refetchConges(); }, [refetchConges]);
+  useRealtime(['planner_conges'], tenant, refetchConges);
 
   // Présélectionne l'employé courant pour la demande.
   useEffect(() => { if (myPerson && !personId) setPersonId(myPerson.id); }, [myPerson]); // eslint-disable-line

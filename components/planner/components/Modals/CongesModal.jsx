@@ -192,9 +192,11 @@ export function CongesModal({
 
             await onSave(congeData);
 
-            const personnel = personnel.find(p => p.id === formData.personnelId);
+            // NB : ne PAS nommer cette variable `personnel` (masque la prop + TDZ ReferenceError → le save
+            // tombait toujours dans le catch et affichait « Erreur » même en cas de succès).
+            const emp = personnel.find(p => p.id === formData.personnelId);
             addNotification(
-                `Congé ${conge ? 'modifié' : 'créé'} pour ${personnel?.nom || 'Employé'}`,
+                `Congé ${conge ? 'modifié' : 'créé'} pour ${emp?.nom || 'Employé'}`,
                 'success'
             );
 
