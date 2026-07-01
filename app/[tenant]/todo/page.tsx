@@ -331,6 +331,7 @@ export default function TodoPage() {
     const { data } = await supabase
       .from('todo_steps')
       .select('*')
+      .eq('tenant_id', tenant)
       .eq('task_id', task.id)
       .order('order_index');
     setSteps((data as Step[]) || []);
@@ -357,7 +358,7 @@ export default function TodoPage() {
         assignee: updated.assignee, site: updated.site,
         due_date: updated.due_date || null,
         updated_at: new Date().toISOString(),
-      }).eq('id', updated.id);
+      }).eq('tenant_id', tenant).eq('id', updated.id);
       setTasks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
       setSaving(false);
     }, 700);
@@ -417,26 +418,26 @@ export default function TodoPage() {
     setSteps(prev => [...prev, data as Step]);
     setNewStep('');
     const newTotal = steps.length + 1;
-    await supabase.from('todo_tasks').update({ steps_total: newTotal, updated_at: new Date().toISOString() }).eq('id', panel.id);
+    await supabase.from('todo_tasks').update({ steps_total: newTotal, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', panel.id);
     setTasks(prev => prev.map(t => t.id === panel.id ? { ...t, steps_total: newTotal } : t));
   }, [newStep, panel, steps.length, tenant]);
 
   const toggleStep = useCallback(async (step: Step) => {
     const nowDone = !step.done;
-    await supabase.from('todo_steps').update({ done: nowDone }).eq('id', step.id);
+    await supabase.from('todo_steps').update({ done: nowDone }).eq('tenant_id', tenant).eq('id', step.id);
     const updated = steps.map(s => s.id === step.id ? { ...s, done: nowDone } : s);
     setSteps(updated);
     const doneCnt = updated.filter(s => s.done).length;
-    await supabase.from('todo_tasks').update({ steps_done: doneCnt, updated_at: new Date().toISOString() }).eq('id', panel!.id);
+    await supabase.from('todo_tasks').update({ steps_done: doneCnt, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', panel!.id);
     setTasks(prev => prev.map(t => t.id === panel!.id ? { ...t, steps_done: doneCnt } : t));
   }, [steps, panel]);
 
   const deleteStep = useCallback(async (stepId: string) => {
-    await supabase.from('todo_steps').delete().eq('id', stepId);
+    await supabase.from('todo_steps').delete().eq('tenant_id', tenant).eq('id', stepId);
     const remaining = steps.filter(s => s.id !== stepId);
     setSteps(remaining);
     const doneCnt = remaining.filter(s => s.done).length;
-    await supabase.from('todo_tasks').update({ steps_total: remaining.length, steps_done: doneCnt, updated_at: new Date().toISOString() }).eq('id', panel!.id);
+    await supabase.from('todo_tasks').update({ steps_total: remaining.length, steps_done: doneCnt, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', panel!.id);
     setTasks(prev => prev.map(t => t.id === panel!.id ? { ...t, steps_total: remaining.length, steps_done: doneCnt } : t));
   }, [steps, panel]);
 
@@ -449,7 +450,7 @@ export default function TodoPage() {
     if (!error) {
       const { data: urlData } = supabase.storage.from('todo-attachments').getPublicUrl(path);
       const newUrls = [...(panel.photo_urls || []), urlData.publicUrl];
-      await supabase.from('todo_tasks').update({ photo_urls: newUrls, updated_at: new Date().toISOString() }).eq('id', panel.id);
+      await supabase.from('todo_tasks').update({ photo_urls: newUrls, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', panel.id);
       setPanel(prev => prev ? { ...prev, photo_urls: newUrls } : prev);
       setTasks(prev => prev.map(t => t.id === panel.id ? { ...t, photo_urls: newUrls } : t));
     }
@@ -470,7 +471,7 @@ export default function TodoPage() {
     if (task.status === 'archived') return;
     const idx = STATUS_CYCLE.indexOf(task.status);
     const next: TStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-    await supabase.from('todo_tasks').update({ status: next, updated_at: new Date().toISOString() }).eq('id', task.id);
+    await supabase.from('todo_tasks').update({ status: next, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', task.id);
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: next } : t));
     if (panel?.id === task.id) setPanel(prev => prev ? { ...prev, status: next } : prev);
   }, [panel]);
@@ -479,14 +480,14 @@ export default function TodoPage() {
   const archiveTask = useCallback(async () => {
     if (!panel) return;
     const newStatus: TStatus = panel.status === 'archived' ? 'todo' : 'archived';
-    await supabase.from('todo_tasks').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', panel.id);
+    await supabase.from('todo_tasks').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('tenant_id', tenant).eq('id', panel.id);
     setTasks(prev => prev.map(t => t.id === panel.id ? { ...t, status: newStatus } : t));
     setPanel(prev => prev ? { ...prev, status: newStatus } : prev);
   }, [panel]);
 
   const deleteTask = useCallback(async () => {
     if (!panel) return;
-    await supabase.from('todo_tasks').delete().eq('id', panel.id);
+    await supabase.from('todo_tasks').delete().eq('tenant_id', tenant).eq('id', panel.id);
     setTasks(prev => prev.filter(t => t.id !== panel.id));
     closePanel();
   }, [panel, closePanel]);
