@@ -34,10 +34,11 @@ export default function PublicDgaPage() {
       } catch { /* défaut */ }
       try { setSites(await getSitesTree(tenant)); } catch { /* défaut */ }
       try {
-        const { data: d } = await supabase.from('dga_dossiers').select('*').eq('id', id).maybeSingle();
+        // Défense-en-profondeur : scoper au tenant du QR (RLS permissive), même si l'id est un UUID.
+        const { data: d } = await supabase.from('dga_dossiers').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle();
         if (!d) { setState('notfound'); return; }
         setDossier(d as Dossier);
-        const { data: ms } = await supabase.from('dga_measures').select('*').eq('dossier_id', id).order('sample_date', { ascending: true });
+        const { data: ms } = await supabase.from('dga_measures').select('*').eq('tenant_id', tenant).eq('dossier_id', id).order('sample_date', { ascending: true });
         setMeasures((ms as Measure[]) || []);
         setState('ok');
       } catch { setState('notfound'); }

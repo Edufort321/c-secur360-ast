@@ -102,9 +102,10 @@ export default function EquipmentPublicPage() {
   useEffect(() => {
     if (!sb) return;
     Promise.all([
-      sb.from('equipment').select('*').eq('id', id).maybeSingle(),
+      sb.from('equipment').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle(),
       sb.from('equipment_inspections')
         .select('id, inspection_number, inspection_date, overall_result, inspector_name, status, non_conformities, corrective_actions, item_notes, notes, equipment_photos, item_photos')
+        .eq('tenant_id', tenant)
         .eq('equipment_id', id)
         .order('inspection_date', { ascending: false })
         .limit(20),

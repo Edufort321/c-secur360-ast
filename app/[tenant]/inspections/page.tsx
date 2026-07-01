@@ -78,7 +78,7 @@ function calcUrgency(eq: EquipmentRow, lastDate: string | null) {
 
 export default function InspectionsPage() {
   const params = useParams();
-  const tenant = (params?.tenant as string) || 'demo';
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
   const { siteId } = useSite(); // sélecteur de site global (en-tête)
 
   const [cards,       setCards]       = useState<EquipmentCard[]>([]);

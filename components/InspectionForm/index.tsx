@@ -161,14 +161,15 @@ function ResultToggle({ value, onChange, disabled }: {
     { v: 'na',   label: 'N/A', active: 'bg-gray-200 text-gray-600 border-gray-400 font-semibold' },
   ];
   return (
-    <div className="flex gap-1 shrink-0">
+    <div className="flex gap-1.5 shrink-0">
       {options.map(({ v, label, active }) => (
         <button
           key={v}
           type="button"
           disabled={disabled}
           onClick={() => onChange(value === v ? null : v)}
-          className={`px-2 py-0.5 text-xs rounded border transition-colors ${
+          // Cible tactile terrain (≥44px) : contrôle le plus utilisé sur mobile, souvent avec des gants.
+          className={`min-h-[40px] min-w-[44px] px-3 py-2 text-sm rounded-lg border transition-colors ${
             value === v ? active : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
           } ${disabled ? 'opacity-50 cursor-default' : 'cursor-pointer'}`}
         >
@@ -433,7 +434,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
   // ── Load linked equipment (when opened from equipment QR) ───────────────
   useEffect(() => {
     if (!equipmentId || !supabase) return;
-    supabase.from('equipment').select('*').eq('id', equipmentId).maybeSingle()
+    supabase.from('equipment').select('*').eq('tenant_id', tenant).eq('id', equipmentId).maybeSingle()
       .then(({ data }) => {
         if (!data) return;
         setLinkedEquipment(data as LinkedEquipment);
@@ -459,8 +460,9 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
     supabase
       .from('equipment_inspections')
       .select('*')
+      .eq('tenant_id', tenant)
       .eq('id', inspectionId)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (!data) return;
         const row = data as InspectionRow;
@@ -670,27 +672,30 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
         const { data } = await supabase
           .from('equipment_inspections')
           .select('*')
+          .eq('tenant_id', tenant)
           .eq('id', savedId)
-          .single();
+          .maybeSingle();
         if (data) setExistingRow(data as InspectionRow);
       }
     } else {
       await supabase
         .from('equipment_inspections')
         .update(payload)
+        .eq('tenant_id', tenant)
         .eq('id', internalId);
       const { data } = await supabase
         .from('equipment_inspections')
         .select('*')
+        .eq('tenant_id', tenant)
         .eq('id', internalId)
-        .single();
+        .maybeSingle();
       if (data) setExistingRow(data as InspectionRow);
     }
 
     // Interconnexion Inspections→Équipement : une inspection 'retrait' met l'équipement HORS SERVICE ;
     // 'conforme' le réactive. (status, migration 176 — repli silencieux si colonne absente.)
     if (effectiveEquipmentId && (result === 'retrait' || result === 'conforme')) {
-      try { await supabase.from('equipment').update({ status: result === 'retrait' ? 'retrait' : 'active' }).eq('id', effectiveEquipmentId); } catch { /* colonne status absente */ }
+      try { await supabase.from('equipment').update({ status: result === 'retrait' ? 'retrait' : 'active' }).eq('tenant_id', tenant).eq('id', effectiveEquipmentId); } catch { /* colonne status absente */ }
     }
 
     setSaving(false);
@@ -710,7 +715,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
     if (!internalId || !supabase) return;
     if (!confirm(I.confirmDelete)) return;
     setDeletingInspection(true);
-    await supabase.from('equipment_inspections').delete().eq('id', internalId);
+    // Isolation : DELETE TOUJOURS scopé au tenant (RLS permissive → sinon suppression inter-tenant possible).
+    await supabase.from('equipment_inspections').delete().eq('tenant_id', tenant).eq('id', internalId);
     onClose();
   }
 
@@ -1003,7 +1009,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                   </span>
                 </div>
                 <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
                       <input type="text" value={form.inspectorName} disabled={isReadOnly}
@@ -1062,7 +1068,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                 </div>
 
                 {/* Nom / Série */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqName}</label>
                     <input type="text" value={form.equipmentName} disabled={isReadOnly}
@@ -1080,7 +1086,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                 </div>
 
                 {/* Emplacement + Date */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqLocation}</label>
                     <input type="text" value={form.equipmentLocation} disabled={isReadOnly}
@@ -1120,7 +1126,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                 </div>
 
                 {/* Inspecteur (recherche dynamique des utilisateurs + saisie libre) + Fréquence */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div ref={inspectorBoxRef} className="relative">
                     <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
                     <input type="text" value={form.inspectorName} disabled={isReadOnly}
@@ -1482,7 +1488,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                             />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">{I.caAssigned}</label>
                               <input

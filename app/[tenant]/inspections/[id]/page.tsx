@@ -88,9 +88,9 @@ export default function InspectionPublicPage() {
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
-    supabase.from('equipment_inspections').select('*').eq('id', id).single()
+    supabase.from('equipment_inspections').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle()
       .then(({ data }) => { setRow(data as InspRow ?? null); setLoading(false); });
-  }, [id]);
+  }, [id, tenant]);
 
   useEffect(() => {
     if (!supabase || !tenant) return;
