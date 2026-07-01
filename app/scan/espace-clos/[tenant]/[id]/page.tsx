@@ -21,14 +21,15 @@ export default function EspaceClosScan() {
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => {
     (async () => {
-      const { data: sp } = await supabase.from('confined_spaces').select('*').eq('id', id).maybeSingle();
+      // Défense-en-profondeur : scoper au tenant du QR (RLS permissive), même si l'id est un UUID.
+      const { data: sp } = await supabase.from('confined_spaces').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle();
       setSpace(sp);
-      const { data: pm } = await supabase.from('cs_permits').select('*').eq('space_id', id).order('created_at', { ascending: false }).limit(1);
+      const { data: pm } = await supabase.from('cs_permits').select('*').eq('tenant_id', tenant).eq('space_id', id).order('created_at', { ascending: false }).limit(1);
       const p = (pm || [])[0]; setPermit(p || null);
       if (p) {
         const [{ data: rd }, { data: en }] = await Promise.all([
-          supabase.from('cs_atm_readings').select('*').eq('permit_id', p.id).order('taken_at', { ascending: false }).limit(20),
-          supabase.from('cs_entries').select('*').eq('permit_id', p.id).order('created_at', { ascending: false }).limit(50),
+          supabase.from('cs_atm_readings').select('*').eq('tenant_id', tenant).eq('permit_id', p.id).order('taken_at', { ascending: false }).limit(20),
+          supabase.from('cs_entries').select('*').eq('tenant_id', tenant).eq('permit_id', p.id).order('created_at', { ascending: false }).limit(50),
         ]);
         setReadings(rd || []); setEntries(en || []);
       }

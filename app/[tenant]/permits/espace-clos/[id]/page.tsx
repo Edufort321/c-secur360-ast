@@ -39,9 +39,10 @@ export default function EspaceClosFiche() {
 
   async function load() {
     setLoading(true);
-    const { data: sp } = await supabase.from('confined_spaces').select('*').eq('id', id).maybeSingle();
+    // Isolation tenant : RLS permissive (USING(true)) → le filtre applicatif est la SEULE barrière.
+    const { data: sp } = await supabase.from('confined_spaces').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle();
     setSpace(sp);
-    const { data: pm } = await supabase.from('cs_permits').select('*').eq('space_id', id).order('created_at', { ascending: false });
+    const { data: pm } = await supabase.from('cs_permits').select('*').eq('tenant_id', tenant).eq('space_id', id).order('created_at', { ascending: false });
     setPermits(pm || []);
     const active = (pm || []).find((p: any) => ['active', 'approved', 'pending_approval', 'draft'].includes(p.status)) || (pm || [])[0] || null;
     setPermit(active);
@@ -51,8 +52,8 @@ export default function EspaceClosFiche() {
   }
   async function loadPermitChildren(pid: string) {
     const [{ data: rd }, { data: en }] = await Promise.all([
-      supabase.from('cs_atm_readings').select('*').eq('permit_id', pid).order('taken_at', { ascending: false }),
-      supabase.from('cs_entries').select('*').eq('permit_id', pid).order('created_at', { ascending: false }),
+      supabase.from('cs_atm_readings').select('*').eq('tenant_id', tenant).eq('permit_id', pid).order('taken_at', { ascending: false }),
+      supabase.from('cs_entries').select('*').eq('tenant_id', tenant).eq('permit_id', pid).order('created_at', { ascending: false }),
     ]);
     setReadings(rd || []); setEntries(en || []);
   }

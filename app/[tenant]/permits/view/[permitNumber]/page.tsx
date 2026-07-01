@@ -138,13 +138,17 @@ export default function ConfinedSpacePublicView() {
         registry.activeEntrants = (registry.activeEntrants ?? []).filter((id: string) => id !== newPersonId);
       }
       const updated = { ...permit, entryRegistry: registry, updated_at: new Date().toISOString() };
-      await supabase.from('confined_space_permits').upsert({ permit_number: permitNumber, tenant_id: tenant, data: updated, updated_at: updated.updated_at });
+      // onConflict (tenant_id, permit_number) : sans ça, la 2e entrée/sortie viole l'unicité (mig 227) →
+      // l'écriture échouait et était avalée par le catch alors que l'UI affichait « ✓ » (journal non sauvé).
+      const { error: upErr } = await supabase.from('confined_space_permits')
+        .upsert({ permit_number: permitNumber, tenant_id: tenant, data: updated, updated_at: updated.updated_at }, { onConflict: 'tenant_id,permit_number' });
+      if (upErr) throw upErr;
       setData(updated);
       setEntryDone(true);
       setEntryModal(false);
       setEntryName(''); setEntryCompany('');
       setTimeout(() => setEntryDone(false), 4000);
-    } catch { /* ignore — offline mode */ } finally { setEntrySaving(false); }
+    } catch { if (typeof window !== 'undefined') window.alert('Échec de l’enregistrement du mouvement — réessayez.'); } finally { setEntrySaving(false); }
   }
 
   if (loading) {

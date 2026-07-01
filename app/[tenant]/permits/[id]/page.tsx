@@ -39,9 +39,10 @@ export default function PermitDetailPage() {
     if (!id) return;
     (async () => {
       try {
-        // Try confined_space_permits first
+        // Try confined_space_permits first — TOUJOURS scoper au tenant (RLS permissive USING(true) :
+        // le filtre applicatif est la SEULE isolation → sans lui, fuite inter-tenant).
         const { data: cs } = await supabase
-          .from('confined_space_permits').select('data').eq('permit_number', id).maybeSingle();
+          .from('confined_space_permits').select('data').eq('tenant_id', tenant).eq('permit_number', id).maybeSingle();
         if (cs?.data) {
           setPermitData(cs.data);
           setPermitType('confined_space');

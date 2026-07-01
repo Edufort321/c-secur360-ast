@@ -365,12 +365,15 @@ export default function ConfinedSpace({
     try {
       const payload = { ...data, updated_at: new Date().toISOString() };
       if (supabase) {
+        // onConflict = clé unique (tenant_id, permit_number) de la migration 227 : sans ça, la cible de
+        // conflit par défaut = PK `id` (jamais fourni) → dès la 2e sauvegarde, violation d'unicité et
+        // l'autosave échoue (l'édition ne persiste jamais).
         const { error } = await supabase.from('confined_space_permits').upsert({
           permit_number: payload.permit_number,
           tenant_id: tenant,
           data: payload,
           updated_at: payload.updated_at,
-        });
+        }, { onConflict: 'tenant_id,permit_number' });
         if (error) { setSaveStatus('error'); return; }
       }
       localStorage.setItem(`${currentTenantSlug()}::cs-permit-${payload.permit_number}`, JSON.stringify(payload));
