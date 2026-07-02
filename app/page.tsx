@@ -502,7 +502,7 @@ export default function LandingPage() {
             { val: '17', label: fr ? 'Modules inclus' : 'Modules included' },
             { val: '4 h', label: fr ? 'Démo gratuite' : 'Free demo' },
             { val: '100%', label: fr ? 'Conforme CNESST' : 'CNESST compliant' },
-            { val: '24/7', label: fr ? 'Support inclus' : 'Support included' },
+            { val: 'FR/EN', label: fr ? 'Bilingue' : 'Bilingual' },
           ].map((s, i) => (
             <div key={i}>
               <p className="text-2xl sm:text-3xl font-black text-orange-400">{s.val}</p>
@@ -677,9 +677,9 @@ export default function LandingPage() {
                 fr ? 'Codes QR personnalises par chantier' : 'Custom QR codes per jobsite',
                 fr ? 'Export PDF et Excel automatique' : 'Automatic PDF and Excel export',
                 fr ? 'Notifications SMS et courriel' : 'SMS and email notifications',
-                fr ? 'Integrations Google Drive & OneDrive' : 'Google Drive & OneDrive integrations',
-                fr ? 'Sauvegarde cloud quotidienne' : 'Daily cloud backup',
-                fr ? 'Authentification a deux facteurs' : 'Two-factor authentication',
+                fr ? 'Import IA (PDF, reçus, données de labo)' : 'AI import (PDF, receipts, lab data)',
+                fr ? 'Isolation stricte par client (multi-tenant)' : 'Strict per-client isolation (multi-tenant)',
+                fr ? 'Conformité Loi 25 / vie privée' : 'Law 25 / privacy compliance',
                 fr ? 'Mises a jour automatiques incluses' : 'Automatic updates included',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -796,7 +796,7 @@ export default function LandingPage() {
                       ? (fr ? `1 site inclus · +${perSitePrice}$/an par site additionnel` : `1 site included · +$${perSitePrice}/year per additional site`)
                       : (fr ? '1 site inclus · multi-sites sur demande' : '1 site included · multi-site on request'),
                     fr ? 'Application mobile PWA' : 'Mobile PWA app',
-                    fr ? 'Support 24/7' : '24/7 support',
+                    fr ? 'Support courriel prioritaire' : 'Priority email support',
                     fr ? 'Analytics avances' : 'Advanced analytics',
                   ].map((f, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
@@ -985,8 +985,8 @@ export default function LandingPage() {
           </h2>
           <p className="text-slate-400 text-lg mb-8">
             {fr
-              ? 'Rejoignez les entreprises de construction qui digitalisent leur securite avec C-Secur360.'
-              : 'Join the construction companies that are digitalizing their safety with C-Secur360.'}
+              ? 'Rejoignez les entreprises industrielles et SST qui numérisent leur sécurité avec C-Secur360.'
+              : 'Join the industrial and safety-driven companies digitalizing their safety with C-Secur360.'}
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
