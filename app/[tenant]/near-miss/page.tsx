@@ -9,7 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 export default function NearMissRedirect() {
   const params = useParams();
   const router = useRouter();
-  const tenant = (params?.tenant as string) || 'demo';
-  useEffect(() => { router.replace(`/${tenant}/accidents`); }, [tenant, router]);
+  const tenant = (params?.tenant as string) || ''; // ISOLATION : pas de repli 'demo' (contamination inter-tenant)
+  useEffect(() => { if (tenant) router.replace(`/${tenant}/accidents`); }, [tenant, router]);
   return <div className="grid min-h-screen place-items-center text-gray-400">Redirection vers Accidents et incidents…</div>;
 }
