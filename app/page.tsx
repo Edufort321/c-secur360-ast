@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
+import { useLanguage } from '@/contexts/LanguageContext'
 import {
   Shield, ShieldCheck, Users, HardHat, Calendar, FileCheck, AlertTriangle,
   Package, ClipboardCheck, Clock, Truck,
@@ -201,7 +202,8 @@ const CONTACT_MAILTO_EN = "mailto:info@cerdia.ai?subject=Information%20Request%2
 // ─── Composant principal ───────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [lang, setLang] = useState<'fr' | 'en'>('fr')
+  // Langue = contexte global (persisté en localStorage + synchronisé avec le reste de l'app et <html lang>).
+  const { lang, setLang } = useLanguage()
   const fr = lang === 'fr'
   const [menuOpen, setMenuOpen] = useState(false)
   const [clientSubdomain, setClientSubdomain] = useState('')

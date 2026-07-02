@@ -45,6 +45,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('cs-lang', lang);
     // Synchronise le module planner (qui lit 'preferred-language') + notifie dans le même onglet
     localStorage.setItem('preferred-language', lang);
+    // Reflète la langue dans l'attribut <html lang> (accessibilité + SEO)
+    if (typeof document !== 'undefined') document.documentElement.lang = lang;
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('cs-lang-change', { detail: lang }));
   }, [lang]);
 
