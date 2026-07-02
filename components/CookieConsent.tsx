@@ -55,7 +55,7 @@ export function CookieConsent() {
               <>
                 Ce site utilise uniquement des <strong>témoins strictement nécessaires</strong>{' '}
                 (connexion et sécurité). Aucun traceur publicitaire ni analytique.{' '}
-                <Link href="/privacy" className="text-orange-400 underline hover:text-orange-300">
+                <Link href="/confidentialite" className="text-orange-400 underline hover:text-orange-300">
                   Politique de confidentialité
                 </Link>
                 .
@@ -64,7 +64,7 @@ export function CookieConsent() {
               <>
                 This site uses only <strong>strictly necessary cookies</strong> (login and
                 security). No advertising or analytics trackers.{' '}
-                <Link href="/privacy" className="text-orange-400 underline hover:text-orange-300">
+                <Link href="/confidentialite" className="text-orange-400 underline hover:text-orange-300">
                   Privacy policy
                 </Link>
                 .

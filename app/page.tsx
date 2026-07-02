@@ -401,10 +401,8 @@ export default function LandingPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-slate-300 transition border border-white/8">
                 <Lock size={14} /> {fr ? 'Acces Admin' : 'Admin Access'}
               </Link>
-              <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN} onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-sm text-white font-semibold transition">
-                {fr ? 'Demarrer gratuitement' : 'Start for free'} <ArrowRight size={14} />
-              </a>
+              <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-sm text-white font-semibold transition" />
             </nav>
           </div>
         )}
@@ -763,10 +761,8 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
-                  className="w-full text-center py-3 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/8 transition">
-                  {fr ? 'Demarrer gratuitement' : 'Start for free'}
-                </a>
+                <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
+                  className="w-full text-center py-3 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/8 transition" />
               </div>
 
               {/* Professionnel — prix live depuis DB */}
@@ -841,10 +837,8 @@ export default function LandingPage() {
                   </details>
                 )}
 
-                <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
-                  className="w-full text-center py-3 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white transition">
-                  {fr ? 'Demarrer gratuitement' : 'Start for free'}
-                </a>
+                <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
+                  className="w-full text-center py-3 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white transition" />
               </div>
 
               {/* Entreprise */}
@@ -989,10 +983,8 @@ export default function LandingPage() {
               : 'Join the industrial and safety-driven companies digitalizing their safety with C-Secur360.'}
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
-              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-orange-500/30">
-              {fr ? 'Demarrer gratuitement' : 'Start for free'} <ArrowRight size={20} />
-            </a>
+            <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
+              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-orange-500/30" />
             <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
               className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/8 text-white px-8 py-4 rounded-xl font-bold text-lg transition">
               <Mail size={18} /> {fr ? 'Nous ecrire' : 'Contact us'}

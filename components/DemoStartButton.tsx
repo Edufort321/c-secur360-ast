@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 // Bouton "Démarrer maintenant" : capture Nom + courriel, démarre une session démo limitée
 // (notif propriétaire par SMS côté serveur), puis donne accès au bac à sable /demo.
-export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; className?: string }) {
+export function DemoStartButton({ fr = true, className = '', label }: { fr?: boolean; className?: string; label?: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,7 +51,7 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
         onClick={() => { setOpen(true); setResult(null); }}
         className={className || 'rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-orange-600'}
       >
-        {fr ? '🚀 Démarrer maintenant' : '🚀 Start now'}
+        {label || (fr ? '🚀 Démarrer maintenant' : '🚀 Start now')}
       </button>
 
       {open && (
@@ -78,7 +78,7 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
                       <>
                         En soumettant, vous acceptez que votre nom et votre courriel soient utilisés
                         pour activer et faire le suivi de votre démo. Aucune revente.{' '}
-                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
+                        <a href="/confidentialite" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
                           Politique de confidentialité
                         </a>.
                       </>
@@ -86,7 +86,7 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
                       <>
                         By submitting, you agree that your name and email will be used to activate and
                         follow up on your demo. No resale.{' '}
-                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
+                        <a href="/confidentialite" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
                           Privacy policy
                         </a>.
                       </>

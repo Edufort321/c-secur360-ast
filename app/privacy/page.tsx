@@ -1,13 +1,6 @@
-import type { Metadata } from 'next';
-import { PrivacyPolicy } from '@/components/legal/PrivacyPolicy';
+import { redirect } from 'next/navigation';
 
-// Alias historique en anglais. La page canonique est /confidentialite (FR).
-export const metadata: Metadata = {
-  title: 'Politique de confidentialité',
-  description: 'Politique de confidentialité de C-Secur360 (Loi 25 / RGPD).',
-  alternates: { canonical: '/confidentialite' },
-};
-
-export default function PrivacyPage() {
-  return <PrivacyPolicy />;
+// Alias historique en anglais -> redirige vers la page canonique /confidentialite (FR, Loi 25 / RGPD).
+export default function PrivacyAlias() {
+  redirect('/confidentialite');
 }
