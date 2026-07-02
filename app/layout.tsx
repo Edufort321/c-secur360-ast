@@ -14,13 +14,32 @@ export const viewport = {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.c-secur360.ca';
 
+// Description enrichie (17 modules réels, cible industrielle/SST au Canada) — réutilisée partout (meta, OG, Twitter, JSON-LD).
+const SITE_DESCRIPTION = 'Plateforme SST tout-en-un pour les entreprises industrielles au Canada : AST, permis, registres & KPI (HSE), inspections, maintenance, diagnostic DGA, planificateur, feuilles de temps, rapports terrain et plus — 17 modules, conformité CNESST et provinciale.';
+const SITE_TITLE = 'C-Secur360 — Plateforme SST tout-en-un';
+const OG_IMAGE = '/c-secur360-logo.png';
+
+// Données structurées (SEO) : logiciel SaaS + éditeur. Aucun prix codé en dur (tarifs dynamiques en base).
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'C-Secur360',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web, iOS, Android (PWA)',
+  description: SITE_DESCRIPTION,
+  url: SITE_URL,
+  inLanguage: ['fr-CA', 'en-CA'],
+  offers: { '@type': 'Offer', priceCurrency: 'CAD', availability: 'https://schema.org/InStock' },
+  provider: { '@type': 'Organization', name: 'Commerce CERDIA inc.', url: 'https://www.cerdia.ai' },
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'C-Secur360 — Sécurité Industrielle',
+    default: SITE_TITLE,
     template: '%s — C-Secur360',
   },
-  description: 'Plateforme SaaS de sécurité industrielle — AST, permis, inspections, conformité provinciale.',
+  description: SITE_DESCRIPTION,
   applicationName: 'C-Secur360',
   manifest: '/manifest.json',
   alternates: { canonical: '/' },
@@ -28,10 +47,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'C-Secur360',
-    title: 'C-Secur360 — Sécurité Industrielle',
-    description: 'Plateforme SaaS de sécurité industrielle — AST, permis, inspections, conformité provinciale.',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     url: SITE_URL,
     locale: 'fr_CA',
+    images: [{ url: OG_IMAGE, alt: 'C-Secur360 — plateforme SST tout-en-un' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE],
   },
 }
 
@@ -49,6 +75,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon-pwa?size=180&v=2" />
         <meta name="theme-color" content="#111827" />
