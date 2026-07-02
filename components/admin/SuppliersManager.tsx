@@ -43,7 +43,7 @@ export function SuppliersManager({ tenant, tr }: { tenant: string; tr: (f: strin
     setSaving(true); setNotice(null);
     const full: any = { tenant_id: tenant, ...form, updated_at: new Date().toISOString() };
     delete full.id;
-    const attempt = (p: any) => form.id ? supabase.from('suppliers').update(p).eq('id', form.id) : supabase.from('suppliers').insert(p);
+    const attempt = (p: any) => form.id ? supabase.from('suppliers').update(p).eq('id', form.id).eq('tenant_id', tenant) : supabase.from('suppliers').insert(p);
     let res: any = await attempt(full); let guard = 0;
     while (res.error && guard < 15) {
       const m = (res.error.message || '').match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
@@ -53,7 +53,7 @@ export function SuppliersManager({ tenant, tr }: { tenant: string; tr: (f: strin
     if (res.error) { setNotice('Erreur : ' + res.error.message); setSaving(false); return; }
     setNotice(tr('Fournisseur enregistré ✓', 'Supplier saved ✓')); deselect(); load(); setSaving(false);
   }
-  async function del(id: string) { if (!window.confirm(tr('Supprimer ce fournisseur ?', 'Delete this supplier?'))) return; await supabase.from('suppliers').delete().eq('id', id); deselect(); load(); }
+  async function del(id: string) { if (!window.confirm(tr('Supprimer ce fournisseur ?', 'Delete this supplier?'))) return; await supabase.from('suppliers').delete().eq('id', id).eq('tenant_id', tenant); deselect(); load(); }
 
   // Modèle de colonnes téléchargeable (CSV).
   function downloadTemplate() {

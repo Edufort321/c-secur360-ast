@@ -1054,7 +1054,7 @@ function Sites({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => s
       for (const r of rows) {
         if (!r.name?.trim()) continue;
         const data: any = { tenant_id: tenant, name: r.name, code: r.code || null, type: r.type || 'site', is_active: r.is_active !== false, address: r.addressText ? { text: r.addressText } : null };
-        if (r.id) await supabase.from('sites').update(data).eq('id', r.id);
+        if (r.id) await supabase.from('sites').update(data).eq('id', r.id).eq('tenant_id', tenant);
         else await supabase.from('sites').insert(data);
       }
       setNotice(tr('Sites enregistrés ✓', 'Sites saved ✓')); load();
@@ -1062,7 +1062,7 @@ function Sites({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => s
   }
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('sites').delete().eq('id', r.id);
+    if (r.id) await supabase.from('sites').delete().eq('id', r.id).eq('tenant_id', tenant);
     setRows(p => p.filter((_, j) => j !== i));
   }
 
@@ -1343,7 +1343,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
     const full: any = { tenant_id: tenant, ...form };
     delete full.id;
     const attempt = (p: any) => form.id
-      ? supabase.from('clients').update(p).eq('id', form.id)
+      ? supabase.from('clients').update(p).eq('id', form.id).eq('tenant_id', tenant)
       : supabase.from('clients').insert(p);
     let res: any = await attempt(full);
     let guard = 0;
@@ -1360,7 +1360,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   }
 
   async function del(id: string) {
-    await supabase.from('clients').delete().eq('id', id);
+    await supabase.from('clients').delete().eq('id', id).eq('tenant_id', tenant);
     deselect(); load();
   }
 
@@ -1655,13 +1655,13 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
     if (!siteForm || !siteForm.name.trim()) return;
     setErr(null);
     const p: any = { tenant_id: tenant, client_id: clientId, name: siteForm.name, address: siteForm.address, city: siteForm.city, province: siteForm.province, postal_code: siteForm.postal_code, billing_address: siteForm.billing_address, billing_city: siteForm.billing_city, billing_province: siteForm.billing_province, billing_postal_code: siteForm.billing_postal_code, active: siteForm.active };
-    const res = siteForm.id ? await supabase.from('client_sites').update(p).eq('id', siteForm.id) : await supabase.from('client_sites').insert(p);
+    const res = siteForm.id ? await supabase.from('client_sites').update(p).eq('id', siteForm.id).eq('tenant_id', tenant) : await supabase.from('client_sites').insert(p);
     if (res.error) { setErr(res.error.message); return; }
     setSiteForm(null); load();
   }
   async function delSite(id: string) {
-    await supabase.from('client_contacts').delete().eq('site_id', id);
-    await supabase.from('client_sites').delete().eq('id', id);
+    await supabase.from('client_contacts').delete().eq('site_id', id).eq('tenant_id', tenant);
+    await supabase.from('client_sites').delete().eq('id', id).eq('tenant_id', tenant);
     if (openSite === id) setOpenSite(null);
     load();
   }
@@ -1669,11 +1669,11 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
     if (!contactForm || !contactForm.name.trim()) return;
     setErr(null);
     const p: any = { tenant_id: tenant, client_id: clientId, site_id: contactForm.site_id, name: contactForm.name, title: contactForm.title, email: contactForm.email, phone: contactForm.phone, mobile: contactForm.mobile, is_primary: contactForm.is_primary, active: contactForm.active };
-    const res = contactForm.id ? await supabase.from('client_contacts').update(p).eq('id', contactForm.id) : await supabase.from('client_contacts').insert(p);
+    const res = contactForm.id ? await supabase.from('client_contacts').update(p).eq('id', contactForm.id).eq('tenant_id', tenant) : await supabase.from('client_contacts').insert(p);
     if (res.error) { setErr(res.error.message); return; }
     setContactForm(null); load();
   }
-  async function delContact(id: string) { await supabase.from('client_contacts').delete().eq('id', id); load(); }
+  async function delContact(id: string) { await supabase.from('client_contacts').delete().eq('id', id).eq('tenant_id', tenant); load(); }
 
   const emptySite = (): Site => ({ name: '', address: '', city: '', province: 'QC', postal_code: '', billing_address: '', billing_city: '', billing_province: 'QC', billing_postal_code: '', active: true });
   const emptyContact = (siteId: string | null): Contact => ({ site_id: siteId, name: '', title: '', email: '', phone: '', mobile: '', is_primary: false, active: true });
@@ -2776,7 +2776,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
         };
         let vehicleId = r.id;
         if (r.id) {
-          const { error } = await supabase.from('vehicles').update(payload).eq('id', r.id);
+          const { error } = await supabase.from('vehicles').update(payload).eq('id', r.id).eq('tenant_id', tenant);
           if (error) throw error;
         } else {
           const { data: ins, error } = await supabase.from('vehicles').insert(payload).select('id').single();
@@ -2793,8 +2793,8 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
           notes: `Régime: ${r.regime}`,
           equipment_photos: r.photos || [],
         };
-        const { data: exEq } = await supabase.from('equipment').select('id').eq('vehicle_id', vehicleId).maybeSingle();
-        if (exEq?.id) await supabase.from('equipment').update(equipSync).eq('id', exEq.id);
+        const { data: exEq } = await supabase.from('equipment').select('id').eq('tenant_id', tenant).eq('vehicle_id', vehicleId).limit(1).maybeSingle();
+        if (exEq?.id) await supabase.from('equipment').update(equipSync).eq('id', exEq.id).eq('tenant_id', tenant);
         else await supabase.from('equipment').insert(equipSync);
 
         // Sync vers planificateur (planner_equipements)
@@ -2804,8 +2804,8 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
           serial_number: r.plate || r.unit_number || '',
           is_active: r.active,
         };
-        const { data: exPl } = await supabase.from('planner_equipements').select('id').eq('vehicle_id', vehicleId).maybeSingle();
-        if (exPl?.id) await supabase.from('planner_equipements').update(plannerSync).eq('id', exPl.id);
+        const { data: exPl } = await supabase.from('planner_equipements').select('id').eq('tenant_id', tenant).eq('vehicle_id', vehicleId).limit(1).maybeSingle();
+        if (exPl?.id) await supabase.from('planner_equipements').update(plannerSync).eq('id', exPl.id).eq('tenant_id', tenant);
         else await supabase.from('planner_equipements').insert(plannerSync);
       }
       setNotice(tr('Véhicules enregistrés ✓', 'Vehicles saved ✓'));
@@ -2815,7 +2815,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('vehicles').delete().eq('id', r.id);
+    if (r.id) await supabase.from('vehicles').delete().eq('id', r.id).eq('tenant_id', tenant);
     setRows(p => p.filter((_, j) => j !== i));
   }
 
@@ -3269,7 +3269,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
     try {
       const h = Math.round((parseFloat(directHourly) || 0) * 10000) / 10000;
       const { data: ep } = await supabase.from('employee_profiles').select('id').eq('tenant_id', tenant).eq('employee_id', employee.id).maybeSingle();
-      if (ep?.id) await supabase.from('employee_profiles').update({ hourly_rate: h }).eq('id', ep.id);
+      if (ep?.id) await supabase.from('employee_profiles').update({ hourly_rate: h }).eq('id', ep.id).eq('tenant_id', tenant);
       else await supabase.from('employee_profiles').insert({ tenant_id: tenant, employee_id: employee.id, employee_name: employee.name, employee_email: (employee as any).email || '', hourly_rate: h, ot_multiplier: 1.5, dt_multiplier: 2.0, ot_daily_hrs: 8, ot_weekly_hrs: 40, active: true });
       setNotice(tr('Taux horaire enregistré ✓', 'Hourly rate saved ✓'));
       onSaved();
@@ -3489,7 +3489,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         const hourly = reco.newSalary > 0 && hpy > 0 ? Math.round((reco.newSalary / hpy) * 10000) / 10000 : null;
         if (hourly != null) {
           const { data: ep } = await supabase.from('employee_profiles').select('id').eq('tenant_id', tenant).eq('employee_id', employee.id).maybeSingle();
-          if (ep?.id) await supabase.from('employee_profiles').update({ hourly_rate: hourly }).eq('id', ep.id);
+          if (ep?.id) await supabase.from('employee_profiles').update({ hourly_rate: hourly }).eq('id', ep.id).eq('tenant_id', tenant);
           else await supabase.from('employee_profiles').insert({ tenant_id: tenant, employee_id: employee.id, employee_name: employee.name, employee_email: (employee as any).email || '', hourly_rate: hourly, ot_multiplier: 1.5, dt_multiplier: 2.0, ot_daily_hrs: 8, ot_weekly_hrs: 40, active: true });
         }
       } catch { /* paie facultative — n'empêche pas l'enregistrement de l'éval */ }
@@ -3879,7 +3879,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
       console.log('[Sous-classes save] payload:', payload, 'id:', r.id);
       try {
         let result;
-        if (r.id) result = await supabase.from('poste_subclasses_catalog').update(payload).eq('id', r.id).select();
+        if (r.id) result = await supabase.from('poste_subclasses_catalog').update(payload).eq('id', r.id).eq('tenant_id', tenant).select();
         else      result = await supabase.from('poste_subclasses_catalog').insert(payload).select();
         console.log('[Sous-classes save] résultat:', result);
         if (result.error) throw result.error;
@@ -3899,7 +3899,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
     const r = rows[i];
     if (r.id) {
       if (usageCounts[r.id] > 0 && !confirm(tr(`Cette sous-classe est utilisée par ${usageCounts[r.id]} poste(s). Supprimer quand même ?`, `This sub-class is used by ${usageCounts[r.id]} position(s). Delete anyway?`))) return;
-      await supabase.from('poste_subclasses_catalog').delete().eq('id', r.id);
+      await supabase.from('poste_subclasses_catalog').delete().eq('id', r.id).eq('tenant_id', tenant);
       onSubclassesChanged?.();
     }
     setRows(p => p.filter((_, j) => j !== i));
@@ -4516,8 +4516,8 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
         if (!r.name?.trim()) continue;
         const payload: any = { tenant_id: tenant, name: r.name, type: r.type || null, serial_number: r.serial_number || null, is_active: r.is_active !== false, succursale: r.succursale || null, photo_url: r.photo_url || null };
         if (r.id) {
-          let { error } = await supabase.from('planner_equipements').update(payload).eq('id', r.id);
-          if (error && isMissing(error)) ({ error } = await supabase.from('planner_equipements').update(strip(payload)).eq('id', r.id));
+          let { error } = await supabase.from('planner_equipements').update(payload).eq('id', r.id).eq('tenant_id', tenant);
+          if (error && isMissing(error)) ({ error } = await supabase.from('planner_equipements').update(strip(payload)).eq('id', r.id).eq('tenant_id', tenant));
           if (error) throw error;
         } else {
           let { error } = await supabase.from('planner_equipements').insert(payload);
@@ -4531,7 +4531,7 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('planner_equipements').delete().eq('id', r.id);
+    if (r.id) await supabase.from('planner_equipements').delete().eq('id', r.id).eq('tenant_id', tenant);
     setRows(p => p.filter((_, j) => j !== i));
   }
 
@@ -5379,7 +5379,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
       const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#6b7280', subclass_ids: r.subclass_ids || [] };
       try {
         if (r.id) {
-          const { error } = await supabase.from('planner_postes').update(payload).eq('id', r.id);
+          const { error } = await supabase.from('planner_postes').update(payload).eq('id', r.id).eq('tenant_id', tenant);
           if (error) throw error;
           okCount++;
         } else {
@@ -5414,7 +5414,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) { await supabase.from('planner_postes').delete().eq('id', r.id); onPostesChanged?.(); }
+    if (r.id) { await supabase.from('planner_postes').delete().eq('id', r.id).eq('tenant_id', tenant); onPostesChanged?.(); }
     setRows(p => p.filter((_, j) => j !== i));
   }
 
@@ -5643,13 +5643,13 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   async function delSite(siteKey: string) {
     const site = sites.find(s => s._key === siteKey);
-    if (site?.id) await supabase.from('planner_succursales').delete().eq('id', site.id);
+    if (site?.id) await supabase.from('planner_succursales').delete().eq('id', site.id).eq('tenant_id', tenant);
     setSites(p => p.filter(s => s._key !== siteKey));
     setDepts(p => p.filter(d => d.siteKey !== siteKey));
   }
   async function delDept(dKey: string) {
     const dept = depts.find(d => d._dKey === dKey);
-    if (dept?.id) await supabase.from('planner_succursales').delete().eq('id', dept.id);
+    if (dept?.id) await supabase.from('planner_succursales').delete().eq('id', dept.id).eq('tenant_id', tenant);
     setDepts(p => p.filter(d => d._dKey !== dKey));
   }
 
@@ -5668,7 +5668,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
         const sPayload = { tenant_id: tenant, name };
         let siteId = site.id;
         if (site.id) {
-          const { error } = await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
+          const { error } = await supabase.from('planner_succursales').update(sPayload).eq('id', site.id).eq('tenant_id', tenant);
           if (error) throw new Error(error.message);
         } else {
           const { data: ins, error } = await supabase.from('planner_succursales').insert(sPayload).select('id').single();
@@ -5681,7 +5681,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           if (!dName) continue;
           const dPayload = { tenant_id: tenant, name: dName, parent_id: siteId };
           if (dept.id) {
-            const { error } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
+            const { error } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id).eq('tenant_id', tenant);
             if (error) throw new Error(error.message);
           } else {
             const { error } = await supabase.from('planner_succursales').insert(dPayload);
@@ -5850,7 +5850,7 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
           active: r.active, updated_at: new Date().toISOString(),
         };
         const writeProfile = async (pl: any) => {
-          if (r.id) return supabase.from('employee_profiles').update(pl).eq('id', r.id);
+          if (r.id) return supabase.from('employee_profiles').update(pl).eq('id', r.id).eq('tenant_id', tenant);
           return supabase.from('employee_profiles').insert(pl);
         };
         let { error } = await writeProfile(payload);
@@ -5966,7 +5966,7 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
       for (const r of rows) {
         if (!r.name?.trim()) continue;
         const payload: any = { tenant_id: tenant, name: r.name.trim(), amount: parseFloat(r.amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order, personnel_ids: r.personnel_ids, recurring_task_ids: r.recurring_task_ids };
-        if (r.id) await supabase.from('timesheet_allowances').update(payload).eq('id', r.id);
+        if (r.id) await supabase.from('timesheet_allowances').update(payload).eq('id', r.id).eq('tenant_id', tenant);
         else await supabase.from('timesheet_allowances').insert(payload);
       }
       setNotice(tr('Avantages enregistrés ✓', 'Allowances saved ✓')); load();
@@ -5975,7 +5975,7 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('timesheet_allowances').delete().eq('id', r.id);
+    if (r.id) await supabase.from('timesheet_allowances').delete().eq('id', r.id).eq('tenant_id', tenant);
     setRows(p => p.filter((_, j) => j !== i));
   }
 
@@ -6097,7 +6097,7 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
         if (!r.name?.trim() || !r.trigger_hours) continue;
         const payload: any = { tenant_id: tenant, name: r.name.trim(), trigger_hours: parseFloat(r.trigger_hours) || 0, bonus_amount: parseFloat(r.bonus_amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order, recurring_task_ids: r.recurring_task_ids };
         // Repli si la colonne recurring_task_ids (mig 238) n'existe pas encore.
-        const tryWrite = async (p: any) => r.id ? supabase.from('timesheet_hour_bonuses').update(p).eq('id', r.id) : supabase.from('timesheet_hour_bonuses').insert(p);
+        const tryWrite = async (p: any) => r.id ? supabase.from('timesheet_hour_bonuses').update(p).eq('id', r.id).eq('tenant_id', tenant) : supabase.from('timesheet_hour_bonuses').insert(p);
         let { error } = await tryWrite(payload);
         if (error && /recurring_task_ids|personnel_ids/i.test(String(error.message || ''))) { const { recurring_task_ids, ...legacy } = payload; ({ error } = await tryWrite(legacy)); }
         if (error) throw error;
@@ -6108,7 +6108,7 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('timesheet_hour_bonuses').delete().eq('id', r.id);
+    if (r.id) await supabase.from('timesheet_hour_bonuses').delete().eq('id', r.id).eq('tenant_id', tenant);
     setRows(p => p.filter((_, j) => j !== i));
   }
 
@@ -6226,7 +6226,7 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
 
   const upd = (i: number, k: keyof Item, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const add = (type: Item['type']) => setRows(p => [...p, { type, title: '', content: '', url: '', active: true, sort_order: p.length }]);
-  async function del(i: number) { const r = rows[i]; if (r.id) await supabase.from('hr_items').delete().eq('id', r.id); setRows(p => p.filter((_, j) => j !== i)); }
+  async function del(i: number) { const r = rows[i]; if (r.id) await supabase.from('hr_items').delete().eq('id', r.id).eq('tenant_id', tenant); setRows(p => p.filter((_, j) => j !== i)); }
   async function onUpload(i: number, file: File) { try { const url = await uploadPhoto(file, tenant, supabase); upd(i, 'url', url); } catch { setNotice(tr('Échec du téléversement', 'Upload failed')); } }
   async function save() {
     setSaving(true); setNotice(null);
@@ -6234,7 +6234,7 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
       for (const r of rows) {
         if (!r.title.trim()) continue;
         const payload = { tenant_id: tenant, type: r.type, title: r.title.trim(), content: r.content || null, url: r.url || null, active: r.active !== false, sort_order: r.sort_order, updated_at: new Date().toISOString() };
-        if (r.id) await supabase.from('hr_items').update(payload).eq('id', r.id);
+        if (r.id) await supabase.from('hr_items').update(payload).eq('id', r.id).eq('tenant_id', tenant);
         else await supabase.from('hr_items').insert(payload);
       }
       setNotice(tr('Éléments RH enregistrés ✓', 'HR items saved ✓')); load();
@@ -7059,7 +7059,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
             reference: inv.invoice_number, journal_code: 'BNK', source_type: 'invoice_payment', source_id: srcId,
             lines: [{ account_id: bankId, debit: baseAmt, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: baseAmt, description: 'Clients' }],
           });
-          if (paymentId) await supabase.from('invoice_payments').update({ gl_entry_id: eId }).eq('id', paymentId);
+          if (paymentId) await supabase.from('invoice_payments').update({ gl_entry_id: eId }).eq('id', paymentId).eq('tenant_id', tenant);
         }
       }
       // 3) Cumul + statut (mise à jour DIRECTE). « Payée » seulement au solde complet.
@@ -7097,7 +7097,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
       if (cQst > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: cQst, description: 'TVQ à payer' });
       const curNote = fx !== 1 ? ` (${(inv as any).currency} @ ${fx})` : '';
       const entryId = await createEntry(tenant, { entry_date: inv.issue_date, description: `Vente — facture ${inv.invoice_number}${curNote}`, reference: inv.invoice_number, journal_code: 'VEN', source_type: 'invoice', source_id: inv.id, lines });
-      await supabase.from('commerce_invoices').update({ gl_entry_id: entryId, status: inv.status === 'draft' ? 'sent' : inv.status }).eq('id', inv.id);
+      await supabase.from('commerce_invoices').update({ gl_entry_id: entryId, status: inv.status === 'draft' ? 'sent' : inv.status }).eq('id', inv.id).eq('tenant_id', tenant);
       setNotice(tr('Vente comptabilisée au grand livre.', 'Sale posted to ledger.')); await load();
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }

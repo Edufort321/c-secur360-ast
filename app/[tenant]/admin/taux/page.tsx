@@ -85,7 +85,7 @@ export default function TauxPage() {
           rate_regular: Number(row.rate_regular) || 0, rate_overtime: Number(row.rate_overtime) || 0,
           rate_premium: Number(row.rate_premium) || 0,
         };
-        if (row.id) await supabase.from('labor_rates').update(data).eq('id', row.id);
+        if (row.id) await supabase.from('labor_rates').update(data).eq('id', row.id).eq('tenant_id', tenant);
         else await supabase.from('labor_rates').insert(data);
       }
       flash(tr('Taux enregistrés ✓', 'Rates saved ✓')); await loadAll();
@@ -93,7 +93,7 @@ export default function TauxPage() {
   }
   async function delRate(idx: number) {
     const row = rates[idx];
-    if (row.id) await supabase.from('labor_rates').delete().eq('id', row.id);
+    if (row.id) await supabase.from('labor_rates').delete().eq('id', row.id).eq('tenant_id', tenant);
     setRates(rates.filter((_, i) => i !== idx));
   }
 
@@ -103,7 +103,7 @@ export default function TauxPage() {
       for (const row of settings) {
         if (!row.category?.trim() || !row.key?.trim()) continue;
         const data = { tenant_id: tenant, category: row.category, key: row.key, value: Number(row.value) || 0 };
-        if (row.id) await supabase.from('rate_settings').update(data).eq('id', row.id);
+        if (row.id) await supabase.from('rate_settings').update(data).eq('id', row.id).eq('tenant_id', tenant);
         else await supabase.from('rate_settings').insert(data);
       }
       flash(tr('Tarifs enregistrés ✓', 'Settings saved ✓')); await loadAll();
@@ -111,7 +111,7 @@ export default function TauxPage() {
   }
   async function delSetting(idx: number) {
     const row = settings[idx];
-    if (row.id) await supabase.from('rate_settings').delete().eq('id', row.id);
+    if (row.id) await supabase.from('rate_settings').delete().eq('id', row.id).eq('tenant_id', tenant);
     setSettings(settings.filter((_, i) => i !== idx));
   }
 
@@ -121,7 +121,7 @@ export default function TauxPage() {
       for (const row of items) {
         if (!row.name?.trim()) continue;
         const data = { tenant_id: tenant, sku: row.sku || null, name: row.name, cost_price: Number(row.cost_price) || 0, sale_price: Number(row.sale_price) || 0 };
-        if (row.id) await supabase.from('inv_items').update(data).eq('id', row.id);
+        if (row.id) await supabase.from('inv_items').update(data).eq('id', row.id).eq('tenant_id', tenant);
         else await supabase.from('inv_items').insert(data);
       }
       flash(tr('Catalogue enregistré ✓', 'Catalog saved ✓')); await loadAll();
@@ -129,7 +129,7 @@ export default function TauxPage() {
   }
   async function delItem(idx: number) {
     const row = items[idx];
-    if (row.id) await supabase.from('inv_items').delete().eq('id', row.id);
+    if (row.id) await supabase.from('inv_items').delete().eq('id', row.id).eq('tenant_id', tenant);
     setItems(items.filter((_, i) => i !== idx));
   }
 
@@ -157,7 +157,7 @@ export default function TauxPage() {
           surcharge_pct: Number(row.surcharge_pct) || 0,
           applies_to: row.applies_to || 'km',
         };
-        if (row.id) await supabase.from('surcharge_fuel_tiers').update(data).eq('id', row.id);
+        if (row.id) await supabase.from('surcharge_fuel_tiers').update(data).eq('id', row.id).eq('tenant_id', tenant);
         else await supabase.from('surcharge_fuel_tiers').insert(data);
       }
       // Sauvegarder le prix courant
@@ -165,7 +165,7 @@ export default function TauxPage() {
       const { data: existing } = await supabase.from('rate_settings')
         .select('id').eq('tenant_id', tenant).eq('category', 'surcharge_fuel').eq('key', 'prix_litre').maybeSingle();
       if (existing?.id) {
-        await supabase.from('rate_settings').update({ value: price }).eq('id', existing.id);
+        await supabase.from('rate_settings').update({ value: price }).eq('id', existing.id).eq('tenant_id', tenant);
       } else {
         await supabase.from('rate_settings').insert({ tenant_id: tenant, category: 'surcharge_fuel', key: 'prix_litre', value: price });
       }
@@ -177,7 +177,7 @@ export default function TauxPage() {
 
   async function delTier(idx: number) {
     const row = tiers[idx];
-    if (row.id) await supabase.from('surcharge_fuel_tiers').delete().eq('id', row.id);
+    if (row.id) await supabase.from('surcharge_fuel_tiers').delete().eq('id', row.id).eq('tenant_id', tenant);
     setTiers(tiers.filter((_, i) => i !== idx));
   }
 
@@ -236,7 +236,7 @@ export default function TauxPage() {
           color: row.color || 'blue',
         };
         if (row.id) {
-          await supabase.from('approval_levels').update(data).eq('id', row.id);
+          await supabase.from('approval_levels').update(data).eq('id', row.id).eq('tenant_id', tenant);
         } else {
           await supabase.from('approval_levels').insert(data);
         }
@@ -250,7 +250,7 @@ export default function TauxPage() {
 
   async function delApproval(idx: number) {
     const row = approvals[idx];
-    if (row.id) await supabase.from('approval_levels').delete().eq('id', row.id);
+    if (row.id) await supabase.from('approval_levels').delete().eq('id', row.id).eq('tenant_id', tenant);
     setApprovals(approvals.filter((_, i) => i !== idx));
   }
 
