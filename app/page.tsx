@@ -499,8 +499,8 @@ export default function LandingPage() {
       <div className="bg-[#0D1F3C] border-y border-white/8 py-6">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
-            { val: '13', label: fr ? 'Modules inclus' : 'Modules included' },
-            { val: '14 j', label: fr ? 'Essai gratuit' : 'Free trial' },
+            { val: '17', label: fr ? 'Modules inclus' : 'Modules included' },
+            { val: '4 h', label: fr ? 'Démo gratuite' : 'Free demo' },
             { val: '100%', label: fr ? 'Conforme CNESST' : 'CNESST compliant' },
             { val: '24/7', label: fr ? 'Support inclus' : 'Support included' },
           ].map((s, i) => (
@@ -552,7 +552,7 @@ export default function LandingPage() {
             {fr ? 'Plateforme tout-en-un' : 'All-in-one platform'}
           </p>
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
-            {fr ? '13 modules. Une seule plateforme.' : '13 modules. One single platform.'}
+            {fr ? '17 modules. Une seule plateforme.' : '17 modules. One single platform.'}
           </h2>
           <p className="text-slate-400 max-w-xl mx-auto text-base">
             {fr
@@ -791,7 +791,7 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-2 flex-1 mb-6">
                   {[
-                    fr ? `${dbModules.length || 13} modules${freeLabel ? ` (${freeLabel} gratuits)` : ''}` : `${dbModules.length || 13} modules${freeLabel ? ` (${freeLabel} free)` : ''}`,
+                    fr ? `${dbModules.length || 17} modules${freeLabel ? ` (${freeLabel} gratuits)` : ''}` : `${dbModules.length || 17} modules${freeLabel ? ` (${freeLabel} free)` : ''}`,
                     perSitePrice != null
                       ? (fr ? `1 site inclus · +${perSitePrice}$/an par site additionnel` : `1 site included · +$${perSitePrice}/year per additional site`)
                       : (fr ? '1 site inclus · multi-sites sur demande' : '1 site included · multi-site on request'),
@@ -978,7 +978,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-orange-500/15 border border-orange-500/30 rounded-full px-4 py-1.5 mb-6">
             <Shield size={13} className="text-orange-400" />
-            <span className="text-orange-300 text-xs font-semibold">{fr ? '14 jours gratuits — aucune carte requise' : '14-day free trial — no card required'}</span>
+            <span className="text-orange-300 text-xs font-semibold">{fr ? 'Démo gratuite de 4 h — aucune carte requise' : 'Free 4-hour demo — no card required'}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
             {fr ? 'Pret a securiser vos chantiers ?' : 'Ready to secure your jobsites?'}
