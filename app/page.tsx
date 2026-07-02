@@ -52,21 +52,21 @@ interface ModuleSlide {
 // ─── Données statiques ────────────────────────────────────────────────────────
 
 const MODULES_FR = [
-  { icon: Users,          key: 'admin',       name: 'Administration',         desc: 'Gestion des utilisateurs, roles, permissions et configuration du compte.' },
-  { icon: HardHat,        key: 'projets',     name: 'Projets',                desc: 'Suivi des chantiers, clients, contrats et avancements en temps reel.' },
-  { icon: Calendar,       key: 'planner',     name: 'Planificateur',          desc: 'Calendrier interactif, affectation du personnel et ressources par journee.' },
-  { icon: Shield,         key: 'ast',         name: 'AST / Securite',         desc: 'Analyses de securite de taches, signatures electroniques, conformite CNESST.' },
-  { icon: ShieldCheck,    key: 'hse',         name: 'Registres & KPI (SST)',  desc: 'Registres reglementaires (normes canadiennes), echeances CNESST, KPI LTIFR/TRIR et taux de gravite, incidents + actions correctives (CAPA), journal d\'audit immuable.' },
-  { icon: FileCheck,      key: 'permits',     name: 'Permis de travail',      desc: 'Permis d\'espaces confines, travaux en hauteur, hot work et excavation.' },
-  { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents et incidents',  desc: 'Tous les incidents : accidents, passes proches, vehicules, materiels et maladies — enquete, actions correctives et suivi reglementaire.' },
-  { icon: Package,        key: 'inventaire',  name: 'Inventaire',             desc: 'Gestion du stock, equipements de protection individuelle et consommables.' },
-  { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Listes de verification, inspections periodiques et rapports d\'etat.' },
-  { icon: Wrench,         key: 'maintenance', name: 'Maintenance d\'equipement', desc: 'Entretien preventif, bons de travail, echeances et historique par equipement — avec alertes de bris par code QR.' },
-  { icon: Activity,       key: 'dga',         name: 'Diagnostic DGA',         desc: 'Analyse des gaz dissous des transformateurs : interpretation experte (IEEE/IEC/Duval), tendances, suivi et rapports.' },
+  { icon: Users,          key: 'admin',       name: 'Administration',         desc: 'Gestion des utilisateurs, rôles, permissions et configuration du compte.' },
+  { icon: HardHat,        key: 'projets',     name: 'Projets',                desc: 'Suivi des chantiers, clients, contrats et avancements en temps réel.' },
+  { icon: Calendar,       key: 'planner',     name: 'Planificateur',          desc: 'Calendrier interactif, affectation du personnel et ressources par journée.' },
+  { icon: Shield,         key: 'ast',         name: 'AST / Sécurité',         desc: 'Analyses de sécurité de tâches, signatures électroniques, conformité CNESST.' },
+  { icon: ShieldCheck,    key: 'hse',         name: 'Registres & KPI (SST)',  desc: 'Registres réglementaires (normes canadiennes), échéances CNESST, KPI LTIFR/TRIR et taux de gravité, incidents + actions correctives (CAPA), journal d\'audit immuable.' },
+  { icon: FileCheck,      key: 'permits',     name: 'Permis de travail',      desc: 'Permis d\'espaces confinés, travaux en hauteur, hot work et excavation.' },
+  { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents et incidents',  desc: 'Tous les incidents : accidents, passés proches, véhicules, matériels et maladies — enquête, actions correctives et suivi réglementaire.' },
+  { icon: Package,        key: 'inventaire',  name: 'Inventaire',             desc: 'Gestion du stock, équipements de protection individuelle et consommables.' },
+  { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Listes de vérification, inspections périodiques et rapports d\'état.' },
+  { icon: Wrench,         key: 'maintenance', name: 'Maintenance d\'equipement', desc: 'Entretien préventif, bons de travail, échéances et historique par équipement — avec alertes de bris par code QR.' },
+  { icon: Activity,       key: 'dga',         name: 'Diagnostic DGA',         desc: 'Analyse des gaz dissous des transformateurs : interprétation experte (IEEE/IEC/Duval), tendances, suivi et rapports.' },
   { icon: Clock,          key: 'temps',       name: 'Feuilles de temps',      desc: 'Saisie des heures, approbation superviseur et export comptable.' },
-  { icon: Plane,          key: 'conges',      name: 'Conges',                 desc: 'Demandes de conge en libre-service, approbation, calendrier d\'equipe et soldes — relie a la paie.' },
-  { icon: Truck,          key: 'logbook',     name: 'Logbook vehicules',      desc: 'Carnet de bord numerique, kilometrage, incidents et entretien de flotte.' },
-  { icon: CheckSquare,    key: 'todo',        name: 'To-Do / Taches',         desc: 'Gestion des taches, priorites, assignations et rappels automatiques.' },
+  { icon: Plane,          key: 'conges',      name: 'Congés',                 desc: 'Demandes de congé en libre-service, approbation, calendrier d\'équipe et soldes — relié à la paie.' },
+  { icon: Truck,          key: 'logbook',     name: 'Logbook véhicules',      desc: 'Carnet de bord numérique, kilométrage, incidents et entretien de flotte.' },
+  { icon: CheckSquare,    key: 'todo',        name: 'To-Do / Taches',         desc: 'Gestion des tâches, priorités, assignations et rappels automatiques.' },
   { icon: FileText,       key: 'rapports',    name: 'Rapports terrain',       desc: 'Constructeur de rapports techniques : gabarits, extraction IA de PDF/manuscrit, annotations, photos et export.' },
   { icon: Megaphone,      key: 'marketing',   name: 'Marketing IA',           desc: 'Studio marketing IA : scripts, vidéos (avatar ou vidéo réelle + slides), posts et courriels conformes — basés sur VOTRE profil d\'entreprise.' },
 ]
@@ -174,9 +174,9 @@ const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }
 };
 
 const HERO_FALLBACK_FR = [
-  { title: 'Securite d\'abord.', subtitle: 'Conformite CNESST assuree.', gradient: 'from-[#0B1728] via-[#0D2040] to-[#0B1728]' },
+  { title: 'Sécurité d\'abord.', subtitle: 'Conformité CNESST assurée.', gradient: 'from-[#0B1728] via-[#0D2040] to-[#0B1728]' },
   { title: 'ASTs, permis et inspections.', subtitle: 'Tout en un — partout sur le chantier.', gradient: 'from-[#0D1F3C] via-[#1a2744] to-[#0D1F3C]' },
-  { title: 'Zero papier. 100 % numerique.', subtitle: 'Votre equipe connectee en temps reel.', gradient: 'from-[#0B1728] via-[#102038] to-[#0B1728]' },
+  { title: 'Zéro papier. 100 % numérique.', subtitle: 'Votre équipe connectée en temps réel.', gradient: 'from-[#0B1728] via-[#102038] to-[#0B1728]' },
 ]
 
 const HERO_FALLBACK_EN = [
@@ -399,7 +399,7 @@ export default function LandingPage() {
               {orgError && <p className="text-red-400 text-xs px-1">{orgError}</p>}
               <Link href="/auth/admin" onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-slate-300 transition border border-white/8">
-                <Lock size={14} /> {fr ? 'Acces Admin' : 'Admin Access'}
+                <Lock size={14} /> {fr ? 'Accès Admin' : 'Admin Access'}
               </Link>
               <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
                 className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-sm text-white font-semibold transition" />
@@ -446,7 +446,7 @@ export default function LandingPage() {
             {dbSlides ? (
               <>
                 <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight mb-3">
-                  {(fr ? dbSlides[slideIdx]?.title_fr : dbSlides[slideIdx]?.title_en) || (fr ? 'Plateforme de gestion securitaire' : 'Safety management platform')}
+                  {(fr ? dbSlides[slideIdx]?.title_fr : dbSlides[slideIdx]?.title_en) || (fr ? 'Plateforme de gestion sécuritaire' : 'Safety management platform')}
                 </h1>
                 <p className="text-lg text-slate-300 mb-8">
                   {(fr ? dbSlides[slideIdx]?.subtitle_fr : dbSlides[slideIdx]?.subtitle_en) || ''}
@@ -468,7 +468,7 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-orange-500/25" />
               <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                 className="inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white/8 px-7 py-3.5 rounded-xl font-semibold text-base transition">
-                <Mail size={16} /> {fr ? 'Ecrire a l\'equipe' : 'Contact the team'}
+                <Mail size={16} /> {fr ? 'Écrire à l\'équipe' : 'Contact the team'}
               </a>
             </div>
           </div>
@@ -515,10 +515,10 @@ export default function LandingPage() {
         <div className="max-w-md mx-auto bg-[#0D1F3C] border border-white/10 rounded-2xl p-6">
           <h3 className="font-bold text-white text-base mb-1 flex items-center gap-2">
             <Globe size={16} className="text-orange-400" />
-            {fr ? 'Acces portail client' : 'Client portal access'}
+            {fr ? 'Accès portail client' : 'Client portal access'}
           </h3>
           <p className="text-slate-400 text-xs mb-4">
-            {fr ? 'Entrez le nom de votre organisation pour acceder a votre portail.' : 'Enter your organization name to access your portal.'}
+            {fr ? 'Entrez le nom de votre organisation pour accéder à votre portail.' : 'Enter your organization name to access your portal.'}
           </p>
           <form onSubmit={e => { e.preventDefault(); goToOrg() }}
             className="flex gap-2">
@@ -532,7 +532,7 @@ export default function LandingPage() {
             <button type="submit" disabled={orgBusy}
               className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
               <ArrowRight size={15} />
-              {orgBusy ? '…' : (fr ? 'Acceder' : 'Go')}
+              {orgBusy ? '…' : (fr ? 'Accéder' : 'Go')}
             </button>
           </form>
           {orgError
@@ -554,7 +554,7 @@ export default function LandingPage() {
           </h2>
           <p className="text-slate-400 max-w-xl mx-auto text-base">
             {fr
-              ? 'Chaque module est concu pour le terrain. Acces mobile, signatures electroniques et synchronisation en temps reel.'
+              ? 'Chaque module est conçu pour le terrain. Accès mobile, signatures électroniques et synchronisation en temps réel.'
               : 'Every module is built for the field. Mobile access, electronic signatures and real-time sync.'}
           </p>
           <p className="mt-3 inline-block rounded-full bg-orange-500/10 border border-orange-500/30 px-4 py-1.5 text-sm font-semibold text-orange-300">
@@ -644,15 +644,15 @@ export default function LandingPage() {
               {fr ? 'Architecture entreprise' : 'Enterprise architecture'}
             </p>
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
-              {fr ? 'Concu pour les grandes organisations' : 'Built for large organizations'}
+              {fr ? 'Conçu pour les grandes organisations' : 'Built for large organizations'}
             </h2>
             <div className="space-y-4">
               {[
                 { icon: Building2, title: fr ? 'Multi-sites & multi-clients' : 'Multi-site & multi-client', desc: fr
-                    ? `Chaque client a son portail prive avec URL dediee. 1 site inclus${perSitePrice != null ? `, site additionnel +${perSitePrice}$/an` : ''}.`
+                    ? `Chaque client a son portail privé avec URL dédiée. 1 site inclus${perSitePrice != null ? `, site additionnel +${perSitePrice}$/an` : ''}.`
                     : `Each client has a private portal with dedicated URL. 1 site included${perSitePrice != null ? `, additional site +$${perSitePrice}/year` : ''}.` },
                 { icon: Smartphone, title: fr ? 'Application mobile PWA' : 'PWA mobile app', desc: fr ? 'Installez sur iOS et Android. Fonctionne hors-ligne sur le chantier.' : 'Install on iOS and Android. Works offline on the jobsite.' },
-                { icon: BarChart3, title: fr ? 'Tableaux de bord en temps reel' : 'Real-time dashboards', desc: fr ? 'KPIs de securite, tendances d\'incidents et rapports de conformite automatiques.' : 'Safety KPIs, incident trends and automatic compliance reports.' },
+                { icon: BarChart3, title: fr ? 'Tableaux de bord en temps réel' : 'Real-time dashboards', desc: fr ? 'KPIs de sécurité, tendances d\'incidents et rapports de conformité automatiques.' : 'Safety KPIs, incident trends and automatic compliance reports.' },
                 { icon: Globe, title: fr ? 'Conforme partout au Canada' : 'Compliant across Canada', desc: fr ? 'Toutes les provinces: QC, ON, BC, AB et plus. CNESST, MOL, WorkSafeBC.' : 'All provinces: QC, ON, BC, AB and more. CNESST, MOL, WorkSafeBC.' },
               ].map((f, i) => (
                 <div key={i} className="flex gap-4 items-start">
@@ -671,14 +671,14 @@ export default function LandingPage() {
           <div className="bg-[#0B1728] rounded-2xl border border-white/8 p-8">
             <div className="space-y-3">
               {[
-                fr ? 'Signature electronique conforme' : 'Compliant electronic signature',
-                fr ? 'Codes QR personnalises par chantier' : 'Custom QR codes per jobsite',
+                fr ? 'Signature électronique conforme' : 'Compliant electronic signature',
+                fr ? 'Codes QR personnalisés par chantier' : 'Custom QR codes per jobsite',
                 fr ? 'Export PDF et Excel automatique' : 'Automatic PDF and Excel export',
                 fr ? 'Notifications SMS et courriel' : 'SMS and email notifications',
                 fr ? 'Import IA (PDF, reçus, données de labo)' : 'AI import (PDF, receipts, lab data)',
                 fr ? 'Isolation stricte par client (multi-tenant)' : 'Strict per-client isolation (multi-tenant)',
                 fr ? 'Conformité Loi 25 / vie privée' : 'Law 25 / privacy compliance',
-                fr ? 'Mises a jour automatiques incluses' : 'Automatic updates included',
+                fr ? 'Mises à jour automatiques incluses' : 'Automatic updates included',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" />
@@ -721,7 +721,7 @@ export default function LandingPage() {
               <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
                 {fr ? 'Prix transparents, sans surprise.' : 'Transparent pricing, no surprises.'}
               </h2>
-              <p className="text-slate-400 text-sm mb-6">{fr ? 'Tarification annuelle · prix definis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
+              <p className="text-slate-400 text-sm mb-6">{fr ? 'Tarification annuelle · prix définis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
 
               {/* Badge rabais + modules gratuits */}
               <div className="flex flex-wrap gap-3 justify-center">
@@ -746,7 +746,7 @@ export default function LandingPage() {
                   <p className="text-3xl font-black text-white">
                     {starterAnnual}$<span className="text-base font-normal text-slate-400">/an</span>
                   </p>
-                  <p className="text-slate-400 text-xs mt-1">{fr ? '5 modules · rabais cumule inclus' : '5 modules · cumulative discount included'}</p>
+                  <p className="text-slate-400 text-xs mt-1">{fr ? '5 modules · rabais cumulé inclus' : '5 modules · cumulative discount included'}</p>
                 </div>
                 <div className="space-y-2 flex-1 mb-6">
                   {[
@@ -793,7 +793,7 @@ export default function LandingPage() {
                       : (fr ? '1 site inclus · multi-sites sur demande' : '1 site included · multi-site on request'),
                     fr ? 'Application mobile PWA' : 'Mobile PWA app',
                     fr ? 'Support courriel prioritaire' : 'Priority email support',
-                    fr ? 'Analytics avances' : 'Advanced analytics',
+                    fr ? 'Analytics avancés' : 'Advanced analytics',
                   ].map((f, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
                       <CheckCircle size={13} className={j === 0 ? 'text-orange-400 flex-shrink-0' : 'text-emerald-400 flex-shrink-0'} />{f}
@@ -844,7 +844,7 @@ export default function LandingPage() {
               {/* Entreprise */}
               <div className="bg-[#111c30] border border-white/8 rounded-2xl p-6 flex flex-col">
                 <h3 className="font-black text-white text-lg mb-1">{fr ? 'Entreprise' : 'Enterprise'}</h3>
-                <p className="text-slate-400 text-xs mb-4">{fr ? 'Volumes · ERP · SLA dedie' : 'Volume · ERP · Dedicated SLA'}</p>
+                <p className="text-slate-400 text-xs mb-4">{fr ? 'Volumes · ERP · SLA dédié' : 'Volume · ERP · Dedicated SLA'}</p>
                 <div className="my-2 mb-5">
                   <p className="text-3xl font-black text-white">{fr ? 'Sur mesure' : 'Custom'}</p>
                   <p className="text-slate-400 text-sm mt-1">{fr ? 'Contactez-nous' : 'Contact us'}</p>
@@ -852,8 +852,8 @@ export default function LandingPage() {
                 <div className="space-y-2 flex-1 mb-6">
                   {[
                     fr ? 'Modules sur mesure' : 'Custom modules',
-                    fr ? 'Sites illimites' : 'Unlimited sites',
-                    fr ? 'Integrations ERP' : 'ERP integrations',
+                    fr ? 'Sites illimités' : 'Unlimited sites',
+                    fr ? 'Intégrations ERP' : 'ERP integrations',
                     fr ? 'SLA garanti' : 'Guaranteed SLA',
                     fr ? 'Formation incluse' : 'Training included',
                   ].map((f, j) => (
@@ -873,7 +873,7 @@ export default function LandingPage() {
             {hasPrices && (
               <div className="mt-12 max-w-3xl mx-auto">
                 <p className="text-center text-slate-400 text-xs uppercase tracking-widest mb-4">
-                  {fr ? 'Detail par module · prix annuel brut (avant rabais)' : 'Per-module detail · annual list price (before discount)'}
+                  {fr ? 'Détail par module · prix annuel brut (avant rabais)' : 'Per-module detail · annual list price (before discount)'}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {freeModules.map(m => (
@@ -941,10 +941,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
-              {fr ? 'Temoignages' : 'Testimonials'}
+              {fr ? 'Témoignages' : 'Testimonials'}
             </p>
             <h2 className="text-3xl sm:text-4xl font-black text-white">
-              {fr ? 'Des equipes qui nous font confiance.' : 'Teams that trust us.'}
+              {fr ? 'Des équipes qui nous font confiance.' : 'Teams that trust us.'}
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -975,7 +975,7 @@ export default function LandingPage() {
             <span className="text-orange-300 text-xs font-semibold">{fr ? 'Démo gratuite de 4 h — aucune carte requise' : 'Free 4-hour demo — no card required'}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
-            {fr ? 'Pret a securiser vos chantiers ?' : 'Ready to secure your jobsites?'}
+            {fr ? 'Prêt à sécuriser vos chantiers ?' : 'Ready to secure your jobsites?'}
           </h2>
           <p className="text-slate-400 text-lg mb-8">
             {fr
@@ -987,7 +987,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-orange-500/30" />
             <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
               className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/8 text-white px-8 py-4 rounded-xl font-bold text-lg transition">
-              <Mail size={18} /> {fr ? 'Nous ecrire' : 'Contact us'}
+              <Mail size={18} /> {fr ? 'Nous écrire' : 'Contact us'}
             </a>
           </div>
         </div>
@@ -1003,7 +1003,7 @@ export default function LandingPage() {
           <div className="flex flex-col items-center gap-2">
             <p className="text-slate-500 text-xs text-center">
               {fr
-                ? `© ${new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360. Plateforme SaaS de securite industrielle. Tous droits reserves.`
+                ? `© ${new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360. Plateforme SaaS de sécurité industrielle. Tous droits réservés.`
                 : `© ${new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360. Industrial safety SaaS platform. All rights reserved.`}
             </p>
             <div className="flex items-center gap-4 text-xs">
