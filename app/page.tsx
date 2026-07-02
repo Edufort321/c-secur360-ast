@@ -211,6 +211,7 @@ export default function LandingPage() {
   const [dbSlides, setDbSlides] = useState<Slide[] | null>(null)
   const [dbTestimonials, setDbTestimonials] = useState<any[]>([])
   const [dbModules, setDbModules] = useState<DbModule[]>([])
+  const [modulesLoaded, setModulesLoaded] = useState(false)
   const [moduleSlides, setModuleSlides] = useState<Record<string, ModuleSlide[]>>({})
   const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
   const [aiPlans, setAiPlans] = useState<{ id: string; name_fr: string; name_en: string; price_cents: number; note_fr: string | null; note_en: string | null }[]>([])
@@ -300,6 +301,7 @@ export default function LandingPage() {
         if (data && data.length > 0) {
           setDbModules(data.map((m: any) => ({ ...m, monthly_price: Number(m.monthly_price || 0) })))
         }
+        setModulesLoaded(true)
       })
   }, [])
 
@@ -705,6 +707,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Normes & conformité (preuve sociale réelle, pas de faux logos clients) ── */}
+      <section className="border-y border-white/8 bg-[#0B1728] py-14 px-4">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+            {fr ? 'Normes & conformité' : 'Standards & compliance'}
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
+            {fr ? 'Bâti sur les normes que vous devez respecter' : 'Built on the standards you must meet'}
+          </h2>
+          <p className="text-slate-400 text-sm mb-6 max-w-2xl mx-auto">
+            {fr
+              ? 'Nos modules encodent des cadres réglementaires et techniques reconnus — pas des cases à cocher génériques.'
+              : 'Our modules encode recognized regulatory and technical frameworks — not generic checkboxes.'}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {['CNESST', 'CSA', 'IEEE C57.104', 'IEC 60599', 'NFPA 10', 'ISO 45001', 'Loi 25 / RGPD', 'ARC / Revenu Québec'].map((n) => (
+              <span key={n} className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-slate-200">
+                <ShieldCheck size={13} className="text-emerald-400" />{n}
+              </span>
+            ))}
+          </div>
+          <p className="mt-6 inline-flex items-center gap-2 text-xs text-slate-400">
+            <Globe size={13} className="text-orange-400" />
+            {fr
+              ? 'Conçu, développé et opéré au Canada · Propulsé par Commerce CERDIA inc.'
+              : 'Designed, developed and operated in Canada · Powered by Commerce CERDIA inc.'}
+          </p>
+        </div>
+      </section>
+
       {/* ── Pricing ─────────────────────────────────────────────────────────── */}
       {(() => {
         // monthly_price dans la DB = prix ANNUEL par module (nom de colonne trompeur)
@@ -736,7 +768,14 @@ export default function LandingPage() {
               <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
                 {fr ? 'Prix transparents, sans surprise.' : 'Transparent pricing, no surprises.'}
               </h2>
-              <p className="text-slate-400 text-sm mb-6">{fr ? 'Tarification annuelle · prix définis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
+              <p className="text-slate-400 text-sm mb-2">{fr ? 'Tarification annuelle · prix définis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
+              <p className="text-xs mb-6" aria-live="polite">
+                {!modulesLoaded
+                  ? <span className="text-slate-500">{fr ? '⏳ Chargement des tarifs en direct…' : '⏳ Loading live pricing…'}</span>
+                  : hasPrices
+                    ? <span className="text-emerald-400/80">{fr ? '● Tarifs en direct depuis l\'administration' : '● Live pricing from administration'}</span>
+                    : <span className="text-slate-500">{fr ? 'Tarifs indicatifs — contactez-nous pour un devis exact.' : 'Indicative pricing — contact us for an exact quote.'}</span>}
+              </p>
 
               {/* Badge rabais + modules gratuits */}
               <div className="flex flex-wrap gap-3 justify-center">
