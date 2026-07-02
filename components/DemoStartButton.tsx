@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Bouton "Démarrer maintenant" : capture Nom + courriel, démarre une session démo limitée
 // (notif propriétaire par SMS côté serveur), puis donne accès au bac à sable /demo.
@@ -10,6 +10,29 @@ export function DemoStartButton({ fr = true, className = '', label }: { fr?: boo
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; status: string; message: string } | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Accessibilité : quand la modale est ouverte — focus le 1er champ, piège le focus (Tab),
+  // ferme avec Échap, et restaure le focus au déclencheur à la fermeture.
+  useEffect(() => {
+    if (!open) return;
+    const prev = (typeof document !== 'undefined' ? document.activeElement : null) as HTMLElement | null;
+    const focusables = () => Array.from(
+      contentRef.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])') || []
+    );
+    focusables()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setOpen(false); return; }
+      if (e.key !== 'Tab') return;
+      const f = focusables();
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); prev?.focus?.(); };
+  }, [open]);
 
   // Lien de partage : ouverture automatique du formulaire si l'URL contient ?demo=1 ou #demo.
   useEffect(() => {
@@ -56,7 +79,9 @@ export function DemoStartButton({ fr = true, className = '', label }: { fr?: boo
 
       {open && (
         <div onClick={() => setOpen(false)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
-          <div onClick={e => e.stopPropagation()} className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0D1F3C] p-6 text-white">
+          <div ref={contentRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true"
+            aria-label={fr ? 'Démarrer la démo gratuite' : 'Start the free demo'}
+            className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0D1F3C] p-6 text-white">
             <button onClick={() => setOpen(false)} aria-label="Fermer" className="absolute right-3 top-3 text-2xl text-slate-400 hover:text-white">×</button>
 
             {!result?.ok ? (

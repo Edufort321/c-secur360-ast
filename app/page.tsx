@@ -257,6 +257,14 @@ export default function LandingPage() {
     if (m) setSelectedModule(m)
   }, [])
 
+  // Accessibilité : fermer la modale « détail module » avec la touche Échap.
+  useEffect(() => {
+    if (!selectedModule) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedModule(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedModule])
+
   // No auto-redirect: users can view the public page even when logged in
 
   // Load slides from DB
@@ -369,12 +377,15 @@ export default function LandingPage() {
             <div className="flex bg-white/8 rounded-lg p-0.5">
               {(['fr', 'en'] as const).map(l => (
                 <button key={l} onClick={() => setLang(l)}
+                  aria-pressed={lang === l} aria-label={l === 'fr' ? 'Français' : 'English'}
                   className={`px-3 py-1 rounded-md text-xs font-semibold transition ${lang === l ? 'bg-orange-500 text-white' : 'text-slate-300 hover:text-white'}`}>
                   {l.toUpperCase()}
                 </button>
               ))}
             </div>
             <button onClick={() => setMenuOpen(!menuOpen)}
+              aria-expanded={menuOpen} aria-controls="public-menu"
+              aria-label={menuOpen ? (fr ? 'Fermer le menu' : 'Close menu') : (fr ? 'Ouvrir le menu' : 'Open menu')}
               className="p-2 bg-white/8 rounded-lg hover:bg-white/12 transition border border-white/10">
               {menuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -382,7 +393,7 @@ export default function LandingPage() {
         </div>
 
         {menuOpen && (
-          <div className="bg-[#111c30] border-t border-white/8">
+          <div id="public-menu" className="bg-[#111c30] border-t border-white/8">
             <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2">
               <form onSubmit={e => { e.preventDefault(); goToOrg() }}
                 className="flex gap-2">
@@ -477,11 +488,11 @@ export default function LandingPage() {
         </div>
 
         {/* Carousel arrows */}
-        <button onClick={goPrev}
+        <button onClick={goPrev} aria-label={fr ? 'Diapositive précédente' : 'Previous slide'}
           className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2.5 bg-black/30 hover:bg-black/50 rounded-full border border-white/10 text-white transition">
           <ChevronLeft size={20} />
         </button>
-        <button onClick={goNext}
+        <button onClick={goNext} aria-label={fr ? 'Diapositive suivante' : 'Next slide'}
           className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2.5 bg-black/30 hover:bg-black/50 rounded-full border border-white/10 text-white transition">
           <ChevronRight size={20} />
         </button>
@@ -490,6 +501,8 @@ export default function LandingPage() {
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
           {Array.from({ length: slideCount }).map((_, i) => (
             <button key={i} onClick={() => { setSlideIdx(i); startInterval() }}
+              aria-label={fr ? `Aller à la diapositive ${i + 1}` : `Go to slide ${i + 1}`}
+              aria-current={i === slideIdx}
               className={`rounded-full transition-all ${i === slideIdx ? 'w-6 h-2 bg-orange-500' : 'w-2 h-2 bg-white/30 hover:bg-white/50'}`} />
           ))}
         </div>
@@ -1043,7 +1056,8 @@ export default function LandingPage() {
         const dbMod = dbModules.find(x => x.key === selectedModule)
         return (
           <div onClick={() => setSelectedModule(null)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
-            <div onClick={e => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0D1F3C] p-6">
+            <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={mod.name}
+              className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0D1F3C] p-6">
               <button onClick={() => setSelectedModule(null)} aria-label="Fermer" className="absolute right-3 top-3 text-2xl text-slate-400 hover:text-white">×</button>
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/15">
