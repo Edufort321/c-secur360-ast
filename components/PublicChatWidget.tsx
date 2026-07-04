@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-// Widget du chatbot PUBLIC (marketing). Bouton flottant + panneau. Anonyme.
+// Widget du chatbot PUBLIC (marketing). Bouton flottant + panneau. Anonyme. Bilingue (prop fr).
 // Ouverture auto une fois par session. CTA démo + contact. Disclaimer. Appelle /api/assistant/public-chat.
 const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'info@cerdia.ai';
-const SUGGESTIONS = ["Qu'est-ce que C-Secur360 ?", 'Quels modules sont offerts ?', 'Comment voir une démo ?'];
+const SUGGESTIONS_FR = ["Qu'est-ce que C-Secur360 ?", 'Quels modules sont offerts ?', 'Comment voir une démo ?'];
+const SUGGESTIONS_EN = ['What is C-Secur360?', 'Which modules are offered?', 'How do I see a demo?'];
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
-export function PublicChatWidget() {
+export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
+  const tr = (f: string, e: string) => (fr ? f : e);
+  const SUGGESTIONS = fr ? SUGGESTIONS_FR : SUGGESTIONS_EN;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -44,9 +47,9 @@ export function PublicChatWidget() {
         body: JSON.stringify({ messages: next }),
       });
       const data = await res.json().catch(() => ({}));
-      setMessages(m => [...m, { role: 'assistant', content: data?.reply || `Écrivez-nous à ${CONTACT}.` }]);
+      setMessages(m => [...m, { role: 'assistant', content: data?.reply || tr(`Écrivez-nous à ${CONTACT}.`, `Write to us at ${CONTACT}.`) }]);
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: `Écrivez-nous à ${CONTACT}.` }]);
+      setMessages(m => [...m, { role: 'assistant', content: tr(`Écrivez-nous à ${CONTACT}.`, `Write to us at ${CONTACT}.`) }]);
     }
     setLoading(false);
   }
@@ -75,7 +78,7 @@ export function PublicChatWidget() {
           <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
             {messages.length === 0 && (
               <div className="space-y-2">
-                <p className="text-gray-600">Bonjour ! Je peux vous présenter C-Secur360 et organiser une démo. 👋</p>
+                <p className="text-gray-600">{tr('Bonjour ! Je peux vous présenter C-Secur360 et organiser une démo. 👋', 'Hi! I can introduce C-Secur360 and set up a demo. 👋')}</p>
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-orange-400">
                     {s}
@@ -90,26 +93,26 @@ export function PublicChatWidget() {
                 </div>
               </div>
             ))}
-            {loading && <div className="text-xs text-gray-400">L'assistant écrit…</div>}
+            {loading && <div className="text-xs text-gray-400">{tr('L\'assistant écrit…', 'The assistant is typing…')}</div>}
             <div ref={endRef} />
           </div>
 
           {/* CTA permanents */}
           <div className="flex gap-2 border-t border-gray-100 px-3 py-2">
-            <a href="/?demo=1" onClick={() => setOpen(false)} className="flex-1 rounded-lg bg-orange-500 px-2 py-1.5 text-center text-xs font-semibold text-white hover:bg-orange-600">Voir la démo</a>
-            <a href={`mailto:${CONTACT}`} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-xs font-semibold text-gray-700 hover:bg-gray-50">Nous écrire</a>
+            <a href="/?demo=1" onClick={() => setOpen(false)} className="flex-1 rounded-lg bg-orange-500 px-2 py-1.5 text-center text-xs font-semibold text-white hover:bg-orange-600">{tr('Voir la démo', 'See the demo')}</a>
+            <a href={`mailto:${CONTACT}`} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-xs font-semibold text-gray-700 hover:bg-gray-50">{tr('Nous écrire', 'Contact us')}</a>
           </div>
 
           <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex items-center gap-2 border-t border-gray-100 p-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Votre question…"
+              placeholder={tr('Votre question…', 'Your question…')}
               className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <button type="submit" disabled={loading || !input.trim()} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">➤</button>
           </form>
-          <p className="px-3 pb-2 text-[10px] leading-tight text-gray-400">Assistant informatif — peut faire des erreurs. Pour une réponse officielle, contactez-nous.</p>
+          <p className="px-3 pb-2 text-[10px] leading-tight text-gray-400">{tr('Assistant informatif — peut faire des erreurs. Pour une réponse officielle, contactez-nous.', 'Informational assistant — may make mistakes. For an official answer, contact us.')}</p>
         </div>
       )}
     </>

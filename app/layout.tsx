@@ -8,8 +8,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  userScalable: false,
-  themeColor: '#10b981',
+  // Zoom autorisé (accessibilité WCAG 1.4.4) ; couleur de thème unifiée avec le manifest (#111827).
+  maximumScale: 5,
+  themeColor: '#111827',
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.c-secur360.ca';
@@ -78,7 +79,6 @@ export default function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon-pwa?size=180&v=2" />
-        <meta name="theme-color" content="#111827" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

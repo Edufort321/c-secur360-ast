@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { supabase } from '@/lib/supabase'
 import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -268,82 +267,26 @@ export default function LandingPage() {
 
   // No auto-redirect: users can view the public page even when logged in
 
-  // Load slides from DB
+  // Chargement des données publiques en UNE seule requête (route /api/public/landing, mise en cache) —
+  // remplace 6 allers-retours Supabase depuis le navigateur. Replis statiques si l'appel échoue.
   useEffect(() => {
-    supabase
-      .from('landing_slides')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data && data.length > 0) setDbSlides(data)
-      })
-  }, [])
-
-  // Load testimonials from DB (real ones only; section hidden when empty)
-  useEffect(() => {
-    supabase
-      .from('landing_testimonials')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order')
-      .then(({ data }) => { if (data) setDbTestimonials(data) }, () => {})
-  }, [])
-
-  // Load module prices from DB
-  useEffect(() => {
-    supabase
-      .from('modules')
-      .select('key, name_fr, name_en, monthly_price, sort_order')
-      .eq('is_active', true)
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setDbModules(data.map((m: any) => ({ ...m, monthly_price: Number(m.monthly_price || 0) })))
-        }
-        setModulesLoaded(true)
-      })
-  }, [])
-
-  // Load per-site price from billing_config
-  useEffect(() => {
-    supabase
-      .from('billing_config')
-      .select('per_site_monthly')
-      .eq('id', 'default')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.per_site_monthly != null) setPerSitePrice(Number(data.per_site_monthly))
-      })
-  }, [])
-
-  // Load forfaits Assistant IA (jetons) — cartes de prix publiques (table ai_plans, migration 132)
-  useEffect(() => {
-    supabase
-      .from('ai_plans')
-      .select('id, name_fr, name_en, price_cents, note_fr, note_en, sort_order, active')
-      .eq('active', true)
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data && data.length > 0) setAiPlans(data.map((p: any) => ({ ...p, price_cents: Number(p.price_cents || 0) })))
-      })
-  }, [])
-
-  // Load module screenshots
-  useEffect(() => {
-    supabase
-      .from('module_slides')
-      .select('module_key, image_url, sort_order')
-      .order('sort_order')
-      .then(({ data }) => {
-        if (!data) return
+    fetch('/api/public/landing')
+      .then(r => r.json())
+      .then((d) => {
+        if (Array.isArray(d.slides) && d.slides.length > 0) setDbSlides(d.slides)
+        if (Array.isArray(d.testimonials)) setDbTestimonials(d.testimonials)
+        if (Array.isArray(d.modules) && d.modules.length > 0) setDbModules(d.modules)
+        if (d.perSitePrice != null) setPerSitePrice(Number(d.perSitePrice))
+        if (Array.isArray(d.aiPlans) && d.aiPlans.length > 0) setAiPlans(d.aiPlans)
         const grouped: Record<string, ModuleSlide[]> = {}
-        for (const row of data) {
+        for (const row of (d.moduleSlides || [])) {
           if (!grouped[row.module_key]) grouped[row.module_key] = []
           grouped[row.module_key].push(row)
         }
         setModuleSlides(grouped)
       })
+      .catch(() => { /* replis statiques */ })
+      .finally(() => setModulesLoaded(true))
   }, [])
 
   // Carousel auto-advance
@@ -406,8 +349,8 @@ export default function LandingPage() {
                   placeholder={fr ? 'Nom de votre organisation' : 'Your organization name'}
                   className="flex-1 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
                 />
-                <button type="submit" disabled={orgBusy}
-                  className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-sm font-bold transition">
+                <button type="submit" disabled={orgBusy} aria-label={fr ? 'Accéder au portail' : 'Access portal'}
+                  className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 rounded-lg text-sm font-bold transition flex items-center justify-center min-h-[44px] min-w-[44px]">
                   <ArrowRight size={15} />
                 </button>
               </form>
@@ -618,7 +561,7 @@ export default function LandingPage() {
                   {slides.length > 0 && (
                     <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
                       {slides.slice(0, 3).map((s, i) => (
-                        <img key={i} src={s.image_url} alt=""
+                        <img key={i} src={s.image_url} alt={`${mod.name} — aperçu`} loading="lazy" width={96} height={64}
                           className="h-16 w-24 object-cover rounded-lg flex-shrink-0 border border-white/10" />
                       ))}
                     </div>
@@ -1121,7 +1064,7 @@ export default function LandingPage() {
               {slides.length > 0 && (
                 <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
                   {slides.slice(0, 3).map((s, i) => (
-                    <img key={i} src={s.image_url} alt="" className="h-24 w-36 flex-shrink-0 rounded-lg border border-white/10 object-cover" />
+                    <img key={i} src={s.image_url} alt={`${mod.name} — aperçu`} loading="lazy" width={144} height={96} className="h-24 w-36 flex-shrink-0 rounded-lg border border-white/10 object-cover" />
                   ))}
                 </div>
               )}
@@ -1147,7 +1090,7 @@ export default function LandingPage() {
         )
       })()}
 
-      <PublicChatWidget />
+      <PublicChatWidget fr={fr} />
     </div>
   )
 }
