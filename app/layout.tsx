@@ -18,7 +18,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.c-secur360.ca'
 // Description enrichie (17 modules réels, cible industrielle/SST au Canada) — réutilisée partout (meta, OG, Twitter, JSON-LD).
 const SITE_DESCRIPTION = 'Plateforme SST tout-en-un pour les entreprises industrielles au Canada : AST, permis, registres & KPI (HSE), inspections, maintenance, diagnostic DGA, planificateur, feuilles de temps, rapports terrain et plus — 17 modules, conformité CNESST et provinciale.';
 const SITE_TITLE = 'C-Secur360 — Plateforme SST tout-en-un';
-const OG_IMAGE = '/c-secur360-logo.png';
+// Image OG/Twitter : générée en 1200×630 par app/opengraph-image.tsx + app/twitter-image.tsx (convention Next).
 
 // Données structurées (SEO) : logiciel SaaS + éditeur. Aucun prix codé en dur (tarifs dynamiques en base).
 const JSON_LD = {
@@ -52,13 +52,11 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     locale: 'fr_CA',
-    images: [{ url: OG_IMAGE, alt: 'C-Secur360 — plateforme SST tout-en-un' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [OG_IMAGE],
   },
 }
 
