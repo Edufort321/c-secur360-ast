@@ -786,17 +786,8 @@ export default function ManagerDashboard({
                 gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 priority: true
               },
-              { 
-                href: `/${tenant.subdomain}/sites`, 
-                icon: MapPin, 
-                title: t.multiSites, 
-                desc: t.multiSitesDesc, 
-                color: '#f59e0b',
-                gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/ast/nouveau`, 
+              {
+                href: `/${tenant.subdomain}/ast/nouveau`,
                 icon: FileText, 
                 title: t.newAST, 
                 desc: t.newASTDesc, 

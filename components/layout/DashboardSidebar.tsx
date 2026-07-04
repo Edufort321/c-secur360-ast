@@ -67,13 +67,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
       description: { fr: 'Inventaire et maintenance', en: 'Inventory and maintenance' }
     },
     {
-      id: 'sites',
-      label: { fr: 'Multi-Sites', en: 'Multi-Sites' },
-      href: `/${tenant}/sites`,
-      icon: MapPin,
-      description: { fr: 'Gestion de plusieurs emplacements', en: 'Multiple locations management' }
-    },
-    {
       id: 'ast',
       label: { fr: 'AST', en: 'JSA' },
       href: `/${tenant}/ast`,
