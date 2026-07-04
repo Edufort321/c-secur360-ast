@@ -103,7 +103,7 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
           key: `inc_${r.id}`, module: isNear ? 'Passé-proche' : 'Incident', icon: 'incident',
           title: isNear ? 'Déclaration passé-proche' : `Incident (${t})`,
           detail: (r.data?.description || r.description || '').slice(0, 80),
-          severity: isNear ? 'orange' : 'red', href: `/${tenant}/near-miss`,
+          severity: isNear ? 'orange' : 'red', href: `/${tenant}/accidents`,
           names: [declarant, r.data?.declarant, r.data?.reporter_name].filter(Boolean), date: r.incident_date || r.created_at,
         });
       };

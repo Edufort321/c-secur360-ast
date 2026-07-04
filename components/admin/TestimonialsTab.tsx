@@ -4,7 +4,7 @@
 // les VRAIS témoignages ici ; tant que la liste est vide, la section « Témoignages » du site est masquée.
 import React, { useEffect, useState } from 'react';
 import { Loader2, Plus, Trash2, Save, Star, MessageSquareQuote } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+// Écritures via route serveur protégée (requireAdmin + service_role) — plus d'accès anon à landing_testimonials.
 
 type Testimonial = { id?: string; name: string; title_fr?: string; title_en?: string; company?: string; text_fr?: string; text_en?: string; rating?: number; sort_order?: number; active?: boolean };
 
@@ -16,9 +16,12 @@ export default function TestimonialsTab() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase.from('landing_testimonials').select('*').order('sort_order').order('created_at');
-    if (error) setNotice('Erreur (migration 192 appliquée ?) : ' + error.message);
-    setRows((data as Testimonial[]) || []);
+    try {
+      const res = await fetch('/api/admin/testimonials');
+      const data = await res.json();
+      if (!res.ok) setNotice('Erreur : ' + (data?.error || res.status));
+      else setRows(Array.isArray(data) ? (data as Testimonial[]) : []);
+    } catch (e: any) { setNotice('Erreur réseau : ' + (e?.message || '')); }
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -30,8 +33,11 @@ export default function TestimonialsTab() {
     setSaving(true); setNotice(null);
     const row: any = { name: t.name.trim(), title_fr: t.title_fr || null, title_en: t.title_en || t.title_fr || null, company: t.company || null, text_fr: t.text_fr || null, text_en: t.text_en || t.text_fr || null, rating: Number(t.rating) || 5, sort_order: Number(t.sort_order) || 0, active: t.active !== false, updated_at: new Date().toISOString() };
     try {
-      if (t.id) await supabase.from('landing_testimonials').update(row).eq('id', t.id);
-      else await supabase.from('landing_testimonials').insert(row);
+      const res = t.id
+        ? await fetch('/api/admin/testimonials', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: t.id, ...row }) })
+        : await fetch('/api/admin/testimonials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setNotice('Erreur : ' + (data?.error || res.status)); return; }
       setNotice('Enregistré ✓'); await load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
     finally { setSaving(false); }
@@ -39,7 +45,8 @@ export default function TestimonialsTab() {
   async function del(t: Testimonial, i: number) {
     if (!t.id) { setRows(p => p.filter((_, j) => j !== i)); return; }
     if (!window.confirm('Supprimer ce témoignage ?')) return;
-    await supabase.from('landing_testimonials').delete().eq('id', t.id);
+    const res = await fetch(`/api/admin/testimonials?id=${t.id}`, { method: 'DELETE' });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setNotice('Erreur : ' + (d?.error || res.status)); return; }
     await load();
   }
 
