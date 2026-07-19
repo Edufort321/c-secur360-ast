@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LogIn, Mail, Lock, Loader2, ShieldCheck } from 'lucide-react';
+import { LogIn, Mail, Lock, Loader2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,10 +65,19 @@ export default function AdminLoginPage() {
             <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30">
               <Lock size={16} className="text-gray-400" />
               <input
-                type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                type={showPassword ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" autoComplete="current-password"
                 className="w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                className="text-gray-400 transition hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </label>
 
