@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Loader2, Trash2, Copy, Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/currentUser';
 import {
   getCatalogues, saveCatalogue, deleteCatalogue, setPreferredCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
   reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, deleteSoumission,
@@ -198,9 +199,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     const norm = (v: string) => String(v || '').trim().toLowerCase();
     let siteName = '', deptName = '', gotSel = false;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data: p } = await supabase.from('planner_personnel').select('id, succursale, current_grid_id').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+      const u = await getCurrentUser();
+      if (u?.email) {
+        const { data: p } = await supabase.from('planner_personnel').select('id, succursale, current_grid_id').eq('tenant_id', tenant).ilike('email', u.email).maybeSingle();
         if (p?.id) { setSellerId(p.id); setMeId(p.id); }
         // Resout le SITE et le DEPARTEMENT du poste de l'utilisateur dans l'arbre Administration.
         const mine = siteList.find((x: any) => norm(x.name) === norm(p?.succursale || '')) // correspondance exacte

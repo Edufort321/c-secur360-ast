@@ -7,6 +7,7 @@ import {
   Save, Truck, AlertCircle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/currentUser';
 import { PortalHeader } from '@/components/PortalHeader';
 
 /* ------------------------------------------------------------------ types */
@@ -107,8 +108,8 @@ function LogbookInner() {
         if (user) { uid = user.id; uname = user.name || user.email || 'Employé'; }
       } catch {}
       if (uid === 'local') {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) { uid = user.id; uname = user.user_metadata?.name || user.email || 'Employé'; }
+        const u = await getCurrentUser();
+        if (u) { uid = u.id; uname = u.name || u.email || 'Employé'; }
       }
       setEmployeeId(uid);
       setEmployeeName(uname);

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import type { PointerEvent as ReactPointerEvent, CSSProperties } from 'react';
-import { supabase } from '@/lib/supabase';
 import { scopeForModule } from '@/lib/norms/registry';
 
 // Assistant TENANT (dashboard). Ne s'affiche que pour un utilisateur connecté.
@@ -46,20 +45,14 @@ export function AssistantWidget() {
 
   useEffect(() => {
     let active = true;
-    // L'utilisateur peut être connecté via Supabase Auth OU via la session maison
-    // (cookie httpOnly auth_token, illisible en JS) -> on vérifie /api/auth/me en repli.
+    // Session maison (cookie httpOnly auth_token, illisible en JS) -> on vérifie /api/auth/me.
     (async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session) { if (active) setAuthed(true); return; }
-      } catch { /* ignore */ }
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
         if (active) setAuthed(res.ok);
       } catch { if (active) setAuthed(false); }
     })();
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { if (session) setAuthed(true); });
-    return () => { active = false; sub?.subscription?.unsubscribe?.(); };
+    return () => { active = false; };
   }, []);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
@@ -151,14 +144,14 @@ export function AssistantWidget() {
     const next = [...messages, { role: 'user' as const, content }];
     setMessages(next); setInput(''); setLoading(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
+      // Auth via cookie httpOnly (session maison), envoye automatiquement par le fetch same-origin.
       // Tenant = 1er segment d'URL (routes [tenant]). Exclut les routes systeme -> aucune contamination.
       const seg = (pathname || '').split('/').filter(Boolean)[0] || '';
       const tenant = ['admin', 'api', 'login', 'scan', 'pricing', 'privacy', 'terms'].includes(seg) ? '' : seg;
       const res = await fetch('/api/assistant/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next, tenant }),
       });
       const json = await res.json().catch(() => ({}));

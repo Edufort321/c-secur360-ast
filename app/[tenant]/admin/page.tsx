@@ -7,6 +7,7 @@ import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, 
 import { listRecurringTasks, saveRecurringTask, deleteRecurringTask, type RecurringTask } from '@/lib/recurringTasks';
 import { getCatalogueConditions, DEFAULT_EMPLOYEE_FACTOR, type CatalogueCondition, type GridCondition } from '@/lib/catalogueConditions';
 import { supabase } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/currentUser';
 import dynamic from 'next/dynamic';
 import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
 import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor, Users } from 'lucide-react';
@@ -3286,8 +3287,8 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
       setLoading(true);
       // Évaluateur courant + historique des évaluations
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setEvaluatedBy(user?.email || '');
+        const u = await getCurrentUser();
+        setEvaluatedBy(u?.email || '');
       } catch { /* indispo */ }
       try { const { data: ep } = await supabase.from('employee_profiles').select('hourly_rate').eq('tenant_id', tenant).eq('employee_id', employee.id).maybeSingle(); if (ep?.hourly_rate != null) setDirectHourly(String(ep.hourly_rate)); } catch { /* profil paie absent */ }
       const { data: hist, error: histErr } = await supabase.from('employee_evaluations').select('*').eq('personnel_id', employee.id).order('evaluation_date', { ascending: false });

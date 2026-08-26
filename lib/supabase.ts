@@ -3,7 +3,51 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// =====================================================
+// Jeton tenant (RLS). Le client navigateur attache un JWT court signe par le serveur
+// (/api/auth/supabase-token) portant tenant_id + app_role. C'est ce JWT que le RLS Supabase
+// lit via auth.jwt() ->> 'tenant_id' pour enforcer l'isolation. Sans jeton (public/deconnecte),
+// accessToken() renvoie null et supabase-js retombe sur la cle anon (aucun claim -> aucune ligne
+// sur les tables a policy tenant). Le jeton est mis en cache en memoire et rafraichi avant expiration.
+// NB : avec l'option accessToken, le namespace supabase.auth n'est plus utilisable (l'auth applicatif
+// passe par /api/auth/*), voir lib/currentUser.ts.
+// =====================================================
+let cachedToken: string | null = null;
+let cachedExp = 0; // epoch (secondes)
+let inflight: Promise<string | null> | null = null;
+
+async function fetchTenantToken(): Promise<string | null> {
+  try {
+    const r = await fetch('/api/auth/supabase-token', { credentials: 'include' });
+    if (!r.ok) { cachedToken = null; cachedExp = 0; return null; }
+    const { token, exp } = await r.json();
+    cachedToken = token ?? null;
+    cachedExp = typeof exp === 'number' ? exp : 0;
+    return cachedToken;
+  } catch {
+    cachedToken = null; cachedExp = 0; return null;
+  }
+}
+
+async function getAccessToken(): Promise<string | null> {
+  // Cote serveur (SSR / route handlers) : pas de session navigateur -> anon.
+  if (typeof window === 'undefined') return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedToken && now < cachedExp - 60) return cachedToken; // marge de 60 s avant expiration
+  if (!inflight) inflight = fetchTenantToken().finally(() => { inflight = null; });
+  return inflight;
+}
+
+/** Force le rechargement du jeton tenant (a appeler apres login/logout). */
+export function resetSupabaseToken(): void {
+  cachedToken = null;
+  cachedExp = 0;
+  inflight = null;
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  accessToken: getAccessToken,
+})
 
 // =================== TYPES ET INTERFACES ===================
 export interface Database {

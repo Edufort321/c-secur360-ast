@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader2, Trash2, Plus, Send, PackageCheck, Download, FileText, ScanLine, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/currentUser';
 import { siteInitials, getActiveCatalogue, type CatalogueTaux } from '@/lib/soumissions';
 import { PROVINCES } from '@/lib/invoicing';
 import { exportBonCommandePdf } from '@/lib/pdf/bonCommandePdf';
@@ -64,9 +65,9 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
     try { const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle(); setTenantLogo(t?.logo_url || null); } catch { /* logo défaut */ }
     try { const { data: sup } = await supabase.from('suppliers').select('name, contact_name, province').eq('tenant_id', tenant).order('name'); setSuppliers((sup as any[]) || []); } catch { /* répertoire fournisseurs absent */ }
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data: p } = await supabase.from('planner_personnel').select('succursale').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+      const u = await getCurrentUser();
+      if (u?.email) {
+        const { data: p } = await supabase.from('planner_personnel').select('succursale').eq('tenant_id', tenant).ilike('email', u.email).maybeSingle();
         setSitePrefix(siteInitials(p?.succursale || tenant));
       } else setSitePrefix(siteInitials(tenant));
     } catch { setSitePrefix(siteInitials(tenant)); }
