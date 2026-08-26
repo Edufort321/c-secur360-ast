@@ -4,7 +4,6 @@
 // (route publique, lecture anon de inventory_state via RLS permissive). Présentation pro + logo tenant.
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { Package, MapPin, DollarSign, Boxes, AlertTriangle, ShieldCheck, Loader2, Plus, Minus, LogIn, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
 
 type Item = any;
@@ -64,37 +63,32 @@ export default function PublicScanPage() {
 
   const reloadItem = async () => {
     try {
-      const { data } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
-      const list: Item[] = (data?.data?.items) || [];
-      const found = list.find(i => String(i.id) === id || i.code === id);
-      if (found) setItem(found);
+      const r = await fetch(`/api/scan/inventory/${encodeURIComponent(tenant)}/${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j?.item) setItem(j.item);
     } catch { /* ignore */ }
   };
 
   useEffect(() => {
     (async () => {
-      // Logo + nom du tenant (best-effort).
+      // Lecture via route serveur (service_role) : inventory_state/company_settings/projects
+      // restent verrouillées par le RLS ; on ne reçoit que l'article scanné + le branding.
+      let scan: any = null;
       try {
-        const { data: cs } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle();
-        if (cs?.logo_url) setLogo(cs.logo_url);
-        if (cs?.legal_name) setTenantName(cs.legal_name);
+        const r = await fetch(`/api/scan/inventory/${encodeURIComponent(tenant)}/${encodeURIComponent(id)}`);
+        if (r.ok) scan = await r.json();
       } catch { /* défaut */ }
+      if (scan?.logo) setLogo(scan.logo);
+      if (scan?.tenantName) setTenantName(scan.tenantName);
+      if (Array.isArray(scan?.projects)) setProjects(scan.projects);
+      if (Array.isArray(scan?.reasonCodes)) setReasonCodes(scan.reasonCodes);
       // Session app (best-effort) : si connecte, on affichera les boutons +/-.
       try {
         const r = await fetch('/api/auth/me', { credentials: 'include' });
         if (r.ok) { const j = await r.json(); if (j?.user) setAuthUser({ name: j.user.name, email: j.user.email }); }
       } catch { /* anon */ } finally { setAuthChecked(true); }
-      // Projets (raison) — best-effort.
-      try { const { data: pr } = await supabase.from('projects').select('project_number, title, submission_number').eq('tenant_id', tenant).order('project_number', { ascending: false }); if (Array.isArray(pr)) setProjects(pr.filter((p: any) => p.project_number)); } catch { /* ignore */ }
-      // Article + codes internes depuis l'instantané inventaire.
-      try {
-        const { data } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
-        const snap: any = data?.data || {};
-        if (Array.isArray(snap.reasonCodes)) setReasonCodes(snap.reasonCodes);
-        const list: Item[] = snap.items || [];
-        const found = list.find((i: any) => String(i.id) === id || i.code === id);
-        if (found) { setItem(found); setState('ok'); return; }
-      } catch { /* ignore */ }
+      if (scan?.found && scan.item) { setItem(scan.item); setState('ok'); return; }
       setState('notfound');
     })();
   }, [tenant, id]);

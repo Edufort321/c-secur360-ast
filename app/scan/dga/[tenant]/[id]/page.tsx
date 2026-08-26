@@ -5,11 +5,10 @@
 // EN PREMIER. Le bouton « Ouvrir dans l'app » mène au module (édition réservée aux utilisateurs connectés).
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { AlertTriangle, Loader2, ShieldCheck, Pencil, Droplet } from 'lucide-react';
 import { IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl, ieeeCondition, worstCondition, COND_LABELS, COND_COLORS, pcbStatus, latestPcb, effectiveNextDate } from '@/lib/dga/fields';
 import { dueStatusByDate } from '@/lib/dga/catalog';
-import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
+import { siteLabel, type SiteNode } from '@/lib/sites';
 import type { Dossier, Measure } from '@/lib/dga/dossiers';
 
 export default function PublicDgaPage() {
@@ -26,20 +25,17 @@ export default function PublicDgaPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: cs } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle();
-        if (cs?.logo_url) setLogo(cs.logo_url);
-        let name = cs?.legal_name || '';
-        if (!name) { try { const { data: t } = await supabase.from('tenants').select('name').eq('subdomain', tenant).maybeSingle(); name = t?.name || ''; } catch { /* ignore */ } }
-        if (name) setTenantName(name);
-      } catch { /* défaut */ }
-      try { setSites(await getSitesTree(tenant)); } catch { /* défaut */ }
-      try {
-        // Défense-en-profondeur : scoper au tenant du QR (RLS permissive), même si l'id est un UUID.
-        const { data: d } = await supabase.from('dga_dossiers').select('*').eq('tenant_id', tenant).eq('id', id).maybeSingle();
-        if (!d) { setState('notfound'); return; }
-        setDossier(d as Dossier);
-        const { data: ms } = await supabase.from('dga_measures').select('*').eq('tenant_id', tenant).eq('dossier_id', id).order('sample_date', { ascending: true });
-        setMeasures((ms as Measure[]) || []);
+        // Lecture via route serveur (service_role) : les tables dga_*/company_settings/tenants
+        // restent verrouillées par le RLS ; on ne reçoit que le payload public du QR.
+        const r = await fetch(`/api/scan/dga/${encodeURIComponent(tenant)}/${encodeURIComponent(id)}`);
+        if (!r.ok) { setState('notfound'); return; }
+        const j = await r.json();
+        if (!j?.found || !j.dossier) { setState('notfound'); return; }
+        if (j.logo) setLogo(j.logo);
+        if (j.tenantName) setTenantName(j.tenantName);
+        setSites((j.sites as SiteNode[]) || []);
+        setDossier(j.dossier as Dossier);
+        setMeasures((j.measures as Measure[]) || []);
         setState('ok');
       } catch { setState('notfound'); }
     })();
