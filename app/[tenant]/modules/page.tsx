@@ -18,6 +18,7 @@ import { getTenantPermissions, canViewModule, type PermMap } from '@/lib/permiss
 import { supabase } from '@/lib/supabase';
 import { effectiveNextDate, worstCondition } from '@/lib/dga/fields';
 import { dueStatusByDate } from '@/lib/dga/catalog';
+import { ModuleIcon } from '@/components/ModuleIcon';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
   cerdia: ['admin', 'projects', 'ast', 'hse', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'maintenance', 'timesheets', 'logbook', 'todo', 'dga', 'conges', 'rapports'],
@@ -387,7 +388,7 @@ export default function ModulesPage() {
                 const open = enabled && m.status === 'available';
                 const inner = (
                   <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div className={`grid h-8 w-8 place-items-center rounded-lg text-white ${enabled ? 'bg-gray-900 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}><Icon size={16} /></div>
+                    <ModuleIcon moduleKey={m.key} icon={Icon} size={32} muted={!enabled} />
                     <span className="flex-1 truncate font-medium">{lang === 'fr' ? m.labelFr : m.labelEn}</span>
                     {open && <span className="h-2 w-2 rounded-full bg-emerald-500" />}
                     {soon && <Clock size={14} className="text-amber-500" />}
@@ -464,7 +465,7 @@ export default function ModulesPage() {
                         {c.key === 'hse' && <input type="checkbox" checked={!!pins[c.key]} title={tr('Épingler le tableau Sécurité en haut', 'Pin the Safety board on top')}
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
                           className="cursor-pointer accent-emerald-600" />}
-                        <div className="grid h-8 w-8 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
+                        <ModuleIcon moduleKey={c.key === 'events' ? 'accidents' : c.key} icon={Icon} size={34} />
                       </div>
                     </div>
                     <div className="text-2xl font-bold leading-tight">{c.big}</div>
@@ -501,7 +502,7 @@ export default function ModulesPage() {
                           onClick={e => e.stopPropagation()} onChange={e => { e.stopPropagation(); togglePin(c.key); }}
                           className="cursor-pointer accent-emerald-600" />
                       : <span className="w-[13px] shrink-0" />}
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gray-900 text-white dark:bg-blue-600"><Icon size={16} /></div>
+                    <ModuleIcon moduleKey={c.key === 'events' ? 'accidents' : c.key} icon={Icon} size={36} />
                     <div className="w-40 shrink-0 font-semibold">{c.title}</div>
                     <div className="w-14 shrink-0 text-2xl font-bold">{c.big}</div>
                     <div className="flex flex-1 flex-wrap items-center gap-1.5">

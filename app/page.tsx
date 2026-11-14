@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { ModuleIcon } from '@/components/ModuleIcon'
 import {
   Shield, ShieldCheck, Users, HardHat, Calendar, FileCheck, AlertTriangle,
   Package, ClipboardCheck, Clock, Truck,
@@ -535,8 +536,8 @@ export default function LandingPage() {
                 className="group relative bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-pointer">
                 {/* Header toujours visible */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/30 group-hover:scale-110 transition-all duration-300">
-                    <mod.icon size={20} className="text-orange-400" />
+                  <div className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
+                    <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={44} />
                   </div>
                   <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-bold text-orange-400 whitespace-nowrap">
                     {dbMod && dbMod.monthly_price > 0 ? `${dbMod.monthly_price}$/an` : (fr ? 'Inclus' : 'Included')}
@@ -1042,9 +1043,7 @@ export default function LandingPage() {
               className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0D1F3C] p-6">
               <button onClick={() => setSelectedModule(null)} aria-label="Fermer" className="absolute right-3 top-3 text-2xl text-slate-400 hover:text-white">×</button>
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/15">
-                  <mod.icon size={24} className="text-orange-400" />
-                </div>
+                <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={52} />
                 <div>
                   <h3 className="text-xl font-black text-white">{mod.name}</h3>
                   {dbMod && dbMod.monthly_price > 0 && <span className="text-xs font-bold text-orange-400">{dbMod.monthly_price}$/an</span>}

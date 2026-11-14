@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { useEntitlements } from '@/lib/entitlements';
 import { InstallPWA } from '@/components/InstallPWA';
 import { NotificationBell } from '@/components/NotificationBell';
+import { ModuleIcon } from '@/components/ModuleIcon';
 
 const QUICK_CREATES = [
   { key: 'project', path: 'projects', labelFr: 'Nouveau projet',  labelEn: 'New project',  icon: FolderKanban, color: 'bg-blue-600' },
@@ -214,7 +215,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                           return (
                             <Link key={m.key} href={href} onClick={close}
                               className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-300 hover:bg-white/10">
-                              <Icon size={16} className="shrink-0 text-gray-400" /> {label}
+                              <ModuleIcon moduleKey={m.key} icon={Icon} size={22} /> {label}
                             </Link>
                           );
                         })}
