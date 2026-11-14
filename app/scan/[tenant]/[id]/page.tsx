@@ -141,7 +141,7 @@ export default function PublicScanPage() {
       } else if (isCount) {
         const d = Number(j.discrepancy || 0);
         setMoveMsg({ kind: 'ok', text: d === 0
-          ? `Inventaire confirmé : ${counted} — aucun écart. ✅`
+          ? `Inventaire confirmé : ${counted} — aucun écart. ✓`
           : `Inventaire ajusté : écart ${d > 0 ? '+' : ''}${d} (système → compté). Nouveau stock : ${j.quantity}. Écart enregistré (balancement).` });
         setReasonProject(''); setReasonInternal('');
         await reloadItem();

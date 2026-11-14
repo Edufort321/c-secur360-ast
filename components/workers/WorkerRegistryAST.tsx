@@ -197,7 +197,7 @@ interface SMSAlert {
 
 const translations = {
   fr: {
-    title: "📋 Registre des Travailleurs - AST",
+    title: "Registre des Travailleurs - AST",
     subtitle: "Enregistrement, signature et suivi temps réel",
     
     // Actions
@@ -277,7 +277,7 @@ const translations = {
   },
   
   en: {
-    title: "📋 Worker Registry - JSA",
+    title: "Worker Registry - JSA",
     subtitle: "Registration, signature and real-time tracking",
     
     // Actions
@@ -681,7 +681,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       
       if (selectedLocation && selectedLocation.maxWorkers > 0) {
         if (selectedLocation.currentWorkers >= selectedLocation.maxWorkers) {
-          alert(`❌ Capacité maximale atteinte pour "${selectedLocation.zone} - ${selectedLocation.name}" (${selectedLocation.currentWorkers}/${selectedLocation.maxWorkers})`);
+          alert(`✕ Capacité maximale atteinte pour "${selectedLocation.zone} - ${selectedLocation.name}" (${selectedLocation.currentWorkers}/${selectedLocation.maxWorkers})`);
           return;
         }
       }
@@ -714,7 +714,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     setShowAddWorker(false);
     
     // Feedback utilisateur amélioré
-    alert(`✅ Travailleur "${newWorker.name}" ajouté avec succès !\n🔒 Cadenas: ${newWorker.lockStatus}\n📍 Emplacement: ${newWorker.workLocation}\n✍️ Consentement AST validé`);
+    alert(`✓ Travailleur "${newWorker.name}" ajouté avec succès !\nCadenas: ${newWorker.lockStatus}\nEmplacement: ${newWorker.workLocation}\nConsentement AST validé`);
   };
   
   const startWork = (workerId: string, location?: string) => {
@@ -776,7 +776,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
         // Vérifier si le travailleur a encore des cadenas actifs
         const hasActiveLocks = worker.assignedLocks.some(lock => lock.isApplied);
         if (hasActiveLocks) {
-          sendSMSAlert('work_completion', `⚠️ ${worker.name} termine ses travaux mais a encore ${worker.assignedLocks.filter(l => l.isApplied).length} cadenas actifs!`);
+          sendSMSAlert('work_completion', `⚠ ${worker.name} termine ses travaux mais a encore ${worker.assignedLocks.filter(l => l.isApplied).length} cadenas actifs!`);
         }
         
         return {
@@ -871,7 +871,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
             const action = isApplying ? 'appliqué' : 'retiré';
             sendSMSAlert(
               isApplying ? 'lock_applied' : 'lock_removed',
-              `🔒 ${worker.name} a ${action} le cadenas ${lock.lockNumber} sur ${lock.equipment}`
+              `${worker.name} a ${action} le cadenas ${lock.lockNumber} sur ${lock.equipment}`
             );
             
             return updatedLock;
@@ -941,7 +941,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     setSmsAlerts(prev => [alert, ...prev]);
     
     // TODO: Appel API Twilio ici quand disponible
-    console.log('📱 SMS Alert:', alert);
+    console.log('SMS Alert:', alert);
     
     try {
       const response = await fetch('/api/sms/send', {
@@ -959,9 +959,9 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
         throw new Error('Erreur envoi SMS');
       }
       
-      console.log('✅ SMS envoyé avec succès');
+      console.log('✓ SMS envoyé avec succès');
     } catch (error) {
-      console.error('❌ Erreur SMS:', error);
+      console.error('✕ Erreur SMS:', error);
     }
   };
   
@@ -1374,7 +1374,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
           <option value="all">Tous les statuts</option>
           <option value="active">Actifs</option>
           <option value="completed">Terminés</option>
-          <option value="withLocks">🔒 Avec cadenas actifs</option>
+          <option value="withLocks">Avec cadenas actifs</option>
         </select>
         
         {/* Mode compact toggle */}
@@ -1394,7 +1394,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
             gap: '6px'
           }}
         >
-          {compactView ? '📋' : '📝'} {compactView ? 'Mode Liste' : 'Mode Compact'}
+          {compactView ? 'Mode Liste' : 'Mode Compact'}
         </button>
         
         {!readOnly && (
@@ -1437,7 +1437,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
           }}
         >
           <Bell size={14} />
-          📱 Alerte SMS
+          Alerte SMS
         </button>
         
         <button
@@ -1487,12 +1487,12 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
               fontWeight: '600',
               color: '#94a3b8'
             }}>
-              <div>👤 Nom & Entreprise</div>
-              {!isMobile && <div>📍 Emplacement</div>}
-              <div>⏱️ Temps</div>
-              <div>📊 Statut</div>
-              {!isMobile && <div>🔒 Cadenas</div>}
-              <div>🎛️ Actions</div>
+              <div>Nom & Entreprise</div>
+              {!isMobile && <div>Emplacement</div>}
+              <div>Temps</div>
+              <div>Statut</div>
+              {!isMobile && <div>Cadenas</div>}
+              <div>Actions</div>
             </div>
             
             {filteredWorkers.map((worker) => (
@@ -1520,7 +1520,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   </div>
                   {worker.phoneNumber && (
                     <div style={{ color: '#64748b', fontSize: '10px' }}>
-                      📞 {worker.phoneNumber}
+                      {worker.phoneNumber}
                     </div>
                   )}
                 </div>
@@ -1602,8 +1602,8 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                           : '#94a3b8',
                       fontWeight: '600'
                     }}>
-                      {worker.lockStatus === 'applied' ? '🔴 Apposé' :
-                       worker.lockStatus === 'removed' ? '🟢 Enlevé' : '⚪ N/A'}
+                      {worker.lockStatus === 'applied' ? 'Apposé' :
+                       worker.lockStatus === 'removed' ? 'Enlevé' : 'N/A'}
                     </div>
                     {worker.assignedLocks.length > 0 && (
                       <div style={{ color: '#64748b', fontSize: '9px' }}>
@@ -1651,7 +1651,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                             fontWeight: '500'
                           }}
                         >
-                          ⏹
+                          <Square size={14} />
                         </button>
                       )}
                     </>
@@ -1724,7 +1724,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   fontSize: '12px',
                   margin: 0
                 }}>
-                  📞 {worker.phoneNumber}
+                  {worker.phoneNumber}
                 </p>
               </div>
               
@@ -1760,7 +1760,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     fontWeight: '600',
                     animation: 'pulse 2s infinite'
                   }}>
-                    ⏱️ EN COURS
+                    EN COURS
                   </div>
                 )}
               </div>
@@ -1843,7 +1843,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   fontSize: '13px', 
                   fontWeight: '600' 
                 }}>
-                  📍 Emplacement
+                  Emplacement
                 </span>
               </div>
               <select
@@ -1882,7 +1882,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     fontSize: '11px', 
                     fontWeight: '600' 
                   }}>
-                    📊 Temps par emplacement ({worker.workSessions.length} sessions)
+                    Temps par emplacement ({worker.workSessions.length} sessions)
                   </span>
                   <div style={{ 
                     maxHeight: '100px', 
@@ -1906,7 +1906,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                           color: '#e2e8f0',
                           fontSize: '10px'
                         }}>
-                          📍 {locationData.location}
+                          {locationData.location}
                         </span>
                         <span style={{ 
                           color: '#60a5fa', 
@@ -1943,12 +1943,12 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                             marginBottom: '2px'
                           }}>
                             <span style={{ color: session.isActive ? '#22c55e' : '#94a3b8' }}>
-                              {session.isActive ? '🟢' : '⚪'} {formatTime(session.startTime)}
+                              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }} /> {formatTime(session.startTime)}
                               {session.endTime && ` → ${formatTime(session.endTime)}`}
                             </span>
                             <br />
                             <span style={{ color: '#64748b', fontSize: '8px' }}>
-                              📍 {session.location}
+                              {session.location}
                             </span>
                           </div>
                         ))}
@@ -1978,7 +1978,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   fontSize: '13px', 
                   fontWeight: '600' 
                 }}>
-                  🔒 Statut Cadenas Personnel
+                  Statut Cadenas Personnel
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -2016,8 +2016,8 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     }}
                     disabled={readOnly}
                   >
-                    {status === 'applied' ? '🔴 Apposé' : 
-                     status === 'removed' ? '🟢 Enlevé' : '⚪ N/A'}
+                    {status === 'applied' ? 'Apposé' : 
+                     status === 'removed' ? 'Enlevé' : 'N/A'}
                   </button>
                 ))}
               </div>
@@ -2098,7 +2098,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                         color: lock.isApplied ? '#fca5a5' : '#fcd34d',
                         fontWeight: lock.isApplied ? '600' : '400'
                       }}>
-                        🔒 {lock.lockNumber} - {lock.equipment}
+                        {lock.lockNumber} - {lock.equipment}
                       </div>
                       <div style={{
                         fontSize: '10px',
@@ -2107,9 +2107,9 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                         gap: '8px'
                       }}>
                         <span>{lock.energyType}</span>
-                        <span>📍 {lock.location}</span>
+                        <span>{lock.location}</span>
                         {lock.appliedTime && (
-                          <span>⏰ {formatTime(lock.appliedTime)}</span>
+                          <span>{formatTime(lock.appliedTime)}</span>
                         )}
                       </div>
                     </div>
@@ -2181,7 +2181,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   fontSize: '13px',
                   fontWeight: '600'
                 }}>
-                  📊 Récapitulatif Journalier
+                  Récapitulatif Journalier
                 </span>
                 <span style={{
                   fontSize: '10px',
@@ -2203,7 +2203,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   padding: '8px',
                   borderRadius: '6px'
                 }}>
-                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>⏱️ Temps de travail:</div>
+                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Temps de travail:</div>
                   <div style={{ color: '#e2e8f0', fontWeight: '600' }}>
                     {formatDuration(worker.totalWorkTime)}
                   </div>
@@ -2219,7 +2219,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   padding: '8px',
                   borderRadius: '6px'
                 }}>
-                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>🔐 Sécurité:</div>
+                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Sécurité:</div>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -2231,8 +2231,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                             worker.lockStatus === 'removed' ? '#86efac' : '#94a3b8',
                       fontWeight: '600'
                     }}>
-                      {worker.lockStatus === 'applied' ? '🔴' :
-                       worker.lockStatus === 'removed' ? '🟢' : '⚪'}
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }} />
                     </span>
                     <span style={{ color: '#e2e8f0', fontSize: '10px' }}>
                       {worker.lockStatus === 'applied' ? 'Apposé' :
@@ -2251,7 +2250,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   padding: '8px',
                   borderRadius: '6px'
                 }}>
-                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>📍 Emplacement:</div>
+                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Emplacement:</div>
                   <div style={{ 
                     color: '#e2e8f0', 
                     fontWeight: '600',
@@ -2266,7 +2265,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   padding: '8px',
                   borderRadius: '6px'
                 }}>
-                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>✅ Statut:</div>
+                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>✓ Statut:</div>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -2276,8 +2275,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                       color: worker.workTimer.isActive ? '#22c55e' :
                             worker.workTimer.endTime ? '#3b82f6' : '#94a3b8'
                     }}>
-                      {worker.workTimer.isActive ? '🟢' :
-                       worker.workTimer.endTime ? '🔵' : '⚪'}
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor' }} />
                     </span>
                     <span style={{
                       color: '#e2e8f0',
@@ -2308,12 +2306,12 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                 borderRadius: '6px',
                 fontSize: '10px'
               }}>
-                <strong style={{ color: '#60a5fa' }}>📋 Pour RH:</strong>
+                <strong style={{ color: '#60a5fa' }}>Pour RH:</strong>
                 <div style={{ color: '#e2e8f0', marginTop: '2px' }}>
                   {worker.name} ({worker.company}) • #{worker.employeeNumber}
-                  {worker.phoneNumber && ` • 📞 ${worker.phoneNumber}`}
+                  {worker.phoneNumber && ` • ${worker.phoneNumber}`}
                   <br />
-                  Consentement: {worker.consentAST ? '✅ Signé' : '❌ En attente'}
+                  Consentement: {worker.consentAST ? '✓ Signé' : '✕ En attente'}
                   {worker.consentSignatureDate && ` le ${formatTime(worker.consentSignatureDate)}`}
                 </div>
               </div>
@@ -2750,9 +2748,9 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                 flexWrap: 'wrap'
               }}>
                 {[
-                  { value: 'applied', label: '🔒 Apposé', color: '#22c55e' },
-                  { value: 'removed', label: '🔓 Enlevé', color: '#f59e0b' },
-                  { value: 'n/a', label: '❌ N/A', color: '#6b7280' }
+                  { value: 'applied', label: 'Apposé', color: '#22c55e' },
+                  { value: 'removed', label: 'Enlevé', color: '#f59e0b' },
+                  { value: 'n/a', label: '✕ N/A', color: '#6b7280' }
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -2861,7 +2859,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     accentColor: '#22c55e'
                   }}
                 />
-                ✍️ Je consens avoir pris connaissance de l'AST
+                Je consens avoir pris connaissance de l'AST
               </label>
               {newWorker.consentAST && newWorker.consentSignatureDate && (
                 <div style={{
@@ -2916,7 +2914,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                         accentColor: '#3b82f6'
                       }}
                     />
-                    🟢 Début des travaux
+                    Début des travaux
                   </label>
                   {newWorker.workStarted && newWorker.workStartTime && (
                     <div style={{
@@ -2974,7 +2972,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                         accentColor: '#ef4444'
                       }}
                     />
-                    🔴 Fin des travaux
+                    Fin des travaux
                   </label>
                   {newWorker.workEnded && newWorker.workEndTime && (
                     <div style={{
@@ -3004,7 +3002,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     fontSize: '16px',
                     fontWeight: '700'
                   }}>
-                    ⏱️ Temps total: {Math.floor(newWorker.totalWorkTime / 60)}h {newWorker.totalWorkTime % 60}min
+                    Temps total: {Math.floor(newWorker.totalWorkTime / 60)}h {newWorker.totalWorkTime % 60}min
                   </div>
                 </div>
               )}
@@ -3080,7 +3078,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
               marginBottom: '20px'
             }}>
               <h3 style={{ color: 'white', margin: 0 }}>
-                📱 Envoi d'alerte SMS
+                Envoi d'alerte SMS
               </h3>
               <button
                 onClick={() => setShowSmsDialog(false)}
@@ -3121,7 +3119,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     fontSize: '12px',
                     color: '#e2e8f0'
                   }}>
-                    📱 {worker.name} - {worker.phoneNumber}
+                    {worker.name} - {worker.phoneNumber}
                   </div>
                 ))}
               </div>
@@ -3177,11 +3175,11 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {[
-                  '🚨 URGENCE: Arrêt immédiat des travaux',
-                  '⚠️ Vérification LOTO requise',
-                  '🔒 Nouveaux cadenas appliqués',
-                  '📋 Réunion sécurité dans 15min',
-                  '🎯 Fin des travaux - Retirer tous cadenas'
+                  'URGENCE: Arrêt immédiat des travaux',
+                  '⚠ Vérification LOTO requise',
+                  'Nouveaux cadenas appliqués',
+                  'Réunion sécurité dans 15min',
+                  'Fin des travaux - Retirer tous cadenas'
                 ].map((message, index) => (
                   <button
                     key={index}
@@ -3230,7 +3228,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   fontWeight: '600'
                 }}
               >
-                📱 Envoyer SMS ({workers.filter(w => w.phoneNumber).length})
+                Envoyer SMS ({workers.filter(w => w.phoneNumber).length})
               </button>
             </div>
             

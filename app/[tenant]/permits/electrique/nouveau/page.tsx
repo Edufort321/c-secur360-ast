@@ -4,7 +4,7 @@ import ModernPermitForm from '@/components/permits/ModernPermitForm';
 // Travail électrique (CSA Z462 / NFPA 70E) — hors tension privilégié, VAT, arc flash. Lié à l'AST.
 export default function Page() {
   return <ModernPermitForm config={{
-    type: 'electrical', title: '⚡ Permis de travail électrique', color: 'text-yellow-600', btn: 'bg-yellow-600 hover:bg-yellow-700', prefix: 'EL',
+    type: 'electrical', title: 'Permis de travail électrique', color: 'text-yellow-600', btn: 'bg-yellow-600 hover:bg-yellow-700', prefix: 'EL',
     intro: 'CSA Z462 / NFPA 70E — privilégier le travail hors tension ; VAT obligatoire ; analyse d’arc flash. (S’appuie sur l’analyse de risques AST.)',
     sections: [{
       title: 'Sécurité électrique', fields: [

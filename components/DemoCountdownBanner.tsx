@@ -27,7 +27,7 @@ export function DemoCountdownBanner() {
   if (remaining <= 0) {
     return (
       <div className="fixed inset-x-0 top-0 z-[80] flex flex-wrap items-center justify-center gap-3 bg-amber-600 px-4 py-2 text-sm font-semibold text-white">
-        <span>⏱️ Démo terminée.</span>
+        <span>Démo terminée.</span>
         <a href="/#pricing" className="rounded-lg bg-white px-3 py-1 text-amber-700 hover:bg-amber-50">Voir les forfaits</a>
         <a href="mailto:info@cerdia.ai?subject=Abonnement C-Secur360" className="rounded-lg border border-white/60 px-3 py-1 hover:bg-amber-700">S'abonner</a>
       </div>
@@ -40,7 +40,7 @@ export function DemoCountdownBanner() {
   const clock = hh > 0 ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
   return (
     <div className="fixed inset-x-0 top-0 z-[80] flex items-center justify-center gap-2 bg-blue-600/95 px-4 py-1.5 text-xs font-semibold text-white">
-      🧪 Mode démo — temps restant : {clock}
+      Mode démo — temps restant : {clock}
       <a href="/#pricing" className="ml-2 underline hover:no-underline">Forfaits</a>
     </div>
   );

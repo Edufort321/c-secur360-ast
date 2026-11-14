@@ -36,7 +36,7 @@ export const workTypeTemplate: WorkType = {
   name: 'Nouveau Type de Travail',
   category: 'Général',
   description: 'Description du type de travail',
-  icon: '🔧',
+  icon: '',
   baseHazards: ['PHY-001'], // Au minimum un danger physique de base
   requiredPermits: ['general'],
   requiredEquipment: ['CAS-001', 'LUN-001'], // Casque et lunettes minimum

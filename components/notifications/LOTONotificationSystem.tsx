@@ -93,7 +93,7 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
       ];
       
       // CRITIQUE: Alerter TOUS les travailleurs présents sur le site
-      console.log(`🔔 LOTO Alert: Notifying ALL ${mockWorkers.length} workers on site for equipment: ${lockoutPoint.equipmentName}`);
+      console.log(`LOTO Alert: Notifying ALL ${mockWorkers.length} workers on site for equipment: ${lockoutPoint.equipmentName}`);
 
       const messageContext = {
         equipmentName: lockoutPoint.equipmentName || 'Équipement',
@@ -109,30 +109,30 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
         switch (modificationType) {
           case 'CHANGE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 MODIFICATION LOTO CRITIQUE\n\n⚠️ ALERTE À TOUS LES TRAVAILLEURS ⚠️\n\nPoint modifié: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n🚨 ACTION IMMÉDIATE REQUISE:\n• Arrêtez votre travail IMMÉDIATEMENT\n• Vérifiez vos cadenas\n• Consultez la nouvelle procédure\n• Répondez OUI pour confirmer réception\n\n⚠️ NE PAS IGNORER - Sécurité priorité absolue`;
+            customMessage = `MODIFICATION LOTO CRITIQUE\n\n⚠ ALERTE À TOUS LES TRAVAILLEURS ⚠\n\nPoint modifié: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\nACTION IMMÉDIATE REQUISE:\n• Arrêtez votre travail IMMÉDIATEMENT\n• Vérifiez vos cadenas\n• Consultez la nouvelle procédure\n• Répondez OUI pour confirmer réception\n\n⚠ NE PAS IGNORER - Sécurité priorité absolue`;
             break;
           case 'DELETE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 POINT LOTO SUPPRIMÉ\n\n⚠️ ALERTE À TOUS LES TRAVAILLEURS ⚠️\n\nÉquipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n🚨 ACTION IMMÉDIATE REQUISE:\n• Arrêtez votre travail IMMÉDIATEMENT\n• RETIREZ vos cadenas de cet équipement\n• Confirmez la réception\n\n⚠️ CRITIQUE - Risque de sécurité si ignoré`;
+            customMessage = `POINT LOTO SUPPRIMÉ\n\n⚠ ALERTE À TOUS LES TRAVAILLEURS ⚠\n\nÉquipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\nACTION IMMÉDIATE REQUISE:\n• Arrêtez votre travail IMMÉDIATEMENT\n• RETIREZ vos cadenas de cet équipement\n• Confirmez la réception\n\n⚠ CRITIQUE - Risque de sécurité si ignoré`;
             break;
           case 'ADD':
             messageType = 'EQUIPMENT_CHANGE';
-            customMessage = `🔒 NOUVEAU POINT LOTO\n\n⚠️ ALERTE À TOUS LES TRAVAILLEURS ⚠️\n\nNouveau équipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n📋 NOUVEAU POINT DE VERROUILLAGE:\n• Consultez la procédure mise à jour\n• Appliquez les mesures de sécurité\n• Répondez OUI pour confirmer réception\n\n🔒 Sécurité renforcée sur le site`;
+            customMessage = `NOUVEAU POINT LOTO\n\n⚠ ALERTE À TOUS LES TRAVAILLEURS ⚠\n\nNouveau équipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\nNOUVEAU POINT DE VERROUILLAGE:\n• Consultez la procédure mise à jour\n• Appliquez les mesures de sécurité\n• Répondez OUI pour confirmer réception\n\nSécurité renforcée sur le site`;
             break;
         }
       } else {
         switch (modificationType) {
           case 'CHANGE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 CRITICAL LOTO MODIFICATION\n\n⚠️ ALERT TO ALL WORKERS ⚠️\n\nModified point: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n🚨 IMMEDIATE ACTION REQUIRED:\n• STOP your work IMMEDIATELY\n• Check your locks\n• Review new procedure\n• Reply YES to confirm receipt\n\n⚠️ DO NOT IGNORE - Safety absolute priority`;
+            customMessage = `CRITICAL LOTO MODIFICATION\n\n⚠ ALERT TO ALL WORKERS ⚠\n\nModified point: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\nIMMEDIATE ACTION REQUIRED:\n• STOP your work IMMEDIATELY\n• Check your locks\n• Review new procedure\n• Reply YES to confirm receipt\n\n⚠ DO NOT IGNORE - Safety absolute priority`;
             break;
           case 'DELETE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 LOTO POINT DELETED\n\n⚠️ ALERT TO ALL WORKERS ⚠️\n\nEquipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n🚨 IMMEDIATE ACTION REQUIRED:\n• STOP your work IMMEDIATELY\n• REMOVE your locks from this equipment\n• Confirm receipt\n\n⚠️ CRITICAL - Safety risk if ignored`;
+            customMessage = `LOTO POINT DELETED\n\n⚠ ALERT TO ALL WORKERS ⚠\n\nEquipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\nIMMEDIATE ACTION REQUIRED:\n• STOP your work IMMEDIATELY\n• REMOVE your locks from this equipment\n• Confirm receipt\n\n⚠ CRITICAL - Safety risk if ignored`;
             break;
           case 'ADD':
             messageType = 'EQUIPMENT_CHANGE';
-            customMessage = `🔒 NEW LOTO POINT\n\n⚠️ ALERT TO ALL WORKERS ⚠️\n\nNew equipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n📋 NEW LOCKOUT POINT:\n• Review updated procedure\n• Apply safety measures\n• Reply YES to confirm receipt\n\n🔒 Enhanced site safety`;
+            customMessage = `NEW LOTO POINT\n\n⚠ ALERT TO ALL WORKERS ⚠\n\nNew equipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\nNEW LOCKOUT POINT:\n• Review updated procedure\n• Apply safety measures\n• Reply YES to confirm receipt\n\nEnhanced site safety`;
             break;
         }
       }
@@ -144,7 +144,7 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
         body: JSON.stringify({
           id: `loto_${Date.now()}`,
           type: messageType,
-          title: `🔒 ${modificationType} LOTO - AST-${messageContext.astNumber}`,
+          title: `${modificationType} LOTO - AST-${messageContext.astNumber}`,
           message: customMessage,
           recipients: mockWorkers,
           priority: 'HIGH',
@@ -154,7 +154,7 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Notification LOTO envoyée:', result);
+        console.log('Notification LOTO envoyée:', result);
 
         setNotificationState(prev => ({
           ...prev,
@@ -176,7 +176,7 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
         throw new Error('Erreur envoi notification');
       }
     } catch (error) {
-      console.error('❌ Erreur notification LOTO:', error);
+      console.error('Erreur notification LOTO:', error);
       setNotificationState(prev => ({ ...prev, isSending: false }));
       alert(text.notificationError);
     }

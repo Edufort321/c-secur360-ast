@@ -4,7 +4,7 @@ import ModernPermitForm from '@/components/permits/ModernPermitForm';
 // Travail en hauteur (CSTC / CSA Z259) — protection contre les chutes + PLAN DE SAUVETAGE en hauteur.
 export default function Page() {
   return <ModernPermitForm config={{
-    type: 'height_work', title: '🪜 Permis de travail en hauteur', color: 'text-blue-600', btn: 'bg-blue-600 hover:bg-blue-700', prefix: 'HT',
+    type: 'height_work', title: 'Permis de travail en hauteur', color: 'text-blue-600', btn: 'bg-blue-600 hover:bg-blue-700', prefix: 'HT',
     intro: 'CSTC / CSA Z259 — hiérarchie des mesures, ancrages conformes, tirant d’air, et plan de sauvetage (suspension trauma).',
     sections: [{
       title: 'Protection contre les chutes', fields: [

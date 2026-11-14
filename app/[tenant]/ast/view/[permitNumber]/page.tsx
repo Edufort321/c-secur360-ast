@@ -223,7 +223,7 @@ export default function ASTPublicView() {
                   {d.supervisorSigAttachments.map((a: any, i: number) => (
                     a.type?.startsWith('image/')
                       ? <a key={i} href={a.url} target="_blank" rel="noreferrer" title={a.name}><img src={a.url} alt={a.name} className="h-20 w-20 rounded-lg border border-slate-300 object-cover" /></a>
-                      : <a key={i} href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">📄 {a.name}</a>
+                      : <a key={i} href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">{a.name}</a>
                   ))}
                 </div>
               </div>

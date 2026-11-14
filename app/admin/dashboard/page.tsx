@@ -619,11 +619,11 @@ export default function AdminDashboard() {
                           onClick={() => toggleAdminBase(client)}
                           title="Basculer entre admin complet et admin de base (Sites, Personnel, Postes, Accès)"
                           style={{ display: 'inline-block', marginTop: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', border: '1px solid', borderColor: (client as any).adminBase ? '#bfdbfe' : '#e5e7eb', background: (client as any).adminBase ? '#dbeafe' : '#f8fafc', color: (client as any).adminBase ? '#1d4ed8' : '#64748b' }}>
-                          {(client as any).adminBase ? '🔒 Admin de base' : '⚙️ Admin complet'}
+                          {(client as any).adminBase ? 'Admin de base' : 'Admin complet'}
                         </button>
                         {(aiReq.requested.includes(client.subdomain) || aiReq.exhausted.includes(client.subdomain)) && (
                           <span style={{ display: 'inline-block', marginTop: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: '#fee2e2', color: '#b91c1c' }}>
-                            🔴 {aiReq.requested.includes(client.subdomain) ? 'Ajustement token requis' : 'Forfait IA épuisé'}
+                            {aiReq.requested.includes(client.subdomain) ? 'Ajustement token requis' : 'Forfait IA épuisé'}
                           </span>
                         )}
                       </div>

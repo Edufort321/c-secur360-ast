@@ -148,7 +148,7 @@ export function ProjectsAnalytics({ projects, tenant }: { projects: ProjectLike[
         <div className="rounded-2xl border border-red-200 bg-red-50/40 p-4 shadow-sm dark:border-red-800 dark:bg-red-900/10">
           <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-red-700 dark:text-red-300"><AlertTriangle size={15} /> Projets non profitables ({a.unprofitable.length})</h3>
           {a.unprofitable.length === 0 ? (
-            <p className="text-xs text-slate-500">Aucun projet en perte (parmi ceux ayant des coûts réels saisis). 👍</p>
+            <p className="text-xs text-slate-500">Aucun projet en perte (parmi ceux ayant des coûts réels saisis).</p>
           ) : (
             <ul className="space-y-1.5">
               {a.unprofitable.slice(0, 6).map(m => (

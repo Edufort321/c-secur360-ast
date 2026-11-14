@@ -32,7 +32,7 @@ export function useGoogleDrive() {
 
         // Vérifier que les APIs Google sont chargées
         if (typeof window.gapi === 'undefined' || typeof window.google === 'undefined') {
-            console.warn('⚠️ APIs Google non disponibles');
+            console.warn('⚠ APIs Google non disponibles');
             setError('APIs Google non disponibles');
             setIsInitialized(true);
             return;
@@ -81,7 +81,7 @@ export function useGoogleDrive() {
             }
 
         } catch (error) {
-            console.error('❌ Erreur initialisation Google Drive:', error);
+            console.error('✕ Erreur initialisation Google Drive:', error);
             setError('Google Drive indisponible');
             setIsInitialized(true); // Marquer comme initialisé même en cas d'erreur
         }
@@ -106,7 +106,7 @@ export function useGoogleDrive() {
                 throw new Error('Token client non disponible');
             }
         } catch (error) {
-            console.error('❌ Erreur connexion Google Drive:', error);
+            console.error('✕ Erreur connexion Google Drive:', error);
             setError('Erreur de connexion');
         }
     };
@@ -123,7 +123,7 @@ export function useGoogleDrive() {
             setIsAuthenticated(false);
             setLastSync(null);
         } catch (error) {
-            console.error('❌ Erreur déconnexion Google Drive:', error);
+            console.error('✕ Erreur déconnexion Google Drive:', error);
         }
     };
 
@@ -139,7 +139,7 @@ export function useGoogleDrive() {
             const files = response.result.files;
             return files && files.length > 0 ? files[0] : null;
         } catch (error) {
-            console.error('❌ Erreur recherche fichier:', error);
+            console.error('✕ Erreur recherche fichier:', error);
             throw error;
         }
     };
@@ -197,7 +197,7 @@ export function useGoogleDrive() {
             setLastSync(new Date());
 
         } catch (error) {
-            console.error('❌ Erreur sauvegarde Google Drive:', error);
+            console.error('✕ Erreur sauvegarde Google Drive:', error);
             setError('Erreur de sauvegarde');
             throw error;
         } finally {
@@ -232,7 +232,7 @@ export function useGoogleDrive() {
             return data;
 
         } catch (error) {
-            console.error('❌ Erreur chargement Google Drive:', error);
+            console.error('✕ Erreur chargement Google Drive:', error);
             setError('Erreur de chargement');
             return null;
         } finally {
@@ -247,7 +247,7 @@ export function useGoogleDrive() {
             try {
                 // Vérification approfondie de la disponibilité des APIs
                 if (typeof window.gapi === 'undefined' || typeof window.google === 'undefined') {
-                    console.warn('⚠️ APIs Google non disponibles - fonctionnement en mode local');
+                    console.warn('⚠ APIs Google non disponibles - fonctionnement en mode local');
                     setError('APIs Google non chargées');
                     setIsInitialized(true);
                     return;
@@ -255,7 +255,7 @@ export function useGoogleDrive() {
 
                 // Vérifier que les objects gapi et google sont complètement chargés
                 if (!window.gapi.load || !window.google.accounts) {
-                    console.warn('⚠️ APIs Google incomplètement chargées');
+                    console.warn('⚠ APIs Google incomplètement chargées');
                     setError('APIs Google non prêtes');
                     setIsInitialized(true);
                     return;
@@ -264,7 +264,7 @@ export function useGoogleDrive() {
                 // Si tout est OK, initialiser
                 await initializeGoogleAPI();
             } catch (error) {
-                console.error('❌ Erreur lors de l\'initialisation sécurisée:', error);
+                console.error('✕ Erreur lors de l\'initialisation sécurisée:', error);
                 setError('Erreur d\'initialisation Google Drive');
                 setIsInitialized(true);
             }

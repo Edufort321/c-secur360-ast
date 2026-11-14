@@ -20,7 +20,7 @@ const TWILIO_CONFIG = {
 // Simulateur Twilio pour développement
 class TwilioSimulator {
   async sendSMS(to: string, body: string, from: string) {
-    console.log('📱 [TWILIO SIMULATOR] SMS envoyé:');
+    console.log('[TWILIO SIMULATOR] SMS envoyé:');
     console.log(`   De: ${from}`);
     console.log(`   À: ${to}`);
     console.log(`   Message: ${body}`);
@@ -62,7 +62,7 @@ async function sendRealSMS(to: string, body: string) {
     return await simulator.sendSMS(to, body, TWILIO_CONFIG.phoneNumber);
     
   } catch (error) {
-    console.error('❌ Erreur envoi SMS Twilio:', error);
+    console.error('Erreur envoi SMS Twilio:', error);
     throw error;
   }
 }
@@ -131,13 +131,13 @@ export async function POST(request: NextRequest) {
 
     const formattedPhone = formatPhoneNumber(body.phoneNumber);
     
-    console.log(`📱 Envoi SMS à ${formattedPhone} (${body.recipientName || 'Inconnu'})`);
+    console.log(`Envoi SMS à ${formattedPhone} (${body.recipientName || 'Inconnu'})`);
     
     // Envoyer le SMS
     const result = await sendRealSMS(formattedPhone, body.message);
     
     // Log pour audit
-    console.log(`✅ SMS envoyé avec succès:`, {
+    console.log(`SMS envoyé avec succès:`, {
       sid: result.sid,
       to: formattedPhone,
       recipientName: body.recipientName,
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Erreur API SMS:', error);
+    console.error('Erreur API SMS:', error);
     
     return NextResponse.json(
       { 
@@ -187,7 +187,7 @@ export async function GET() {
     return NextResponse.json(status);
     
   } catch (error) {
-    console.error('❌ Erreur status API SMS:', error);
+    console.error('Erreur status API SMS:', error);
     
     return NextResponse.json(
       { 

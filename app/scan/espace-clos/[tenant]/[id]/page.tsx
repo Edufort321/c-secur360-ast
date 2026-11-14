@@ -49,7 +49,7 @@ export default function EspaceClosScan() {
   if (!space) return <div className="min-h-screen grid place-items-center bg-gray-900 text-gray-300 p-6 text-center">Espace clos introuvable.</div>;
 
   const banner = state === 'danger' ? { bg: '#dc2626', t: '⚠ DANGER — NE PAS ENTRER', s: 'Atmosphère hors limites. Ventiler et reprendre les mesures.', I: AlertTriangle }
-    : state === 'recheck' ? { bg: '#d97706', t: '⏱ REPRISE REQUISE', s: 'Le délai de validité des mesures est dépassé. Refaire un relevé.', I: Clock }
+    : state === 'recheck' ? { bg: '#d97706', t: 'REPRISE REQUISE', s: 'Le délai de validité des mesures est dépassé. Refaire un relevé.', I: Clock }
     : state === 'safe' ? { bg: '#059669', t: '✓ ENTRÉE PERMISE', s: 'Atmosphère conforme au dernier relevé.', I: ShieldCheck }
     : { bg: '#6b7280', t: 'PERMIS NON ACTIF', s: 'Aucun permis d’entrée actif sur cet espace.', I: Wind };
   const BI = banner.I;

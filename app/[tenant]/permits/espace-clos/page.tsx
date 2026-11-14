@@ -204,7 +204,7 @@ function NewSpaceModal({ tenant, onClose, onCreated }: { tenant: string; onClose
 
         <div className="mt-3">
           <button onClick={runAi} disabled={aiBusy} className="inline-flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">
-            {aiBusy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {aiBusy ? 'Analyse…' : '✦ Conseiller IA (dangers, contrôles, sauvetage)'}
+            {aiBusy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {aiBusy ? 'Analyse…' : 'Conseiller IA (dangers, contrôles, sauvetage)'}
           </button>
         </div>
 

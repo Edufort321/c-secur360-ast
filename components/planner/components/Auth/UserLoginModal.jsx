@@ -23,7 +23,7 @@ export function UserLoginModal({
     useEffect(() => {
         if (personnel && personnel.length > 0) {
         } else {
-            console.warn('⚠️ Aucun personnel reçu dans UserLoginModal');
+            console.warn('⚠ Aucun personnel reçu dans UserLoginModal');
         }
     }, [personnel]);
 
@@ -117,7 +117,7 @@ export function UserLoginModal({
                 onLogin(utilisateurTrouve, null);
             }
         } else {
-            console.warn('❌ Utilisateur non trouvé pour:', loginForm.nom);
+            console.warn('✕ Utilisateur non trouvé pour:', loginForm.nom);
             alert('Utilisateur non trouvé. Sélectionnez un nom dans la liste ou vérifiez l\'orthographe.');
         }
     };
@@ -327,7 +327,7 @@ export function UserLoginModal({
                         {/* Note aide */}
                         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                             <p className="text-xs text-yellow-700">
-                                💡 <strong>Aide :</strong> Si vous oubliez votre mot de passe, contactez votre administrateur système.
+                                <strong>Aide :</strong> Si vous oubliez votre mot de passe, contactez votre administrateur système.
                             </p>
                         </div>
                     </div>

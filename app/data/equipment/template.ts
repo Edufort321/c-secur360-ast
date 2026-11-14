@@ -1,5 +1,5 @@
 // app/data/equipment/template.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+// IMPORT CORRIGÉ - Utilise les types depuis types/
 import { SafetyEquipment } from '../../types/equipment';
 
 // =================== FONCTION HELPER ===================

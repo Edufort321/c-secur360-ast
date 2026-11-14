@@ -404,7 +404,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
               <span className="text-sm font-semibold">{tr('Articles', 'Items')}</span>
               {canEdit && (
                 <div className="flex items-center gap-2">
-                  <button onClick={openScan} className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100">🛒 {tr('Importer « À commander » (mandats)', 'Import "to order" (jobs)')}</button>
+                  <button onClick={openScan} className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100">{tr('Importer « À commander » (mandats)', 'Import "to order" (jobs)')}</button>
                   <button onClick={addLigne} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>
                 </div>
               )}
@@ -431,7 +431,7 @@ export function BonsCommandeModule({ tenant, tr, canEdit }: { tenant: string; tr
                         {(() => {
                           const st = lineReception(l);
                           const ring = st === 'over' ? 'border-red-400' : st === 'partial' ? 'border-amber-400' : st === 'complete' ? 'border-green-400' : 'border-gray-200 dark:border-gray-700';
-                          const dot = st === 'over' ? '⚠️' : st === 'partial' ? '⏳' : st === 'complete' ? '✓' : '';
+                          const dot = st === 'over' ? '⚠' : st === 'partial' ? '…' : st === 'complete' ? '✓' : '';
                           const title = st === 'over' ? tr('Surplus reçu vs commandé', 'Over-received vs ordered') : st === 'partial' ? tr('Partiellement reçu', 'Partially received') : st === 'complete' ? tr('Reçu au complet', 'Fully received') : tr('Rien reçu', 'Nothing received');
                           return (
                             <div className="flex items-center justify-end gap-1" title={title}>

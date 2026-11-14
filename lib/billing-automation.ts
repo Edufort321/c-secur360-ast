@@ -339,7 +339,7 @@ export class BillingAutomation {
         htmlBody: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #fecaca; border-left: 4px solid #dc2626; padding: 16px; margin-bottom: 20px;">
-              <h2 style="color: #991b1b; margin: 0;">🚨 DERNIER JOUR DE SERVICE</h2>
+              <h2 style="color: #991b1b; margin: 0;">DERNIER JOUR DE SERVICE</h2>
             </div>
             <p>Votre abonnement expire <strong>demain</strong>. Renouvelez maintenant pour éviter l'interruption de service.</p>
             <a href="https://app.c-secur360.com/billing" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 16px 0;">
@@ -347,7 +347,7 @@ export class BillingAutomation {
             </a>
           </div>
         `,
-        textBody: `🚨 DERNIER JOUR - Renouveler maintenant: https://app.c-secur360.com/billing`
+        textBody: `DERNIER JOUR - Renouveler maintenant: https://app.c-secur360.com/billing`
       },
       
       expired: {
@@ -355,7 +355,7 @@ export class BillingAutomation {
         htmlBody: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #f3f4f6; border-left: 4px solid #6b7280; padding: 16px; margin-bottom: 20px;">
-              <h2 style="color: #374151; margin: 0;">🔒 Service suspendu</h2>
+              <h2 style="color: #374151; margin: 0;">Service suspendu</h2>
             </div>
             <p>Votre abonnement a expiré. Votre compte est temporairement suspendu.</p>
             <p>Renouvelez maintenant pour réactiver votre service:</p>
@@ -413,7 +413,7 @@ export const billingCronJobs = {
   
   // Tous les jours à 9h00 - Vérifier les renouvellements
   async checkRenewals() {
-    console.log('🔄 Vérification des renouvellements...');
+    console.log('Vérification des renouvellements...');
     
     try {
       // Récupérer toutes les subscriptions actives
@@ -425,16 +425,16 @@ export const billingCronJobs = {
       // Envoyer les rappels programmés
       await BillingAutomation.sendRenewalReminders(reminders);
       
-      console.log(`✅ ${reminders.length} rappels traités`);
+      console.log(`${reminders.length} rappels traités`);
       
     } catch (error) {
-      console.error('❌ Erreur vérification renouvellements:', error);
+      console.error('Erreur vérification renouvellements:', error);
     }
   },
   
   // Le 1er de chaque mois - Générer les factures
   async generateMonthlyInvoices() {
-    console.log('📄 Génération des factures mensuelles...');
+    console.log('Génération des factures mensuelles...');
     
     try {
       // Récupérer les abonnements mensuels
@@ -455,10 +455,10 @@ export const billingCronJobs = {
         });
       }
       
-      console.log(`✅ ${monthlySubscriptions.length} factures générées`);
+      console.log(`${monthlySubscriptions.length} factures générées`);
       
     } catch (error) {
-      console.error('❌ Erreur génération factures:', error);
+      console.error('Erreur génération factures:', error);
     }
   }
 };

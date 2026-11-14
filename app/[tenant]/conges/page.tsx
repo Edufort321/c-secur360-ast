@@ -253,11 +253,11 @@ export default function CongesPage() {
           {/* Cadre CONGÉ PARENTAL selon la PROVINCE du tenant (RQAP au QC / AE ailleurs) + Relevé d'emploi */}
           {parental && (
             <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-200">
-              <div className="mb-1 font-bold">👶 {L('Congé parental', 'Parental leave')} — {province} · {rules.plan === 'RQAP' ? 'RQAP' : L('Assurance-emploi (AE)', 'Employment Insurance (EI)')}</div>
+              <div className="mb-1 font-bold">{L('Congé parental', 'Parental leave')} — {province} · {rules.plan === 'RQAP' ? 'RQAP' : L('Assurance-emploi (AE)', 'Employment Insurance (EI)')}</div>
               <ul className="ml-4 list-disc space-y-0.5">
                 <li>{L(`Maternité ≈ ${rules.maternityWeeks} sem.`, `Maternity ≈ ${rules.maternityWeeks} wk`)}{rules.paternityWeeks ? L(`, paternité ≈ ${rules.paternityWeeks} sem.`, `, paternity ≈ ${rules.paternityWeeks} wk`) : ''} · {L(`parental ≈ ${rules.parentalWeeks} sem.`, `parental ≈ ${rules.parentalWeeks} wk`)}{rules.parentalWeeksExtended ? L(` (ou ${rules.parentalWeeksExtended} sem. prolongé)`, ` (or ${rules.parentalWeeksExtended} wk extended)`) : ''}</li>
                 <li>{L(`Prestation ≈ ${rules.benefitRatePct} % du revenu (max assurable ${rules.maxInsurableAnnual.toLocaleString('fr-CA')} $).`, `Benefit ≈ ${rules.benefitRatePct}% of income (max insurable $${rules.maxInsurableAnnual.toLocaleString('en-CA')}).`)}</li>
-                <li className="font-semibold">{L(`📄 Relevé d'emploi requis (cessation temporaire, code « ${rules.roeCode} ») → la paie est interrompue pendant le congé.`, `📄 Record of Employment required (temporary stop, code “${rules.roeCode}”) → payroll is interrupted during the leave.`)}</li>
+                <li className="font-semibold">{L(`Relevé d'emploi requis (cessation temporaire, code « ${rules.roeCode} ») → la paie est interrompue pendant le congé.`, `Record of Employment required (temporary stop, code “${rules.roeCode}”) → payroll is interrupted during the leave.`)}</li>
                 <li className="italic opacity-80">{rules.note}</li>
               </ul>
             </div>

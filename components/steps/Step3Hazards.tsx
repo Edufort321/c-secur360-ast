@@ -54,7 +54,7 @@ interface Standard {
 // =================== SYSTÈME DE TRADUCTIONS ===================
 const translations = {
   fr: {
-    title: "⚠️ Identification des Dangers & Risques",
+    title: "⚠ Identification des Dangers & Risques",
     subtitle: "Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis",
     searchPlaceholder: "Rechercher un danger...",
     allCategories: "Toutes catégories",
@@ -66,21 +66,21 @@ const translations = {
     noHazardsFound: "Aucun danger trouvé",
     noHazardsMessage: "Modifiez vos critères de recherche pour voir plus de dangers",
     responsible: "Responsable...",
-    standardsReferences: "📋 Normes & Références:",
+    standardsReferences: "Normes & Références:",
     mandatory: "Obligatoire",
     recommended: "Recommandé",
     riskLevels: {
-      critical: "🔴 Critique",
-      high: "🟠 Élevé",
-      medium: "🟡 Moyen",
-      low: "🟢 Faible"
+      critical: "Critique",
+      high: "Élevé",
+      medium: "Moyen",
+      low: "Faible"
     },
     controlCategories: {
-      elimination: "❌ Élimination",
-      substitution: "🔄 Substitution", 
-      engineering: "🔧 Ingénierie",
-      administrative: "📋 Administratif",
-      ppe: "🛡️ EPI"
+      elimination: "✕ Élimination",
+      substitution: "Substitution", 
+      engineering: "Ingénierie",
+      administrative: "Administratif",
+      ppe: "EPI"
     },
     categories: {
       'Électrique': 'Électrique',
@@ -95,7 +95,7 @@ const translations = {
     }
   },
   en: {
-    title: "⚠️ Hazard & Risk Identification",
+    title: "⚠ Hazard & Risk Identification",
     subtitle: "Select potential hazards and define required control measures",
     searchPlaceholder: "Search for a hazard...",
     allCategories: "All categories",
@@ -107,21 +107,21 @@ const translations = {
     noHazardsFound: "No hazards found",
     noHazardsMessage: "Modify your search criteria to see more hazards",
     responsible: "Responsible...",
-    standardsReferences: "📋 Standards & References:",
+    standardsReferences: "Standards & References:",
     mandatory: "Mandatory",
     recommended: "Recommended",
     riskLevels: {
-      critical: "🔴 Critical",
-      high: "🟠 High",
-      medium: "🟡 Medium",
-      low: "🟢 Low"
+      critical: "Critical",
+      high: "High",
+      medium: "Medium",
+      low: "Low"
     },
     controlCategories: {
-      elimination: "❌ Elimination",
-      substitution: "🔄 Substitution", 
-      engineering: "🔧 Engineering",
-      administrative: "📋 Administrative",
-      ppe: "🛡️ PPE"
+      elimination: "✕ Elimination",
+      substitution: "Substitution", 
+      engineering: "Engineering",
+      administrative: "Administrative",
+      ppe: "PPE"
     },
     categories: {
       'Électrique': 'Electrical',
@@ -402,7 +402,7 @@ const electricalHazards: Hazard[] = [
     description: 'Contact direct ou indirect avec parties sous tension',
     riskLevel: 'critical',
     legislation: 'CSA Z462, RSST Art. 185',
-    icon: '⚡',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -459,7 +459,7 @@ const electricalHazards: Hazard[] = [
     description: 'Arc électrique lors de manœuvres sous tension',
     riskLevel: 'critical',
     legislation: 'CSA Z462, NFPA 70E',
-    icon: '🔥',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -504,7 +504,7 @@ const electricalHazards: Hazard[] = [
     description: 'Contact avec lignes électriques extérieures',
     riskLevel: 'critical',
     legislation: 'RSST Art. 185-190',
-    icon: '🌩️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -552,7 +552,7 @@ const mechanicalHazards: Hazard[] = [
     description: 'Écrasement, coincement par pièces mobiles',
     riskLevel: 'high',
     legislation: 'RSST Art. 182-184',
-    icon: '⚙️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -597,7 +597,7 @@ const mechanicalHazards: Hazard[] = [
     description: 'Explosion, projection due à la pression',
     riskLevel: 'high',
     legislation: 'CSA B51',
-    icon: '💨',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -631,7 +631,7 @@ const mechanicalHazards: Hazard[] = [
     description: 'Chute de charge, basculement d\'équipement',
     riskLevel: 'high',
     legislation: 'RSST Art. 260-290, CSA B335',
-    icon: '🏗️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -680,7 +680,7 @@ const manualToolsHazards: Hazard[] = [
     description: 'Blessures par impact d\'outils (marteaux, clés, etc.)',
     riskLevel: 'high',
     legislation: 'RSST Art. 45, CSA Z94.1',
-    icon: '🔨',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -736,7 +736,7 @@ const manualToolsHazards: Hazard[] = [
     description: 'Exposition aux objets projetés, éjectés ou en mouvement',
     riskLevel: 'critical',
     legislation: 'OSHA 29 CFR 1926, RSST Art. 51',
-    icon: '⚡',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -803,7 +803,7 @@ const manualToolsHazards: Hazard[] = [
     description: 'Défaillance d\'outils par manque d\'entretien',
     riskLevel: 'medium',
     legislation: 'RSST Art. 51.11, CSA Z142',
-    icon: '🔧',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -848,7 +848,7 @@ const manualToolsHazards: Hazard[] = [
     description: 'Perte de contrôle par réaction de l\'outil (scie, meuleuse)',
     riskLevel: 'high',
     legislation: 'RSST Art. 51.12, UL 745',
-    icon: '⚙️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -897,7 +897,7 @@ const physicalHazards: Hazard[] = [
     description: 'Chutes de plus de 3 mètres',
     riskLevel: 'critical',
     legislation: 'RSST Art. 347, CSA Z259',
-    icon: '🪂',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -942,7 +942,7 @@ const physicalHazards: Hazard[] = [
     description: 'Effondrement, instabilité des échafaudages',
     riskLevel: 'high',
     legislation: 'RSST Art. 347-350, CSA S269.2',
-    icon: '🚧',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -976,7 +976,7 @@ const physicalHazards: Hazard[] = [
     description: 'Impact d\'objets en chute libre',
     riskLevel: 'high',
     legislation: 'RSST Art. 338',
-    icon: '⬇️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1010,7 +1010,7 @@ const physicalHazards: Hazard[] = [
     description: 'Atmosphères dangereuses, engloutissement',
     riskLevel: 'critical',
     legislation: 'RSST Art. 302-317',
-    icon: '🕳️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1059,7 +1059,7 @@ const chemicalHazards: Hazard[] = [
     description: 'Inhalation de substances dangereuses',
     riskLevel: 'high',
     legislation: 'RSST Art. 44, SIMDUT',
-    icon: '☠️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1093,7 +1093,7 @@ const chemicalHazards: Hazard[] = [
     description: 'Contact avec substances corrosives',
     riskLevel: 'medium',
     legislation: 'SIMDUT 2015',
-    icon: '🧪',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1127,7 +1127,7 @@ const chemicalHazards: Hazard[] = [
     description: 'Exposition aux fibres d\'amiante',
     riskLevel: 'critical',
     legislation: 'RSST Art. 30-52',
-    icon: '🫁',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1176,7 +1176,7 @@ const ergonomicHazards: Hazard[] = [
     description: 'Troubles musculo-squelettiques',
     riskLevel: 'medium',
     legislation: 'RSST Art. 166',
-    icon: '🏋️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1210,7 +1210,7 @@ const ergonomicHazards: Hazard[] = [
     description: 'Mouvements répétitifs, postures contraignantes',
     riskLevel: 'medium',
     legislation: 'Guide CNESST TMS',
-    icon: '🔄',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1248,7 +1248,7 @@ const environmentalHazards: Hazard[] = [
     description: 'Exposition aux intempéries',
     riskLevel: 'medium',
     legislation: 'Guide CNESST',
-    icon: '🌪️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1282,7 +1282,7 @@ const environmentalHazards: Hazard[] = [
     description: 'Coups de chaleur, épuisement',
     riskLevel: 'high',
     legislation: 'Guide CNESST Coup de chaleur',
-    icon: '🌡️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1316,7 +1316,7 @@ const environmentalHazards: Hazard[] = [
     description: 'Dommages auditifs',
     riskLevel: 'medium',
     legislation: 'RSST Art. 141-151',
-    icon: '🔊',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1350,7 +1350,7 @@ const environmentalHazards: Hazard[] = [
     description: 'Déversement de fluides (huile, carburant, produits chimiques)',
     riskLevel: 'high',
     legislation: 'RSST Art. 44, LQE, SIMDUT',
-    icon: '🛢️',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1384,7 +1384,7 @@ const environmentalHazards: Hazard[] = [
     description: 'Pollution sol, eau, air par substances dangereuses',
     riskLevel: 'high',
     legislation: 'LQE, LCPE, Règlements municipaux',
-    icon: '🌍',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1411,7 +1411,7 @@ const psychosocialHazards: Hazard[] = [
     description: 'Violence physique ou psychologique',
     riskLevel: 'high',
     legislation: 'LSST Art. 2.1, RSST',
-    icon: '⚠️',
+    icon: '⚠',
     selected: false,
     controlMeasures: [
       { 
@@ -1434,7 +1434,7 @@ const psychosocialHazards: Hazard[] = [
     description: 'Conduites vexatoires répétées',
     riskLevel: 'medium',
     legislation: 'Loi sur les normes du travail',
-    icon: '😰',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1461,7 +1461,7 @@ const fireHazards: Hazard[] = [
     description: 'Feu, explosion de matières inflammables',
     riskLevel: 'critical',
     legislation: 'Code de construction, NFPA',
-    icon: '🔥',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1499,7 +1499,7 @@ const transportHazards: Hazard[] = [
     description: 'Collision avec véhicules, engins',
     riskLevel: 'high',
     legislation: 'RSST Art. 320-340, Code sécurité routière',
-    icon: '🚛',
+    icon: '',
     selected: false,
     controlMeasures: [
       { 
@@ -1670,22 +1670,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   };
 
   const getRiskLabel = (level: string) => {
-    return texts.riskLevels[level as keyof typeof texts.riskLevels] || '⚪ Indéterminé';
-  };
-
-  const getCategoryIcon = (category: string) => {
-    const iconMap: { [key: string]: string } = {
-      'Électrique': '⚡', 'Electrical': '⚡',
-      'Mécanique': '⚙️', 'Mechanical': '⚙️',
-      'Physique': '🏗️', 'Physical': '🏗️',
-      'Chimique': '🧪', 'Chemical': '🧪',
-      'Ergonomique': '🏋️', 'Ergonomic': '🏋️',
-      'Environnemental': '🌪️', 'Environmental': '🌪️',
-      'Psychosocial': '🧠',
-      'Incendie': '🔥', 'Fire': '🔥',
-      'Transport': '🚛'
-    };
-    return iconMap[category] || '⚠️';
+    return texts.riskLevels[level as keyof typeof texts.riskLevels] || 'Indéterminé';
   };
 
   const getControlCategoryColor = (category: string) => {
@@ -1700,7 +1685,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   };
 
   const getControlCategoryLabel = (category: string) => {
-    return texts.controlCategories[category as keyof typeof texts.controlCategories] || '❓ Autre';
+    return texts.controlCategories[category as keyof typeof texts.controlCategories] || 'Autre';
   };
 
   // Effet pour mettre à jour les traductions quand la langue change
@@ -1885,7 +1870,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                 const count = hazards.filter(h => h.category === category).length;
                 return (
                   <option key={category} value={category}>
-                    {getCategoryIcon(category)} {category} ({count})
+                    {category} ({count})
                   </option>
                 );
               })}
@@ -1905,10 +1890,10 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
               >
                 {/* Header avec sélection */}
                 <div className="hazard-header" onClick={() => handleHazardToggle(hazard.id)}>
-                  <div className="hazard-icon">{hazard.icon}</div>
+                  {hazard.icon && <div className="hazard-icon">{hazard.icon}</div>}
                   <div className="hazard-content">
                     <h3 className="hazard-name">{hazard.name}</h3>
-                    <div className="hazard-category">{getCategoryIcon(hazard.category)} {hazard.category}</div>
+                    <div className="hazard-category">{hazard.category}</div>
                     <div className="hazard-description">{hazard.description}</div>
                   </div>
                   <div className={`hazard-checkbox ${isSelected ? 'checked' : ''}`}>

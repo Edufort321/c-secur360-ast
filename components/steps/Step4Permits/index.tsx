@@ -177,7 +177,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         ? 'Confined space entry permit with atmospheric testing and continuous monitoring'
         : 'Permis d\'entrée en espace clos avec tests atmosphériques et surveillance continue',
       icon: Home,
-      iconEmoji: '🏠',
+      iconEmoji: '',
       color: '#dc2626',
       riskLevel: 'critical' as const,
       estimatedTime: 45,
@@ -210,7 +210,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         ? 'Electrical work permit with LOTO lockout and VAT verification'
         : 'Permis pour travaux électriques avec consignation LOTO et vérification VAT',
       icon: Zap,
-      iconEmoji: '⚡',
+      iconEmoji: '',
       color: '#dc2626',
       riskLevel: 'critical' as const,
       estimatedTime: 35,
@@ -240,7 +240,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         ? 'Excavation work permit with soil analysis and slope protection'
         : 'Permis pour travaux d\'excavation avec analyse sol et protection talus',
       icon: Construction,
-      iconEmoji: '🏗️',
+      iconEmoji: '',
       color: '#d97706',
       riskLevel: 'high' as const,
       estimatedTime: 40,
@@ -270,7 +270,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         ? 'Work at height permit with fall protection and rescue plan'
         : 'Permis pour travaux en hauteur avec protection antichute et plan sauvetage',
       icon: Building,
-      iconEmoji: '🏢',
+      iconEmoji: '',
       color: '#7c3aed',
       riskLevel: 'critical' as const,
       estimatedTime: 50,
@@ -300,7 +300,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         ? 'Hot work permit for welding/cutting with fire watch and post-work timer'
         : 'Permis pour soudage/coupage avec surveillance incendie et timer post-travaux',
       icon: Flame,
-      iconEmoji: '🔥',
+      iconEmoji: '',
       color: '#ea580c',
       riskLevel: 'critical' as const,
       estimatedTime: 30,
@@ -330,7 +330,7 @@ const getPermitModules = (language: 'fr' | 'en'): PermitModule[] => {
         ? 'Lifting operations permit with load calculations and equipment inspection'
         : 'Permis pour opérations de levage avec calcul charges et inspection équipements',
       icon: Wrench,
-      iconEmoji: '🏗️',
+      iconEmoji: '',
       color: '#059669',
       riskLevel: 'high' as const,
       estimatedTime: 55,
@@ -376,12 +376,12 @@ const getTexts = (language: 'fr' | 'en') => {
       completed: "Completed",
       inProgress: "In Progress",
       moduleInDevelopment: "Module in Development",
-      plannedFeatures: "🚀 Planned Features:",
+      plannedFeatures: "Planned Features:",
       modulesAvailable: "Available Modules",
       completedCount: "Completed",
       inProgressCount: "In Progress",
       province: "Province",
-      provinceSelection: "🍁 Province Selection",
+      provinceSelection: "Province Selection",
       selectedProvince: "Selected province:",
       competentAuthority: "Competent authority:",
       autoAdaptation: "Permits will be automatically adapted to this province's regulations",
@@ -389,10 +389,10 @@ const getTexts = (language: 'fr' | 'en') => {
       complianceText: "All permits are designed to comply with current provincial regulations.",
       featuresText: "Each module integrates required advanced features: electronic signatures, secure timestamping, geolocated photos, and automatic archiving in Supabase.",
       riskLevels: {
-        critical: "🔴 Critical",
-        high: "🟠 High",
-        medium: "🟡 Medium",
-        low: "🟢 Low"
+        critical: "Critical",
+        high: "High",
+        medium: "Medium",
+        low: "Low"
       }
     };
   }
@@ -412,12 +412,12 @@ const getTexts = (language: 'fr' | 'en') => {
     completed: "Complété",
     inProgress: "En Cours",
     moduleInDevelopment: "Module en Développement",
-    plannedFeatures: "🚀 Fonctionnalités Prévues :",
+    plannedFeatures: "Fonctionnalités Prévues :",
     modulesAvailable: "Modules Disponibles",
     completedCount: "Complétés",
     inProgressCount: "En Cours",
     province: "Province",
-    provinceSelection: "🍁 Sélection de la Province",
+    provinceSelection: "Sélection de la Province",
     selectedProvince: "Province sélectionnée :",
     competentAuthority: "Autorité compétente :",
     autoAdaptation: "Les permis seront adaptés automatiquement aux réglementations de cette province",
@@ -425,10 +425,10 @@ const getTexts = (language: 'fr' | 'en') => {
     complianceText: "Tous les permis sont conçus pour respecter les réglementations provinciales en vigueur.",
     featuresText: "Chaque module intègre les fonctionnalités avancées requises : signatures électroniques, horodatage sécurisé, photos géolocalisées, et archivage automatique dans Supabase.",
     riskLevels: {
-      critical: "🔴 Critique",
-      high: "🟠 Élevé",
-      medium: "🟡 Moyen",
-      low: "🟢 Faible"
+      critical: "Critique",
+      high: "Élevé",
+      medium: "Moyen",
+      low: "Faible"
     }
   };
 };
@@ -487,7 +487,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     });
   }, [language]);
 
-  // 🔧 CORRECTION : Chemin d'import corrigé
+  // CORRECTION : Chemin d'import corrigé
   const handlePermitSelect = async (permitId: string) => {
     setSelectedPermit(permitId);
     setIsLoading(true);
@@ -495,15 +495,15 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     // Import avec le bon chemin pour ConfinedSpace
     if (permitId === 'confined-space') {
       try {
-        console.log('🔄 Tentative de chargement ConfinedSpace...');
-        // 🔧 CORRECTION : Chemin corrigé ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
+        console.log('Tentative de chargement ConfinedSpace...');
+        // CORRECTION : Chemin corrigé ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
         const ConfinedSpaceModule = await import('./ConfinedSpace/index');
-        console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
+        console.log('✓ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
         
         setConfinedSpaceComponent(ConfinedSpaceModule);
         
       } catch (error) {
-        console.log('⚠️ Erreur chargement ConfinedSpace:', error);
+        console.log('⚠ Erreur chargement ConfinedSpace:', error);
         setConfinedSpaceComponent(null);
       }
     }
@@ -560,7 +560,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     handleBackToSelection();
   }, [selectedPermit, onDataChange]);
 
-  // 🔧 CORRECTION : Rendu conditionnel pour ConfinedSpace
+  // CORRECTION : Rendu conditionnel pour ConfinedSpace
   if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
     const ConfinedSpaceModule = confinedSpaceComponent.default;
     
@@ -686,7 +686,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 border: `2px solid ${permit?.color}40`,
                 boxShadow: `0 8px 32px ${permit?.color}30`
               }}>
-                {permit?.iconEmoji}
+                {permit?.icon ? React.createElement(permit.icon, { size: isMobile ? 28 : 36, color: permit.color }) : null}
               </div>
               <div>
                 <h2 style={{
@@ -856,7 +856,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                 marginBottom: '4px',
                 lineHeight: 1.2
               }}>
-                📄 {texts.title}
+                {texts.title}
               </h2>
               <p style={{
                 color: '#d1d5db',
@@ -1085,7 +1085,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                   border: `2px solid ${permit.color}30`,
                   transition: 'all 0.3s ease'
                 }}>
-                  {permit.iconEmoji}
+                  {React.createElement(permit.icon, { size: isMobile ? 20 : 28, color: permit.color })}
                 </div>
                 
                 <div style={{ flex: 1, minWidth: 0 }}>

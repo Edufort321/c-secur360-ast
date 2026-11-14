@@ -161,7 +161,7 @@ export default function TenantMarketing() {
         {/* Vidéo IA — clé D-ID du tenant (BYOK). Le texte IA est sur le forfait ; la vidéo avatar est gérée/payée par le tenant. */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1"><Video size={16} className="text-pink-600" /> Vidéo IA — avatar parlant <span className={`text-[11px] px-2 py-0.5 rounded-full ${didConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{didConfigured ? 'Clé configurée' : 'Non configurée'}</span></h2>
-          <p className="text-xs text-gray-500 mb-2">La <b>génération d’avatars parlants</b> utilise le service D-ID. Tu fournis <b>ta propre clé D-ID</b> et gères ta consommation/facturation vidéo directement (indépendant de ton forfait texte). 💡 La <b>vidéo réelle (caméra) + slides</b> reste <b>gratuite</b>.</p>
+          <p className="text-xs text-gray-500 mb-2">La <b>génération d’avatars parlants</b> utilise le service D-ID. Tu fournis <b>ta propre clé D-ID</b> et gères ta consommation/facturation vidéo directement (indépendant de ton forfait texte). La <b>vidéo réelle (caméra) + slides</b> reste <b>gratuite</b>.</p>
           <div className="flex gap-2 items-end">
             <div className="flex-1"><label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1"><KeyRound size={12} /> Clé API D-ID</label>
               <input className="inp" type="password" value={didKey} onChange={e => setDidKey(e.target.value)} placeholder={didConfigured ? '•••••••• (configurée — entre une nouvelle pour remplacer)' : 'colle ta clé D-ID ici'} /></div>
@@ -205,7 +205,7 @@ export default function TenantMarketing() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-3"><Sparkles size={16} /> Générer du contenu</h2>
           <F l="Objectif / sujet de la campagne"><input className="inp" value={objective} onChange={e => setObjective(e.target.value)} placeholder="ex. promouvoir notre nouveau service, recruter, offre saisonnière…" /></F>
-          <button onClick={generate} disabled={busy || budget?.exhausted} className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">{busy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {busy ? 'Génération…' : '✦ Générer le pack marketing'}</button>
+          <button onClick={generate} disabled={busy || budget?.exhausted} className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">{busy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {busy ? 'Génération…' : 'Générer le pack marketing'}</button>
 
           {pack && (
             <div className="mt-4 space-y-4 text-sm">
@@ -226,11 +226,11 @@ export default function TenantMarketing() {
 
         {/* Médiathèque */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-          <h3 className="font-semibold text-gray-900 mb-3 text-sm">🗂 Médiathèque {upBusy && <Loader2 className="inline animate-spin" size={13} />}</h3>
+          <h3 className="font-semibold text-gray-900 mb-3 text-sm">Médiathèque {upBusy && <Loader2 className="inline animate-spin" size={13} />}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MediaCol title="🧑 Avatars (visage)" items={assets.avatars} onDel={delAsset} accept="image/*" label="avatar" onPick={f => uploadKind(f, 'avatar', 'avatar_model')} />
+            <MediaCol title="Avatars (visage)" items={assets.avatars} onDel={delAsset} accept="image/*" label="avatar" onPick={f => uploadKind(f, 'avatar', 'avatar_model')} />
             <MediaCol title="📷 Photos / images" items={assets.library} onDel={delAsset} accept="image/*" label="image" onPick={f => uploadKind(f, 'library', 'library_image')} />
-            <MediaCol title="🎞 Vidéos de fond" items={assets.bgVideos} onDel={delAsset} accept="video/*" video label="vidéo de fond" onPick={f => uploadKind(f, 'bg', 'bg_video')} />
+            <MediaCol title="Vidéos de fond" items={assets.bgVideos} onDel={delAsset} accept="video/*" video label="vidéo de fond" onPick={f => uploadKind(f, 'bg', 'bg_video')} />
           </div>
         </div>
 
@@ -256,7 +256,7 @@ export default function TenantMarketing() {
 
         {/* Galerie */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mt-4">
-          <h3 className="font-semibold text-gray-900 text-sm mb-2">📁 Mes vidéos enregistrées</h3>
+          <h3 className="font-semibold text-gray-900 text-sm mb-2">Mes vidéos enregistrées</h3>
           {[...assets.compositions.map(v => ({ ...v, tag: 'Montage' })), ...assets.videos.map(v => ({ ...v, tag: 'Avatar/clip' }))].length === 0 ? <p className="text-sm text-gray-400">Aucune vidéo.</p> : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[...assets.compositions.map(v => ({ ...v, tag: 'Montage' })), ...assets.videos.map(v => ({ ...v, tag: 'Clip' }))].map(v => (

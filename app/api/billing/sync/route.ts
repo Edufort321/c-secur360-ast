@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-    console.error('❌ Billing sync critical error:', error);
+    console.error('Billing sync critical error:', error);
     
     return NextResponse.json({
       success: false,

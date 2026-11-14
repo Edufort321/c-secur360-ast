@@ -354,7 +354,7 @@ export function PosteModal({
                                 type="submit"
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                             >
-                                {poste ? tr('📝 Modifier le Poste', '📝 Edit Position') : tr('✨ Créer le Poste', '✨ Create Position')}
+                                {poste ? tr('Modifier le Poste', 'Edit Position') : tr('Créer le Poste', 'Create Position')}
                             </button>
                         </div>
                     </form>

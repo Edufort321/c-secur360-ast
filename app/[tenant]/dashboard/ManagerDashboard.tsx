@@ -1571,7 +1571,7 @@ export default function ManagerDashboard({
                   margin: '0 0 8px 0',
                   fontWeight: '500'
                 }}>
-                  🏛️ Conforme CNESST • CSA Z1000 • C-Secur360 © {new Date().getFullYear()} Commerce CERDIA inc.
+                  Conforme CNESST • CSA Z1000 • C-Secur360 © {new Date().getFullYear()} Commerce CERDIA inc.
                 </p>
                 <p style={{ 
                   color: '#64748b', 

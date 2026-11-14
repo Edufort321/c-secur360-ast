@@ -84,7 +84,7 @@ export async function generateEquipmentSheetPdf(opts: {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
       for (const nc of (ins.non_conformities || [])) {
         ensure(13);
-        const tag = nc.withdrawal ? '⛔ ' : nc.critical ? '⚠️ ' : '• ';
+        const tag = nc.withdrawal ? '[RETRAIT] ' : nc.critical ? '[CRITIQUE] ' : '• ';
         doc.setTextColor(nc.withdrawal ? 153 : nc.critical ? 200 : 60, nc.withdrawal ? 27 : nc.critical ? 80 : 60, nc.withdrawal ? 27 : 6);
         doc.text(`${tag}${nc.label || ''}`, M + 8, y, { maxWidth: W - 2 * M - 8 } as any); y += 12;
         const ca = (ins.corrective_actions || {})[nc.id];

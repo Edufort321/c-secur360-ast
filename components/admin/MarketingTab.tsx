@@ -5,6 +5,7 @@ import { MODULES as MODULE_REGISTRY } from '@/lib/modules/registry';
 import MarketingComposer from '@/components/admin/MarketingComposer';
 import CameraRecorder from '@/components/admin/CameraRecorder';
 import { supabase as sbBrowser } from '@/lib/supabase';
+import { MessageSquare, Clapperboard, Mail, Scale, Trash2, type LucideIcon } from 'lucide-react';
 
 // Studio MARKETING IA (espace /admin). Porté du prototype C:\C-Secur360\Marketing.
 // 3 sections : Studio vidéo · Prospection · Conformité. Les actions génératives appellent la VRAIE
@@ -25,17 +26,17 @@ const CHAT_STARTERS = [
 const SCRIPT_TEMPLATES: { k: string; label: string; ideas: string }[] = [
   {
     k: 'app',
-    label: '🏢 Présentation de l\'app (globale)',
+    label: 'Présentation de l\'app (globale)',
     ideas: "Présenter C-Secur360 dans son ensemble : une plateforme SST/industrielle modulaire et tout-en-un pour les entreprises (AST, permis, inspections d'équipement, planificateur, feuilles de temps, DGA transformateurs, RH, rapports). Insister sur : un seul outil au lieu de plusieurs, conformité (Loi 25, normes SST), assistance IA intégrée, mobile et terrain (QR, photos), hébergement canadien. Ton : confiant, professionnel, accessible. Public : dirigeants, responsables SST et maintenance. Terminer par un appel à l'action pour une démo.",
   },
   {
     k: 'affil',
-    label: '🤝 Programme d\'affiliation (vendeur)',
+    label: 'Programme d\'affiliation (vendeur)',
     ideas: "Présenter le programme d'affiliation / co-vendeur de C-Secur360 : comment un partenaire ou vendeur peut référer des clients et toucher des commissions récurrentes. Insister sur : produit québécois en forte demande (SST, conformité), commissions sur abonnement, outils de vente fournis, contrat clair, accompagnement. Ton : motivant, orienté opportunité d'affaires. Public : vendeurs, consultants SST, partenaires, représentants. Terminer par un appel à l'action pour rejoindre le programme.",
   },
   {
     k: 'cerdia',
-    label: '🏢 CERDIA — Plateforme immobilière (organisations)',
+    label: 'CERDIA — Plateforme immobilière (organisations)',
     ideas: "Présenter CERDIA : plateforme de GESTION IMMOBILIÈRE et d'INVESTISSEMENT multi-tenant assistée par IA, dans un seul tableau de bord. Public : sociétés de gestion, family offices et groupes d'investisseurs détenant des actifs au Canada, en République dominicaine, aux États-Unis et au Mexique. Insister sur : suivi de portefeuille en temps réel (valeur, NAV par part, rendements, appréciation) ; multi-devise automatique (CAD, USD, DOP, MXN, EUR aux taux de la Banque du Canada) ; conformité fiscale multi-juridiction intégrée (T1135, T2209, IRNR, ITBIS, FIRPTA, TDT) ; gestion des investisseurs (parts, classes d'actions, votes, dividendes, relevés T5) ; trésorerie, flux, échéanciers et rapports exportables ; assistant IA confidentiel ; architecture multi-tenant sécurisée (organisations isolées). Tarif : 1 450 $/an par organisation. Essai : démo gratuite. CTA : « Démarrer la démo » ou « Nous contacter ». Ton : haut de gamme, financier, confiance.",
   },
 ];
@@ -51,7 +52,6 @@ const MODULES = [
   ...MODULE_REGISTRY.filter(m => m.key !== 'admin').map(m => m.labelFr),
 ];
 const CLBL = { expres: 'Exprès', tacite: 'Tacite', bloque: 'Bloqué' } as const;
-const PLAT_ICON: Record<string, string> = { LinkedIn: '💼', Facebook: '📘', Instagram: '📸', TikTok: '🎵', 'X (Twitter)': '𝕏', X: '𝕏', Twitter: '𝕏', YouTube: '▶️' };
 
 export default function MarketingTab() {
   const [view, setView] = useState<View>('assistant');
@@ -170,7 +170,7 @@ export default function MarketingTab() {
   const [demoPassword, setDemoPassword] = useState('');
   async function runCapture() {
     if (!capturePlan?.steps?.length) { setNotice({ msg: '⚠ Génère d\'abord le plan de capture.', ok: false }); return; }
-    setCapturing(true); setNotice({ msg: '📸 Capture en cours (connexion démo + écrans réels)…', ok: true });
+    setCapturing(true); setNotice({ msg: 'Capture en cours (connexion démo + écrans réels)…', ok: true });
     try {
       const r = await fetch('/api/admin/marketing/capture', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -345,7 +345,7 @@ export default function MarketingTab() {
   async function generateAvatar() {
     setAvaMsg(null);
     const text = avaText.trim() || (pack?.storyboard ? pack.storyboard.map((s: any) => s.voiceover).filter(Boolean).join(' ') : '');
-    if (!selectedAvatar?.url) { aMsg({ msg: '⚠ Ajoute (et choisis) un avatar dans ⚙ Réglages du Studio (en haut).', ok: false }); return; }
+    if (!selectedAvatar?.url) { aMsg({ msg: '⚠ Ajoute (et choisis) un avatar dans Réglages du Studio (en haut).', ok: false }); return; }
     if (!text) { aMsg({ msg: '⚠ Entre le texte à narrer (ou clique « Remplir depuis le storyboard »).', ok: false }); return; }
     setAvaBusy(true); setAvaUrl('');
     try {
@@ -356,7 +356,7 @@ export default function MarketingTab() {
       const j = await r.json();
       if (!r.ok) { aMsg({ msg: 'Avatar : ' + (j.error || 'échec'), ok: false }); setAvaBusy(false); return; }
       if (j.status === 'done' && j.url) { setAvaUrl(j.url); aMsg({ msg: '✓ Avatar généré.' + (j.stored === false ? ' ⚠ Bucket non public — lecture via lien D-ID temporaire ; applique la migration 165 (bucket « marketing » PUBLIC).' : ''), ok: true }); setAvaBusy(false); loadAssets(); }
-      else if (j.id) { aMsg({ msg: '⏳ Rendu de l\'avatar en cours (10-40 s)…', ok: true }); pollAvatar(j.id); }
+      else if (j.id) { aMsg({ msg: 'Rendu de l\'avatar en cours (10-40 s)…', ok: true }); pollAvatar(j.id); }
       else { aMsg({ msg: 'Avatar : réponse inattendue.', ok: false }); setAvaBusy(false); }
     } catch (e: any) { aMsg({ msg: 'Avatar : ' + (e?.message || 'réseau'), ok: false }); setAvaBusy(false); }
   }
@@ -493,11 +493,11 @@ export default function MarketingTab() {
     finally { setScheduling(false); }
   }
 
-  const TABS: { k: View; ico: string; label: string }[] = [
-    { k: 'assistant', ico: '💬', label: 'Assistant IA' },
-    { k: 'studio', ico: '🎬', label: 'Studio vidéo' },
-    { k: 'prospect', ico: '✉', label: 'Prospection' },
-    { k: 'compliance', ico: '⚖', label: 'Conformité' },
+  const TABS: { k: View; ico: LucideIcon; label: string }[] = [
+    { k: 'assistant', ico: MessageSquare, label: 'Assistant IA' },
+    { k: 'studio', ico: Clapperboard, label: 'Studio vidéo' },
+    { k: 'prospect', ico: Mail, label: 'Prospection' },
+    { k: 'compliance', ico: Scale, label: 'Conformité' },
   ];
 
   return (
@@ -517,7 +517,7 @@ export default function MarketingTab() {
       <div className="mkt-tabs">
         {TABS.map(t => (
           <button key={t.k} className={`mkt-tab ${view === t.k ? 'active' : ''}`} onClick={() => setView(t.k)}>
-            <span className="ico">{t.ico}</span> {t.label}
+            <span className="ico"><t.ico size={15} /></span> {t.label}
           </button>
         ))}
       </div>
@@ -533,7 +533,7 @@ export default function MarketingTab() {
           <div className="chatwin">
             {chat.length === 0 && (
               <div className="chatempty">
-                <div style={{ fontSize: 30 }}>💬</div>
+                <div><MessageSquare size={30} /></div>
                 <p>Donne une piste de ce que tu veux, ou pars d'une suggestion :</p>
                 <div className="starters">
                   {CHAT_STARTERS.map((s, i) => <button key={i} className="starter" onClick={() => sendChat(s)}>{s}</button>)}
@@ -567,7 +567,7 @@ export default function MarketingTab() {
           {/* Médiathèque : avatars + images/photos + vidéos de fond (tout le matériel du studio) */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }} onClick={() => setSettingsOpen(o => !o)}>
-              <h2 style={{ margin: 0 }}>🗂 Médiathèque du Studio <span className="chip">avatars · photos · vidéos</span></h2>
+              <h2 style={{ margin: 0 }}>Médiathèque du Studio <span className="chip">avatars · photos · vidéos</span></h2>
               <span style={{ color: 'var(--mist)' }}>{settingsOpen ? '▲ replier' : '▼ déplier'}</span>
             </div>
             <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>Tout le matériel réutilisable du studio au même endroit : tes <b>avatars</b> (visages qui parlent), tes <b>photos/images</b> (logos, captures, B-roll) et tes <b>vidéos d'arrière-plan</b>. Tout est piochable dans l'assembleur vidéo plus bas.</p>
@@ -621,7 +621,7 @@ export default function MarketingTab() {
                   </div>
                   {/* Vidéos d'arrière-plan */}
                   <div>
-                    <label>🎞 Vidéos d'arrière-plan (B-roll en mouvement)</label>
+                    <label>Vidéos d'arrière-plan (B-roll en mouvement)</label>
                     <div className="dropzone">
                       <div className="libgrid">
                         {bgVideos.map(v => (
@@ -666,7 +666,7 @@ export default function MarketingTab() {
               ))}
             </div>
             <div className="actions">
-              <button className="btn btn-violet" onClick={generatePack} disabled={genPack}>{genPack ? '✦ Génération du pack…' : '✦ Générer le pack marketing (IA)'}</button>
+              <button className="btn btn-violet" onClick={generatePack} disabled={genPack}>{genPack ? 'Génération du pack…' : 'Générer le pack marketing (IA)'}</button>
               {pack && <button className="btn btn-ghost" onClick={() => setPack(null)}>Vider</button>}
             </div>
           </div>
@@ -676,8 +676,8 @@ export default function MarketingTab() {
               <div className="packbar">
                 <span className="chip">Langue : {sLang.toUpperCase()}</span>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button className="btn btn-ghost" onClick={translatePack} disabled={translating}>{translating ? 'Traduction…' : `🌐 Traduire en ${sLang === 'fr' ? 'EN' : 'FR'}`}</button>
-                  <button className="btn btn-signal" onClick={saveAsset} disabled={savingAsset}>{savingAsset ? 'Enregistrement…' : '💾 Enregistrer dans les actifs'}</button>
+                  <button className="btn btn-ghost" onClick={translatePack} disabled={translating}>{translating ? 'Traduction…' : `Traduire en ${sLang === 'fr' ? 'EN' : 'FR'}`}</button>
+                  <button className="btn btn-signal" onClick={saveAsset} disabled={savingAsset}>{savingAsset ? 'Enregistrement…' : 'Enregistrer dans les actifs'}</button>
                 </div>
               </div>
 
@@ -731,8 +731,8 @@ export default function MarketingTab() {
                     <p className="note" style={{ marginTop: 8 }}>Utilise un <b>compte normal</b> du tenant CERDIA (données fictives). Laisse vide si tu as défini <code>MKT_DEMO_EMAIL</code>/<code>MKT_DEMO_PASSWORD</code> sur Vercel. Les identifiants servent uniquement à cette capture et ne sont jamais sauvegardés.</p>
                   </div>
                   <div className="actions">
-                    <button className="btn btn-violet" onClick={generateCapturePlan} disabled={genPlan}>{genPlan ? '✦ Préparation…' : '✦ Générer le plan de capture (IA)'}</button>
-                    {capturePlan && <button className="btn btn-reel" onClick={runCapture} disabled={capturing}>{capturing ? '📸 Capture en cours…' : '📸 Lancer la capture réelle'}</button>}
+                    <button className="btn btn-violet" onClick={generateCapturePlan} disabled={genPlan}>{genPlan ? 'Préparation…' : 'Générer le plan de capture (IA)'}</button>
+                    {capturePlan && <button className="btn btn-reel" onClick={runCapture} disabled={capturing}>{capturing ? 'Capture en cours…' : 'Lancer la capture réelle'}</button>}
                     {capturePlan && <button className="btn btn-ghost" onClick={downloadPlan}>↧ Plan (.json)</button>}
                   </div>
                   {capturePlan && Array.isArray(capturePlan.steps) && (
@@ -743,7 +743,7 @@ export default function MarketingTab() {
                           <tr key={i}><td>{i + 1}</td><td>{st.scene}</td><td className="mono">{st.route}</td><td>{(st.actions || []).map((a: any) => a.type === 'wait' ? `wait ${a.ms}ms` : `${a.type} ${a.selector || ''}`).join(' · ') || '—'}</td><td className="mono">{st.highlight || '—'}</td></tr>
                         ))}</tbody>
                       </table></div>
-                      <div className="note"><b>📸 Lancer la capture réelle</b> exécute le robot <b>côté serveur</b> : il se connecte à CERDIA avec le compte démo ci-dessus (sécurité/RLS respectées) et range les écrans capturés directement dans <b>📷 Photos &amp; images</b> (prêts à servir de slides). Le bouton « Plan (.json) » reste disponible pour un usage hors-ligne via <code>scripts/marketing-capture.mjs</code>.
+                      <div className="note"><b>Lancer la capture réelle</b> exécute le robot <b>côté serveur</b> : il se connecte à CERDIA avec le compte démo ci-dessus (sécurité/RLS respectées) et range les écrans capturés directement dans <b>📷 Photos &amp; images</b> (prêts à servir de slides). Le bouton « Plan (.json) » reste disponible pour un usage hors-ligne via <code>scripts/marketing-capture.mjs</code>.
                       </div>
                     </>
                   )}
@@ -769,7 +769,7 @@ export default function MarketingTab() {
                       const full = `${sp.caption}${Array.isArray(sp.hashtags) && sp.hashtags.length ? `\n\n${sp.hashtags.join(' ')}` : ''}`;
                       return (
                         <div key={i} className="platcard">
-                          <div className="plathead"><b>{PLAT_ICON[sp.platform] || '◆'} {sp.platform}</b><button className="copy" onClick={() => copyText(full)}>copier</button></div>
+                          <div className="plathead"><b>{sp.platform}</b><button className="copy" onClick={() => copyText(full)}>copier</button></div>
                           <pre className="ebody">{sp.caption}</pre>
                           {Array.isArray(sp.hashtags) && sp.hashtags.length > 0 && <div className="tags-row">{sp.hashtags.map((t: string, j: number) => <span key={j} className="htag">{t}</span>)}</div>}
                         </div>
@@ -810,7 +810,7 @@ export default function MarketingTab() {
           <div className="card">
             <h2>Avatar présentateur <span className="chip">parle &amp; explique</span></h2>
             <p className="hint">Choisis un <b>avatar</b> (déposé dans la Médiathèque) ; il prononce ton script (lip-sync, via D-ID).</p>
-            {avatars.length === 0 && <div className="warnbox" style={{ marginTop: 0 }}>Ajoute d'abord un <b>avatar</b> dans 🗂 Médiathèque du Studio (en haut).</div>}
+            {avatars.length === 0 && <div className="warnbox" style={{ marginTop: 0 }}>Ajoute d'abord un <b>avatar</b> dans Médiathèque du Studio (en haut).</div>}
             <div className="row3">
               <div><label>Avatar</label>
                 <select value={selectedAvatarId} onChange={e => setSelectedAvatarId(e.target.value)}>
@@ -831,7 +831,7 @@ export default function MarketingTab() {
             </div>
             {/* Mode « texte IA » : idées + durée -> script calibré */}
             <div className="addbox">
-              <label style={{ marginTop: 0 }}>✦ Rédiger le texte par IA — donne tes idées</label>
+              <label style={{ marginTop: 0 }}>Rédiger le texte par IA — donne tes idées</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                 <span style={{ color: 'var(--mist)', fontSize: 11, alignSelf: 'center' }}>Modèles :</span>
                 {SCRIPT_TEMPLATES.map(t => (
@@ -846,14 +846,14 @@ export default function MarketingTab() {
                     <option value={30}>30 secondes</option><option value={45}>45 secondes</option><option value={60}>60 secondes</option>
                   </select>
                 </div>
-                <button className="btn btn-violet" onClick={writeAvatarScript} disabled={avaWriting}>{avaWriting ? '✦ Rédaction…' : '✦ Rédiger le texte'}</button>
+                <button className="btn btn-violet" onClick={writeAvatarScript} disabled={avaWriting}>{avaWriting ? 'Rédaction…' : 'Rédiger le texte'}</button>
               </div>
             </div>
 
             <label>Texte à narrer</label>
             <textarea value={avaText} onChange={e => setAvaText(e.target.value)} placeholder="Ce que l'avatar dit à l'écran… (ou rédige-le par IA ci-dessus)" rows={3} />
             <div className="actions">
-              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy}>{avaBusy ? '🎬 Génération…' : '🎬 Générer l\'avatar qui parle'}</button>
+              <button className="btn btn-reel" onClick={generateAvatar} disabled={avaBusy}>{avaBusy ? 'Génération…' : 'Générer l\'avatar qui parle'}</button>
             </div>
             {avaMsg && <div className={`mkt-notice ${avaMsg.ok ? 'ok' : 'err'}`} style={{ marginTop: 10, marginBottom: 0 }}>{avaMsg.msg}</div>}
             {avaUrl && (
@@ -880,8 +880,8 @@ export default function MarketingTab() {
 
           {/* Galerie UNIQUE : clips d'avatar + montages assemblés, tout ensemble. */}
           <div className="card">
-            <h2>📁 Mes vidéos enregistrées <span className="chip">{avaVideos.length + compositions.length}</span></h2>
-            <p className="hint">Tout est conservé ici (stockage Supabase) : tes <b>clips d'avatar</b> et tes <b>montages assemblés</b> (badge). Revois, télécharge (↧) ou supprime (🗑). Les montages y arrivent via « 💾 Enregistrer dans la galerie » de l'assembleur.</p>
+            <h2>Mes vidéos enregistrées <span className="chip">{avaVideos.length + compositions.length}</span></h2>
+            <p className="hint">Tout est conservé ici (stockage Supabase) : tes <b>clips d'avatar</b> et tes <b>montages assemblés</b> (badge). Revois, télécharge (↧) ou supprime (corbeille). Les montages y arrivent via « Enregistrer dans la galerie » de l'assembleur.</p>
             {(() => {
               const all = [
                 ...compositions.map(v => ({ ...v, tag: 'Montage', tc: 'var(--reel)' })),
@@ -898,7 +898,7 @@ export default function MarketingTab() {
                         <span className="chip" style={{ color: v.tc, borderColor: v.tc }}>{v.tag}</span>
                         <span style={{ display: 'flex', gap: 8 }}>
                           <button className="copy" onClick={() => downloadAsset(v.url, `${(v.tag || 'video').toLowerCase()}-${v.id.slice(0, 6)}.${v.url.split('.').pop()?.split('?')[0] || 'mp4'}`)} title="Télécharger">↧</button>
-                          <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}>🗑</button>
+                          <button className="copy" style={{ color: 'var(--rust)' }} onClick={() => { if (confirm('Supprimer définitivement cette vidéo ?')) deleteAsset(v.id); }}><Trash2 size={14} /></button>
                         </span>
                       </div>
                     </div>
@@ -932,7 +932,7 @@ export default function MarketingTab() {
                 </select>
               </div>
               <div><label>Secteur ciblé</label><input value={researchSector} onChange={e => setResearchSector(e.target.value)} placeholder="Ex. : mutuelles SST, location d'équipement, manufacturiers MT…" /></div>
-              <button className="btn btn-violet" onClick={runResearch} disabled={researching}>{researching ? '✦ Recherche…' : '✦ Rechercher (IA)'}</button>
+              <button className="btn btn-violet" onClick={runResearch} disabled={researching}>{researching ? 'Recherche…' : 'Rechercher (IA)'}</button>
             </div>
 
             {candidates.length > 0 && (
@@ -950,7 +950,7 @@ export default function MarketingTab() {
                         <div className="candc">{c.company} <span className="candcity">{c.city ? `· ${c.city}` : ''} · {c.region || researchRegion}</span></div>
                         <div className="mono candmail">{c.email}</div>
                         {c.relevance && <div className="candrel">{c.relevance}</div>}
-                        {c.source_url && <a className="candsrc" href={c.source_url} target="_blank" rel="noreferrer">⚖ source publiée</a>}
+                        {c.source_url && <a className="candsrc" href={c.source_url} target="_blank" rel="noreferrer">source publiée</a>}
                       </div>
                     </label>
                   );
@@ -986,7 +986,7 @@ export default function MarketingTab() {
                 ))}
               </div>
               <div className="actions">
-                <button className="btn btn-violet" onClick={generateEmail} disabled={genEmail}>{genEmail ? '✦ Génération…' : '✦ Générer le courriel (IA)'}</button>
+                <button className="btn btn-violet" onClick={generateEmail} disabled={genEmail}>{genEmail ? 'Génération…' : 'Générer le courriel (IA)'}</button>
                 <button className="btn btn-signal" onClick={scheduleCampaign} disabled={!allChecks || scheduling} title={allChecks ? '' : 'Active les 4 conditions de conformité'}>{scheduling ? '▶ Envoi…' : '▶ Programmer & envoyer'}</button>
               </div>
 
@@ -997,7 +997,7 @@ export default function MarketingTab() {
                   <pre className="ebody">{emailDraft.body}</pre>
                   <div className="efoot">{emailDraft.footer}</div>
                   {Array.isArray(emailDraft.compliance) && emailDraft.compliance.length > 0 && (
-                    <ul className="ecomp">{emailDraft.compliance.map((c: string, i: number) => <li key={i}>⚖ {c}</li>)}</ul>
+                    <ul className="ecomp">{emailDraft.compliance.map((c: string, i: number) => <li key={i}>{c}</li>)}</ul>
                   )}
                 </div>
               )}
@@ -1067,24 +1067,24 @@ export default function MarketingTab() {
       {view === 'compliance' && (
         <>
           <div className="grid">
-            <LawCard title="✉ Prospection courriel" tag="LCAP / CASL" rules={[
+            <LawCard title="Prospection courriel" tag="LCAP / CASL" rules={[
               ['!', 'Consentement par destinataire', 'Exprès (opt-in) ou tacite (relation < 24 mois, ou adresse publiée sans mention « pas de sollicitation »).'],
               ['!', 'Identité + adresse physique', 'Nom et adresse postale valides dans chaque courriel.'],
               ['!', 'Désabonnement fonctionnel', 'Lien clair, traité sous 10 jours ouvrables.'],
               ['✓', 'Registre de preuve', 'Source et date de consentement conservées. Amendes jusqu\'à 10 M$ par violation.'],
             ]} />
-            <LawCard title="🛡 Données personnelles" tag="Loi 25 — QC" rules={[
+            <LawCard title="Données personnelles" tag="Loi 25 — QC" rules={[
               ['!', 'Courriel nominatif = renseignement personnel', 'marc.tremblay@… est protégé ; info@… reste encadré.'],
               ['!', 'Finalité documentée', 'Pouvoir dire d\'où vient chaque contact et pourquoi.'],
               ['✓', 'Politique de confidentialité + responsable (PRP)', 'Publiée, accessible, responsable désigné.'],
               ['✓', 'Droit d\'accès et de retrait', 'Consultation et suppression sur demande.'],
             ]} />
-            <LawCard title="🎬 Vidéos promo" tag="Concurrence / LPC" rules={[
+            <LawCard title="Vidéos promo" tag="Concurrence / LPC" rules={[
               ['!', 'Pas de données client réelles à l\'écran', 'Compte démo à données fictives. Une vraie capture = fuite de renseignements.'],
               ['!', 'Allégations démontrables', '« −70 % de temps » doit reposer sur une mesure réelle.'],
               ['✓', 'Autorisation pour témoignage', 'Un témoignage client exige son accord écrit.'],
             ]} />
-            <LawCard title="🤖 Agent autonome" tag="bonnes pratiques" rules={[
+            <LawCard title="Agent autonome" tag="bonnes pratiques" rules={[
               ['!', 'Validation humaine au départ', 'L\'IA prépare ; tu approuves la 1re campagne de chaque segment.'],
               ['!', 'Pas de scraping aveugle', 'Enrichir des fiches légitimes, jamais collecter sans base de consentement.'],
               ['✓', 'Cadence + warm-up', 'Envoi étalé pour la délivrabilité et sous les seuils de plainte.'],

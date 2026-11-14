@@ -6,7 +6,7 @@ export const gasMaintenance: WorkType = {
   name: 'Maintenance gazière',
   category: 'Gaz & Pipeline',
   description: 'Maintenance sur réseaux de distribution de gaz naturel',
-  icon: '🔥',
+  icon: '',
   baseHazards: [
     'GAZ-001', // Fuite de gaz
     'GAZ-002', // Explosion
@@ -64,7 +64,7 @@ export const pipelineInspection: WorkType = {
   name: 'Inspection pipeline',
   category: 'Gaz & Pipeline',
   description: 'Inspection et contrôle d\'intégrité des pipelines',
-  icon: '🚰',
+  icon: '',
   baseHazards: [
     'GAZ-001', // Fuite de gaz
     'GAZ-003', // Asphyxie
@@ -108,7 +108,7 @@ export const gasInstallation: WorkType = {
   name: 'Installation gazière',
   category: 'Gaz & Pipeline',
   description: 'Installation de nouveaux équipements et raccordements gaz',
-  icon: '⛽',
+  icon: '',
   baseHazards: [
     'GAZ-001', // Fuite de gaz
     'GAZ-002', // Explosion

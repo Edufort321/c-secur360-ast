@@ -341,7 +341,7 @@ export default function TenantManagePage() {
                 </label>
                 <label className="block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">URL de base ERP</span><input className={inputCls} placeholder="https://erp.exemple.com/api" value={tenant.erp_base_url || ''} onChange={e => setTenant((t: any) => ({ ...t, erp_base_url: e.target.value }))} /></label>
                 <label className="block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">ID société / base</span><input className={inputCls} value={tenant.erp_company_id || ''} onChange={e => setTenant((t: any) => ({ ...t, erp_company_id: e.target.value }))} /></label>
-                <p className="text-xs text-gray-400 sm:col-span-2 lg:col-span-3">🔒 Clé/API ERP : stockage sécurisé côté serveur (à brancher) — non saisie ici.</p>
+                <p className="text-xs text-gray-400 sm:col-span-2 lg:col-span-3">Clé/API ERP : stockage sécurisé côté serveur (à brancher) — non saisie ici.</p>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Abonnement — sites</div>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Nombre de sites inclus</span>
@@ -352,7 +352,7 @@ export default function TenantManagePage() {
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Forfait Assistant IA (jetons — sans date, jusqu'à épuisement)</span>
                   {aiRequested && (
                     <div className="mb-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
-                      🔴 Ajustement token requis — le client a demandé un renouvellement. Ajuste le forfait puis « Conso à 0 + facturer », ou enregistre le profil pour effacer la demande.
+                      Ajustement token requis — le client a demandé un renouvellement. Ajuste le forfait puis « Conso à 0 + facturer », ou enregistre le profil pour effacer la demande.
                     </div>
                   )}
                   <select className={inputCls} value={aiTier} onChange={e => setAiTier(Number(e.target.value))}>
@@ -377,7 +377,7 @@ export default function TenantManagePage() {
                   <div className="flex gap-2">
                     <input className={inputCls} placeholder="https://exemple.com/logo.png ou téléverser →" value={tenant.logo_url || ''} onChange={e => setTenant((t: any) => ({ ...t, logo_url: e.target.value }))} />
                     <label className="shrink-0 cursor-pointer inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700" title="Téléverser une image (PNG, JPG)">
-                      📤 Téléverser
+                      Téléverser
                       <input type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (!f) return; try { const url = await uploadPhoto(f, (tenant.subdomain || id) as string, supabase); setTenant((t: any) => ({ ...t, logo_url: url })); setNotice('Logo téléversé ✓ — pensez à Enregistrer'); } catch { setNotice('Erreur téléversement logo'); } e.target.value = ''; }} />
                     </label>
                   </div>

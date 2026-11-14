@@ -262,7 +262,7 @@ function AtmPanel({ norm, retestMin, atmState, secsLeft, lastReading, lastEval, 
   const banner = atmState === 'danger'
     ? { bg: 'bg-red-600', txt: '⚠ DANGER — NE PAS ENTRER · VENTILER ET REPRENDRE', icon: <AlertTriangle /> }
     : atmState === 'recheck'
-      ? { bg: 'bg-amber-500', txt: '⏱ REPRISE REQUISE — refaire un relevé avant d’entrer', icon: <Clock /> }
+      ? { bg: 'bg-amber-500', txt: 'REPRISE REQUISE — refaire un relevé avant d’entrer', icon: <Clock /> }
       : atmState === 'safe'
         ? { bg: 'bg-emerald-600', txt: '✓ ATMOSPHÈRE CONFORME — entrée permise', icon: <ShieldCheck /> }
         : { bg: 'bg-gray-400', txt: 'Aucun relevé — effectuer le premier test avant toute entrée', icon: <Wind /> };
@@ -372,7 +372,7 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, peopl
     return (
       <div className="flex items-center gap-2 text-sm border-b border-gray-100 py-1.5">
         <span className="font-medium text-gray-800">{e.person_name}</span>
-        {!isAtt && Array.isArray(e.equipment_in) && e.equipment_in.length > 0 && <span className="text-[11px] text-gray-400 truncate">🧰 {e.equipment_in.join(', ')}</span>}
+        {!isAtt && Array.isArray(e.equipment_in) && e.equipment_in.length > 0 && <span className="text-[11px] text-gray-400 truncate">{e.equipment_in.join(', ')}</span>}
         <span className="ml-auto text-xs">
           {!e.entered_at ? <span className="text-gray-400">—</span>
             : inside ? <span className="font-mono font-semibold text-emerald-600 tabular-nums"><Clock size={11} className="inline mb-0.5" /> {fmtClock(sec)}{isAtt ? ' en poste' : ''}</span>
@@ -442,7 +442,7 @@ function EntriesPanel({ norm, entries, openEntrants, attendants, atmState, peopl
         <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
           <div className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1.5"><AlertTriangle size={13} /> Matériel encore à l’intérieur ({equipInside.length}) — à ressortir avant fermeture</div>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-amber-900">
-            {equipInside.map((x: any, i: number) => <span key={i}>🧰 {x.item} <span className="text-amber-600">({x.who})</span></span>)}
+            {equipInside.map((x: any, i: number) => <span key={i}>{x.item} <span className="text-amber-600">({x.who})</span></span>)}
           </div>
         </div>
       )}

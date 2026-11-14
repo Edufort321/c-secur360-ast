@@ -245,12 +245,12 @@ export default function EquipmentPublicPage() {
         {(() => {
           if (!maintDue) return null;
           const days = Math.round((new Date(maintDue + 'T00:00:00').getTime() - Date.now()) / 86400_000);
-          const cfg = days < 0 ? { cls: 'bg-red-600', dot: '🔴', label: fr ? `En retard depuis le ${maintDue}` : `Overdue since ${maintDue}` }
-            : days <= 30 ? { cls: 'bg-yellow-500', dot: '🟡', label: fr ? `Bientôt due — ${maintDue} (${days} j)` : `Due soon — ${maintDue} (${days}d)` }
-            : { cls: 'bg-green-600', dot: '🟢', label: fr ? `À jour — prochaine le ${maintDue}` : `Up to date — next ${maintDue}` };
+          const cfg = days < 0 ? { cls: 'bg-red-600', dot: 'bg-red-300', label: fr ? `En retard depuis le ${maintDue}` : `Overdue since ${maintDue}` }
+            : days <= 30 ? { cls: 'bg-yellow-500', dot: 'bg-yellow-200', label: fr ? `Bientôt due — ${maintDue} (${days} j)` : `Due soon — ${maintDue} (${days}d)` }
+            : { cls: 'bg-green-600', dot: 'bg-green-300', label: fr ? `À jour — prochaine le ${maintDue}` : `Up to date — next ${maintDue}` };
           return (
             <div className={`${cfg.cls} text-white rounded-xl px-4 py-3 flex items-center gap-2 text-sm font-semibold shadow-sm`}>
-              <Wrench size={16} /> {cfg.dot} {fr ? 'Maintenance périodique' : 'Periodic maintenance'} : {cfg.label}
+              <Wrench size={16} /> <span className={`inline-block h-2.5 w-2.5 rounded-full ${cfg.dot}`} /> {fr ? 'Maintenance périodique' : 'Periodic maintenance'} : {cfg.label}
             </div>
           );
         })()}

@@ -4,7 +4,7 @@ import { ClientConfiguration } from './template';
 export const demoClient: ClientConfiguration = {
   id: 'demo',
   name: 'Client Démo C-Secur360',
-  logo: '🎯',
+  logo: '',
   primaryColor: '#3b82f6',
   secondaryColor: '#1d4ed8',
   emergencyProtocol: {

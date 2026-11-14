@@ -218,7 +218,7 @@ interface RecentProject {
 
 // Hook spécialisé pour les données AST
 export const useASTLocalStorage = () => {
-  // ✅ CORRECTION : Utiliser les types explicites
+  // CORRECTION : Utiliser les types explicites
   const draftsStorage = useLocalStorage<ASTDraft[]>('ast_drafts', [], {
     syncAcrossTabs: true
   });

@@ -60,7 +60,7 @@ export function AstLinkSection({ formData, setFormData, addNotification }) {
     return (
         <div className="rounded-lg border border-teal-200 bg-teal-50/60 p-3">
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-teal-800">
-                🛡️ Analyse sécurité (AST)
+                Analyse sécurité (AST)
             </div>
             <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-[220px] flex-1">
@@ -82,7 +82,7 @@ export function AstLinkSection({ formData, setFormData, addNotification }) {
                     className="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700"
                     title="Créer une AST préremplie avec les infos du mandat (lieu, client, dates, personnel)"
                 >
-                    ➕ Créer une AST préremplie
+                    Créer une AST préremplie
                 </button>
                 {formData.astId && (
                     <a

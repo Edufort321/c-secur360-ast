@@ -41,7 +41,7 @@ export default function PunchWidget({ tenant }: { tenant: string }) {
       const r = await fetch('/api/planner/punch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ action: 'in', jobId: job.id, projectId: job.project_id, projectNumber: job.project_number, siteId: job.site_id }) });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur');
-      await loadOpen(); setMsg('⏱ Poinçon démarré.');
+      await loadOpen(); setMsg('Poinçon démarré.');
     } catch (e: any) { setMsg('Erreur : ' + (e?.message || 'poinçon')); } finally { setBusy(false); }
   }
   async function punchOut() {
@@ -62,7 +62,7 @@ export default function PunchWidget({ tenant }: { tenant: string }) {
   return (
     <div style={{ maxWidth: 1100, margin: '6px auto', padding: '0 12px' }}>
       <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '6px 10px', background: open ? '#ecfdf5' : '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 700, color: '#111827', fontSize: 13 }}>⏱ Poinçon</span>
+        <span style={{ fontWeight: 700, color: '#111827', fontSize: 13 }}>Poinçon</span>
         {open ? (
           <>
             <span style={{ color: '#065f46', fontSize: 13 }}>En cours{open.project_number ? ` · projet ${open.project_number}` : ''} — <b style={{ fontFamily: 'monospace' }}>{clock}</b></span>

@@ -141,7 +141,7 @@ export function ASTProvider({
   userId?: string;
 }) {
   
-  // ✅ ÉTAT INITIAL STABLE
+  // ÉTAT INITIAL STABLE
   const [state, dispatch] = useReducer(astReducer, {
     formData: {
       ...initialData,
@@ -157,9 +157,9 @@ export function ASTProvider({
     language
   });
 
-  // ✅ HANDLERS ULTRA-STABLES - Références figées
+  // HANDLERS ULTRA-STABLES - Références figées
   const updateStepData = useCallback((section: string, data: any) => {
-    console.log('🔥 Context Update:', { section, data, tenant: tenant.id });
+    console.log('Context Update:', { section, data, tenant: tenant.id });
     
     dispatch({
       type: 'UPDATE_STEP_DATA',
@@ -167,7 +167,7 @@ export function ASTProvider({
       data
     });
 
-    // 🚀 Sauvegarde différée automatique
+    // Sauvegarde différée automatique
     setTimeout(() => {
       saveToTenantDatabase(tenant.database, section, data, state.formData.astNumber);
     }, 1000);
@@ -210,7 +210,7 @@ export function ASTProvider({
     });
   }, []);
 
-  // ✅ LOGIQUE NAVIGATION OPTIMISÉE
+  // LOGIQUE NAVIGATION OPTIMISÉE
   const canNavigateToNext = useCallback((): boolean => {
     const { formData, currentStep } = state;
     
@@ -248,7 +248,7 @@ export function ASTProvider({
     }
   }, [canNavigateToPrevious, state.currentStep, setCurrentStep]);
 
-  // ✅ UTILITAIRES
+  // UTILITAIRES
   const getCompletionPercentage = useCallback((): number => {
     const { formData } = state;
     let completed = 0;
@@ -273,12 +273,12 @@ export function ASTProvider({
       );
       dispatch({ type: 'MARK_SAVED' });
     } catch (error) {
-      console.error('❌ Erreur sauvegarde:', error);
+      console.error('Erreur sauvegarde:', error);
       throw error;
     }
   }, [tenant.database, state.formData]);
 
-  // ✅ VALEUR CONTEXT STABLE avec useRef
+  // VALEUR CONTEXT STABLE avec useRef
   const contextValue = useRef<ASTContextValue>({
     tenant,
     state,
@@ -300,7 +300,7 @@ export function ASTProvider({
   contextValue.current.state = state;
   contextValue.current.tenant = tenant;
 
-  // ✅ AUTO-SAVE AVEC CLEANUP
+  // AUTO-SAVE AVEC CLEANUP
   useEffect(() => {
     if (state.isDirty) {
       const saveTimer = setTimeout(() => {
@@ -311,7 +311,7 @@ export function ASTProvider({
     }
   }, [state.isDirty]);
 
-  // ✅ RÉCUPÉRATION LANGUE SAUVEGARDÉE
+  // RÉCUPÉRATION LANGUE SAUVEGARDÉE
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
@@ -345,9 +345,9 @@ async function saveToTenantDatabase(
   astNumber: string
 ) {
   try {
-    // 🚀 Mode development - simulation API
+    // Mode development - simulation API
     if (process.env.NODE_ENV === 'development') {
-      console.log('💾 DEV - Sauvegarde simulée:', {
+      console.log('DEV - Sauvegarde simulée:', {
         tenant: dbConfig.schema,
         section,
         astNumber,
@@ -356,7 +356,7 @@ async function saveToTenantDatabase(
       return;
     }
 
-    // 🚀 Mode production - vraie API
+    // Mode production - vraie API
     const response = await fetch(`${dbConfig.host}/api/tenants/${dbConfig.schema}/ast`, {
       method: 'POST',
       headers: {
@@ -378,10 +378,10 @@ async function saveToTenantDatabase(
     }
 
     const result = await response.json();
-    console.log('✅ Sauvegardé dans BD tenant:', dbConfig.schema, result);
+    console.log('Sauvegardé dans BD tenant:', dbConfig.schema, result);
     
   } catch (error) {
-    console.error('❌ Erreur sauvegarde tenant:', error);
+    console.error('Erreur sauvegarde tenant:', error);
     // En cas d'erreur, sauvegarde locale de secours
     if (typeof window !== 'undefined') {
       localStorage.setItem(`ast_backup_${astNumber}`, JSON.stringify({

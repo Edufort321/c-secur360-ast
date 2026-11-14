@@ -420,7 +420,7 @@ export default function Step5Validation({
 
   // =================== NOTIFICATION PARENT ===================
   const notifyParent = useCallback((newData: ValidationData) => {
-    console.log('🔄 Step5 - Mise à jour:', newData);
+    console.log('Step5 - Mise à jour:', newData);
     onDataChange('validation', newData);
   }, [onDataChange]);
 
@@ -484,7 +484,7 @@ export default function Step5Validation({
     });
     setShowAddWorker(false);
     
-    console.log('✅ Travailleur ajouté:', worker.name);
+    console.log('✓ Travailleur ajouté:', worker.name);
   }, [newWorker, validationData, notifyParent, workLocations, t.mustAcknowledgeAST, language]);
 
   const createNewLocationAndSync = useCallback(() => {
@@ -531,7 +531,7 @@ export default function Step5Validation({
     });
     setShowCreateLocation(false);
     
-    console.log('✅ Emplacement créé et synchronisé:', location.name);
+    console.log('✓ Emplacement créé et synchronisé:', location.name);
   }, [newLocation, formData.projectInfo, onDataChange]);
 
   const removeWorker = useCallback((workerId: string) => {

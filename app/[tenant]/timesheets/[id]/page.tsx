@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Save, Send, Loader2, Plus, Trash2,
+  ArrowLeft, Save, Send, Loader2, Plus, Trash2, Lock,
   Search, Briefcase, Settings2, Wrench, MoreHorizontal, Car, Building2,
   Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown, DollarSign, Paperclip, Receipt, Download,
 } from 'lucide-react';
@@ -757,7 +757,7 @@ export default function TimesheetDetailPage() {
   if (forbidden) return (
     <div className="min-h-screen bg-slate-50"><PortalHeader tenant={tenant} />
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <div className="text-4xl">🔒</div>
+        <div className="flex justify-center"><Lock size={40} /></div>
         <h1 className="mt-3 text-xl font-bold text-slate-800">Accès refusé</h1>
         <p className="mt-2 text-sm text-slate-500">Cette feuille de temps appartient à un autre utilisateur.</p>
         <button onClick={() => router.push(`/${tenant}/timesheets`)} className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
@@ -826,7 +826,7 @@ export default function TimesheetDetailPage() {
                 </span>
                 <button onClick={roundAllTo15} title="Arrondir toutes les heures au 15 min (0,25 h)"
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  ⏱ Arrondir 15 min
+                  Arrondir 15 min
                 </button>
                 <button onClick={() => save(false)} disabled={saving}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
@@ -1035,7 +1035,7 @@ export default function TimesheetDetailPage() {
                 {/* Ligne 2: heures + km + véhicule + matériel */}
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/40">
-                    <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">⏱ Heures travaillées (h)</div>
+                    <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">Heures travaillées (h)</div>
                     <div className="flex items-end gap-2">
                       {[
                         { label: 'Régulier', k: 'hrs_regular' as keyof Entry },

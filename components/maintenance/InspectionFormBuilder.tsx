@@ -187,7 +187,7 @@ export default function InspectionFormBuilder({ tenant, tr }: { tenant: string; 
 
       {/* Gabarits pré-montés : démarrage rapide (ouvre l'éditeur pré-rempli, modifiable avant d'enregistrer). */}
       <div className="rounded-2xl border border-orange-200 bg-orange-50/60 p-3 dark:border-orange-500/30 dark:bg-orange-500/10">
-        <div className="mb-2 text-xs font-bold text-orange-800 dark:text-orange-300">⚡ {tr('Partir d’un gabarit pré-monté', 'Start from a pre-built template')}</div>
+        <div className="mb-2 text-xs font-bold text-orange-800 dark:text-orange-300">{tr('Partir d’un gabarit pré-monté', 'Start from a pre-built template')}</div>
         <div className="flex flex-wrap gap-2">
           {STARTER_TEMPLATES.map((s, i) => (
             <button key={i} onClick={() => setEdit(starterToTemplate(s))} className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100 dark:border-orange-500/40 dark:bg-gray-800 dark:text-orange-300">

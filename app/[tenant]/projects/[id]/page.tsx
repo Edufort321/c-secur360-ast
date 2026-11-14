@@ -549,7 +549,7 @@ export default function ProjectDetailPage() {
                 {/* Temps réel sur le projet (feuilles de temps) — alimente le suivi et la facturation */}
                 {timeRollup && timeRollup.total > 0 && (
                   <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
-                    <h3 className="mb-2 text-sm font-bold">⏱️ {tr('Temps réel sur le projet', 'Actual time on project')}</h3>
+                    <h3 className="mb-2 text-sm font-bold">{tr('Temps réel sur le projet', 'Actual time on project')}</h3>
                     <div className="flex flex-wrap gap-3 text-sm">
                       <span className="rounded-lg bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{tr('Total', 'Total')} : {timeRollup.total.toLocaleString('fr-CA')} h</span>
                       <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{tr('Rég.', 'Reg.')} {timeRollup.reg} · {tr('Supp.', 'OT')} {timeRollup.ot} · {tr('Maj.', 'Prem.')} {timeRollup.prem}</span>

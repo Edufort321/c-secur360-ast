@@ -136,7 +136,7 @@ export default function ModernPermitForm({ config }: { config: PermitConfig }) {
         ))}
 
         <Sec title={`${(config.sections?.length || 0) + 2} · Conseiller IA (dangers, contrôles, EPI, plan d’action)`} icon={<Sparkles size={16} />}>
-          <button onClick={runAi} disabled={aiBusy} className="inline-flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">{aiBusy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {aiBusy ? 'Analyse…' : '✦ Analyser les risques'}</button>
+          <button onClick={runAi} disabled={aiBusy} className="inline-flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">{aiBusy ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />} {aiBusy ? 'Analyse…' : 'Analyser les risques'}</button>
           {advice && (
             <div className="mt-3 space-y-3 text-sm">
               <div className="flex items-center gap-2"><span className="text-xs text-gray-500">Risque :</span><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${RISK[advice.risk_level] || 'bg-gray-100'}`}>{advice.risk_level}</span></div>

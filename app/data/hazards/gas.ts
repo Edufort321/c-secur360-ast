@@ -1,5 +1,5 @@
 // app/data/hazards/gas.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+// IMPORT CORRIGÉ - Utilise les types depuis types/
 import { Hazard } from '../../types/hazards';
 
 // Fonction helper pour créer un danger

@@ -5,6 +5,7 @@
 // Chaque entrée = PDF importé (base64) OU hyperlien. Stockés dans dga_dossiers.docs (jsonb).
 // ============================================================================
 import React, { useState } from 'react';
+import { Trash2, FileText, Link2 } from 'lucide-react';
 import type { DgaDoc } from '@/lib/dga/dossiers';
 import type { Lang } from '@/lib/dga/fields';
 
@@ -49,7 +50,7 @@ export function DocsSection({ docs, onChange, lang, tr, setNotice }: {
 
   return (
     <section className={CARD}>
-      <h3 className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">📄 {tr('Documents', 'Documents')}</h3>
+      <h3 className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">{tr('Documents', 'Documents')}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         {CATS.map(cat => {
           const items = docs.filter(d => d.category === cat.id);
@@ -58,10 +59,10 @@ export function DocsSection({ docs, onChange, lang, tr, setNotice }: {
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-400">{cat.label}</span>
                 <div className="flex gap-1.5">
-                  <label className={BTN + ' cursor-pointer'}>📄 {tr('PDF', 'PDF')}
+                  <label className={BTN + ' cursor-pointer'}>{tr('PDF', 'PDF')}
                     <input type="file" accept="application/pdf,.pdf" multiple className="hidden" onChange={e => { addFiles(cat.id, e.target.files); e.currentTarget.value = ''; }} />
                   </label>
-                  <button className={BTN} onClick={() => setLinkForm({ cat: cat.id, name: '', url: '' })}>🔗 {tr('Lien', 'Link')}</button>
+                  <button className={BTN} onClick={() => setLinkForm({ cat: cat.id, name: '', url: '' })}>{tr('Lien', 'Link')}</button>
                 </div>
               </div>
 
@@ -81,10 +82,10 @@ export function DocsSection({ docs, onChange, lang, tr, setNotice }: {
                 : <ul className="space-y-1">
                   {items.map(d => (
                     <li key={d.id} className="flex items-center gap-2 rounded-lg border border-gray-100 px-2 py-1 text-xs dark:border-gray-700/60">
-                      <span>{d.kind === 'file' ? '📄' : '🔗'}</span>
+                      <span>{d.kind === 'file' ? <FileText size={14} /> : <Link2 size={14} />}</span>
                       <a href={d.kind === 'file' ? d.data : d.url} download={d.kind === 'file' ? d.name : undefined} target="_blank" rel="noopener noreferrer"
                         className="flex-1 truncate font-medium text-blue-600 hover:underline dark:text-blue-400" title={d.name}>{d.name}</a>
-                      <button className="text-gray-300 hover:text-red-500" onClick={() => remove(d.id)}>🗑</button>
+                      <button className="text-gray-300 hover:text-red-500" onClick={() => remove(d.id)}><Trash2 size={14} /></button>
                     </li>
                   ))}
                 </ul>}

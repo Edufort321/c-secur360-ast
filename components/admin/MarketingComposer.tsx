@@ -18,11 +18,11 @@ type Aspect = '16:9' | '9:16' | '1:1';
 type Style = 'tiktok' | 'canva' | 'powerpoint' | 'fade' | 'cut';
 
 const STYLE_OPTIONS: { v: Style; l: string; d: string }[] = [
-  { v: 'canva', l: '🎨 Canva', d: 'zoom & panoramique doux (Ken Burns)' },
-  { v: 'tiktok', l: '⚡ TikTok', d: 'zoom punché, coupe rapide' },
-  { v: 'powerpoint', l: '📊 PowerPoint', d: 'glissement (push) latéral' },
-  { v: 'fade', l: '🌫 Fondu', d: 'fondu enchaîné' },
-  { v: 'cut', l: '✂ Coupe', d: 'coupe franche, sans animation' },
+  { v: 'canva', l: 'Canva', d: 'zoom & panoramique doux (Ken Burns)' },
+  { v: 'tiktok', l: 'TikTok', d: 'zoom punché, coupe rapide' },
+  { v: 'powerpoint', l: 'PowerPoint', d: 'glissement (push) latéral' },
+  { v: 'fade', l: 'Fondu', d: 'fondu enchaîné' },
+  { v: 'cut', l: 'Coupe', d: 'coupe franche, sans animation' },
 ];
 const easeOut = (p: number) => 1 - (1 - p) * (1 - p);
 
@@ -387,7 +387,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
         } catch { /* conversion indisponible -> repli sur le fichier d'origine */ }
         if (finalUrl) {
           setMp4Url(finalUrl); await saveVideoToGallery(finalUrl); setSavedUrl(finalUrl);
-          onNotice({ msg: '✓ Montage .mp4 enregistré dans « 📁 Mes vidéos enregistrées » (prêt pour TikTok).', ok: true });
+          onNotice({ msg: '✓ Montage .mp4 enregistré dans « Mes vidéos enregistrées » (prêt pour TikTok).', ok: true });
         } else {
           setMp4Url(nativeMp4 ? uploadedUrl : ''); await saveVideoToGallery(uploadedUrl); setSavedUrl(uploadedUrl);
           onNotice({ msg: nativeMp4
@@ -505,7 +505,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
 
   return (
     <div className="card cmp">
-      <h2>🎬 Assembler la vidéo <span className="chip">aperçu + enregistrement</span></h2>
+      <h2>Assembler la vidéo <span className="chip">aperçu + enregistrement</span></h2>
       <p className="hint">Compose ici la vidéo finale : un <b>fond</b> (tes slides qui défilent <i>ou</i> une vidéo) + l'<b>avatar</b> qui parle, incrusté dans un coin ou plein cadre, avec sous-titres. L'aperçu à droite est <b>exactement</b> ce qui sera enregistré. Aucun outil externe.</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: `1fr ${stageW + 24}px`, gap: 16, alignItems: 'start' }} className="composer-grid">
@@ -536,8 +536,8 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
           <div className="addbox">
             <label style={{ marginTop: 0 }}>② Arrière-plan</label>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <button type="button" className={`btn ${bgMode === 'slides' ? 'btn-violet' : 'btn-ghost'}`} onClick={() => setBgMode('slides')}>🖼 Slides (images)</button>
-              <button type="button" className={`btn ${bgMode === 'video' ? 'btn-violet' : 'btn-ghost'}`} onClick={() => setBgMode('video')}>🎞 Vidéo de fond</button>
+              <button type="button" className={`btn ${bgMode === 'slides' ? 'btn-violet' : 'btn-ghost'}`} onClick={() => setBgMode('slides')}>Slides (images)</button>
+              <button type="button" className={`btn ${bgMode === 'video' ? 'btn-violet' : 'btn-ghost'}`} onClick={() => setBgMode('video')}>Vidéo de fond</button>
             </div>
 
             {bgMode === 'video' ? (
@@ -606,7 +606,7 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
             <div style={{ display: 'flex', gap: 8 }}>
               {(['16:9', '9:16', '1:1'] as Aspect[]).map(a => (
                 <button key={a} type="button" className={`btn ${aspect === a ? 'btn-violet' : 'btn-ghost'}`} onClick={() => setAspect(a)}>
-                  {a === '16:9' ? '🖥 Paysage 16:9' : a === '9:16' ? '📱 Vertical 9:16' : '⬛ Carré 1:1'}
+                  {a === '16:9' ? 'Paysage 16:9' : a === '9:16' ? 'Vertical 9:16' : 'Carré 1:1'}
                 </button>
               ))}
             </div>
@@ -620,8 +620,8 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
           <div style={{ width: stageW, maxWidth: '100%', margin: '0 auto' }}>
             <canvas ref={canvasRef} width={dims.w} height={dims.h} style={{ width: stageW, height: stageH, maxWidth: '100%', borderRadius: 12, border: '1px solid var(--line)', background: '#0b1220', display: 'block' }} />
             <div className="actions" style={{ justifyContent: 'center', marginTop: 10 }}>
-              <button className="btn btn-ghost" onClick={play} disabled={recording}>{playing && !recording ? '⏸ Pause' : '▶ Aperçu'}</button>
-              <button className="btn btn-reel" onClick={record} disabled={recording}>{recording ? '⏺ Enregistrement…' : '⏺ Assembler & enregistrer'}</button>
+              <button className="btn btn-ghost" onClick={play} disabled={recording}>{playing && !recording ? 'Pause' : '▶ Aperçu'}</button>
+              <button className="btn btn-reel" onClick={record} disabled={recording}>{recording ? 'Enregistrement…' : 'Assembler & enregistrer'}</button>
             </div>
           </div>
 
@@ -631,10 +631,10 @@ export default function MarketingComposer({ avatarVideos, library, bgVideos = []
               <div className="actions" style={{ justifyContent: 'center' }}>
                 {mp4Url
                   ? <button className="btn btn-signal" onClick={() => downloadFile(mp4Url, `composition-${aspect.replace(':', 'x')}.mp4`)}>↧ Télécharger le .mp4</button>
-                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting || saving}>{(converting || saving) ? '🎞 Conversion .mp4…' : '🎞 Convertir en .mp4'}</button>}
+                  : <button className="btn btn-violet" onClick={convertToMp4} disabled={converting || saving}>{(converting || saving) ? 'Conversion .mp4…' : 'Convertir en .mp4'}</button>}
                 {savedUrl && <span className="btn btn-ghost" style={{ cursor: 'default', opacity: 0.8 }}>✓ Enregistré</span>}
               </div>
-              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Le montage est <b>converti en .mp4</b> et <b>enregistré automatiquement</b> dans « 📁 Mes vidéos enregistrées » — c'est le seul format diffusable (TikTok/Meta).</p>
+              <p className="cmp-note" style={{ textAlign: 'center', marginTop: 6 }}>Le montage est <b>converti en .mp4</b> et <b>enregistré automatiquement</b> dans « Mes vidéos enregistrées » — c'est le seul format diffusable (TikTok/Meta).</p>
             </div>
           )}
         </div>

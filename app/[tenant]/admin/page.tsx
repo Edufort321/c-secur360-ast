@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/currentUser';
 import dynamic from 'next/dynamic';
 import { buildPayrollRows, buildPayrollCsv, downloadCsv, isoWeekNum, type PayrollRow } from '@/lib/payroll';
-import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor, Users } from 'lucide-react';
+import { Package, PieChart, ShieldCheck, Bell, Repeat, Boxes, Wand2, Monitor, Users, Eye, EyeOff, Copy, Megaphone, Link2, Sparkles, KeyRound, Wallet, BarChart3, Calendar, Pencil, Handshake, Crown, type LucideIcon } from 'lucide-react';
 // Panneaux légers / fréquents : import statique.
 import { KioskSettings } from '@/components/admin/KioskSettings';
 import { CurrencySettings } from '@/components/admin/CurrencySettings';
@@ -109,15 +109,15 @@ function useCurrentAccess(tenant: string) {
 type AccessLevel = 'consultation' | 'modification' | 'coordination' | 'administration' | 'admin_paie' | 'rh' | 'direction' | 'super_user';
 
 // Cascade numérotée du plus bas (1) au plus haut (8) niveau d'accès
-const ACCESS_LEVELS: { value: AccessLevel; tier: number; label_fr: string; label_en: string; emoji: string; desc_fr: string; desc_en: string }[] = [
-  { value: 'consultation',   tier: 1, label_fr: 'Consultation',           label_en: 'View only',         emoji: '👁️',  desc_fr: 'Lecture seule des données qui le concernent.',                    desc_en: 'Read-only access to own data.' },
-  { value: 'modification',   tier: 2, label_fr: 'Modification',           label_en: 'Edit',              emoji: '✏️',  desc_fr: 'Modifie ses propres informations.',                              desc_en: 'Edit own information.' },
-  { value: 'coordination',   tier: 3, label_fr: 'Coordination',           label_en: 'Coordinate',        emoji: '🗓️',  desc_fr: 'Voit la liste des employés et coordonne le planning.',          desc_en: 'View staff list and coordinate planning.' },
-  { value: 'administration', tier: 4, label_fr: 'Administration',         label_en: 'Admin',             emoji: '⚙️',  desc_fr: 'Gère les employés, postes et accès. Pas d\'accès aux salaires.', desc_en: 'Manage staff, positions, access. No salary access.' },
-  { value: 'admin_paie',     tier: 5, label_fr: 'Admin paie & avantages', label_en: 'Payroll admin',     emoji: '💵',  desc_fr: 'Voit et modifie les salaires/avantages. Mène les évaluations.',  desc_en: 'View/edit salaries/benefits. Run evaluations.' },
-  { value: 'rh',             tier: 6, label_fr: 'Ressources humaines',    label_en: 'HR',                emoji: '🤝',  desc_fr: 'Toutes fonctions Admin + Paie. Embauche/évaluation/sanctions.',   desc_en: 'All Admin + Payroll. Hiring/evaluation/discipline.' },
-  { value: 'direction',      tier: 7, label_fr: 'Direction',              label_en: 'Management',        emoji: '🏢',  desc_fr: 'Vue exécutive. Accès complet aux KPI, salaires et stratégie.',   desc_en: 'Executive view. Full KPI, salary and strategic access.' },
-  { value: 'super_user',     tier: 8, label_fr: 'Super-utilisateur',      label_en: 'Super-user',        emoji: '👑',  desc_fr: 'Accès TOTAL au tenant. Configuration système, migrations, dette.', desc_en: 'TOTAL tenant access. System config, migrations, debt.' },
+const ACCESS_LEVELS: { value: AccessLevel; tier: number; label_fr: string; label_en: string; Icon: LucideIcon; desc_fr: string; desc_en: string }[] = [
+  { value: 'consultation',   tier: 1, label_fr: 'Consultation',           label_en: 'View only',         Icon: Eye,      desc_fr: 'Lecture seule des données qui le concernent.',                    desc_en: 'Read-only access to own data.' },
+  { value: 'modification',   tier: 2, label_fr: 'Modification',           label_en: 'Edit',              Icon: Pencil,   desc_fr: 'Modifie ses propres informations.',                              desc_en: 'Edit own information.' },
+  { value: 'coordination',   tier: 3, label_fr: 'Coordination',           label_en: 'Coordinate',        Icon: Calendar, desc_fr: 'Voit la liste des employés et coordonne le planning.',          desc_en: 'View staff list and coordinate planning.' },
+  { value: 'administration', tier: 4, label_fr: 'Administration',         label_en: 'Admin',             Icon: Settings, desc_fr: 'Gère les employés, postes et accès. Pas d\'accès aux salaires.', desc_en: 'Manage staff, positions, access. No salary access.' },
+  { value: 'admin_paie',     tier: 5, label_fr: 'Admin paie & avantages', label_en: 'Payroll admin',     Icon: Banknote, desc_fr: 'Voit et modifie les salaires/avantages. Mène les évaluations.',  desc_en: 'View/edit salaries/benefits. Run evaluations.' },
+  { value: 'rh',             tier: 6, label_fr: 'Ressources humaines',    label_en: 'HR',                Icon: Handshake, desc_fr: 'Toutes fonctions Admin + Paie. Embauche/évaluation/sanctions.',   desc_en: 'All Admin + Payroll. Hiring/evaluation/discipline.' },
+  { value: 'direction',      tier: 7, label_fr: 'Direction',              label_en: 'Management',        Icon: Building2, desc_fr: 'Vue exécutive. Accès complet aux KPI, salaires et stratégie.',   desc_en: 'Executive view. Full KPI, salary and strategic access.' },
+  { value: 'super_user',     tier: 8, label_fr: 'Super-utilisateur',      label_en: 'Super-user',        Icon: Crown,    desc_fr: 'Accès TOTAL au tenant. Configuration système, migrations, dette.', desc_en: 'TOTAL tenant access. System config, migrations, debt.' },
 ];
 
 // Correspondance niveau d'accès (8 niveaux fins, sur planner_personnel.niveauAcces) → rôle users (3 rôles
@@ -159,7 +159,7 @@ function AccessGuideModal({ tr, onClose }: { tr: (f: string, e: string) => strin
       <div className="w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-800 p-5 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3 sticky top-0 bg-white dark:bg-gray-800 pb-2 z-10">
           <div>
-            <h3 className="font-bold text-lg">🔐 {tr('Guide des niveaux d\'accès', 'Access levels guide')}</h3>
+            <h3 className="font-bold text-lg">{tr('Guide des niveaux d\'accès', 'Access levels guide')}</h3>
             <p className="text-xs text-gray-500">{tr('Cascade du plus bas (1) au plus haut (8) — chaque niveau hérite du précédent + ajoute des droits.', 'Cascade from lowest (1) to highest (8) — each level inherits from the previous + adds more rights.')}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
@@ -181,7 +181,7 @@ function AccessGuideModal({ tr, onClose }: { tr: (f: string, e: string) => strin
                 <div className={`rounded-xl border-2 p-3 ${tierStyles[lvl.tier]}`}>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{lvl.emoji}</span>
+                      <lvl.Icon size={20} className="shrink-0" />
                       <div>
                         <div className="font-bold text-sm">{tr(lvl.label_fr, lvl.label_en)}</div>
                         <div className="text-[11px] opacity-80">{tr(lvl.desc_fr, lvl.desc_en)}</div>
@@ -189,13 +189,13 @@ function AccessGuideModal({ tr, onClose }: { tr: (f: string, e: string) => strin
                     </div>
                     {/* Mini-grille de droits */}
                     <div className="flex gap-2 text-[10px] font-semibold">
-                      <span title={tr('Voir employés', 'View staff')}    className="flex items-center gap-0.5">{cell(p.viewEmployees)}👥</span>
-                      <span title={tr('Modifier employés', 'Edit staff')} className="flex items-center gap-0.5">{cell(p.modifyEmployees)}✏️</span>
-                      <span title={tr('Voir salaire', 'View salary')}     className="flex items-center gap-0.5">{cell(p.viewSalary)}💵</span>
-                      <span title={tr('Modifier salaire', 'Edit salary')} className="flex items-center gap-0.5">{cell(p.editSalary)}💰</span>
-                      <span title={tr('Évaluer', 'Evaluate')}             className="flex items-center gap-0.5">{cell(p.evaluate)}📊</span>
-                      <span title={tr('Coordonner', 'Coordinate')}        className="flex items-center gap-0.5">{cell(p.coordinate)}🗓️</span>
-                      <span title={tr('Comptes auth', 'Auth')}            className="flex items-center gap-0.5">{cell(p.viewAuth)}🔑</span>
+                      <span title={tr('Voir employés', 'View staff')}    className="flex items-center gap-0.5">{cell(p.viewEmployees)}<Users size={12} /></span>
+                      <span title={tr('Modifier employés', 'Edit staff')} className="flex items-center gap-0.5">{cell(p.modifyEmployees)}<Pencil size={12} /></span>
+                      <span title={tr('Voir salaire', 'View salary')}     className="flex items-center gap-0.5">{cell(p.viewSalary)}<Banknote size={12} /></span>
+                      <span title={tr('Modifier salaire', 'Edit salary')} className="flex items-center gap-0.5">{cell(p.editSalary)}<Wallet size={12} /></span>
+                      <span title={tr('Évaluer', 'Evaluate')}             className="flex items-center gap-0.5">{cell(p.evaluate)}<BarChart3 size={12} /></span>
+                      <span title={tr('Coordonner', 'Coordinate')}        className="flex items-center gap-0.5">{cell(p.coordinate)}<Calendar size={12} /></span>
+                      <span title={tr('Comptes auth', 'Auth')}            className="flex items-center gap-0.5">{cell(p.viewAuth)}<KeyRound size={12} /></span>
                     </div>
                   </div>
                 </div>
@@ -210,28 +210,28 @@ function AccessGuideModal({ tr, onClose }: { tr: (f: string, e: string) => strin
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-3">
           <div className="text-xs font-bold mb-1.5">{tr('Légende des icônes', 'Icon legend')} :</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] text-gray-600 dark:text-gray-300">
-            <div>👥 {tr('Voir employés', 'View staff')}</div>
-            <div>✏️ {tr('Modifier employés', 'Edit staff')}</div>
-            <div>💵 {tr('Voir salaire', 'View salary')}</div>
-            <div>💰 {tr('Modifier salaire', 'Edit salary')}</div>
-            <div>📊 {tr('Évaluer', 'Evaluate')}</div>
-            <div>🗓️ {tr('Coordonner', 'Coordinate')}</div>
-            <div>🔑 {tr('Comptes auth', 'Auth accounts')}</div>
+            <div className="flex items-center gap-1"><Users size={12} /> {tr('Voir employés', 'View staff')}</div>
+            <div className="flex items-center gap-1"><Pencil size={12} /> {tr('Modifier employés', 'Edit staff')}</div>
+            <div className="flex items-center gap-1"><Banknote size={12} /> {tr('Voir salaire', 'View salary')}</div>
+            <div className="flex items-center gap-1"><Wallet size={12} /> {tr('Modifier salaire', 'Edit salary')}</div>
+            <div className="flex items-center gap-1"><BarChart3 size={12} /> {tr('Évaluer', 'Evaluate')}</div>
+            <div className="flex items-center gap-1"><Calendar size={12} /> {tr('Coordonner', 'Coordinate')}</div>
+            <div className="flex items-center gap-1"><KeyRound size={12} /> {tr('Comptes auth', 'Auth accounts')}</div>
           </div>
         </div>
 
         {/* Notes importantes */}
         <div className="space-y-2 text-xs">
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/10 p-3">
-            🔒 <strong className="text-emerald-700 dark:text-emerald-300">{tr('Salaires bloqués', 'Salary blocked')} :</strong>{' '}
+            <strong className="text-emerald-700 dark:text-emerald-300">{tr('Salaires bloqués', 'Salary blocked')} :</strong>{' '}
             {tr('niveaux 1 à 4 ne voient PAS les salaires. Seuls Admin paie (5), RH (6), Direction (7), Super-utilisateur (8) y ont accès.', 'levels 1–4 do NOT see salaries. Only Payroll admin (5), HR (6), Management (7), Super-user (8) can access them.')}
           </div>
           <div className="rounded-lg border border-blue-200 bg-blue-50/60 dark:border-blue-500/30 dark:bg-blue-500/10 p-3">
-            👥 <strong className="text-blue-700 dark:text-blue-300">{tr('Liste des employés', 'Staff list')} :</strong>{' '}
+            <strong className="text-blue-700 dark:text-blue-300">{tr('Liste des employés', 'Staff list')} :</strong>{' '}
             {tr('accessible à partir du niveau 3 (Coordination). Les niveaux 1 et 2 ne voient que leurs propres données.', 'accessible from level 3 (Coordination). Levels 1 and 2 see only their own data.')}
           </div>
           <div className="rounded-lg border border-red-200 bg-red-50/60 dark:border-red-500/30 dark:bg-red-500/10 p-3">
-            👑 <strong className="text-red-700 dark:text-red-300">{tr('Direction (7) & Super-utilisateur (8)', 'Management (7) & Super-user (8)')} :</strong>{' '}
+            <strong className="text-red-700 dark:text-red-300">{tr('Direction (7) & Super-utilisateur (8)', 'Management (7) & Super-user (8)')} :</strong>{' '}
             {tr('accès TOTAL incluant configuration système. À attribuer avec parcimonie.', 'TOTAL access including system config. Assign sparingly.')}
           </div>
         </div>
@@ -393,7 +393,7 @@ export default function AdminPage() {
             };
             return lvl ? (
               <div className={`inline-flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-sm font-semibold ${tierStyles[lvl.tier]}`} title={userEmail}>
-                <span className="text-lg">{lvl.emoji}</span>
+                <lvl.Icon size={18} className="shrink-0" />
                 <div className="text-left">
                   <div className="text-[10px] uppercase opacity-70 leading-none">{tr('Niveau', 'Tier')} {lvl.tier}</div>
                   <div className="font-bold leading-tight">{tr(lvl.label_fr, lvl.label_en)}</div>
@@ -716,7 +716,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
       const res = await fetch('/api/payroll/deposit-csv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, items, periodLabel }) });
       const j = await res.json();
       if (!res.ok) { alert(j.error || tr('Export impossible.', 'Export failed.')); return; }
-      if (j.missing?.length) alert(tr(`⚠️ Coordonnées bancaires manquantes (exclus du fichier) : ${j.missing.join(', ')}. Saisissez-les via « Coordonnées bancaires ».`, `⚠️ Missing bank info (excluded): ${j.missing.join(', ')}.`));
+      if (j.missing?.length) alert(tr(`⚠ Coordonnées bancaires manquantes (exclus du fichier) : ${j.missing.join(', ')}. Saisissez-les via « Coordonnées bancaires ».`, `⚠ Missing bank info (excluded): ${j.missing.join(', ')}.`));
       if (j.count > 0) downloadCsv(`depot_direct_${periodLabel.replace(/[^\w]+/g, '_')}.csv`, j.csv);
       else if (!j.missing?.length) alert(tr('Aucun dépôt à générer.', 'No deposit to generate.'));
     } catch { alert(tr('Erreur réseau.', 'Network error.')); }
@@ -730,7 +730,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
       const res = await fetch('/api/payroll/deposit-cpa005', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, items, periodLabel }) });
       const j = await res.json();
       if (!res.ok) { alert(j.error || tr('Export impossible.', 'Export failed.')); return; }
-      if (j.missing?.length) alert(tr(`⚠️ Coordonnées bancaires manquantes (exclus du fichier) : ${j.missing.join(', ')}.`, `⚠️ Missing bank info (excluded): ${j.missing.join(', ')}.`));
+      if (j.missing?.length) alert(tr(`⚠ Coordonnées bancaires manquantes (exclus du fichier) : ${j.missing.join(', ')}.`, `⚠ Missing bank info (excluded): ${j.missing.join(', ')}.`));
       if (j.count > 0) {
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([j.content], { type: 'text/plain;charset=us-ascii' }));
         a.download = `depot_cpa005_${periodLabel.replace(/[^\w]+/g, '_')}_${j.fileCreationNumber}.txt`; a.click();
@@ -815,7 +815,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                 le « Standard 005 » (Desjardins, RBC…). Les valeurs viennent de l'enrôlement dépôt direct. */}
             <details className="mb-3 rounded-xl border border-green-300 bg-green-50/50 p-3 dark:border-green-500/30 dark:bg-green-500/10">
               <summary className="cursor-pointer text-sm font-bold text-green-800 dark:text-green-300">{tr('Paramètres dépôt direct (CPA-005 / norme 005)', 'Direct deposit settings (CPA-005 / Standard 005)')}</summary>
-              <p className="mt-2 text-[11px] text-green-800/80 dark:text-green-300/80">{tr('Norme canadienne « 005 » acceptée par plusieurs banques (Desjardins AccèsD, RBC Express…). Valeurs fournies par votre enrôlement au dépôt direct de VOTRE institution. ⚠️ Validez avec un fichier test avant la 1re transmission.', 'Canadian “005” standard accepted by several banks (Desjardins AccèsD, RBC Express…). Values come from YOUR bank’s direct-deposit enrolment. ⚠️ Validate with a test file before the first transmission.')}</p>
+              <p className="mt-2 text-[11px] text-green-800/80 dark:text-green-300/80">{tr('Norme canadienne « 005 » acceptée par plusieurs banques (Desjardins AccèsD, RBC Express…). Valeurs fournies par votre enrôlement au dépôt direct de VOTRE institution. ⚠ Validez avec un fichier test avant la 1re transmission.', 'Canadian “005” standard accepted by several banks (Desjardins AccèsD, RBC Express…). Values come from YOUR bank’s direct-deposit enrolment. ⚠ Validate with a test file before the first transmission.')}</p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {([
                   ['cpa_originator_id', tr('N° d’expéditeur / client (10)', 'Originator/client no. (10)')],
@@ -1267,13 +1267,13 @@ function AiPlanPanel({ tenant, tr }: { tenant: string; tr: (f: string, e: string
         <span className="ml-2 text-gray-400">{tr('(s\'utilise jusqu\'à épuisement, sans date)', '(used until depleted, no end date)')}</span>
       </div>
       {mods.length > 0 && <div className="mt-1 text-[11px] text-gray-500">{tr('Par module', 'Per module')} : {mods.map(([m, c]) => `${m} ${modPct(c as number)}%`).join(' · ')}</div>}
-      {exhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {tr('Forfait de jetons IA épuisé — demandez un renouvellement pour réactiver les assistants.', 'AI token plan exhausted — request a renewal to reactivate the assistants.')}</p>}
-      {low && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr('Forfait presque épuisé (≤ 10 %).', 'Plan almost depleted (≤ 10%).')}</p>}
+      {exhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">{tr('Forfait de jetons IA épuisé — demandez un renouvellement pour réactiver les assistants.', 'AI token plan exhausted — request a renewal to reactivate the assistants.')}</p>}
+      {low && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">{tr('Forfait presque épuisé (≤ 10 %).', 'Plan almost depleted (≤ 10%).')}</p>}
 
       {/* Demande de renouvellement / ajout de forfait -> courriel pré-rempli + drapeau côté admin */}
       <div className="mt-3 border-t border-purple-200/60 pt-3 dark:border-purple-800/60">
         {requested ? (
-          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✅ {tr('Demande envoyée — en attente de l\'ajustement par C-Secur360.', 'Request sent — awaiting adjustment by C-Secur360.')}</p>
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✓ {tr('Demande envoyée — en attente de l\'ajustement par C-Secur360.', 'Request sent — awaiting adjustment by C-Secur360.')}</p>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {plans.length > 0 && (
@@ -1536,7 +1536,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-gray-500">
                     <span className="rounded bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"><MapPin size={10} className="inline" /> {ct.sites}</span>
-                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">👤 {ct.contacts}</span>
+                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{ct.contacts}</span>
                     {!r.active && <span className="text-gray-400">· {tr('Inactif', 'Inactive')}</span>}
                   </div>
                 </button>
@@ -1733,7 +1733,7 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
                         : si === 0 && <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tr('Principal', 'Main')}</span>}
                     </div>
                     <div className="truncate text-xs text-gray-500">{[s.address, s.city, s.province].filter(Boolean).join(', ') || tr('Aucune adresse', 'No address')} · {sc.length} {tr('contact(s)', 'contact(s)')}</div>
-                    {s.billing_address && <div className="truncate text-[11px] text-emerald-600 dark:text-emerald-400">💳 {tr('Facturation', 'Billing')} : {[s.billing_address, s.billing_city, s.billing_province].filter(Boolean).join(', ')}</div>}
+                    {s.billing_address && <div className="truncate text-[11px] text-emerald-600 dark:text-emerald-400">{tr('Facturation', 'Billing')} : {[s.billing_address, s.billing_city, s.billing_province].filter(Boolean).join(', ')}</div>}
                   </div>
                 </button>
                 <button onClick={() => setSiteForm({ ...s })} className="text-gray-400 hover:text-blue-600" title={tr('Modifier', 'Edit')}><Settings size={14} /></button>
@@ -1927,9 +1927,9 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
                 <th className="px-2 whitespace-nowrap">
                   {tr('Classe véh.', 'Veh. class')}
                   <div className="font-normal text-[10px] text-gray-400 space-y-0.5 mt-0.5">
-                    <div>🚗 {tr('Tourisme', 'Passenger')} — {tr('Camry, RAV4, VUS, EV', 'Camry, RAV4, SUV, EV')}</div>
-                    <div>🚛 {tr('Utilitaire ≥ 1T', 'Commercial ≥ 1T')} — {tr('F-250, Sprinter', 'F-250, Sprinter')}</div>
-                    <div>🏗️ {tr('Spécialisé', 'Specialized')} — {tr('nacelle, grue', 'boom lift, crane')}</div>
+                    <div>{tr('Tourisme', 'Passenger')} — {tr('Camry, RAV4, VUS, EV', 'Camry, RAV4, SUV, EV')}</div>
+                    <div>{tr('Utilitaire ≥ 1T', 'Commercial ≥ 1T')} — {tr('F-250, Sprinter', 'F-250, Sprinter')}</div>
+                    <div>{tr('Spécialisé', 'Specialized')} — {tr('nacelle, grue', 'boom lift, crane')}</div>
                   </div>
                 </th>
               )}
@@ -2394,7 +2394,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                 {tr('Usage affaires', 'Business use')}: <strong>{(calc.bizPct * 100).toFixed(0)} %</strong>
                 {calc.bizPct > 0.5
                   ? tr(' ✓ > 50 % — réductions applicables', ' ✓ > 50% — reductions available')
-                  : tr(' ✗ ≤ 50 % — aucune réduction', ' ✗ ≤ 50% — no reduction')}
+                  : tr(' ✕ ≤ 50 % — aucune réduction', ' ✕ ≤ 50% — no reduction')}
               </div>
 
               {/* Droit d'usage */}
@@ -2455,7 +2455,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                 </div>
               </div>
 
-              <p className="text-[10px] text-gray-400">{tr('⚠️ Estimation uniquement — à valider par votre comptable. Taux ARC 2026.', '⚠️ Estimate only — validate with your accountant. CRA 2026 rates.')}</p>
+              <p className="text-[10px] text-gray-400">{tr('⚠ Estimation uniquement — à valider par votre comptable. Taux ARC 2026.', '⚠ Estimate only — validate with your accountant. CRA 2026 rates.')}</p>
             </div>
           </div>
 
@@ -2503,7 +2503,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                       <tbody>
                         {rows.map(r => (
                           <tr key={r.pct} className={`border-t border-blue-100 dark:border-blue-500/20 ${r.pct.includes('★') ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''} ${r.kp === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
-                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✗'}</td>
+                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✕'}</td>
                             <td className="px-2 py-1 text-right text-gray-600 dark:text-gray-300">{r.kp.toLocaleString('fr-CA')}</td>
                             <td className="px-2 py-1 text-right">{r.total > 0 ? r.total.toLocaleString('fr-CA') + ' $' : <span className="text-emerald-600 font-bold">0 $</span>}</td>
                             <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.impot > 0 ? r.impot.toLocaleString('fr-CA') + ' $' : '—'}</td>
@@ -2557,7 +2557,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                       <tbody>
                         {rows.map(r => (
                           <tr key={r.pct} className={`border-t border-violet-100 dark:border-violet-500/20 ${r.pct.includes('★') ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''} ${r.kp === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
-                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✗'}</td>
+                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✕'}</td>
                             <td className="px-2 py-1 text-right text-gray-600 dark:text-gray-300">{r.kp.toLocaleString('fr-CA')}</td>
                             <td className="px-2 py-1 text-right">{r.total > 0 ? r.total.toLocaleString('fr-CA') + ' $' : <span className="text-emerald-600 font-bold">0 $</span>}</td>
                             <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.impot > 0 ? r.impot.toLocaleString('fr-CA') + ' $' : '—'}</td>
@@ -2610,7 +2610,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                       <tbody>
                         {rows.map(r => (
                           <tr key={r.pct} className={`border-t border-sky-100 dark:border-sky-500/20 ${r.pct.includes('★') ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''} ${r.kp === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
-                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✗'}</td>
+                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✕'}</td>
                             <td className="px-2 py-1 text-right text-gray-600 dark:text-gray-300">{r.kp.toLocaleString('fr-CA')}</td>
                             <td className="px-2 py-1 text-right">{r.total > 0 ? r.total.toLocaleString('fr-CA') + ' $' : <span className="text-emerald-600 font-bold">0 $</span>}</td>
                             <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.impot > 0 ? r.impot.toLocaleString('fr-CA') + ' $' : '—'}</td>
@@ -2667,7 +2667,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
 
             </div>
             <p className="text-[10px] text-gray-400">
-              ⚠️ {tr('Hypothèses tableaux : taux marginal 43 %, méthode ½ activée si éligible, 25 000 km/an total (Régimes A). Taux ARC 2026 officiels. À valider par votre comptable.', 'Table assumptions: 43% marginal rate, half-method if eligible, 25,000 km/yr total (Regime A). Official CRA 2026 rates. Validate with your accountant.')}
+              ⚠ {tr('Hypothèses tableaux : taux marginal 43 %, méthode ½ activée si éligible, 25 000 km/an total (Régimes A). Taux ARC 2026 officiels. À valider par votre comptable.', 'Table assumptions: 43% marginal rate, half-method if eligible, 25,000 km/yr total (Regime A). Official CRA 2026 rates. Validate with your accountant.')}
             </p>
           </div>
 
@@ -2844,7 +2844,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
         </div>
         <div className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${activeInfo.bg}`}>
           {activeInfo.desc}
-          <span className="ml-2 text-xs font-semibold opacity-60">⚠️ {tr('Estimation — à valider par votre comptable', 'Estimate — validate with your accountant')}</span>
+          <span className="ml-2 text-xs font-semibold opacity-60">⚠ {tr('Estimation — à valider par votre comptable', 'Estimate — validate with your accountant')}</span>
         </div>
       </div>
 
@@ -3122,7 +3122,7 @@ function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr
                 {canReveal && p.access_password && (
                   <span className="flex items-center gap-1 text-[11px]" onClick={e => e.stopPropagation()}>
                     <span className="font-mono text-gray-600 dark:text-gray-300 select-all">{revealed ? p.access_password : '••••••'}</span>
-                    <button type="button" onClick={() => setShowPwdFor(revealed ? null : p.id)} className="text-gray-400 hover:text-gray-600" title={tr('Afficher / masquer', 'Show / hide')}>{revealed ? '🙈' : '👁'}</button>
+                    <button type="button" onClick={() => setShowPwdFor(revealed ? null : p.id)} className="text-gray-400 hover:text-gray-600" title={tr('Afficher / masquer', 'Show / hide')}>{revealed ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                   </span>
                 )}
                 {p.niveauAcces && <span className="text-[10px] rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-gray-600 dark:text-gray-300">{p.niveauAcces}</span>}
@@ -3141,7 +3141,7 @@ function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr
         {selected ? (
           <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-5 dark:border-blue-500/30 dark:bg-blue-500/10 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-bold text-sm flex items-center gap-1.5">🔑 {tr('Identifiants', 'Credentials')}</h2>
+              <h2 className="font-bold text-sm flex items-center gap-1.5">{tr('Identifiants', 'Credentials')}</h2>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-300">
@@ -3160,7 +3160,7 @@ function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr
             <div>
               <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Niveau d’accès', 'Access level')}</label>
               <select className={inp2} value={form.niveau} onChange={e => { const niveau = e.target.value as AccessLevel; setForm(f => ({ ...f, niveau, role: NIVEAU_TO_ROLE[niveau] || 'user' })); }}>
-                {grantableLevels.map(l => <option key={l.value} value={l.value}>{l.emoji} {l.tier}. {tr(l.label_fr, l.label_en)}</option>)}
+                {grantableLevels.map(l => <option key={l.value} value={l.value}>{l.tier}. {tr(l.label_fr, l.label_en)}</option>)}
               </select>
               <p className="mt-1 text-[10px] leading-snug text-gray-400">{tr(ACCESS_LEVELS.find(l => l.value === form.niveau)?.desc_fr || '', ACCESS_LEVELS.find(l => l.value === form.niveau)?.desc_en || '')}</p>
             </div>
@@ -3184,9 +3184,9 @@ function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr
               <div className="flex gap-1.5">
                 <div className="relative flex-1">
                   <input type={showPwd ? 'text' : 'password'} autoComplete="new-password" placeholder={tr('Tapez un mot de passe ou cliquez ↻', 'Type a password or click ↻')} className={`${inp2} pr-9 font-mono text-base tracking-wider`} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-                  <button type="button" onClick={() => setShowPwd(v => !v)} title={showPwd ? tr('Masquer', 'Hide') : tr('Afficher', 'Show')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">{showPwd ? '🙈' : '👁'}</button>
+                  <button type="button" onClick={() => setShowPwd(v => !v)} title={showPwd ? tr('Masquer', 'Hide') : tr('Afficher', 'Show')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">{showPwd ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                 </div>
-                <button type="button" onClick={copyPwd} title={tr('Copier', 'Copy')} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${copied ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10' : 'border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{copied ? '✓' : '📋'}</button>
+                <button type="button" onClick={copyPwd} title={tr('Copier', 'Copy')} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${copied ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10' : 'border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{copied ? '✓' : <Copy size={14} />}</button>
                 <button type="button" onClick={regenerate} title={tr('Régénérer', 'Regenerate')} className="shrink-0 rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">↻</button>
               </div>
             </div>
@@ -3199,9 +3199,9 @@ function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr
               ); })()}
               <button onClick={savePwdToFiche} disabled={busy} title={tr('Enregistre le mot de passe dans la fiche seulement — NE crée PAS le compte de connexion', 'Saves the password to the record only — does NOT create the login account')}
                 className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
-                💾 {tr('Fiche', 'Record')}
+                {tr('Fiche', 'Record')}
               </button>
-              <button onClick={copyAll} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📋 {tr('Tout', 'All')}</button>
+              <button onClick={copyAll} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">{tr('Tout', 'All')}</button>
             </div>
             <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
               {(() => { const acc = userByEmail[(form.email || '').toLowerCase()]; return acc
@@ -3234,7 +3234,7 @@ function ComptesAcces({ tenant, tr, canReveal, selfLevel }: { tenant: string; tr
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-8 text-center text-sm text-gray-400">
-            👈 {tr('Choisissez un employé à gauche pour générer ses identifiants.', 'Pick an employee on the left to generate credentials.')}
+            {tr('Choisissez un employé à gauche pour générer ses identifiants.', 'Pick an employee on the left to generate credentials.')}
           </div>
         )}
 
@@ -3515,7 +3515,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between z-10">
           <div>
             <h3 className="font-bold text-lg flex items-center gap-2">
-              📊 {tr('Évaluation & salaire', 'Evaluation & salary')}
+              {tr('Évaluation & salaire', 'Evaluation & salary')}
               <span className="text-blue-600 dark:text-blue-400">{employee.name}</span>
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">
@@ -3560,7 +3560,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 <h4 className="font-bold text-xs text-gray-500 uppercase mb-2">{tr('Embauche', 'Hire')}</h4>
                 <label className="text-xs">{tr('Date d\'embauche', 'Hire date')}</label>
                 <input type="date" disabled={!canEdit} className={inp2} value={hireDate} onChange={e => setHireDate(e.target.value)} />
-                {seniorityLabel && <p className="mt-0.5 text-[10px] font-semibold text-gray-500 dark:text-gray-400">⏳ {tr('Ancienneté', 'Seniority')} : {seniorityLabel}</p>}
+                {seniorityLabel && <p className="mt-0.5 text-[10px] font-semibold text-gray-500 dark:text-gray-400">{tr('Ancienneté', 'Seniority')} : {seniorityLabel}</p>}
                 <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">{tr('Taux', 'Rate')} $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
@@ -3678,8 +3678,8 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                     reco.verdict === 'under' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200'
                       : reco.verdict === 'over' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200'
                         : 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-200'}`}>
-                    {reco.verdict === 'under' && `⬆️ ${tr('Sous-positionné — sa note justifie un palier supérieur', 'Under-positioned — the score justifies a higher tier')}`}
-                    {reco.verdict === 'over' && `⬇️ ${tr('Au-dessus du palier que sa note justifie', 'Above the tier justified by the score')}`}
+                    {reco.verdict === 'under' && `${tr('Sous-positionné — sa note justifie un palier supérieur', 'Under-positioned — the score justifies a higher tier')}`}
+                    {reco.verdict === 'over' && `${tr('Au-dessus du palier que sa note justifie', 'Above the tier justified by the score')}`}
                     {reco.verdict === 'aligned' && `✓ ${tr('Aligné — le salaire est cohérent avec la note', 'Aligned — salary is consistent with the score')}`}
                   </div>
                   {useGrid && (
@@ -3722,7 +3722,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button onClick={() => { const s = String(Math.round(reco.targetSalary)); setHireSalary(s); setCurrentSalary(s); }}
                         className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
-                        📊 {tr('Placer selon la note (palier)', 'Place by score (tier)')} — {fmt(reco.targetSalary)}
+                        {tr('Placer selon la note (palier)', 'Place by score (tier)')} — {fmt(reco.targetSalary)}
                       </button>
                       <span className="self-center text-[10px] text-gray-400">{tr('ou saisir un taux manuel selon l\'expérience pertinente ci-dessus', 'or enter a manual rate based on relevant experience above')}</span>
                     </div>
@@ -3733,13 +3733,13 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
 
             {/* Objectifs pour la prochaine année */}
             <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">🎯 {tr('Objectifs pour la prochaine année', 'Objectives for next year')}</h4>
+              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">{tr('Objectifs pour la prochaine année', 'Objectives for next year')}</h4>
               <textarea rows={3} disabled={!canEdit} className={`${inp2} resize-y`} value={objectives} onChange={e => setObjectives(e.target.value)} placeholder={tr('Objectifs de développement, compétences à acquérir, projets visés…', 'Development goals, skills to acquire, target projects…')} />
             </div>
 
             {/* Historique des évaluations */}
             <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">📜 {tr('Historique & évolution', 'History & evolution')} <span className="text-xs text-gray-400 font-normal">({history.length})</span></h4>
+              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">{tr('Historique & évolution', 'History & evolution')} <span className="text-xs text-gray-400 font-normal">({history.length})</span></h4>
               {(
                 <div className="overflow-x-auto">
                   <table className="mobile-cards w-full text-xs">
@@ -3789,7 +3789,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
 
             {/* Vérifications & approbations (multi-niveaux, horodatées) */}
             <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <h4 className="mb-1 flex items-center gap-1.5 text-sm font-bold">✅ {tr('Vérifications & approbations', 'Verifications & approvals')}</h4>
+              <h4 className="mb-1 flex items-center gap-1.5 text-sm font-bold">✓ {tr('Vérifications & approbations', 'Verifications & approvals')}</h4>
               {/* 1. Vérifié par le gestionnaire */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="w-44 font-semibold">{tr('Vérifié par (gestionnaire)', 'Verified by (manager)')}</span>
@@ -3872,7 +3872,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
     const rowsToSave = rows.filter(r => r.name?.trim());
     if (rowsToSave.length === 0) {
       const reasons = rows.map((r, i) => `[${i}] name="${r.name}" (${typeof r.name})`).join(' · ');
-      setNotice(`⚠️ Aucune sous-classe à enregistrer.\nLignes en mémoire : ${rows.length}\n${reasons}`);
+      setNotice(`⚠ Aucune sous-classe à enregistrer.\nLignes en mémoire : ${rows.length}\n${reasons}`);
       setSaving(false); return;
     }
     for (const r of rowsToSave) {
@@ -3892,7 +3892,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
         err++; errs.push(`${r.name}: ${msg}`);
       }
     }
-    setNotice(`✓ ${ok} ${tr('enregistré(s)', 'saved')}${err ? ` · ✗ ${err} ${tr('erreur(s)', 'errors')}` : ''}${errs.length ? `\n${errs.slice(0, 3).join('\n')}` : ''}`);
+    setNotice(`✓ ${ok} ${tr('enregistré(s)', 'saved')}${err ? ` · ✕ ${err} ${tr('erreur(s)', 'errors')}` : ''}${errs.length ? `\n${errs.slice(0, 3).join('\n')}` : ''}`);
     await load(); onSubclassesChanged?.(); setSaving(false);
   }
 
@@ -3931,7 +3931,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
-          <button onClick={() => setShowBulk(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40">📋 {tr('Coller liste', 'Paste list')}</button>
+          <button onClick={() => setShowBulk(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40">{tr('Coller liste', 'Paste list')}</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
@@ -3940,7 +3940,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
       {showBulk && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setShowBulk(false)}>
           <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-2">📋 {tr('Importer des sous-classes', 'Import sub-classes')}</h3>
+            <h3 className="font-bold mb-2">{tr('Importer des sous-classes', 'Import sub-classes')}</h3>
             <div className="mb-2">
               <label className="text-xs text-gray-500">{tr('Catégorie pour toutes les lignes', 'Category for all lines')}</label>
               <select className={inp} value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}>
@@ -3979,7 +3979,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
                       {/* Nom (PROMINENT) */}
                       <div className="col-span-10 sm:col-span-5">
                         <label className={`block text-[9px] uppercase font-bold mb-0.5 ${nameEmpty ? 'text-red-600' : 'text-gray-500'}`}>
-                          {tr('Nom *', 'Name *')} {nameEmpty && `⚠️ ${tr('Obligatoire', 'Required')}`}
+                          {tr('Nom *', 'Name *')} {nameEmpty && `⚠ ${tr('Obligatoire', 'Required')}`}
                         </label>
                         <input
                           className={`${inp} ${nameEmpty ? 'ring-2 ring-red-400 dark:ring-red-500/60 border-red-300' : ''}`}
@@ -4226,11 +4226,11 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   async function save() {
     setSaving(true); setNotice(null);
     const debug: string[] = [];
-    debug.push(`📋 Total lignes en mémoire : ${rows.length}`);
+    debug.push(`Total lignes en mémoire : ${rows.length}`);
     const rowsToSave = rows.filter(r => r.name?.trim());
-    debug.push(`✏️  Lignes avec nom non vide : ${rowsToSave.length}`);
+    debug.push(`Lignes avec nom non vide : ${rowsToSave.length}`);
     if (rowsToSave.length === 0) {
-      setNotice(`⚠️ Aucune ligne à enregistrer. ${debug.join(' · ')}`);
+      setNotice(`⚠ Aucune ligne à enregistrer. ${debug.join(' · ')}`);
       setSaving(false);
       return;
     }
@@ -4260,7 +4260,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
         err++; errs.push(`${r.name}: ${msg || 'erreur inconnue'}`);
       }
     }
-    setNotice(`✓ ${ok} enregistré(s)${err ? ` · ✗ ${err} erreur(s)` : ''}${errs.length ? `\n${errs.slice(0, 4).join('\n')}` : ''}`);
+    setNotice(`✓ ${ok} enregistré(s)${err ? ` · ✕ ${err} erreur(s)` : ''}${errs.length ? `\n${errs.slice(0, 4).join('\n')}` : ''}`);
     if (!err) clearDraft(draftKey); // tout enregistré → plus de brouillon en attente
     await load();
     setSaving(false);
@@ -4272,8 +4272,8 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
     const testRow = { name: `TEST ${new Date().toISOString().slice(11, 19)}`, is_active: true, niveauAcces: 'consultation' };
     const resp = await fetch('/api/hr/personnel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ tenant, row:testRow }) });
     const j = await resp.json().catch(() => ({}));
-    if (!resp.ok || j.error) setNotice(`❌ TEST ÉCHEC : ${j.error || resp.status}`);
-    else if (!j.row) setNotice(`❌ TEST BLOQUÉ`);
+    if (!resp.ok || j.error) setNotice(`✕ TEST ÉCHEC : ${j.error || resp.status}`);
+    else if (!j.row) setNotice(`✕ TEST BLOQUÉ`);
     else { setNotice(`✓ TEST RÉUSSI : ligne "${testRow.name}" insérée avec id ${j.row.id}`); await load(); }
     setSaving(false);
   }
@@ -4294,8 +4294,8 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
           <p className="text-xs text-gray-500">{tr('Employés assignables aux chantiers.', 'Employees assignable to job sites.')} <span className="text-emerald-600 font-semibold">✓ {tr('Synchronisé avec le planificateur', 'Synced with planner')}</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setShowGuide(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10">🔐 {tr('Guide des accès', 'Access guide')}</button>
-          <button onClick={testDirectInsert} disabled={saving} className="inline-flex items-center gap-1 rounded-lg border border-orange-300 px-3 py-1.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 dark:border-orange-500/40 dark:text-orange-300" title={tr('Diagnostic : insère une ligne de test directement', 'Diagnostic: inserts a test row directly')}>🧪 {tr('Test BD', 'Test DB')}</button>
+          <button onClick={() => setShowGuide(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10">{tr('Guide des accès', 'Access guide')}</button>
+          <button onClick={testDirectInsert} disabled={saving} className="inline-flex items-center gap-1 rounded-lg border border-orange-300 px-3 py-1.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 dark:border-orange-500/40 dark:text-orange-300" title={tr('Diagnostic : insère une ligne de test directement', 'Diagnostic: inserts a test row directly')}>{tr('Test BD', 'Test DB')}</button>
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
@@ -4303,7 +4303,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       {/* Barre de filtres — gestion au volume */}
       <div className="flex flex-wrap items-end gap-2 border-t border-gray-100 px-4 py-2 dark:border-gray-700">
         <div className="min-w-[10rem] flex-1">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('🔍 Rechercher un nom…', '🔍 Search a name…')} className={inp} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('Rechercher un nom…', 'Search a name…')} className={inp} />
         </div>
         <select value={siteFilter} onChange={e => { setSiteFilter(e.target.value); setDeptFilter(''); }} className={`${inp} w-40`}>
           <option value="">{tr('Tous les sites', 'All sites')}</option>
@@ -4325,7 +4325,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       {/* Brouillon non enregistré retrouvé (session précédente) — proposer la restauration. */}
       {pendingDraft && (
         <div className="mx-4 mt-3 flex flex-wrap items-center gap-2 rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-          <span className="flex-1">💾 {tr('Des modifications non enregistrées ont été retrouvées (vous aviez quitté sans enregistrer).', 'Unsaved changes were found (you left without saving).')}</span>
+          <span className="flex-1">{tr('Des modifications non enregistrées ont été retrouvées (vous aviez quitté sans enregistrer).', 'Unsaved changes were found (you left without saving).')}</span>
           <button type="button" onClick={() => { setRows(pendingDraft); setPendingDraft(null); }} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">{tr('Restaurer', 'Restore')}</button>
           <button type="button" onClick={() => { clearDraft(draftKey); setPendingDraft(null); }} className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40">{tr('Ignorer', 'Dismiss')}</button>
         </div>
@@ -4333,9 +4333,9 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       {/* Notice persistante en bandeau si erreur */}
       {notice && (
         <div className={`mx-4 mt-3 rounded-lg border-2 px-3 py-2 text-sm whitespace-pre-line font-medium ${
-          notice.includes('✓') && !notice.includes('✗') && !notice.includes('❌')
+          notice.includes('✓') && !notice.includes('✕')
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300'
-            : notice.includes('❌') || notice.includes('✗')
+            : notice.includes('✕')
               ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300'
               : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300'
         }`}>
@@ -4346,12 +4346,12 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       {postes.length === 0 && (
         <button type="button" onClick={goToPostes}
           className="mx-4 mt-3 w-[calc(100%-2rem)] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs text-amber-700 transition hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20">
-          {tr("💡 Créez des postes dans l'onglet « Ressources → Postes » pour les sélectionner ici. Cliquez ici pour y accéder →", '💡 Create positions in the "Resources → Positions" tab to select them here. Click here to go there →')}
+          {tr("Créez des postes dans l'onglet « Ressources → Postes » pour les sélectionner ici. Cliquez ici pour y accéder →", 'Create positions in the "Resources → Positions" tab to select them here. Click here to go there →')}
         </button>
       )}
       {siteTree.length === 0 && (
         <div className="mx-4 mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
-          {tr("💡 Créez des sites/départements dans l'onglet « Sites/Dépts » pour assigner le personnel (optionnel).", '💡 Create sites/departments in the "Sites/Depts" tab to assign staff (optional).')}
+          {tr("Créez des sites/départements dans l'onglet « Sites/Dépts » pour assigner le personnel (optionnel).", 'Create sites/departments in the "Sites/Depts" tab to assign staff (optional).')}
         </div>
       )}
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
@@ -4439,7 +4439,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                 {perms.viewSalary && (
                   <td className="px-2" data-label={tr('Salaire', 'Salary')}>
                     {r.id && r.role
-                      ? <button onClick={() => setEvalEmployee(r)} className="inline-flex items-center gap-1 rounded-lg bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-500/20 dark:text-purple-300" title={tr('Évaluation + salaire + compétences', 'Evaluation + salary + skills')}>📊 {tr('Évaluer', 'Evaluate')}</button>
+                      ? <button onClick={() => setEvalEmployee(r)} className="inline-flex items-center gap-1 rounded-lg bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-500/20 dark:text-purple-300" title={tr('Évaluation + salaire + compétences', 'Evaluation + salary + skills')}>{tr('Évaluer', 'Evaluate')}</button>
                       : <span className="text-[10px] text-gray-400">—</span>}
                   </td>
                 )}
@@ -4604,7 +4604,7 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
       </div>
       {/* Filtres — gestion au volume */}
       <div className="flex flex-wrap items-end gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700">
-        <div className="min-w-[10rem] flex-1"><input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('🔍 Rechercher (nom, type, n° série)…', '🔍 Search (name, type, serial)…')} className={inp} /></div>
+        <div className="min-w-[10rem] flex-1"><input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('Rechercher (nom, type, n° série)…', 'Search (name, type, serial)…')} className={inp} /></div>
         <select value={siteFilter} onChange={e => { setSiteFilter(e.target.value); setDeptFilter(''); }} className={`${inp} w-40`}>
           <option value="">{tr('Tous les sites', 'All sites')}</option>
           {siteTree.map(site => <option key={site.id} value={site.name}>{site.name}</option>)}
@@ -5119,7 +5119,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
             <div>
               <h4 className="font-bold text-sm flex items-center gap-1.5 text-violet-700 dark:text-violet-300">
-                🎁 {tr('Primes discrétionnaires', 'Discretionary bonuses')}
+                {tr('Primes discrétionnaires', 'Discretionary bonuses')}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-xl">
                 {tr("Bonifications optionnelles, octroyées à la discrétion de la direction EN PLUS du palier. Ex. : un employé « Niveau 2 » peut recevoir « Prime 1 ».", "Optional bonuses, granted at management's discretion ON TOP of the tier. E.g. a “Level 2” employee can receive “Bonus 1”.")}
@@ -5167,7 +5167,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
         {/* Section Frais / conditions (subsistance, hébergement…) du catalogue — prix vendant vs employé */}
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/5 p-3">
           <h4 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300">
-            🧾 {tr('Frais / conditions applicables', 'Applicable allowances')}
+            {tr('Frais / conditions applicables', 'Applicable allowances')}
           </h4>
           <p className="mb-2 text-[11px] text-gray-500">{tr("Du catalogue des taux (prix vendant). Cochez ce qui s'applique à ce poste ; le « prix employé » par défaut = vendant −20 %, éditable. Le prix vendant sert à la facturation du projet.", 'From the rate catalog (selling price). Check what applies to this position; default employee price = selling −20%, editable. Selling price feeds project billing.')}</p>
           {catConditions.length === 0 ? (
@@ -5200,7 +5200,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
         <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/5 p-3">
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-bold text-sm flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
-              💰 {tr('Commission sur ventes', 'Sales commission')}
+              {tr('Commission sur ventes', 'Sales commission')}
             </h4>
             <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
               <input type="checkbox" checked={!!grid.commission_enabled} onChange={e => updGrid('commission_enabled', e.target.checked)} />
@@ -5234,7 +5234,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
                 <input type="number" min={0} className={inp2} value={grid.commission_cap || ''} onChange={e => updGrid('commission_cap', e.target.value ? Number(e.target.value) : null)} placeholder={tr('Aucun', 'None')} />
               </div>
               <div className="md:col-span-2 lg:col-span-4 text-[10px] text-amber-700 dark:text-amber-400 italic">
-                💡 {tr('Chaque palier peut avoir son propre % (colonne "Comm. %" du tableau). Si vide, le % par défaut s\'applique.', 'Each tier can have its own % (column "Comm. %" in the table). If empty, the default % applies.')}
+                {tr('Chaque palier peut avoir son propre % (colonne "Comm. %" du tableau). Si vide, le % par défaut s\'applique.', 'Each tier can have its own % (column "Comm. %" in the table). If empty, the default % applies.')}
               </div>
             </div>
           )}
@@ -5440,7 +5440,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
         <div className="flex gap-2 flex-wrap">
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('1 poste', '1 position')}</button>
           <button onClick={() => addBatch(10)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> 10</button>
-          <button onClick={() => setShowBulk(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:hover:bg-purple-500/10">📋 {tr('Coller liste', 'Paste list')}</button>
+          <button onClick={() => setShowBulk(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:hover:bg-purple-500/10">{tr('Coller liste', 'Paste list')}</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer tout', 'Save all')}</button>
         </div>
       </div>
@@ -5450,7 +5450,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
       {showBulk && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setShowBulk(false)}>
           <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold mb-2">📋 {tr('Importer des postes en lot', 'Bulk import positions')}</h3>
+            <h3 className="font-bold mb-2">{tr('Importer des postes en lot', 'Bulk import positions')}</h3>
             <p className="text-xs text-gray-500 mb-3">
               {tr('Un poste par ligne. Optionnel : « Nom | CODE » ou « Nom, CODE ».', 'One position per line. Optional: "Name | CODE" or "Name, CODE".')}
             </p>
@@ -5485,7 +5485,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                 </div>
                 <div className="col-span-10 sm:col-span-5">
                   <label className={`block text-[9px] uppercase font-bold mb-0.5 ${!r.name?.trim() ? 'text-red-600' : 'text-gray-500'}`}>
-                    {tr('Nom du poste *', 'Position name *')} {!r.name?.trim() && `⚠️ ${tr('Obligatoire', 'Required')}`}
+                    {tr('Nom du poste *', 'Position name *')} {!r.name?.trim() && `⚠ ${tr('Obligatoire', 'Required')}`}
                   </label>
                   <input className={`${inp} ${!r.name?.trim() ? 'ring-2 ring-red-400 dark:ring-red-500/60 border-red-300' : ''}`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('ex: Technicien senior, Soudeur, Contremaître…', 'e.g. Senior technician, Welder, Foreman…')} autoFocus={!r.id && !r.name} />
                 </div>
@@ -5498,11 +5498,11 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                     <button onClick={() => toggle(r.id)} disabled={!r.id}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
                       title={r.id ? tr('Configurer grille salariale + commission + paliers', 'Configure salary grid + commission + tiers') : tr('Enregistrez d\'abord', 'Save first')}>
-                      💰 {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </button>
                   ) : (
                     <button disabled className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed">
-                      🔒 {tr('Grille verrouillée', 'Grid locked')}
+                      {tr('Grille verrouillée', 'Grid locked')}
                     </button>
                   )}
                   <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1.5"><Trash2 size={15} /></button>
@@ -5513,7 +5513,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
               <div className="mt-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
                 <div className="flex items-start gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 text-[10px] font-bold uppercase shrink-0">
-                    📂 {tr('Sous-catégories', 'Sub-categories')}
+                    {tr('Sous-catégories', 'Sub-categories')}
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5 flex-1">
                   {subsApplied.length === 0 && <span className="text-[11px] text-gray-400 italic">{tr('aucune appliquée', 'none applied')} —</span>}
@@ -5543,7 +5543,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                                   autoFocus
                                   value={subSearch}
                                   onChange={e => setSubSearch(e.target.value)}
-                                  placeholder={tr('🔍 Rechercher dans le catalogue…', '🔍 Search catalog…')}
+                                  placeholder={tr('Rechercher dans le catalogue…', 'Search catalog…')}
                                   className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-transparent px-2 py-1 text-xs outline-none focus:border-cyan-500"
                                 />
                                 <p className="mt-1 text-[9px] text-gray-400">{filtered.length} {tr('résultat(s) sur', 'result(s) of')} {available.length}</p>
@@ -5569,7 +5569,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                               <div className="border-t border-gray-100 dark:border-gray-700 p-1">
                                 <button type="button" onClick={() => { setSubPickerFor(null); goToSubclasses(); }}
                                   className="w-full text-center text-[10px] text-purple-600 hover:underline py-1">
-                                  ⚙️ {tr('Gérer / créer dans le catalogue', 'Manage / create in catalog')}
+                                  {tr('Gérer / créer dans le catalogue', 'Manage / create in catalog')}
                                 </button>
                               </div>
                             </div>
@@ -5579,7 +5579,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                     </div>
                   ) : (
                     <button onClick={goToSubclasses} className="rounded-full border border-dashed border-amber-300 dark:border-amber-500/40 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-50">
-                      💡 {tr('Catalogue vide → créez des sous-classes', 'Empty catalog → create sub-classes')}
+                      {tr('Catalogue vide → créez des sous-classes', 'Empty catalog → create sub-classes')}
                     </button>
                   )}
                   </div>
@@ -5635,7 +5635,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   const addSite = () => {
     if (sites.length >= maxSites) {
-      setNotice(tr(`⚠️ Limite de ${maxSites} site(s) atteinte — veuillez réviser votre abonnement pour ajouter des sites supplémentaires.`, `⚠️ Limit of ${maxSites} site(s) reached — please review your subscription to add more sites.`));
+      setNotice(tr(`⚠ Limite de ${maxSites} site(s) atteinte — veuillez réviser votre abonnement pour ajouter des sites supplémentaires.`, `⚠ Limit of ${maxSites} site(s) reached — please review your subscription to add more sites.`));
       return;
     }
     const k = Math.random().toString(36).slice(2); setSites(p => [...p, { _key: k, initName: '', initCode: '', initAddr: '' }]);
@@ -5659,7 +5659,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
     // Read values straight from DOM via callback-ref Map — immune to onChange/autocomplete issues
     const validSites = sites.filter(s => val(`s:${s._key}:n`));
     if (!validSites.length) {
-      setNotice(`⚠️ ${tr(`Aucun site (${sites.length} ligne(s), aucun nom). Clique + Site et tape un nom.`, `Nothing to save (${sites.length} row(s), no name). Click + Site and type a name.`)}`);
+      setNotice(`⚠ ${tr(`Aucun site (${sites.length} ligne(s), aucun nom). Clique + Site et tape un nom.`, `Nothing to save (${sites.length} row(s), no name). Click + Site and type a name.`)}`);
       setSaving(false); return;
     }
     let savedSites = 0, savedDepts = 0;
@@ -6017,7 +6017,7 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                 <tr className="border-t border-gray-100 dark:border-gray-700">
                   <td className="px-2 py-1" data-label={tr("Nom", 'Name')}>
                     <input className={`${inp} w-40`} value={r.name} placeholder={tr('Ex: Dîner', 'Ex: Lunch')} onChange={e => upd(i, 'name', e.target.value)} disabled={r.source === 'catalogue'} />
-                    {r.source === 'catalogue' && <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Vient du catalogue des taux', 'From rate catalogue')}>📘 {tr('catalogue', 'catalogue')}</span>}
+                    {r.source === 'catalogue' && <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Vient du catalogue des taux', 'From rate catalogue')}>{tr('catalogue', 'catalogue')}</span>}
                   </td>
                   <td className="px-2" data-label={tr('Payé employé $', 'Paid $')}>
                     <div className="flex items-center gap-1">
@@ -6243,9 +6243,9 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
   }
 
   const TYPES = [
-    { k: 'message' as const, label: tr('Message corpo', 'Corp message'), icon: '📣' },
-    { k: 'document' as const, label: tr('Document', 'Document'), icon: '📄' },
-    { k: 'link' as const, label: tr('Hyperlien', 'Hyperlink'), icon: '🔗' },
+    { k: 'message' as const, label: tr('Message corpo', 'Corp message'), icon: Megaphone },
+    { k: 'document' as const, label: tr('Document', 'Document'), icon: FileText },
+    { k: 'link' as const, label: tr('Hyperlien', 'Hyperlink'), icon: Link2 },
   ];
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -6259,7 +6259,7 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
             <p className="text-xs text-gray-500">{tr('Messages corporatifs, documents et liens partagés au personnel.', 'Corporate messages, documents and links shared with staff.')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {TYPES.map(t => <button key={t.k} onClick={() => add(t.k)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={13} /> {t.icon} {t.label}</button>)}
+            {TYPES.map(t => <button key={t.k} onClick={() => add(t.k)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={13} /> <t.icon size={13} /> {t.label}</button>)}
             <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
           </div>
         </div>
@@ -6273,7 +6273,7 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
               return (
                 <div key={r.id || i} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-lg">{t.icon}</span>
+                    <t.icon size={16} className="shrink-0 text-gray-500" />
                     <select className={`${inp} w-40`} value={r.type} onChange={e => upd(i, 'type', e.target.value)}>
                       {TYPES.map(x => <option key={x.k} value={x.k}>{x.label}</option>)}
                     </select>
@@ -6290,7 +6290,7 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
                   {r.type === 'document' && (
                     <div className="flex flex-wrap items-center gap-2">
                       <input className={`${inp} min-w-[12rem] flex-1`} value={r.url} placeholder={tr('URL du document ou téléverser →', 'Document URL or upload →')} onChange={e => upd(i, 'url', e.target.value)} />
-                      <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📤 {tr('Téléverser', 'Upload')}<input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(i, f); e.target.value = ''; }} /></label>
+                      <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">{tr('Téléverser', 'Upload')}<input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(i, f); e.target.value = ''; }} /></label>
                       {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir', 'View')}</a>}
                     </div>
                   )}
@@ -6542,7 +6542,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
           {accounts.length > 0 && canEdit && (
             <div className="flex flex-wrap gap-2">
               <button onClick={syncAll} disabled={syncing} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40" title={tr('Poste au grand livre tout ce qui manque : paie, ventes, encaissements, achats, paiements (idempotent).', 'Post all missing entries to the ledger (idempotent).')}>
-                {syncing ? <Loader2 size={15} className="inline animate-spin" /> : `🔄 ${tr('Synchroniser tout vers le grand livre', 'Sync everything to the ledger')}`}
+                {syncing ? <Loader2 size={15} className="inline animate-spin" /> : `${tr('Synchroniser tout vers le grand livre', 'Sync everything to the ledger')}`}
               </button>
               <button onClick={syncPay} disabled={syncing} className="rounded-xl border border-indigo-300 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 dark:border-indigo-700 dark:text-indigo-300">
                 {tr('Paie seulement', 'Payroll only')}
@@ -6727,7 +6727,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             </div>
             {/* Transmettre au comptable — exports + lien read-only (migration 184) */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <h3 className="mb-1 text-sm font-bold">📤 {tr('Transmettre au comptable', 'Send to accountant')}</h3>
+              <h3 className="mb-1 text-sm font-bold">{tr('Transmettre au comptable', 'Send to accountant')}</h3>
               <p className="mb-3 text-xs text-gray-500">{tr('Export du grand livre validé (format standard importable) ou accès LECTURE SEULE en direct via un lien sécurisé. Aucune écriture, aucune autre donnée.', 'Export the posted ledger (standard importable format) or live READ-ONLY access via a secure link. No write access, no other data.')}</p>
               <div className="flex flex-wrap items-center gap-2">
                 <button onClick={async () => { try { await exportAcctJournalCsv(tenant); } catch (e: any) { setNotice(e?.message); } }} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Journal d’écritures (CSV)', 'Journal entries (CSV)')}</button>
@@ -6794,7 +6794,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
       ) : sub === 'periods' ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-1 text-sm font-bold">🔒 {tr('Verrouillage de période (anti back-dating)', 'Period lock (anti back-dating)')}</h3>
+            <h3 className="mb-1 text-sm font-bold">{tr('Verrouillage de période (anti back-dating)', 'Period lock (anti back-dating)')}</h3>
             <p className="mb-3 text-xs text-gray-500">{tr('Une période FERMÉE empêche toute écriture datée dedans — contrôle au niveau base de données (migration 183). Rouvrez-la pour corriger.', 'A CLOSED period blocks any entry dated within it — enforced at the database level (migration 183). Reopen to correct.')}</p>
             {canEdit && (() => {
               const now = new Date(); const y = now.getFullYear(); const m = now.getMonth() + 1; const p2 = (n: number) => String(n).padStart(2, '0');
@@ -6822,7 +6822,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
                     <td className="px-4 py-2 font-semibold">{p.name}</td>
                     <td className="px-3 text-gray-500">{p.start_date}</td>
                     <td className="px-3 text-gray-500">{p.end_date}</td>
-                    <td className="px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.status === 'closed' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'}`}>{p.status === 'closed' ? `🔒 ${tr('Fermée', 'Closed')}` : tr('Ouverte', 'Open')}</span></td>
+                    <td className="px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.status === 'closed' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'}`}>{p.status === 'closed' ? `${tr('Fermée', 'Closed')}` : tr('Ouverte', 'Open')}</span></td>
                     <td className="px-3 text-right">{canEdit && <button onClick={async () => { const { error } = await setPeriodStatus(tenant, p.id, p.status === 'closed' ? 'open' : 'closed'); if (error) { setNotice(error.message); return; } reloadPeriods(); }} className="text-xs font-semibold text-blue-600 hover:underline">{p.status === 'closed' ? tr('Rouvrir', 'Reopen') : tr('Fermer', 'Close')}</button>}</td>
                   </tr>
                 ))}
@@ -6835,7 +6835,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
         // Écriture de correction / ajustement (la saisie NORMALE passe par Transactions, comptabilisées auto)
         <div className="space-y-3">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-            ⚠️ {tr('Cet écran sert UNIQUEMENT aux écritures de correction / ajustement (vérification comptable). La saisie normale (revenus, dépenses, achats) passe par le module ', 'This screen is ONLY for correcting/adjusting entries (accounting review). Normal entry (revenue, expenses, purchases) goes through the ')}<b>{tr('Transactions', 'Transactions')}</b>{tr(' — tout y est comptabilisé automatiquement au grand livre.', ' module — everything is auto-posted to the ledger there.')}
+            ⚠ {tr('Cet écran sert UNIQUEMENT aux écritures de correction / ajustement (vérification comptable). La saisie normale (revenus, dépenses, achats) passe par le module ', 'This screen is ONLY for correcting/adjusting entries (accounting review). Normal entry (revenue, expenses, purchases) goes through the ')}<b>{tr('Transactions', 'Transactions')}</b>{tr(' — tout y est comptabilisé automatiquement au grand livre.', ' module — everything is auto-posted to the ledger there.')}
           </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-3 sm:grid-cols-4">
@@ -7229,7 +7229,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
           )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
-            <button onClick={doInvPrint} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">📄 {tr('Exporter (PDF — facture)', 'Export (PDF — invoice)')}</button>
+            <button onClick={doInvPrint} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">{tr('Exporter (PDF — facture)', 'Export (PDF — invoice)')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
           </div>
           {/* Facture imprimable (portail body) — même présentation pro que Soumission/DGA */}
@@ -7250,7 +7250,7 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
           {/* Encaissement en ligne (Stripe Connect) : statut + bouton de connexion */}
           {canEdit && (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs dark:border-indigo-800 dark:bg-indigo-900/20">
-              <span className="font-semibold text-indigo-700 dark:text-indigo-300">💳 {tr('Encaissement en ligne', 'Online payments')} :</span>
+              <span className="font-semibold text-indigo-700 dark:text-indigo-300">{tr('Encaissement en ligne', 'Online payments')} :</span>
               {!stripeStatus?.connected ? (
                 <>
                   <span className="text-indigo-600 dark:text-indigo-300">{tr('non connecté', 'not connected')}</span>
@@ -7323,9 +7323,9 @@ function InvoicingModule({ tenant, tr, canEdit, initialProject }: { tenant: stri
                           if (!r.ok) { setNotice(j.error || 'Erreur (migration 180 ?)'); return; }
                           try { await navigator.clipboard.writeText(j.url); setNotice(tr('Lien client copié : ', 'Client link copied: ') + j.url); } catch { window.prompt(tr('Lien client :', 'Client link:'), j.url); }
                         } catch { setNotice(tr('Erreur réseau.', 'Network error.')); }
-                      }} className="text-emerald-600 hover:underline">✍️ {tr('Transmettre', 'Send')}</button>}
+                      }} className="text-emerald-600 hover:underline">{tr('Transmettre', 'Send')}</button>}
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
-                      {inv.status !== 'paid' && stripeStatus?.chargesEnabled && <button onClick={() => payInvoice(inv)} disabled={payingId === inv.id} className="font-semibold text-indigo-600 hover:underline disabled:opacity-40">{payingId === inv.id ? <Loader2 size={12} className="inline animate-spin" /> : `💳 ${tr('Payer', 'Pay')}`}</button>}
+                      {inv.status !== 'paid' && stripeStatus?.chargesEnabled && <button onClick={() => payInvoice(inv)} disabled={payingId === inv.id} className="font-semibold text-indigo-600 hover:underline disabled:opacity-40">{payingId === inv.id ? <Loader2 size={12} className="inline animate-spin" /> : `${tr('Payer', 'Pay')}`}</button>}
                       {inv.status !== 'paid' && <button onClick={() => { setPayFor(inv); setPayDate(today); setPayBankGl(''); setPayAmount(String(Math.round(((Number(inv.total) || 0) - (Number((inv as any).paid_amount) || 0)) * 100) / 100)); }} className="ml-auto text-emerald-600 hover:underline">{(Number((inv as any).paid_amount) || 0) > 0 ? tr('Encaisser (solde)', 'Receive (balance)') : tr('Encaisser (Payée)', 'Receive (Paid)')}</button>}
                       {(inv.status === 'sent' || inv.status === 'paid') && inv.id && <button onClick={() => { setCreditFor(inv); setCnMode('full'); setCnAmount(String(inv.subtotal || '')); setCnReason(''); setCnRefund(inv.status === 'paid'); }} className={`${inv.status === 'paid' ? '' : 'ml-auto'} text-rose-600 hover:underline`}>{tr('Note de crédit', 'Credit note')}</button>}
                     </div>
@@ -7722,7 +7722,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     // Contrôle d'écart : compare les totaux extraits aux totaux DÉCLARÉS du/des relevé(s).
     if (anyStmt) setStmtCheck({ declaredCred: Math.round(declCred * 100) / 100, extCred: Math.round(extCred * 100) / 100, declaredDeb: Math.round(declDeb * 100) / 100, extDeb: Math.round(extDeb * 100) / 100, openBal: 0, closeBal: 0 });
     else setStmtCheck(null);
-    setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} doublon(s) ignoré(s)` : ''}${transfers ? `, ${transfers} transfert(s) interne(s) non comptabilisé(s)` : ''} — ⏳ À VÉRIFIER${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created${dups ? `, ${dups} duplicate(s) skipped` : ''}${transfers ? `, ${transfers} internal transfer(s) not booked` : ''} — ⏳ TO REVIEW${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
+    setNotice(tr(`${created} transaction(s) créée(s)${dups ? `, ${dups} doublon(s) ignoré(s)` : ''}${transfers ? `, ${transfers} transfert(s) interne(s) non comptabilisé(s)` : ''} — À VÉRIFIER${failed ? `, ${failed} échec(s)${lastErr ? ` — ${lastErr}` : ''}` : ''}.`, `${created} transaction(s) created${dups ? `, ${dups} duplicate(s) skipped` : ''}${transfers ? `, ${transfers} internal transfer(s) not booked` : ''} — TO REVIEW${failed ? `, ${failed} failed${lastErr ? ` — ${lastErr}` : ''}` : ''}.`));
     // Ne PAS forcer le filtre sur « Brouillon » : ça masquait les autres transactions (revenus, comptabilisées).
     // Les nouvelles lignes sont déjà badgées « À vérifier » ; on garde le filtre courant.
     await load();
@@ -7987,8 +7987,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       for (const b of lines) { try { await updateBankLine(tenant, b.id!, { reconciled: true }); } catch { /* noop */ } }
       setBankLines(await getBankLines(tenant));
       setNotice(tr(
-        `${created} transaction(s) créée(s)${dups ? `, ${dups} déjà existante(s)` : ''}${transfers ? `, ${transfers} transfert(s) ignoré(s)` : ''}${fbBatches ? ` · ${fbBatches} lot(s) créé(s) sans IA (à catégoriser)` : ''} — ⏳ À VÉRIFIER.`,
-        `${created} transaction(s) created${dups ? `, ${dups} already existing` : ''}${transfers ? `, ${transfers} transfer(s) skipped` : ''}${fbBatches ? ` · ${fbBatches} batch(es) created without AI (to categorize)` : ''} — ⏳ TO REVIEW.`));
+        `${created} transaction(s) créée(s)${dups ? `, ${dups} déjà existante(s)` : ''}${transfers ? `, ${transfers} transfert(s) ignoré(s)` : ''}${fbBatches ? ` · ${fbBatches} lot(s) créé(s) sans IA (à catégoriser)` : ''} — À VÉRIFIER.`,
+        `${created} transaction(s) created${dups ? `, ${dups} already existing` : ''}${transfers ? `, ${transfers} transfer(s) skipped` : ''}${fbBatches ? ` · ${fbBatches} batch(es) created without AI (to categorize)` : ''} — TO REVIEW.`));
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
     setBankBusy(false);
   }
@@ -8003,7 +8003,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       const r = await createTxnFromExtracted(x, null, seen, importAccount || undefined);
       await updateBankLine(tenant, b.id!, { reconciled: true });
       setBankLines(await getBankLines(tenant));
-      setNotice(r === 'duplicate' ? tr('Transaction déjà existante — ligne rapprochée.', 'Transaction already exists — line reconciled.') : tr('Transaction créée depuis la ligne — ⏳ à vérifier (taxes à compléter).', 'Transaction created from the line — ⏳ to review (add taxes).'));
+      setNotice(r === 'duplicate' ? tr('Transaction déjà existante — ligne rapprochée.', 'Transaction already exists — line reconciled.') : tr('Transaction créée depuis la ligne — à vérifier (taxes à compléter).', 'Transaction created from the line — to review (add taxes).'));
     } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); } finally { setBankBusy(false); }
   }
 
@@ -8025,16 +8025,16 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           {treasury.filter(a => a.active !== false).length > 0 && (
             <select value={importAccount} onChange={e => setImportAccount(e.target.value)} className={inputCls} title={tr('Compte des opérations importées (optionnel — sinon tout en « à vérifier », à classer/filtrer ensuite)', 'Account for imported transactions (optional — otherwise all “to review”, classify/filter later)')}>
               <option value="">{tr('Sans compte → tout « à vérifier » (classer ensuite)', 'No account → all “to review” (classify later)')}</option>
-              {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{tr('Classer sur', 'Assign to')} → {a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+              {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{tr('Classer sur', 'Assign to')} → {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
             </select>
           )}
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('Relevé PDF / plusieurs reçus -> l’IA extrait CHAQUE opération en détail et les classe sur le compte choisi', 'PDF statement / many receipts -> AI extracts EACH transaction in detail and assigns to the chosen account')}>
             {batch?.busy ? <Loader2 size={14} className="animate-spin" /> : '📷'} {tr('Import lot (IA)', 'Batch import (AI)')}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" multiple className="hidden" disabled={batch?.busy} onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) batchScanCreate(fs); }} />
           </label>
-          <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🏦 {tr('Mes comptes', 'My accounts')}</button>
-          <button onClick={openBalances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">💰 {tr('Soldes des comptes', 'Account balances')}</button>
-          <button onClick={openAdvances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">🤝 {tr('Avances investisseurs', 'Investor advances')}</button>
+          <button onClick={() => { setView('accounts'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Mes comptes', 'My accounts')}</button>
+          <button onClick={openBalances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Soldes des comptes', 'Account balances')}</button>
+          <button onClick={openAdvances} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Avances investisseurs', 'Investor advances')}</button>
           <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
         </div>}
         {(view === 'bank' || view === 'accounts' || view === 'balances' || view === 'advances') && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
@@ -8079,7 +8079,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 <div className="mt-1 flex items-center gap-1">
                   <select value={hdr.treasury_account_id || ''} onChange={e => setHdr(h => ({ ...h, treasury_account_id: e.target.value || null }))} className={`w-full ${inputCls}`}>
                     <option value="">{tr('— Banque par défaut —', '— Default bank —')}</option>
-                    {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{TREASURY_KIND_LABELS[a.kind][0] === 'Carte de crédit' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+                    {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
                   </select>
                   <button type="button" onClick={() => setView('accounts')} className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-600" title={tr('Gérer mes comptes', 'Manage my accounts')}>＋</button>
                 </div>
@@ -8176,7 +8176,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.xls,.xlsx,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) scanReceiptAI(f); }} />
               </label>
               {hdr.receipt_url && <a href={hdr.receipt_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir le reçu', 'View receipt')}</a>}
-              <button onClick={verifyAI} disabled={aiChecking} className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA vérifie la cohérence comptable/fiscale et propose des corrections', 'AI checks accounting/tax coherence and suggests fixes')}>{aiChecking ? <Loader2 size={13} className="animate-spin" /> : '✨'} {tr('Vérifier IA', 'AI check')}</button>
+              <button onClick={verifyAI} disabled={aiChecking} className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA vérifie la cohérence comptable/fiscale et propose des corrections', 'AI checks accounting/tax coherence and suggests fixes')}>{aiChecking ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {tr('Vérifier IA', 'AI check')}</button>
             </div>
             <div className="flex flex-col items-end gap-1 text-sm">
               <div>{tr('Sous-total', 'Subtotal')} : <b>{mny(totals.subtotal)}</b></div>
@@ -8199,7 +8199,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               ? <div className="text-xs text-gray-400">{tr('Aucune pièce jointe. Le reçu principal et les pièces ajoutées ici accompagnent l’écriture au grand livre.', 'No attachment. The main receipt and files added here accompany the ledger entry.')}</div>
               : <ul className="space-y-1">{attachments.map((a, i) => (
                   <li key={a.id || i} className="flex items-center gap-2 text-xs">
-                    <a href={a.file_url} target="_blank" rel="noreferrer" className="flex-1 truncate text-blue-600 hover:underline">📄 {a.file_name}</a>
+                    <a href={a.file_url} target="_blank" rel="noreferrer" className="flex-1 truncate text-blue-600 hover:underline">{a.file_name}</a>
                     <button onClick={() => removeAttach(a, i)} className="text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </li>
                 ))}</ul>}
@@ -8208,14 +8208,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           {aiResult && (
             <div className={`mt-3 rounded-xl border p-3 text-sm ${aiResult.ok && !(aiResult.issues || []).length ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100'}`}>
               <div className="mb-1 flex items-center justify-between">
-                <span className="font-bold">✨ {tr('Vérification IA', 'AI check')}{aiResult.summary ? ` — ${aiResult.summary}` : ''}</span>
+                <span className="font-bold">{tr('Vérification IA', 'AI check')}{aiResult.summary ? ` — ${aiResult.summary}` : ''}</span>
                 <button onClick={() => setAiResult(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
               </div>
               {(!aiResult.issues || aiResult.issues.length === 0)
                 ? <div>{tr('✓ Aucune incohérence détectée.', '✓ No issue detected.')}</div>
                 : <ul className="space-y-1">{aiResult.issues.map((it, i) => (
                     <li key={i} className="flex gap-2">
-                      <span>{it.severity === 'error' ? '🔴' : it.severity === 'warning' ? '🟠' : 'ℹ️'}</span>
+                      <span className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${it.severity === 'error' ? 'bg-red-500' : it.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}`} />
                       <span><b>{it.field ? `${it.field} : ` : ''}</b>{it.message}{it.suggestion ? <em className="block text-xs opacity-80">→ {it.suggestion}</em> : null}</span>
                     </li>
                   ))}</ul>}
@@ -8229,7 +8229,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       ) : view === 'advances' ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-2 text-sm font-bold">🤝 {tr('Avances investisseurs (dettes à rembourser)', 'Investor advances (debts to repay)')}</h3>
+            <h3 className="mb-2 text-sm font-bold">{tr('Avances investisseurs (dettes à rembourser)', 'Investor advances (debts to repay)')}</h3>
             {(() => {
               // Solde net dû = compte 2400 (passif : crédit − débit).
               const acc2400 = accounts.find(a => a.code === '2400');
@@ -8268,8 +8268,8 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
         <div className="space-y-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-1 flex items-center justify-between gap-2">
-              <h3 className="text-sm font-bold">💰 {tr('Soldes de tous les comptes', 'All account balances')}</h3>
-              {canEdit && <button onClick={cleanupOrphanGl} className="rounded-lg border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300" title={tr('Supprime les écritures du grand livre dont la transaction n\'existe plus', 'Remove ledger entries whose transaction no longer exists')}>🧹 {tr('Nettoyer orphelines', 'Clean orphans')}</button>}
+              <h3 className="text-sm font-bold">{tr('Soldes de tous les comptes', 'All account balances')}</h3>
+              {canEdit && <button onClick={cleanupOrphanGl} className="rounded-lg border border-amber-300 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300" title={tr('Supprime les écritures du grand livre dont la transaction n\'existe plus', 'Remove ledger entries whose transaction no longer exists')}>{tr('Nettoyer orphelines', 'Clean orphans')}</button>}
             </div>
             <p className="mb-3 text-xs text-gray-500">{tr('Solde (sens normal) de chaque compte du grand livre, d’après toutes les écritures comptabilisées.', 'Balance (normal side) of each ledger account, from all posted entries.')}</p>
             {accounts.length === 0 ? <div className="text-sm text-gray-400">{tr('Plan comptable non initialisé (onglet Comptabilité → migration 085).', 'Chart of accounts not initialized.')}</div> : (
@@ -8300,7 +8300,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
       ) : view === 'accounts' ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-1 text-sm font-bold">🏦 {tr('Mes comptes (banque, carte de crédit, caisse)', 'My accounts (bank, credit card, cash)')}</h3>
+            <h3 className="mb-1 text-sm font-bold">{tr('Mes comptes (banque, carte de crédit, caisse)', 'My accounts (bank, credit card, cash)')}</h3>
             <p className="mb-3 text-xs text-gray-500">{tr('Créez vos comptes réels et assignez-les à vos transactions : chaque compte a son propre compte au grand livre (suivi du solde). Achat sur carte = passif carte ; sortie d’argent = actif banque.', 'Create your real accounts and assign them to transactions: each has its own ledger account (balance tracking). Card purchase = card liability; cash out = bank asset.')}</p>
             {canEdit && (
               <div className="grid gap-2 sm:grid-cols-5">
@@ -8319,7 +8319,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <tbody>
                 {treasury.map(a => (
                   <tr key={a.id} className="border-t border-gray-50 dark:border-gray-700/50">
-                    <td className="px-4 py-2 font-semibold">{a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}</td>
+                    <td className="px-4 py-2 font-semibold">{a.name}</td>
                     <td className="px-3 text-gray-500">{tr(TREASURY_KIND_LABELS[a.kind][0], TREASURY_KIND_LABELS[a.kind][1])}</td>
                     <td className="px-3 text-gray-500">{a.last4 ? `••${a.last4}` : '—'}</td>
                     <td className="px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${a.active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{a.active !== false ? tr('Actif', 'Active') : tr('Inactif', 'Inactive')}</span></td>
@@ -8345,10 +8345,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                 <input type="file" accept=".csv,.tsv,.txt,.ofx,.qfx,text/csv,text/plain,application/x-ofx" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) { try { const txt = await readBankFile(f); setImportText(txt); const n = parseStatement(txt).lines.length; setNotice(n ? tr(`${n} opération(s) détectée(s) dans « ${f.name} » — cliquez « Importer ».`, `${n} transaction(s) detected in “${f.name}” — click “Import”.`) : tr(`Aucune opération détectée dans « ${f.name} » (format non reconnu).`, `No transaction detected in “${f.name}” (unrecognized format).`)); } catch { setNotice(tr('Lecture du fichier impossible.', 'Could not read the file.')); } } e.target.value = ''; }} />
               </label>
               <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
-              {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>✨ {tr('Auto-rapprocher', 'Auto-match')}</button>}
+              {bankLines.some(b => !b.reconciled) && <button onClick={doAutoMatch} disabled={bankBusy} className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={tr('Apparie par montant (± 0,02 $) et date (± 5 j) — applique seulement les correspondances uniques', 'Match by amount (± $0.02) and date (± 5 d) — applies only unique matches')}>{tr('Auto-rapprocher', 'Auto-match')}</button>}
               {bankLines.some(b => !b.reconciled && !b.matched_transaction_id) && <button onClick={doBankAI} disabled={bankBusy} className="rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300" title={tr('L’IA crée des transactions « à vérifier » à partir des lignes non rapprochées', 'AI creates “to review” transactions from unmatched lines')}>📷 {tr('Transactions du relevé (IA)', 'Statement → transactions (AI)')}</button>}
               {importText.trim() && <span className="text-xs text-gray-400">{parseStatement(importText).lines.length} {tr('opération(s) détectée(s)', 'transaction(s) detected')}{/<OFX>|OFXHEADER|<STMTTRN>/i.test(importText) ? ' · OFX/QFX' : ' · CSV'}</span>}
-              {bankSel.size > 0 && <button onClick={deleteSelectedBank} disabled={bankBusy} className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-40 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">🗑 {tr('Supprimer la sélection', 'Delete selection')} ({bankSel.size})</button>}
+              {bankSel.size > 0 && <button onClick={deleteSelectedBank} disabled={bankBusy} className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-40 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">{tr('Supprimer la sélection', 'Delete selection')} ({bankSel.size})</button>}
               {bankLines.length > 0 && <button onClick={deleteAllBank} disabled={bankBusy} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-600 dark:text-gray-300">{tr('Tout vider', 'Clear all')}</button>}
             </div>
           </div>
@@ -8469,7 +8469,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           {/* Filtre par COMPTE (banque/carte/caisse) enregistré */}
           <select value={fAccount} onChange={e => setFAccount(e.target.value)} className={inputCls} title={tr('Filtrer par compte', 'Filter by account')}>
             <option value="all">{tr('Tous les comptes', 'All accounts')}</option>
-            {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{a.kind === 'credit_card' ? '💳' : a.kind === 'cash' ? '💵' : '🏦'} {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+            {treasury.filter(a => a.active !== false).map(a => <option key={a.id} value={a.id}>{a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
             <option value="none">{tr('— Sans compte assigné —', '— No account assigned —')}</option>
           </select>
           <input value={fSearch} onChange={e => setFSearch(e.target.value)} placeholder={tr('Rechercher n° ou tiers…', 'Search # or party…')} className={`min-w-[160px] flex-1 ${inputCls}`} />
@@ -8479,7 +8479,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           {/* Solde des MOUVEMENTS du compte filtré (revenus − dépenses) — contrôle par compte */}
           {fAccount !== 'all' && fAccount !== 'none' && (() => { const net = filteredTxns.reduce((s, t) => s + ((t.txn_type === 'revenue') ? (Number(t.total) || 0) : -(Number(t.total) || 0)), 0); return <span className={`rounded-lg px-2 py-1 text-xs font-bold ${net < 0 ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300' : 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'}`} title={tr('Solde des mouvements affichés sur ce compte (revenus − dépenses)', 'Balance of displayed movements on this account (revenue − expenses)')}>{tr('Solde compte', 'Account bal.')} : {mny(net)}</span>; })()}
           <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
-          {canEdit && filteredTxns.some(t => !t.gl_entry_id && t.status !== 'cancelled') && <button onClick={postAllFiltered} className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300" title={tr('Comptabiliser au grand livre toutes les transactions affichées non comptabilisées', 'Post all displayed unposted transactions to the ledger')}>📒 {tr('Comptabiliser tout', 'Post all')}</button>}
+          {canEdit && filteredTxns.some(t => !t.gl_entry_id && t.status !== 'cancelled') && <button onClick={postAllFiltered} className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300" title={tr('Comptabiliser au grand livre toutes les transactions affichées non comptabilisées', 'Post all displayed unposted transactions to the ledger')}>{tr('Comptabiliser tout', 'Post all')}</button>}
           <button onClick={exportCsv} disabled={filteredTxns.length === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{tr('Exporter CSV', 'Export CSV')}</button>
         </div>
         {/* Lignes à HAUTEUR FIXE (une ligne, sans retour) + scroll HORIZONTAL si étroit — plus de cartes qui grossissent. Survol = détails via title. */}
@@ -8501,7 +8501,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{formatMoney(Number(t.total) || 0, (t as any).currency)}</td>
                   <td className="px-4 py-2" data-label={tr('Statut', 'Status')}>
                     {(t as any).needs_review
-                      ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">⏳ {tr('À vérifier', 'To review')}</span>
+                      ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{tr('À vérifier', 'To review')}</span>
                       : <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[t.status]}`}>{STATUS_LABEL[t.status]}</span>}
                   </td>
                   <td className="px-4 py-2" data-label="GL">{t.gl_entry_id ? <Check size={15} className="text-emerald-600" /> : <span className="text-gray-300">—</span>}</td>

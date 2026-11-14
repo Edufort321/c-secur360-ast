@@ -79,7 +79,7 @@ export default function PublicDgaPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logo} alt="logo" className="h-11 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/c-secur360-logo.png'; }} />
           <span className="text-sm font-bold uppercase tracking-wide text-slate-600">{tenantName || tenant}</span>
-          {siteTxt && <span className="text-xs font-semibold text-cyan-700">📍 {siteTxt}</span>}
+          {siteTxt && <span className="text-xs font-semibold text-cyan-700">{siteTxt}</span>}
         </div>
 
         <div className="space-y-4 rounded-b-2xl bg-white px-5 pb-6 pt-3 shadow">
@@ -118,7 +118,7 @@ export default function PublicDgaPage() {
           {/* Inspection visuelle de routine + anomalies à surveiller */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border-2 p-3 text-center" style={{ borderColor: inspColor, background: inspColor + '14' }}>
-              <div className="text-sm font-extrabold" style={{ color: inspColor }}>🛠 {inspLabel}</div>
+              <div className="text-sm font-extrabold" style={{ color: inspColor }}>{inspLabel}</div>
               <div className="text-[11px] text-slate-500">Inspection visuelle{inspNext ? ` · ${inspNext}` : ''}</div>
             </div>
             <div className="rounded-xl border-2 p-3 text-center" style={{ borderColor: anomCount ? '#e63946' : '#2a9d8f', background: (anomCount ? '#e63946' : '#2a9d8f') + '14' }}>

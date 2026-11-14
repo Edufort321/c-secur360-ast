@@ -6,7 +6,7 @@ export const generalConstruction: WorkType = {
   name: 'Construction générale',
   category: 'Construction',
   description: 'Travaux de construction et rénovation générale',
-  icon: '🏗️',
+  icon: '',
   baseHazards: [
     'PHY-003', // Chutes de hauteur
     'PHY-005', // Heurt par objets
@@ -63,7 +63,7 @@ export const excavation: WorkType = {
   name: 'Excavation',
   category: 'Construction',
   description: 'Travaux d\'excavation et terrassement',
-  icon: '⛏️',
+  icon: '',
   baseHazards: [
     'PHY-006', // Effondrement/cave-in
     'PHY-005', // Heurt par objets
@@ -110,7 +110,7 @@ export const roofing: WorkType = {
   name: 'Couverture',
   category: 'Construction',
   description: 'Travaux de toiture et couverture',
-  icon: '🏠',
+  icon: '',
   baseHazards: [
     'PHY-003', // Chutes de hauteur
     'METEO-001', // Exposition météo
@@ -165,7 +165,7 @@ export const demolition: WorkType = {
   name: 'Démolition',
   category: 'Construction',
   description: 'Travaux de démolition et déconstruction',
-  icon: '🔨',
+  icon: '',
   baseHazards: [
     'PHY-005', // Heurt par objets
     'PHY-003', // Chutes de hauteur

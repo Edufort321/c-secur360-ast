@@ -384,13 +384,13 @@ const translations = {
     
     // LOTO Energy Types
     energyTypes: {
-      electrical: "⚡ Électrique",
-      mechanical: "⚙️ Mécanique",
-      hydraulic: "🔧 Hydraulique",
-      pneumatic: "💨 Pneumatique",
-      thermal: "🔥 Thermique",
-      chemical: "🧪 Chimique",
-      gravitational: "⬇️ Gravitationnelle"
+      electrical: "Électrique",
+      mechanical: "Mécanique",
+      hydraulic: "Hydraulique",
+      pneumatic: "Pneumatique",
+      thermal: "Thermique",
+      chemical: "Chimique",
+      gravitational: "Gravitationnelle"
     },
     
     // LOTO Statuses
@@ -404,10 +404,10 @@ const translations = {
     
     // LOTO Priorities
     lotoPriorities: {
-      critical: "🔴 Critique",
-      high: "🟠 Élevée",
-      medium: "🟡 Moyenne",
-      low: "🟢 Faible"
+      critical: "Critique",
+      high: "Élevée",
+      medium: "Moyenne",
+      low: "Faible"
     },
     
     // Actions
@@ -619,13 +619,13 @@ const translations = {
     
     // LOTO Energy Types
     energyTypes: {
-      electrical: "⚡ Electrical",
-      mechanical: "⚙️ Mechanical",
-      hydraulic: "🔧 Hydraulic",
-      pneumatic: "💨 Pneumatic",
-      thermal: "🔥 Thermal",
-      chemical: "🧪 Chemical",
-      gravitational: "⬇️ Gravitational"
+      electrical: "Electrical",
+      mechanical: "Mechanical",
+      hydraulic: "Hydraulic",
+      pneumatic: "Pneumatic",
+      thermal: "Thermal",
+      chemical: "Chemical",
+      gravitational: "Gravitational"
     },
     
     // LOTO Statuses
@@ -639,10 +639,10 @@ const translations = {
     
     // LOTO Priorities
     lotoPriorities: {
-      critical: "🔴 Critical",
-      high: "🟠 High",
-      medium: "🟡 Medium",
-      low: "🟢 Low"
+      critical: "Critical",
+      high: "High",
+      medium: "Medium",
+      low: "Low"
     },
     
     // Actions
@@ -1597,7 +1597,7 @@ const Step1ProjectInfo = memo(({
       const updatedPhotos = [...(localData.lockoutPhotos || []), newPhoto];
       updateField('lockoutPhotos', updatedPhotos);
       
-      console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
+      console.log('✓ Step1 - Photo ajoutée:', newPhoto.id);
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
@@ -1606,7 +1606,7 @@ const Step1ProjectInfo = memo(({
   const deletePhoto = useCallback((photoId: string) => {
     const updatedPhotos = (localData.lockoutPhotos || []).filter((photo: any) => photo.id !== photoId);
     updateField('lockoutPhotos', updatedPhotos);
-    console.log('✅ Step1 - Photo supprimée:', photoId);
+    console.log('✓ Step1 - Photo supprimée:', photoId);
   }, [localData.lockoutPhotos, updateField]);
 
   const getCategoryLabel = useCallback((category: string): string => {
@@ -4046,7 +4046,7 @@ const Step1ProjectInfo = memo(({
                     gap: '8px'
                   }}>
                     <Lock size={20} style={{ color: '#ef4444' }} />
-                    🔒 Verrouillage / Cadenassage (LOTO)
+                    Verrouillage / Cadenassage (LOTO)
                   </h3>
                   <p style={{ 
                     margin: 0, 
@@ -4181,7 +4181,7 @@ const Step1ProjectInfo = memo(({
                     borderBottom: '1px solid rgba(239, 68, 68, 0.2)'
                   }}>
                     <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                      🔒 Point de Verrouillage #{index + 1}
+                      Point de Verrouillage #{index + 1}
                     </h4>
                     <button
                       onClick={() => deleteLockoutPoint(point.id)}
@@ -4260,7 +4260,7 @@ const Step1ProjectInfo = memo(({
                         padding: '16px',
                         marginTop: '12px'
                       }}>
-                        <h4 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600', margin: '0 0 12px' }}>🔧 Procédures à Suivre:</h4>
+                        <h4 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600', margin: '0 0 12px' }}>Procédures à Suivre:</h4>
                         <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                           {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
                             const isCompleted = (point.completedProcedures || []).includes(idx);

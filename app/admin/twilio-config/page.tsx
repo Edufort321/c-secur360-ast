@@ -70,12 +70,12 @@ export default function TwilioConfigPage() {
       if (response.ok) {
         const result = await response.json();
         setConfig(result);
-        alert('✅ Configuration Twilio sauvegardée');
+        alert('✓ Configuration Twilio sauvegardée');
       } else {
-        alert('❌ Erreur sauvegarde');
+        alert('✕ Erreur sauvegarde');
       }
     } catch (error) {
-      alert('❌ Erreur réseau');
+      alert('✕ Erreur réseau');
     } finally {
       setSaving(false);
     }
@@ -327,7 +327,7 @@ export default function TwilioConfigPage() {
         {/* Documentation */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
           <h3 className="text-lg font-bold text-blue-900 mb-3">
-            📚 Instructions de configuration
+            Instructions de configuration
           </h3>
           <div className="text-blue-800 space-y-2 text-sm">
             <p>• <strong>Account SID</strong> : Identifiant unique de votre compte Twilio</p>

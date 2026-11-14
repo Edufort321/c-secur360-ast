@@ -170,7 +170,7 @@ export function ThemeSelector({ className = '', showLabel = true, size = 'normal
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    🌙 Mode nuit à
+                                                    Mode nuit à
                                                 </label>
                                                 <input
                                                     type="time"
@@ -181,7 +181,7 @@ export function ThemeSelector({ className = '', showLabel = true, size = 'normal
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    ☀️ Mode jour à
+                                                    Mode jour à
                                                 </label>
                                                 <input
                                                     type="time"

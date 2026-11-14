@@ -74,7 +74,7 @@ export function BankConnect({ tenant, tr, accounts, onSynced }: { tenant: string
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <select value={target} onChange={e => setTarget(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800">
               <option value="">{tr('Compte cible (optionnel)', 'Target account (optional)')}</option>
-              {accounts.map(a => <option key={a.id} value={a.id}>🏦 {a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}{a.last4 ? ` ••${a.last4}` : ''}</option>)}
             </select>
             <button onClick={() => { setShowWidget(true); setNotice(null); }} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40">{busy ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />} {tr('Connecter ma banque', 'Connect my bank')}</button>
           </div>

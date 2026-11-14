@@ -123,7 +123,7 @@ export default function CauserieEditor({ tenant, value, userEmail, lang, onSaved
         setUploading(mode === 'video' ? t('Téléversement de la vidéo…', 'Uploading video…') : t('Téléversement de l’audio…', 'Uploading audio…'));
         const res = await uploadMeetingMedia(tenant, blob, 'webm');
         setUploading(null);
-        if (res.url) addMedia({ kind: mode, url: res.url, path: res.path, label: `${mode === 'video' ? '🎥' : '🎙️'} ${new Date().toLocaleString(fr ? 'fr-CA' : 'en-CA')}` });
+        if (res.url) addMedia({ kind: mode, url: res.url, path: res.path, label: `${mode === 'video' ? (fr ? 'Vidéo' : 'Video') : 'Audio'} ${new Date().toLocaleString(fr ? 'fr-CA' : 'en-CA')}` });
         else alert((fr ? 'Échec du téléversement : ' : 'Upload failed: ') + (res.error || ''));
       };
       mediaRecRef.current = mr; mr.start(); setRecMode(mode); setSeconds(0);

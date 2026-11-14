@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export const LANGUAGES = {
-  fr: { code: 'fr', name: 'Français', flag: '🇫🇷', display: 'FR' },
-  en: { code: 'en', name: 'English', flag: '🇬🇧', display: 'EN' }
+  fr: { code: 'fr', name: 'Français', flag: 'FR', display: 'FR' },
+  en: { code: 'en', name: 'English', flag: 'EN', display: 'EN' }
 };
 
 const translations = {
@@ -294,12 +294,12 @@ const translations = {
       excel: {
         title: 'Import/Export Excel',
         downloadTemplate: 'Télécharger le Modèle Excel',
-        downloadTemplateIcon: '📥 Télécharger le Modèle Excel',
+        downloadTemplateIcon: 'Télécharger le Modèle Excel',
         dragDrop: 'Glissez votre fichier Excel ici',
         clickToSelect: 'ou cliquez pour sélectionner un fichier',
         acceptedFormats: 'Formats acceptés: .xlsx, .xls',
-        instructions: '📋 Instructions:',
-        beforeImporting: '📋 Avant d\'importer:',
+        instructions: 'Instructions:',
+        beforeImporting: 'Avant d\'importer:',
         step1: '1. Téléchargez le modèle Excel ci-dessus',
         step4: '4. Glissez le fichier ici ou cliquez pour le sélectionner',
         instructionDownload: 'Téléchargez le modèle Excel depuis l\'onglet Administration',
@@ -326,7 +326,7 @@ const translations = {
 
         // Instructions du template
         template: {
-          title: '📋 INSTRUCTIONS D\'IMPORTATION - C-SECUR360 INVENTAIRE',
+          title: 'INSTRUCTIONS D\'IMPORTATION - C-SECUR360 INVENTAIRE',
           requiredColumns: 'COLONNES OBLIGATOIRES (ne pas modifier les noms):',
           col1: '1. Code',
           col1Desc: 'Code unique de l\'article (ex: EPI-001, TOOL-042)',
@@ -353,21 +353,21 @@ const translations = {
           col12: '12. Description',
           col12Desc: 'Description détaillée (optionnel)',
 
-          importantRules: '⚠️ RÈGLES IMPORTANTES:',
+          importantRules: '⚠ RÈGLES IMPORTANTES:',
           ruleUnique: '• Le Code doit être UNIQUE (pas de doublons)',
           ruleQuantities: '• Les quantités doivent être des nombres entiers positifs',
           rulePrices: '• Les prix doivent être des nombres décimaux (ex: 2.50)',
           ruleMinMax: '• La Quantité Min doit être inférieure à la Quantité Max',
           ruleExist: '• Les catégories et départements doivent exister dans le système',
 
-          availableCategories: '✅ CATÉGORIES DISPONIBLES:',
-          availableDepartments: '✅ DÉPARTEMENTS DISPONIBLES:',
-          exampleImport: '📊 EXEMPLE D\'IMPORT:',
-          importSteps: '💾 ÉTAPES D\'IMPORTATION:',
+          availableCategories: '✓ CATÉGORIES DISPONIBLES:',
+          availableDepartments: '✓ DÉPARTEMENTS DISPONIBLES:',
+          exampleImport: 'EXEMPLE D\'IMPORT:',
+          importSteps: 'ÉTAPES D\'IMPORTATION:',
           step2: '2. Sauvegardez le fichier',
           step5: '5. Vérifiez la prévisualisation',
           step6: '6. Confirmez l\'importation',
-          support: '🔧 SUPPORT:',
+          support: 'SUPPORT:',
           supportText: 'Pour toute question, contactez l\'administrateur système',
           sheetInstructions: 'Instructions',
           sheetData: 'Données Exemple'
@@ -860,7 +860,7 @@ const translations = {
       priceUpdate: 'Gestion des Prix',
       markAsUpdated: 'Marquer comme mis à jour',
       priceAdvice: 'Vérifiez régulièrement les prix de vos articles pour maintenir des marges optimales',
-      priceAdviceLabel: '💡 Conseil:',
+      priceAdviceLabel: 'Conseil:',
       next30Days: 'Prochains 30 jours',
 
       // Excel import/export
@@ -1353,12 +1353,12 @@ const translations = {
       excel: {
         title: 'Import/Export Excel',
         downloadTemplate: 'Download Excel Template',
-        downloadTemplateIcon: '📥 Download Excel Template',
+        downloadTemplateIcon: 'Download Excel Template',
         dragDrop: 'Drag your Excel file here',
         clickToSelect: 'or click to select a file',
         acceptedFormats: 'Accepted formats: .xlsx, .xls',
-        instructions: '📋 Instructions:',
-        beforeImporting: '📋 Before importing:',
+        instructions: 'Instructions:',
+        beforeImporting: 'Before importing:',
         step1: '1. Download the Excel template above',
         step4: '4. Drag the file here or click to select it',
         instructionDownload: 'Download the Excel template from the Administration tab',
@@ -1385,7 +1385,7 @@ const translations = {
 
         // Template instructions
         template: {
-          title: '📋 IMPORT INSTRUCTIONS - C-SECUR360 INVENTORY',
+          title: 'IMPORT INSTRUCTIONS - C-SECUR360 INVENTORY',
           requiredColumns: 'REQUIRED COLUMNS (do not modify names):',
           col1: '1. Code',
           col1Desc: 'Unique item code (e.g., EPI-001, TOOL-042)',
@@ -1412,21 +1412,21 @@ const translations = {
           col12: '12. Description',
           col12Desc: 'Detailed description (optional)',
 
-          importantRules: '⚠️ IMPORTANT RULES:',
+          importantRules: '⚠ IMPORTANT RULES:',
           ruleUnique: '• Code must be UNIQUE (no duplicates)',
           ruleQuantities: '• Quantities must be positive integers',
           rulePrices: '• Prices must be decimal numbers (e.g., 2.50)',
           ruleMinMax: '• Min Quantity must be less than Max Quantity',
           ruleExist: '• Categories and departments must exist in the system',
 
-          availableCategories: '✅ AVAILABLE CATEGORIES:',
-          availableDepartments: '✅ AVAILABLE DEPARTMENTS:',
-          exampleImport: '📊 IMPORT EXAMPLE:',
-          importSteps: '💾 IMPORT STEPS:',
+          availableCategories: '✓ AVAILABLE CATEGORIES:',
+          availableDepartments: '✓ AVAILABLE DEPARTMENTS:',
+          exampleImport: 'IMPORT EXAMPLE:',
+          importSteps: 'IMPORT STEPS:',
           step2: '2. Save the file',
           step5: '5. Verify the preview',
           step6: '6. Confirm the import',
-          support: '🔧 SUPPORT:',
+          support: 'SUPPORT:',
           supportText: 'For any questions, contact the system administrator',
           sheetInstructions: 'Instructions',
           sheetData: 'Sample Data'
@@ -1919,7 +1919,7 @@ const translations = {
       priceUpdate: 'Price Management',
       markAsUpdated: 'Mark as updated',
       priceAdvice: 'Review your item prices regularly to maintain optimal margins',
-      priceAdviceLabel: '💡 Tip:',
+      priceAdviceLabel: 'Tip:',
       next30Days: 'Next 30 days',
 
       // Excel import/export

@@ -12,7 +12,7 @@ export function CongeTypesManager({ tenant, tr, canEdit }: { tenant: string; tr:
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [neu, setNeu] = useState<CongeTypeDef>({ value: '', label_fr: '', emoji: '🌴', requires_justification: false });
+  const [neu, setNeu] = useState<CongeTypeDef>({ value: '', label_fr: '', emoji: '', requires_justification: false });
 
   async function load() {
     try { const [t, p] = await Promise.all([getCongeTypesAdmin(tenant), getPostes(tenant)]); setTypes(t); setPostes(p); }
@@ -38,7 +38,7 @@ export function CongeTypesManager({ tenant, tr, canEdit }: { tenant: string; tr:
     while (existing.has(value)) value = `${base}_${i++}`;
     const r = await saveCongeType(tenant, { ...neu, value, label_fr: neu.label_fr.trim(), sort_order: types.length });
     if (r.error) { setNotice(r.error); return; }
-    setNeu({ value: '', label_fr: '', emoji: '🌴', requires_justification: false }); await load(); setNotice(tr('Type ajouté.', 'Type added.'));
+    setNeu({ value: '', label_fr: '', emoji: '', requires_justification: false }); await load(); setNotice(tr('Type ajouté.', 'Type added.'));
   }
   async function remove(t: CongeTypeDef) { if (t.id) { await deleteCongeType(tenant, t.id); await load(); } }
 
@@ -95,7 +95,7 @@ export function CongeTypesManager({ tenant, tr, canEdit }: { tenant: string; tr:
       </div>
       {canEdit && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-          <input value={neu.emoji || ''} onChange={e => setNeu(n => ({ ...n, emoji: e.target.value }))} className={`w-12 text-center ${inp}`} placeholder="🌴" />
+          <input value={neu.emoji || ''} onChange={e => setNeu(n => ({ ...n, emoji: e.target.value }))} className={`w-12 text-center ${inp}`} />
           <input value={neu.label_fr} onChange={e => setNeu(n => ({ ...n, label_fr: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') add(); }} className={inp} placeholder={tr('Nouveau type (ex. Sans solde)', 'New type (e.g. Unpaid)')} />
           <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!!neu.requires_justification} onChange={e => setNeu(n => ({ ...n, requires_justification: e.target.checked }))} /> {tr('Justification', 'Justification')}</label>
           <button onClick={add} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>

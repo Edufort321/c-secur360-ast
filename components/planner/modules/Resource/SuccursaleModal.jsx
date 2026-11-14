@@ -331,7 +331,7 @@ export function SuccursaleModal({
                                                 onChange={() => handleInputChange('actif', true)}
                                                 className="mr-2"
                                             />
-                                            <span className="text-green-600">🟢 {tr('Actif', 'Active')}</span>
+                                            <span className="text-green-600">{tr('Actif', 'Active')}</span>
                                         </label>
                                         <label className="flex items-center cursor-pointer">
                                             <input
@@ -340,7 +340,7 @@ export function SuccursaleModal({
                                                 onChange={() => handleInputChange('actif', false)}
                                                 className="mr-2"
                                             />
-                                            <span className="text-red-600">🔴 {tr('Inactif', 'Inactive')}</span>
+                                            <span className="text-red-600">{tr('Inactif', 'Inactive')}</span>
                                         </label>
                                     </div>
                                 </div>

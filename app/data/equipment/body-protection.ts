@@ -1,5 +1,5 @@
 // app/data/equipment/body-protection.ts
-// ⭐ IMPORT CORRIGÉ - Utilise la nouvelle interface
+// IMPORT CORRIGÉ - Utilise la nouvelle interface
 import { SafetyEquipment } from '../../types/equipment';
 
 // Fonction helper pour créer un équipement (remplace createNewEquipment)
@@ -34,7 +34,7 @@ export const highVisibilityVest: SafetyEquipment = createNewEquipment({
   subcategory: 'high_visibility',
   description: 'Protection haute visibilité pour travaux routiers et industriels',
   
-  // ✅ Maintenant ces propriétés sont acceptées
+  // Maintenant ces propriétés sont acceptées
   specifications: {
     model: 'CSA Z96 Classe 2',
     backgroundMaterial: 'Polyester fluorescent',

@@ -5,13 +5,15 @@ import { useParams } from 'next/navigation';
 import { PortalHeader } from '@/components/PortalHeader';
 import { BackLink } from '@/components/BackLink';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ModuleIcon } from '@/components/ModuleIcon';
+import { AlertTriangle, Wrench, Plane, Car, Megaphone, type LucideIcon } from 'lucide-react';
 
 // Guide / Mode d'emploi — description détaillée et BILINGUE (FR/EN, via le bouton langue du header) de
 // l'ensemble des modules C-Secur360 et de leurs fonctionnalités. Page de référence (présentation,
 // formation, support) destinée à un utilisateur non initié. Recherche + sections pliables.
 
 type Mod = {
-  key: string; icon: string;
+  key: string; icon?: LucideIcon;
   titleFr: string; titleEn: string;
   taglineFr: string; taglineEn: string;
   featuresFr: string[]; featuresEn: string[];
@@ -19,12 +21,12 @@ type Mod = {
 
 const MODULES: Mod[] = [
   {
-    key: 'ast', icon: '🦺',
+    key: 'ast',
     titleFr: 'AST / Sécurité', titleEn: 'JSA / Safety',
     taglineFr: "Remplir une analyse sécuritaire de tâche complète, la faire signer par l'équipe et la partager par QR — même sans compte.",
     taglineEn: 'Fill out a complete job safety analysis, get the crew to sign it, and share it by QR — even without an account.',
     featuresFr: [
-      "Deux modèles : « Simple » (dangers et mesures rapides) ou « Complet ✦ » qui ajoute l'onglet Énergie/Cadenassage (LOTO) et des mesures de contrôle pré-remplies selon chaque danger.",
+      "Deux modèles : « Simple » (dangers et mesures rapides) ou « Complet » qui ajoute l'onglet Énergie/Cadenassage (LOTO) et des mesures de contrôle pré-remplies selon chaque danger.",
       "Infos générales : n° et nom de projet, lieu, département, entrepreneur, superviseur (+ certification), date, durée, nombre de travailleurs, type de tâche, équipements, description ; projet/entrepreneur/superviseur via répertoire, le projet auto-remplit nom et lieu.",
       "Décomposez le travail en étapes et cochez, par étape, les dangers d'un catalogue rangé par famille (chutes, mécanique, thermique/chimique, électrique, ergonomie, espace clos, incendie, biologique/psychosocial, intempéries…) avec notes libres.",
       "Mesures de contrôle par étape selon la hiérarchie (élimination, substitution, ingénierie, administratif, EPI) ; en mode Complet, les mesures normées sont pré-remplies.",
@@ -39,7 +41,7 @@ const MODULES: Mod[] = [
       "Partage sans compte : QR + lien public en lecture seule pour consulter, télécharger le PDF et cocher sa prise de connaissance ; export PDF stylé, JSON et impression. Rattachable à un projet.",
     ],
     featuresEn: [
-      'Two templates: “Simple” (quick hazards and controls) or “Complete ✦”, which adds the Energy/Lockout (LOTO) tab and pre-filled control measures for each hazard.',
+      'Two templates: “Simple” (quick hazards and controls) or “Complete”, which adds the Energy/Lockout (LOTO) tab and pre-filled control measures for each hazard.',
       'General info: project number and name, location, department, contractor, supervisor (+ certification), date, duration, number of workers, task type, equipment, description; project/contractor/supervisor from the directory, with the project auto-filling name and location.',
       'Break the work into steps and, per step, check hazards from a catalog grouped by family (falls, mechanical, thermal/chemical, electrical, ergonomics, confined space, fire, biological/psychosocial, weather…) with free notes.',
       'Control measures per step following the hierarchy of controls (elimination, substitution, engineering, administrative, PPE); in Complete mode, standard measures are pre-filled.',
@@ -55,7 +57,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'hse', icon: '🛡️',
+    key: 'hse',
     titleFr: 'Santé et sécurité (registres & KPI)', titleEn: 'Health & Safety (registers & KPIs)',
     taglineFr: "Votre tour de contrôle SST : indicateurs de performance, registres réglementaires, incidents et causeries — alimentés automatiquement.",
     taglineEn: 'Your HSE control tower: performance indicators, regulatory registers, incidents and toolbox talks — fed automatically.',
@@ -91,7 +93,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'permits', icon: '📄',
+    key: 'permits',
     titleFr: 'Permis de travail', titleEn: 'Work permits',
     taglineFr: "Émettez et validez tous vos permis à haut risque — espace clos, travail à chaud, hauteur… — avec analyse IA, normes provinciales et signature électronique.",
     taglineEn: 'Issue and validate all your high-risk permits — confined space, hot work, heights… — with AI analysis, provincial standards and e-signature.',
@@ -123,7 +125,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'accidents', icon: '🚨',
+    key: 'accidents', icon: AlertTriangle,
     titleFr: 'Accidents et incidents', titleEn: 'Accidents & incidents',
     taglineFr: "Déclarez tout événement — accident, passé proche, véhicule, dommage, maladie — avec verdict CNESST automatique, assistance IA et schéma corporel.",
     taglineEn: 'Report any event — accident, near-miss, vehicle, damage, illness — with automatic CNESST verdict, AI assistance and a body diagram.',
@@ -157,7 +159,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'inspections', icon: '🔧',
+    key: 'inspections',
     titleFr: "Inspections d'équipement", titleEn: 'Equipment inspections',
     taglineFr: "Chaque équipement inspecté selon sa norme, avec verdict conforme/non-conforme, photos et QR — le mauvais matériel sort automatiquement du service.",
     taglineEn: 'Every piece of equipment inspected to its standard, with pass/fail verdict, photos and QR — bad equipment is taken out of service automatically.',
@@ -166,7 +168,7 @@ const MODULES: Mod[] = [
       "Tuiles KPI : total d'équipements, en retard, à venir, non conformes ; recherche, filtre par type et filtre global par site.",
       "Fiche d'équipement : type, nom, numéro de série, emplacement/chantier, province canadienne (affiche l'organisme et la référence légale, ex. Québec → CNESST/RSST), inspecteur (répertoire du personnel, avec alerte « formation expirée »), fréquence, et photos multiples.",
       "11 gabarits de checklist pré-montés selon les normes réelles : harnais (CSA Z259), chariot élévateur (CSA B335), nacelle/PEMP, échafaudage, échelle, outils électriques, extincteur (NFPA 10), détecteur de gaz, protection respiratoire, EPI général, pré-départ de véhicule.",
-      "Remplissage à trois états par point : ✓ conforme / ✗ non conforme / S.O., cibles tactiles de 44 px (utilisable avec des gants) ; un point échoué ouvre une note de défaut + photo. Chaque point porte des drapeaux « critique » et « retrait de service ».",
+      "Remplissage à trois états par point : ✓ conforme / ✕ non conforme / S.O., cibles tactiles de 44 px (utilisable avec des gants) ; un point échoué ouvre une note de défaut + photo. Chaque point porte des drapeaux « critique » et « retrait de service ».",
       "Points additionnels personnalisés ajoutables à la volée en plus du gabarit standard.",
       "Moteur de verdict automatique : un échec « retrait » → RETRAIT IMMÉDIAT ; un échec critique → non conforme ; un autre échec → conditionnel ; tout répondu sans échec → conforme.",
       "Interconnexion clé : un verdict « retrait » met l'équipement hors service automatiquement, un verdict « conforme » le réactive.",
@@ -181,7 +183,7 @@ const MODULES: Mod[] = [
       'KPI tiles: total equipment, overdue, upcoming, non-compliant; search, filter by type and a global site filter.',
       'Equipment sheet: type, name, serial number, location/site, Canadian province (shows the authority and legal reference, e.g. Quebec → CNESST/RSST), inspector (personnel directory, with an “expired training” alert), frequency, and multiple photos.',
       'Eleven pre-built checklist templates based on real standards: harness (CSA Z259), forklift (CSA B335), aerial lift/MEWP, scaffold, ladder, power tools, fire extinguisher (NFPA 10), gas detector, respiratory protection, general PPE, vehicle pre-trip.',
-      'Three-state marking per checkpoint: ✓ pass / ✗ fail / N/A, 44px touch targets (usable with gloves); a failed point opens a defect note + photo. Each point carries “critical” and “remove from service” flags.',
+      'Three-state marking per checkpoint: ✓ pass / ✕ fail / N/A, 44px touch targets (usable with gloves); a failed point opens a defect note + photo. Each point carries “critical” and “remove from service” flags.',
       'Custom extra checkpoints can be added on the fly on top of the standard template.',
       'Automatic verdict engine: a “remove” failure → IMMEDIATE REMOVAL; a critical failure → non-compliant; any other failure → conditional; all answered with no failure → compliant.',
       'Key interconnection: a “remove” verdict takes the equipment out of service automatically, a “compliant” verdict reactivates it.',
@@ -193,7 +195,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'maintenance', icon: '🛠️',
+    key: 'maintenance', icon: Wrench,
     titleFr: "Maintenance d'équipement (GMAO)", titleEn: 'Equipment maintenance (CMMS)',
     taglineFr: "Gabarit → client → inspection → tableau de bord : un flux léger qui suit vos équipements, calcule les échéances récurrentes et prévient vos clients.",
     taglineEn: 'Template → client → inspection → dashboard: a lightweight flow that tracks your equipment, computes recurring due dates and notifies your clients.',
@@ -231,7 +233,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'projects', icon: '🏗️',
+    key: 'projects',
     titleFr: 'Projets', titleEn: 'Projects',
     taglineFr: "Le hub central : soumission → projet → coûts réels → facture, avec numérotation auto, marge et analyse IA, relié aux permis, à l'inventaire et à la paie.",
     taglineEn: 'The central hub: quote → project → actual costs → invoice, with auto numbering, margin and AI analysis, linked to permits, inventory and payroll.',
@@ -267,7 +269,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'planner', icon: '📅',
+    key: 'planner',
     titleFr: 'Planificateur', titleEn: 'Scheduler',
     taglineFr: "Planifiez personnel, équipements et mandats sur un calendrier vivant qui transforme les heures de travail en dates réalistes, du terrain au poinçon.",
     taglineEn: 'Schedule personnel, equipment and jobs on a living calendar that turns work-hours into realistic dates, from the field to the punch clock.',
@@ -303,13 +305,13 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'timesheets', icon: '⏱️',
+    key: 'timesheets',
     titleFr: 'Feuille de temps', titleEn: 'Timesheets',
     taglineFr: "Saisissez vos heures par projet et par tâche, vos primes, vos dépenses (avec reçus IA) et votre odomètre — le tout alimente la paie, les coûts de projet et le logbook.",
     taglineEn: 'Log your hours by project and task, your bonuses, your expenses (with AI receipts) and your odometer — all feeding payroll, project costs and the logbook.',
     featuresFr: [
       "Saisie hebdomadaire par semaine ISO (lundi-dimanche) ; la semaine suivante est créée automatiquement 7 jours à l'avance. Vue personnelle : vous ne voyez que VOS feuilles.",
-      "Trois types d'heures par ligne : Régulier, Supplémentaire, Majoré — en pas de 0,5 h, avec un bouton « ⏱ Arrondir 15 min ».",
+      "Trois types d'heures par ligne : Régulier, Supplémentaire, Majoré — en pas de 0,5 h, avec un bouton « Arrondir 15 min ».",
       "Ligne par projet OU par tâche récurrente (recherche par numéro/titre/client) ; plusieurs lignes par jour, regroupées sous un en-tête de journée avec total.",
       "Kilométrage et véhicule par ligne : champ Km + sélecteur (véhicule d'entreprise, personnel autorisé, ou « mon véhicule personnel »), pré-sélectionné selon l'assignation.",
       "Avantages/primes : cochez les avantages applicables (subsistance…) filtrés selon l'employé et le contexte ; les primes horaires se déclenchent au-delà d'un seuil et s'affichent en pastilles.",
@@ -322,7 +324,7 @@ const MODULES: Mod[] = [
     ],
     featuresEn: [
       'Weekly entry by ISO week (Monday–Sunday); the next week is created automatically 7 days ahead. Personal view: you only see YOUR sheets.',
-      'Three hour types per line: Regular, Overtime, Premium — in 0.5 h steps, with a “⏱ Round to 15 min” button.',
+      'Three hour types per line: Regular, Overtime, Premium — in 0.5 h steps, with a “Round to 15 min” button.',
       'A line per project OR per recurring task (search by number/title/client); several lines per day, grouped under a day header with a total.',
       'Mileage and vehicle per line: Km field + selector (company vehicle, authorized personal, or “my personal vehicle”), pre-selected based on assignment.',
       'Benefits/bonuses: check applicable benefits (per diem…) filtered by employee and context; hourly bonuses trigger past a threshold and show as chips.',
@@ -335,7 +337,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'conges', icon: '🏖️',
+    key: 'conges', icon: Plane,
     titleFr: 'Congés', titleEn: 'Time off',
     taglineFr: "Demandez vos congés en libre-service, suivez leur statut et vos soldes, pendant que le superviseur approuve — confidentialité Loi 25 et lien au planificateur.",
     taglineEn: 'Request time off in self-service, track its status and your balances, while the supervisor approves — Law 25 privacy and a link to the scheduler.',
@@ -365,7 +367,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'logbook', icon: '🚗',
+    key: 'logbook', icon: Car,
     titleFr: 'Journal de bord des véhicules', titleEn: 'Vehicle logbook',
     taglineFr: "Tenez l'odomètre hebdomadaire de chaque véhicule, séparez automatiquement usage personnel et professionnel, et exportez un CSV conforme TP-41 et T777.",
     taglineEn: 'Keep the weekly odometer for each vehicle, automatically split personal and business use, and export a TP-41 / T777-ready CSV.',
@@ -395,7 +397,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'inventory', icon: '📦',
+    key: 'inventory',
     titleFr: 'Inventaire', titleEn: 'Inventory',
     taglineFr: "Gestion des articles, étiquettes QR et mouvements, avec valorisation des stocks et consommation liée aux projets.",
     taglineEn: 'Item management, QR labels and movements, with stock valuation and project-linked consumption.',
@@ -417,7 +419,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'todo', icon: '✅',
+    key: 'todo',
     titleFr: 'Tâches / To-Do', titleEn: 'Tasks / To-Do',
     taglineFr: "Organisez vos tâches et mesures correctives en liste ou en Kanban, avec étapes cochables, photos, échéances, priorités et assignation.",
     taglineEn: 'Organize your tasks and corrective actions in a list or Kanban, with checkable steps, photos, due dates, priorities and assignment.',
@@ -447,7 +449,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'dga', icon: '🧪',
+    key: 'dga',
     titleFr: 'Diagnostic DGA', titleEn: 'DGA Diagnostic',
     taglineFr: "Suivez la santé de vos transformateurs à partir des analyses d'huile de laboratoire : diagnostic automatique (IEEE + Duval), alertes d'échéance et rapports client.",
     taglineEn: 'Track your transformers’ health from lab oil analyses: automatic diagnosis (IEEE + Duval), due-date alerts and client reports.',
@@ -481,7 +483,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'rapports', icon: '📋',
+    key: 'rapports',
     titleFr: 'Rapports terrain', titleEn: 'Field reports',
     taglineFr: "Constructeur de rapports techniques assisté par IA, du terrain au PDF professionnel, avec import de PDF/manuscrit et partage au vérificateur.",
     taglineEn: 'AI-assisted technical report builder, from the field to a professional PDF, with PDF/handwriting import and reviewer sharing.',
@@ -515,7 +517,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'marketing', icon: '📣',
+    key: 'marketing', icon: Megaphone,
     titleFr: 'Marketing IA', titleEn: 'AI Marketing',
     taglineFr: "Un brief, des livrables complets : scripts, vidéos (avatar ou vidéo réelle + diapos), publications et courriels conformes — générés par IA à partir de votre profil d'entreprise.",
     taglineEn: 'One brief, complete deliverables: scripts, videos (avatar or real video + slides), posts and compliant emails — AI-generated from your company profile.',
@@ -549,7 +551,7 @@ const MODULES: Mod[] = [
     ],
   },
   {
-    key: 'admin', icon: '⚙️',
+    key: 'admin',
     titleFr: 'Administration', titleEn: 'Administration',
     taglineFr: "Paramètres du tenant, sites et personnel, taux et grilles salariales, RH, finances et conformité — le socle qui alimente tous les autres modules.",
     taglineEn: 'Tenant settings, sites and personnel, rates and salary grids, HR, finance and compliance — the foundation that feeds every other module.',
@@ -583,18 +585,18 @@ const MODULES: Mod[] = [
 ];
 
 const CROSS_FR = [
-  "🔒 Sécurité multi-tenant : isolation stricte par tenant, lectures sensibles via routes serveur (jamais en anonyme), anti-IDOR.",
-  "🤖 IA encadrée : clé serveur (jamais dans le navigateur), budget IA par tenant, anti-injection, limite de débit.",
-  "📱 PWA installable, responsive mobile, mode jour/nuit, FR/EN suivant le bouton langue du header.",
-  "🔗 Interconnexion : Soumission → Projet → Planificateur → Facturation → Rapports, avec QR et liens partagés.",
-  "📊 Tableau de bord : compteurs par module, anomalies, conformité.",
+  "Sécurité multi-tenant : isolation stricte par tenant, lectures sensibles via routes serveur (jamais en anonyme), anti-IDOR.",
+  "IA encadrée : clé serveur (jamais dans le navigateur), budget IA par tenant, anti-injection, limite de débit.",
+  "PWA installable, responsive mobile, mode jour/nuit, FR/EN suivant le bouton langue du header.",
+  "Interconnexion : Soumission → Projet → Planificateur → Facturation → Rapports, avec QR et liens partagés.",
+  "Tableau de bord : compteurs par module, anomalies, conformité.",
 ];
 const CROSS_EN = [
-  '🔒 Multi-tenant security: strict per-tenant isolation, sensitive reads via server routes (never anonymous), anti-IDOR.',
-  '🤖 Governed AI: server key (never in the browser), per-tenant AI budget, anti-injection, rate limiting.',
-  '📱 Installable PWA, mobile responsive, day/night mode, FR/EN following the header language button.',
-  '🔗 Interconnection: Quote → Project → Scheduler → Invoicing → Reports, with QR and shared links.',
-  '📊 Dashboard: per-module counters, anomalies, compliance.',
+  'Multi-tenant security: strict per-tenant isolation, sensitive reads via server routes (never anonymous), anti-IDOR.',
+  'Governed AI: server key (never in the browser), per-tenant AI budget, anti-injection, rate limiting.',
+  'Installable PWA, mobile responsive, day/night mode, FR/EN following the header language button.',
+  'Interconnection: Quote → Project → Scheduler → Invoicing → Reports, with QR and shared links.',
+  'Dashboard: per-module counters, anomalies, compliance.',
 ];
 
 export default function GuidePage() {
@@ -638,7 +640,7 @@ export default function GuidePage() {
 
         {/* Atouts transversaux */}
         <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900/40 dark:bg-indigo-900/20">
-          <div className="font-bold text-sm">{tr('✨ Atouts transversaux', '✨ Cross-cutting strengths')}</div>
+          <div className="font-bold text-sm">{tr('Atouts transversaux', 'Cross-cutting strengths')}</div>
           <ul className="mt-2 space-y-1 text-sm">{cross.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </div>
 
@@ -650,7 +652,7 @@ export default function GuidePage() {
                 <button onClick={() => setOpen(o => ({ ...o, [m.key]: !o[m.key] }))}
                   className="flex w-full items-center justify-between gap-3 p-4 text-left">
                   <span className="flex items-center gap-3">
-                    <span className="text-2xl">{m.icon}</span>
+                    <ModuleIcon moduleKey={m.key} icon={m.icon} size={36} />
                     <span>
                       <span className="block font-extrabold" style={{ fontFamily: 'Archivo, sans-serif' }}>{m.title}</span>
                       <span className="block text-xs text-gray-500">{m.tagline}</span>

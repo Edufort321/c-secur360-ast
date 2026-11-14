@@ -157,7 +157,7 @@ function ResultToggle({ value, onChange, disabled }: {
 }) {
   const options: { v: ItemResult; label: string; active: string }[] = [
     { v: 'pass', label: '✓', active: 'bg-green-100 text-green-700 border-green-400 font-bold' },
-    { v: 'fail', label: '✗', active: 'bg-red-100 text-red-700 border-red-400 font-bold' },
+    { v: 'fail', label: '✕', active: 'bg-red-100 text-red-700 border-red-400 font-bold' },
     { v: 'na',   label: 'N/A', active: 'bg-gray-200 text-gray-600 border-gray-400 font-semibold' },
   ];
   return (

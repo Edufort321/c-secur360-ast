@@ -4,7 +4,7 @@ import ModernPermitForm from '@/components/permits/ModernPermitForm';
 // Produits chimiques (SIMDUT/SGH) — FDS, compatibilité, ventilation, EPI, plan de déversement.
 export default function Page() {
   return <ModernPermitForm config={{
-    type: 'chemical', title: '🧪 Permis — produits chimiques', color: 'text-green-700', btn: 'bg-green-700 hover:bg-green-800', prefix: 'CH',
+    type: 'chemical', title: 'Permis — produits chimiques', color: 'text-green-700', btn: 'bg-green-700 hover:bg-green-800', prefix: 'CH',
     intro: 'SIMDUT 2015 / SGH — fiches de données de sécurité (FDS), compatibilité, ventilation, EPI, plan de déversement.',
     sections: [{
       title: 'Produits & maîtrise', fields: [

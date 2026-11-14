@@ -6,7 +6,7 @@ export const electricalMaintenance: WorkType = {
   name: 'Maintenance électrique',
   category: 'Électricité',
   description: 'Maintenance préventive et corrective sur installations électriques',
-  icon: '⚡',
+  icon: '',
   baseHazards: [
     'ELEC-001', // Choc électrique
     'ELEC-002', // Arc électrique
@@ -55,7 +55,7 @@ export const electricalInstallation: WorkType = {
   name: 'Installation électrique',
   category: 'Électricité',
   description: 'Installation de nouveaux équipements et circuits électriques',
-  icon: '🔌',
+  icon: '',
   baseHazards: [
     'ELEC-001', // Choc électrique
     'ELEC-002', // Arc électrique
@@ -101,7 +101,7 @@ export const electricalInspection: WorkType = {
   name: 'Inspection électrique',
   category: 'Électricité',
   description: 'Inspection et tests d\'équipements électriques',
-  icon: '🔍',
+  icon: '',
   baseHazards: [
     'ELEC-001', // Choc électrique
     'ELEC-002', // Arc électrique

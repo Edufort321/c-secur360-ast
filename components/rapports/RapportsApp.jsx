@@ -13,6 +13,7 @@ function __rptNS(k){ return __rptTenant() + "::" + (__rptDocType === "maintenanc
 if (typeof window !== "undefined" && !window.storage) { window.storage = { get: async (k)=>{ try{ const v=localStorage.getItem(__rptNS(k)); return v==null?null:{value:v}; }catch{ return null; } }, set: async (k,v)=>{ try{ localStorage.setItem(__rptNS(k),v); }catch{} }, delete: async (k)=>{ try{ localStorage.removeItem(__rptNS(k)); }catch{} } }; }
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { Settings as LuSettings, FileText as LuFileText, Folder as LuFolder, FlaskConical as LuFlask, Image as LuImage, RefreshCw as LuRefresh, Import as LuImport } from "lucide-react";
 
 // ============================================================
 //  RAPPORTS TERRAIN — Générateur de documents à gabarit (tenant)
@@ -26,7 +27,7 @@ let LANG = "fr";
 const I18N = {
   fr: {
     appName:"Rapports Terrain", tagline:"Générateur de documents à gabarit",
-    backAll:"← Tous les rapports", newReport:"Nouveau rapport", importDoc:"📄 Importer un document",
+    backAll:"← Tous les rapports", newReport:"Nouveau rapport", importDoc:"Importer un document",
     settings:"Réglages", search:"Rechercher (titre, client, type)…",
     filterAll:"Tous", stInProgress:"En cours", stReview:"En révision", stApproved:"Approuvé", stSent:"Envoyé",
     templates:"Gabarits", chooseTemplate:"Choisir un gabarit", templateSuggested:"Gabarit proposé",
@@ -57,10 +58,10 @@ const I18N = {
     sevMinor:"Mineur", sevMajor:"Majeur", sevCritical:"Critique",
     annTitle:"Titre", annDesc:"Description", annPhoto:"Photo", noAnnotations:"Aucune anomalie ni commentaire.",
     genReport:"Générer le récap", recapAnomalies:"SOMMAIRE DES ANOMALIES", recapComments:"SOMMAIRE DES COMMENTAIRES",
-    fixReport:"✨ Corriger le rapport", fixing:"Correction en cours…", fixDone:"Rapport corrigé ✓",
-    translateReport:"🌐 Traduire le rapport", translateDone:"Rapport traduit ✓",
+    fixReport:"Corriger le rapport", fixing:"Correction en cours…", fixDone:"Rapport corrigé ✓",
+    translateReport:"Traduire le rapport", translateDone:"Rapport traduit ✓",
     fixNoKey:"Ajoute une clé API dans Réglages pour la correction IA.",
-    annotateBlock:"💬 Annoter", delAnnotation:"Supprimer cette annotation?",
+    annotateBlock:"Annoter", delAnnotation:"Supprimer cette annotation?",
     savedTag:"Enregistré ✓", dupBlock:"Dupliquer ce bloc", dragHint:"Glisser pour réordonner",
     treeAll:"Tous les rapports", treeOrder:"Classement", treeEmpty:"(vide)", noClient:"Sans client", noLocation:"Sans lieu", noYear:"Sans année", noJob:"Sans n° projet",
     navTitle:"Navigation", navBlocks:"sections",
@@ -80,17 +81,17 @@ const I18N = {
     inspGood:"Bon", inspNormal:"Normal", inspAnomaly:"Anomalie", inspNA:"N/V",
     anomRecapTitle:"Sommaire des anomalies", anomLoc:"Emplacement", anomPoint:"Point", anomSeverity:"Gravité", anomDesc:"Description", anomBanner:"anomalie(s) relevée(s)",
     cellClear:"Vider la cellule", cellSplit:"Diviser (nouvelle ligne)", cellMerge:"Fusionner avec la droite", cellActions:"Actions cellule",
-    tplDefaults:"Gabarits par défaut", tplCustom:"Mes gabarits", tplImportPdf:"📄 Importer un PDF comme gabarit", tplImporting:"Création du gabarit…",
+    tplDefaults:"Gabarits par défaut", tplCustom:"Mes gabarits", tplImportPdf:"Importer un PDF comme gabarit", tplImporting:"Création du gabarit…",
     tplSaveName:"Nom du gabarit", tplUse:"Utiliser", tplDelete:"Supprimer ce gabarit?", tplNoCustom:"Aucun gabarit personnalisé. Importe un PDF pour en créer un.",
-    handwriting:"✍ Brouillon manuscrit", handwritingImport:"✍ Importer un brouillon manuscrit (photo)", handwritingBusy:"Lecture de l'écriture…",
+    handwriting:"Brouillon manuscrit", handwritingImport:"Importer un brouillon manuscrit (photo)", handwritingBusy:"Lecture de l'écriture…",
     uncertainBadge:"à vérifier", uncertainNote:"⚠ Les valeurs marquées « à vérifier » ont été lues sur l'écriture manuscrite et peuvent contenir des erreurs. Vérifie-les avant de finaliser.",
     themeTitle2:"Couleurs de mise en page", themeReset:"Réinitialiser", themeHint:"S'applique à l'app et aux rapports PDF (charte globale).",
     themeSecBar:"Bandeaux de section", themeTableHd:"En-têtes de tableau", themeAccent:"Accent (boutons)", themeTitle:"Titres", themeText:"Texte", themeBorder:"Bordures",
-    compareView:"🔍 Comparer à la source", compareTitle:"Comparaison source vs extrait", compareSource:"Document source (texte)", compareExtract:"Contenu extrait", compareHint:"Vérifie qu'aucune donnée ne manque. Ce qui est dans la source mais absent de l'extrait doit être ajouté manuellement.", compareNoSource:"Texte source non disponible (réimporte le PDF pour comparer).",
+    compareView:"Comparer à la source", compareTitle:"Comparaison source vs extrait", compareSource:"Document source (texte)", compareExtract:"Contenu extrait", compareHint:"Vérifie qu'aucune donnée ne manque. Ce qui est dans la source mais absent de l'extrait doit être ajouté manuellement.", compareNoSource:"Texte source non disponible (réimporte le PDF pour comparer).",
   },
   en: {
     appName:"Field Reports", tagline:"Template-based document generator",
-    backAll:"← All reports", newReport:"New report", importDoc:"📄 Import a document",
+    backAll:"← All reports", newReport:"New report", importDoc:"Import a document",
     settings:"Settings", search:"Search (title, client, type)…",
     filterAll:"All", stInProgress:"In progress", stReview:"In review", stApproved:"Approved", stSent:"Sent",
     templates:"Templates", chooseTemplate:"Choose a template", templateSuggested:"Suggested template",
@@ -121,10 +122,10 @@ const I18N = {
     sevMinor:"Minor", sevMajor:"Major", sevCritical:"Critical",
     annTitle:"Title", annDesc:"Description", annPhoto:"Photo", noAnnotations:"No anomaly or comment.",
     genReport:"Generate summary", recapAnomalies:"ANOMALY SUMMARY", recapComments:"COMMENT SUMMARY",
-    fixReport:"✨ Fix report", fixing:"Fixing…", fixDone:"Report fixed ✓",
-    translateReport:"🌐 Translate report", translateDone:"Report translated ✓",
+    fixReport:"Fix report", fixing:"Fixing…", fixDone:"Report fixed ✓",
+    translateReport:"Translate report", translateDone:"Report translated ✓",
     fixNoKey:"Add an API key in Settings for AI correction.",
-    annotateBlock:"💬 Annotate", delAnnotation:"Delete this annotation?",
+    annotateBlock:"Annotate", delAnnotation:"Delete this annotation?",
     savedTag:"Saved ✓", dupBlock:"Duplicate this block", dragHint:"Drag to reorder",
     treeAll:"All reports", treeOrder:"Grouping", treeEmpty:"(empty)", noClient:"No client", noLocation:"No location", noYear:"No year", noJob:"No project no.",
     navTitle:"Navigation", navBlocks:"sections",
@@ -144,13 +145,13 @@ const I18N = {
     inspGood:"Good", inspNormal:"Normal", inspAnomaly:"Anomaly", inspNA:"N/V",
     anomRecapTitle:"Anomaly summary", anomLoc:"Location", anomPoint:"Point", anomSeverity:"Severity", anomDesc:"Description", anomBanner:"anomaly(ies) found",
     cellClear:"Clear cell", cellSplit:"Split (new row)", cellMerge:"Merge with right", cellActions:"Cell actions",
-    tplDefaults:"Default templates", tplCustom:"My templates", tplImportPdf:"📄 Import a PDF as template", tplImporting:"Creating template…",
+    tplDefaults:"Default templates", tplCustom:"My templates", tplImportPdf:"Import a PDF as template", tplImporting:"Creating template…",
     tplSaveName:"Template name", tplUse:"Use", tplDelete:"Delete this template?", tplNoCustom:"No custom template. Import a PDF to create one.",
-    handwriting:"✍ Handwritten draft", handwritingImport:"✍ Import a handwritten draft (photo)", handwritingBusy:"Reading handwriting…",
+    handwriting:"Handwritten draft", handwritingImport:"Import a handwritten draft (photo)", handwritingBusy:"Reading handwriting…",
     uncertainBadge:"to verify", uncertainNote:"⚠ Values marked \"to verify\" were read from handwriting and may contain errors. Check them before finalizing.",
     themeTitle2:"Layout colors", themeReset:"Reset", themeHint:"Applies to the app and PDF reports (global brand).",
     themeSecBar:"Section bars", themeTableHd:"Table headers", themeAccent:"Accent (buttons)", themeTitle:"Titles", themeText:"Text", themeBorder:"Borders",
-    compareView:"🔍 Compare to source", compareTitle:"Source vs extract comparison", compareSource:"Source document (text)", compareExtract:"Extracted content", compareHint:"Check that no data is missing. Anything in the source but absent from the extract must be added manually.", compareNoSource:"Source text not available (re-import the PDF to compare).",
+    compareView:"Compare to source", compareTitle:"Source vs extract comparison", compareSource:"Source document (text)", compareExtract:"Extracted content", compareHint:"Check that no data is missing. Anything in the source but absent from the extract must be added manually.", compareNoSource:"Source text not available (re-import the PDF to compare).",
   },
 };
 function t(k){ return (I18N[LANG] && I18N[LANG][k]) || (I18N.fr[k]) || k; }
@@ -1258,14 +1259,14 @@ export default function App({ docType, embedded } = {}){
               {online ? `⟳ ${pendingN} ${LANG==="en"?"to sync":"à synchro."}` : `⚠ ${LANG==="en"?"Offline":"Hors ligne"}${pendingN>0?` · ${pendingN}`:""}`}
             </span>
           )}
-          <button style={S.gearBtn} onClick={()=>setShowSettings(true)} title={t("settings")}>⚙</button>
+          <button style={S.gearBtn} onClick={()=>setShowSettings(true)} title={t("settings")}><LuSettings size={16} /></button>
           {view!=="list" && <button style={S.btnGhost} onClick={()=>{setView("list");setSelId(null);}}>{t("backAll")}</button>}
         </div>
       </header>
 
       {showSettings && <SettingsModal logo={logo} onLogo={(d)=>{ setLogo(d); if(d) saveLogo(d); else clearLogo(); }} theme={theme} onTheme={applyTheme} onClose={()=>setShowSettings(false)}/>}
 
-      {importing && <div style={S.overlay}><div style={{...S.modal,maxWidth:340,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>📄</div><div style={{fontFamily:"'Archivo'",fontWeight:700}}>{t("importing")}</div></div></div>}
+      {importing && <div style={S.overlay}><div style={{...S.modal,maxWidth:340,textAlign:"center"}}><div style={{marginBottom:10,display:"flex",justifyContent:"center"}}><LuFileText size={32} /></div><div style={{fontFamily:"'Archivo'",fontWeight:700}}>{t("importing")}</div></div></div>}
       {importErr && <div style={S.overlay} onClick={()=>setImportErr(null)}><div style={{...S.modal,maxWidth:440}} onClick={e=>e.stopPropagation()}><h2 style={{...S.h2,color:"#c1121f"}}>{t("importErr")}</h2><p style={{fontSize:13,wordBreak:"break-word"}}>{importErr}</p><div style={{marginTop:14}}><button style={S.btnGhost} onClick={()=>setImportErr(null)}>{t("cancel")}</button></div></div></div>}
 
       {importPreview && <ImportReview ip={importPreview} setIp={setImportPreview} onApply={applyImport} onCancel={()=>{ setImportPreview(null); setImporting(false); setImportErr(null); }}/>}
@@ -1313,11 +1314,11 @@ export default function App({ docType, embedded } = {}){
         return (
         <div style={S.overlay} onClick={()=>{ if(!importing) setHwImport(null); }}>
           <div style={{...S.modal,maxWidth:480,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-            <h2 style={S.h2}>✍ {LANG==="en"?"Handwritten import":"Import manuscrit"}</h2>
+            <h2 style={S.h2}>{LANG==="en"?"Handwritten import":"Import manuscrit"}</h2>
             <p style={{...S.hint,marginTop:0}}>{LANG==="en"?"Associate this sheet with a template? The AI will fill its exact structure (standardization). Otherwise it auto-detects.":"Associer cette feuille à un gabarit ? L'IA remplira sa structure exacte (standardisation). Sinon, auto-détection."}</p>
             <input style={{...S.input,marginBottom:8}} placeholder={LANG==="en"?"Search a template…":"Rechercher un gabarit…"} value={hwImport.query} onChange={e=>setHwImport(h=>({...h,query:e.target.value}))}/>
             <div style={{maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
-              <button onClick={()=>setHwImport(h=>({...h,tplId:""}))} style={{...tplRow, ...(hwImport.tplId===""?tplRowOn:{})}}>🔎 {LANG==="en"?"Auto-detect (no template)":"Auto-détecter (aucun gabarit)"}</button>
+              <button onClick={()=>setHwImport(h=>({...h,tplId:""}))} style={{...tplRow, ...(hwImport.tplId===""?tplRowOn:{})}}>{LANG==="en"?"Auto-detect (no template)":"Auto-détecter (aucun gabarit)"}</button>
               {opts.map(o=>(<button key={o.id} onClick={()=>setHwImport(h=>({...h,tplId:o.id}))} style={{...tplRow, ...(hwImport.tplId===o.id?tplRowOn:{})}}><span>{o.name}</span>{o.num && <span style={{fontSize:11,color:"#94a3b8"}}>{o.num}</span>}</button>))}
               {opts.length===0 && <div style={{fontSize:12,color:"#94a3b8",padding:"6px 2px"}}>{LANG==="en"?"No template found.":"Aucun gabarit trouvé."}</div>}
             </div>
@@ -1457,13 +1458,13 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
       {/* Actions : Importer ▾ · (Anomalies) · + Nouveau — UNE seule ligne (icônes compactes sur mobile) */}
       <div style={{display:"flex",gap:narrow?6:8,alignItems:"center",flexWrap:narrow?"nowrap":"wrap",marginBottom:16}}>
         <div style={{position:"relative",flexShrink:0}}>
-          <button style={{...S.btnDark,cursor:"pointer",...(narrow?{padding:"9px 12px"}:{})}} onClick={()=>{setImpOpen(v=>!v);setClsOpen(false);}}>📥{narrow?" ▾":` ${LANG==="en"?"Import":"Importer"} ▾`}</button>
+          <button style={{...S.btnDark,cursor:"pointer",...(narrow?{padding:"9px 12px"}:{})}} onClick={()=>{setImpOpen(v=>!v);setClsOpen(false);}}><LuImport size={14} style={{verticalAlign:"-2px"}} />{narrow?" ▾":` ${LANG==="en"?"Import":"Importer"} ▾`}</button>
           {impOpen && (
             <div style={{position:"absolute",left:0,top:"110%",zIndex:50,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.18)",padding:6,minWidth:210}} onMouseLeave={()=>setImpOpen(false)}>
-              <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>📄 {t("importDoc")}
+              <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>{t("importDoc")}
                 <input type="file" accept="application/pdf" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onImport(f); e.target.value=""; }}/>
               </label>
-              <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>✍ {t("handwriting")}
+              <label style={{...S.blockMenuItem,display:"block",cursor:"pointer",fontWeight:700}}>{t("handwriting")}
                 <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{ const f=e.target.files?.[0]; setImpOpen(false); if(f) onHandwriting(f); e.target.value=""; }}/>
               </label>
               <button style={{...S.blockMenuItem,fontWeight:700}} onClick={()=>{setImpOpen(false);onPhotos();}}>📷 {LANG==="en"?"Photos":"Photos"}</button>
@@ -1516,7 +1517,7 @@ function ListView({ db, all, query, setQuery, statusFilter, setStatusFilter, onO
                 </div>
               )}
             </div>
-            <button onClick={()=>setTreePath([])} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"5px 11px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5}}>📁 {t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
+            <button onClick={()=>setTreePath([])} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:6,border:"none",background:treePath.length===0?"#1e293b":"transparent",color:treePath.length===0?"#fff":"#1e293b",borderRadius:7,padding:"5px 11px",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5}}>{t("treeAll")} <span style={{...S.treeCount,background:treePath.length===0?"rgba(255,255,255,.2)":undefined,color:treePath.length===0?"#fff":undefined}}>{db.length}</span></button>
             {treePath.map((seg,i)=>(<span key={i} style={{flexShrink:0,display:"inline-flex",alignItems:"center",gap:8}}><span style={{color:"#94a3b8"}}>›</span><button onClick={()=>setTreePath(treePath.slice(0,i+1))} style={{border:"none",background:"transparent",cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,fontSize:12.5,color:"#1e293b",whiteSpace:"nowrap"}}>{seg}</button></span>))}
             {curKeys.length>0 && <span style={{flexShrink:0,width:1,height:18,background:"#e2e8f0"}}/>}
             {curKeys.map(k=>(<button key={k} onClick={()=>setTreePath([...treePath,k])} style={{...S.treeOrderChip,flexShrink:0,whiteSpace:"nowrap"}}>{k} <span style={S.treeCount}>{cur[k].__count}</span></button>))}
@@ -1589,7 +1590,7 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onEdit, onHide, o
       <div style={{minWidth:160,flex:1,cursor:"pointer",fontWeight:700,color:"#0f172a"}} onClick={onName}>{name}</div>
       <span style={{fontSize:12,color:"#64748b"}}>{count} {LANG==="en"?"blocks":"blocs"}</span>
       <span style={{display:"flex",gap:8,marginLeft:"auto"}}>
-        {onEditRow && <button style={{...S.miniBtn}} onClick={onEditRow}>✏️ {t("tplEdit")}</button>}
+        {onEditRow && <button style={{...S.miniBtn}} onClick={onEditRow}>{t("tplEdit")}</button>}
         <button style={{...S.btnPrimary,fontSize:12,padding:"5px 12px"}} onClick={()=>onUse(id)}>{t("tplUse")}</button>
         <button style={S.miniBtnDel} onClick={onDel}>{t("del")}</button>
       </span>
@@ -1629,11 +1630,11 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onEdit, onHide, o
               </div>
               <div style={S.cardMeta}>{(c.blocks||[]).length} {LANG==="en"?"blocks":"blocs"}</div>
               <div style={{marginTop:8,fontSize:11,color:"#64748b"}}>
-                {(c.blocks||[]).slice(0,8).map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?"🖼":"¶"}</span>))}
+                {(c.blocks||[]).slice(0,8).map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?<LuImage size={12} style={{verticalAlign:"-2px"}} />:"¶"}</span>))}
               </div>
               <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
                 <button style={{...S.btnPrimary,fontSize:12,padding:"7px 14px"}} onClick={()=>onUse(c.id)}>{t("tplUse")}</button>
-                {onEdit && <button style={{...S.btnGhost,fontSize:12,padding:"7px 14px"}} onClick={()=>onEdit(c.id)}>✏️ {t("tplEdit")}</button>}
+                {onEdit && <button style={{...S.btnGhost,fontSize:12,padding:"7px 14px"}} onClick={()=>onEdit(c.id)}>{t("tplEdit")}</button>}
               </div>
             </div>
           ))}
@@ -1660,7 +1661,7 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onEdit, onHide, o
               </div>
               <div style={S.cardMeta}>{blocks.length} {LANG==="en"?"blocks":"blocs"}</div>
               <div style={{marginTop:8,fontSize:11,color:"#64748b"}}>
-                {blocks.map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="photos"?"🖼 "+b.title:"¶"}</span>))}
+                {blocks.map((b,i)=>(<span key={i} style={S.tplTag}>{b.type==="section"?"§ "+b.title:b.type==="photos"?<><LuImage size={12} style={{verticalAlign:"-2px"}} /> {b.title}</>:"¶"}</span>))}
               </div>
               <button style={{...S.btnPrimary,marginTop:10,fontSize:12,padding:"7px 14px"}} onClick={()=>onUse(tp.id)}>{t("tplUse")}</button>
             </div>
@@ -1675,13 +1676,13 @@ function TemplatesView({ custom, onImportPdf, onDelete, onUse, onEdit, onHide, o
             <h2 style={S.h2}>{nameOf(preview)}</h2>
             {blocks.map((b,i)=>(
               <div key={i} style={{marginBottom:10,padding:10,border:"1px solid #e2e8f0",borderRadius:8,background:"#f8fafc"}}>
-                <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#1e293b"}}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?"🖼 "+b.title:"¶ "+t("freeText")}</div>
+                <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#1e293b"}}>{b.type==="section"?"§ "+b.title:b.type==="table"?"▦ "+b.title:b.type==="photos"?<><LuImage size={12} style={{verticalAlign:"-2px"}} /> {b.title}</>:"¶ "+t("freeText")}</div>
                 {b.type==="section" && <div style={{fontSize:12,color:"#475569",marginTop:4}}>{(b.fields||[]).map(f=>f.label).join(" · ")}</div>}
                 {b.type==="table" && <div style={{fontSize:12,color:"#475569",marginTop:4}}>{(b.columns||[]).join(" | ")}</div>}
               </div>
             ))}
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {preview.kind==="custom" && onEdit && <button style={{...S.btnPrimary}} onClick={()=>{ const id=preview.id; setPreview(null); onEdit(id); }}>✏️ {t("tplEdit")}</button>}
+              {preview.kind==="custom" && onEdit && <button style={{...S.btnPrimary}} onClick={()=>{ const id=preview.id; setPreview(null); onEdit(id); }}>{t("tplEdit")}</button>}
               <button style={S.btnGhost} onClick={()=>setPreview(null)}>{t("cancel")}</button>
             </div>
           </div>
@@ -1698,7 +1699,7 @@ function ImportReview({ ip, setIp, onApply, onCancel }){
   return (
     <div style={S.overlay} onClick={onCancel}>
       <div style={{...S.modal,maxWidth:640,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-        <h2 style={S.h2}>{ip.handwriting?"✍":"📄"} {t("importReview")}</h2>
+        <h2 style={S.h2}>{t("importReview")}</h2>
         {ip.truncated && <div style={{background:"#fef6ec",border:"1.5px solid #e0a96d",borderRadius:8,padding:"8px 10px",marginBottom:12,fontSize:12,color:"#9d6b2e"}}>{t("truncWarn")}</div>}
         {ip.handwriting && <div style={{background:"#f3eefb",border:"1.5px solid #b9a3dd",borderRadius:8,padding:"8px 10px",marginBottom:12,fontSize:12,color:"#5a3d8c"}}>{t("uncertainNote")}</div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
@@ -1717,7 +1718,7 @@ function ImportReview({ ip, setIp, onApply, onCancel }){
             <div key={i} style={{marginBottom:8}}>
               {b.type==="section" && <><b>§ {b.title}</b>{(b.fields||[]).map((f,j)=><div key={j} style={{paddingLeft:10,color:"#475569"}}>{f.label}: {f.value||"—"}</div>)}</>}
               {b.type==="text" && <div style={{color:"#1e293b"}}>{b.value?b.value.slice(0,160):"—"}{b.value&&b.value.length>160?"…":""}</div>}
-              {b.type==="photos" && <i style={{color:"#999"}}>🖼 {t("photoZone")}</i>}
+              {b.type==="photos" && <i style={{color:"#999"}}>{t("photoZone")}</i>}
             </div>
           ))}
         </div>
@@ -1742,7 +1743,7 @@ function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:520,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-        <h2 style={S.h2}>⚙ {t("settings")}</h2>
+        <h2 style={S.h2}>{t("settings")}</h2>
         {/* Le logo vient automatiquement du TENANT (ou C-Secur360 par défaut), comme les autres
             modules : aucun réglage de logo propre au module ici. */}
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
@@ -1753,7 +1754,7 @@ function SettingsModal({ logo, onLogo, theme, onTheme, onClose }){
         {/* THÈME DE COULEURS */}
         <div style={{borderTop:"1px solid #e2e8f0",paddingTop:14,marginBottom:14}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{...S.label,margin:0}}>🎨 {t("themeTitle2")}</div>
+            <div style={{...S.label,margin:0}}>{t("themeTitle2")}</div>
             <button style={{...S.btnGhost,fontSize:11,padding:"5px 10px"}} onClick={resetTheme}>{t("themeReset")}</button>
           </div>
           <p style={{...S.hint,marginTop:0,marginBottom:10}}>{t("themeHint")}</p>
@@ -2075,9 +2076,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
     setTimeout(()=>{ printWithName(); setTimeout(()=>setPaleExport(false),600); },250);
   }
   const updatedCount = (r.blocks||[]).filter(b=>b.updated).length;
-  // Export « mises à jour seulement » : n'imprime que les blocs marqués 🔁 (addendum/révision).
+  // Export « mises à jour seulement » : n'imprime que les blocs marqués (addendum/révision).
   function doExportUpdates(){
-    if(updatedCount===0){ alert(LANG==="en"?"No block marked as updated (use the 🔁 button on a block).":"Aucun bloc marqué comme mis à jour (bouton 🔁 sur un bloc)."); return; }
+    if(updatedCount===0){ alert(LANG==="en"?"No block marked as updated (use the “mark as updated” button on a block).":"Aucun bloc marqué comme mis à jour (bouton « Marquer comme mis à jour » sur un bloc)."); return; }
     if(!dossierName()){ alert(LANG==="en"?"A file/dossier number is required before export.":"Un numéro de dossier est obligatoire avant l'export."); return; }
     setUpdatesExport(true);
     setTimeout(()=>{ printWithName(); setTimeout(()=>setUpdatesExport(false),600); },250);
@@ -2091,7 +2092,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
 
   // ASSEMBLAGE MIXTE : fusionne des blocs extraits de pages MANUSCRITES dans le rapport courant.
   // Une section manuscrite est replacée AU BON ENDROIT (même titre de section) et remplit ses champs
-  // (par libellé) ; sinon elle est ajoutée à la fin. Les blocs touchés sont marqués « mis à jour » 🔁.
+  // (par libellé) ; sinon elle est ajoutée à la fin. Les blocs touchés sont marqués « mis à jour » .
   function mergeHandwritten(incoming){
     const norm=s=>String(s||"").toLowerCase().trim().replace(/\s+/g," ");
     const blocks=[...r.blocks];
@@ -2193,36 +2194,36 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
         {(()=>{
           // Actions de l'éditeur. Sur écran étroit (mobile), elles se replient dans un menu « ⋯ ».
           const actions=[
-            { key:"link", label:`🔗 ${(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}`, on:()=>setShowLink(true), style:(r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement" },
-            { key:"qr", label:`🔳 ${LANG==="en"?"QR / page":"QR / page"}`, on:()=>setShowQr(true), title:LANG==="en"?"Page QR code — scan to open & edit this report":"QR code de page — scanner pour ouvrir et éditer ce rapport" },
-            { key:"share", label:`📤 ${LANG==="en"?"Share":"Partager"}`, on:()=>setShowShare(true), title:LANG==="en"?"Share a read/review link with a verifier":"Partager un lien lecture/révision à un vérificateur" },
-            { key:"assemble", label:`🤝 ${LANG==="en"?"Merge handwritten":"Assembler manuscrit"}`, on:()=>{ setAssembleResult(null); setShowAssemble(true); }, title:LANG==="en"?"Scan handwritten pages — the AI places them at the right spot in this report":"Scanner des pages manuscrites — l'IA les replace au bon endroit dans ce rapport" },
-            { key:"voice", label:`🎤 ${LANG==="en"?"Voice report":"Rapport vocal"}`, on:()=>{ setVoiceResult(null); setShowVoice(true); }, title:LANG==="en"?"Dictate freely — the AI structures it into the report":"Dictez librement — l'IA structure le tout dans le rapport" },
-            { key:"plate", label:`🔖 ${LANG==="en"?"Nameplate OCR":"Plaque (OCR)"}`, on:()=>{ setPlateResult(null); setShowPlate(true); }, title:LANG==="en"?"Photograph an equipment nameplate — the AI reads its specs":"Photographiez une plaque signalétique — l'IA lit ses caractéristiques" },
-            { key:"defects", label:`🔍 ${LANG==="en"?"Detect defects (AI)":"Détecter défauts (IA)"}`, on:()=>{ setDefectsResult(null); setShowDefects(true); }, title:LANG==="en"?"Photograph equipment — the AI flags visible defects as anomalies":"Photographiez l'équipement — l'IA repère les défauts visibles en anomalies" },
-            { key:"ann", label:`💬 ${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
-            priceItems.length>0 && { key:"soum", label:`💲 ${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
+            { key:"link", label:`${(r.link&&r.link.projectId)?(r.link.projectNumber||(LANG==="en"?"Linked":"Lié")):(LANG==="en"?"Link":"Lier")}`, on:()=>setShowLink(true), style:(r.link&&r.link.projectId)?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Link to a project / scheduler event":"Lier à un projet / événement" },
+            { key:"qr", label:`${LANG==="en"?"QR / page":"QR / page"}`, on:()=>setShowQr(true), title:LANG==="en"?"Page QR code — scan to open & edit this report":"QR code de page — scanner pour ouvrir et éditer ce rapport" },
+            { key:"share", label:`${LANG==="en"?"Share":"Partager"}`, on:()=>setShowShare(true), title:LANG==="en"?"Share a read/review link with a verifier":"Partager un lien lecture/révision à un vérificateur" },
+            { key:"assemble", label:`${LANG==="en"?"Merge handwritten":"Assembler manuscrit"}`, on:()=>{ setAssembleResult(null); setShowAssemble(true); }, title:LANG==="en"?"Scan handwritten pages — the AI places them at the right spot in this report":"Scanner des pages manuscrites — l'IA les replace au bon endroit dans ce rapport" },
+            { key:"voice", label:`${LANG==="en"?"Voice report":"Rapport vocal"}`, on:()=>{ setVoiceResult(null); setShowVoice(true); }, title:LANG==="en"?"Dictate freely — the AI structures it into the report":"Dictez librement — l'IA structure le tout dans le rapport" },
+            { key:"plate", label:`${LANG==="en"?"Nameplate OCR":"Plaque (OCR)"}`, on:()=>{ setPlateResult(null); setShowPlate(true); }, title:LANG==="en"?"Photograph an equipment nameplate — the AI reads its specs":"Photographiez une plaque signalétique — l'IA lit ses caractéristiques" },
+            { key:"defects", label:`${LANG==="en"?"Detect defects (AI)":"Détecter défauts (IA)"}`, on:()=>{ setDefectsResult(null); setShowDefects(true); }, title:LANG==="en"?"Photograph equipment — the AI flags visible defects as anomalies":"Photographiez l'équipement — l'IA repère les défauts visibles en anomalies" },
+            { key:"ann", label:`${t("annotations")}${annotations.length>0?` (${annotations.length})`:""}`, on:()=>setShowAnn(true) },
+            priceItems.length>0 && { key:"soum", label:`${LANG==="en"?"Quote":"Soumission"} (${priceItems.length})`, on:()=>setShowSoum(true), style:{borderColor:"#2a6f97",color:"#2a6f97"}, title:LANG==="en"?"Create a quote from the anomalies/recommendations the client wants priced":"Créer une soumission à partir des anomalies/recommandations à chiffrer" },
             r.sourceText && { key:"cmp", label:t("compareView"), on:()=>setShowCompare(true) },
             { key:"ins", label:t("insertPage"), on:()=>setShowInsert(true) },
             { key:"fix", label:fixing?t("fixing"):t("fixReport"), on:doFix, disabled:fixing },
             { key:"tr", label:t("translateReport"), on:doTranslate, disabled:fixing },
             { key:"dup", label:t("duplicate"), on:()=>onDuplicate(r.id,false) },
             { key:"ver", label:t("newVersion"), on:()=>onDuplicate(r.id,true) },
-            { key:"savetpl", label:`💾 ${r.createdFromTpl?(LANG==="en"?"Save template":"Enregistrer le gabarit"):(LANG==="en"?"Save as template":"Comme gabarit")}`, on:()=>onSaveTemplate&&onSaveTemplate(r), style:r.createdFromTpl?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Save this structure as a reusable template (values emptied)":"Enregistrer cette structure comme gabarit réutilisable (valeurs vidées)" },
-            { key:"hw", label:`🖊 ${LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}`, on:doExportHandwrite, title:LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main" },
-            updatedCount>0 && { key:"upd", label:`🔁 ${LANG==="en"?"Export updates":"Export MAJ"} (${updatedCount})`, on:doExportUpdates, style:{borderColor:"#e0a96d",color:"#b45309"}, title:LANG==="en"?"Export only the blocks marked as updated":"Exporter uniquement les blocs marqués comme mis à jour" },
+            { key:"savetpl", label:`${r.createdFromTpl?(LANG==="en"?"Save template":"Enregistrer le gabarit"):(LANG==="en"?"Save as template":"Comme gabarit")}`, on:()=>onSaveTemplate&&onSaveTemplate(r), style:r.createdFromTpl?{borderColor:"#2a9d8f",color:"#2a9d8f"}:{}, title:LANG==="en"?"Save this structure as a reusable template (values emptied)":"Enregistrer cette structure comme gabarit réutilisable (valeurs vidées)" },
+            { key:"hw", label:`${LANG==="en"?"To complete (handwrite)":"À compléter (manuscrit)"}`, on:doExportHandwrite, title:LANG==="en"?"Print with pale values to fill by hand":"Imprimer avec les valeurs en pâle pour compléter à la main" },
+            updatedCount>0 && { key:"upd", label:`${LANG==="en"?"Export updates":"Export MAJ"} (${updatedCount})`, on:doExportUpdates, style:{borderColor:"#e0a96d",color:"#b45309"}, title:LANG==="en"?"Export only the blocks marked as updated":"Exporter uniquement les blocs marqués comme mis à jour" },
           ].filter(Boolean);
           // Bouton d'export scindé : action principale + menu « QR sur la feuille : oui/non »
           // (le choix est mémorisé dans r.qrShow, donc synchro avec l'option de mise en page).
           const exportControl=(
             <div style={{position:"relative",display:"inline-flex"}}>
-              <button style={{...S.btnDark,borderTopRightRadius:0,borderBottomRightRadius:0}} onClick={doExport}>🖨 {t("export")}</button>
+              <button style={{...S.btnDark,borderTopRightRadius:0,borderBottomRightRadius:0}} onClick={doExport}>{t("export")}</button>
               <button style={{...S.btnDark,borderTopLeftRadius:0,borderBottomLeftRadius:0,borderLeft:"1px solid rgba(255,255,255,.3)",padding:"9px 10px"}} onClick={()=>setShowExportMenu(v=>!v)} title={LANG==="en"?"Export options (QR on the sheet)":"Options d'export (QR sur la feuille)"}>▾</button>
               {showExportMenu && (
                 <div style={{position:"absolute",right:0,top:"110%",zIndex:60,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,.22)",padding:6,minWidth:220}} onMouseLeave={()=>setShowExportMenu(false)}>
                   <div style={{fontSize:11,fontWeight:700,fontFamily:"'Archivo'",color:"#64748b",textTransform:"uppercase",letterSpacing:.4,padding:"4px 8px 6px"}}>{LANG==="en"?"QR code on the sheet":"QR code sur la feuille"}</div>
-                  <button style={{...S.blockMenuItem,fontWeight:700,...(r.qrShow!==false?{color:"#1e293b"}:{})}} onClick={()=>{ setShowExportMenu(false); setField("qrShow",true); setTimeout(()=>doExport(),60); }} title={LANG==="en"?"Print the report QR in the footer of each page":"Imprimer le QR du rapport dans le pied de chaque page"}>{r.qrShow!==false?"✓ ":""}🔳 {LANG==="en"?"Export WITH QR":"Exporter AVEC QR"}</button>
-                  <button style={{...S.blockMenuItem,fontWeight:700,...(r.qrShow===false?{color:"#1e293b"}:{})}} onClick={()=>{ setShowExportMenu(false); setField("qrShow",false); setTimeout(()=>doExport(),60); }} title={LANG==="en"?"Export the PDF without any QR code on the sheet":"Exporter le PDF sans aucun QR code sur la feuille"}>{r.qrShow===false?"✓ ":""}🚫 {LANG==="en"?"Export WITHOUT QR":"Exporter SANS QR"}</button>
+                  <button style={{...S.blockMenuItem,fontWeight:700,...(r.qrShow!==false?{color:"#1e293b"}:{})}} onClick={()=>{ setShowExportMenu(false); setField("qrShow",true); setTimeout(()=>doExport(),60); }} title={LANG==="en"?"Print the report QR in the footer of each page":"Imprimer le QR du rapport dans le pied de chaque page"}>{r.qrShow!==false?"✓ ":""}{LANG==="en"?"Export WITH QR":"Exporter AVEC QR"}</button>
+                  <button style={{...S.blockMenuItem,fontWeight:700,...(r.qrShow===false?{color:"#1e293b"}:{})}} onClick={()=>{ setShowExportMenu(false); setField("qrShow",false); setTimeout(()=>doExport(),60); }} title={LANG==="en"?"Export the PDF without any QR code on the sheet":"Exporter le PDF sans aucun QR code sur la feuille"}>{r.qrShow===false?"✓ ":""}{LANG==="en"?"Export WITHOUT QR":"Exporter SANS QR"}</button>
                 </div>
               )}
             </div>
@@ -2298,8 +2299,8 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
                       {b.type==="section" && <><b>§ {b.title}</b>{(b.fields||[]).map(f=><div key={f.id} style={{paddingLeft:8,color:"#555"}}>{f.label}: {f.value||"—"}</div>)}</>}
                       {b.type==="table" && <><b>▦ {b.title}</b><div style={{fontSize:11,color:"#555",paddingLeft:8}}>{(b.columns||[]).join(" | ")}<br/>{(b.rows||[]).map((row,ri)=><div key={ri}>{row.join(" | ")}</div>)}</div></>}
                       {b.type==="text" && <div style={{color:"#333",whiteSpace:"pre-wrap"}}>{b.value}</div>}
-                      {b.type==="photos" && <i style={{color:"#999"}}>🖼 {b.title}</i>}
-                      {b.type==="pdfpage" && <i style={{color:"#999"}}>📄 {b.name}</i>}
+                      {b.type==="photos" && <i style={{color:"#999"}}>{b.title}</i>}
+                      {b.type==="pdfpage" && <i style={{color:"#999"}}>{b.name}</i>}
                     </div>
                   ))}
                 </div>
@@ -2326,11 +2327,11 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
           <div style={{display:"flex",alignItems:"center",gap:18,flexWrap:"wrap"}}>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
               <input type="checkbox" checked={(r.cover||{}).show!==false} onChange={e=>setField("cover",{...(r.cover||{}),show:e.target.checked})}/>
-              📄 {t("coverShow")}
+              {t("coverShow")}
             </label>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
               <input type="checkbox" checked={!!r.toc} onChange={e=>setField("toc",e.target.checked)}/>
-              📑 {t("tocShow")}
+              {t("tocShow")}
             </label>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}}>
               <input type="checkbox" checked={r.anomRecap!==false} onChange={e=>setField("anomRecap",e.target.checked)}/>
@@ -2338,20 +2339,20 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
             </label>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Each section/equipment starts on its own page (fresh template header)":"Chaque section/équipement commence sur sa propre page (nouvelle entête de gabarit)"}>
               <input type="checkbox" checked={!!r.sectionPerPage} onChange={e=>setField("sectionPerPage",e.target.checked)}/>
-              📃 {LANG==="en"?"One page per section":"Une page par section"}
+              {LANG==="en"?"One page per section":"Une page par section"}
             </label>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Condensed: tighter spacing to fit more per page":"Condensé : espacement réduit pour densifier la page"}>
               <input type="checkbox" checked={!!r.condensed} onChange={e=>setField("condensed",e.target.checked)}/>
-              🗜 {LANG==="en"?"Condensed":"Condensé"}
+              {LANG==="en"?"Condensed":"Condensé"}
             </label>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Include the test-sheet QR in the exported PDF (page footer)":"Inclure le QR de la feuille de test dans le PDF exporté (pied de page)"}>
               <input type="checkbox" checked={r.qrShow!==false} onChange={e=>setField("qrShow",e.target.checked)}/>
-              🔳 {LANG==="en"?"QR in export":"QR à l'export"}
+              {LANG==="en"?"QR in export":"QR à l'export"}
             </label>
             {(r.blocks||[]).some(b=>b.type==="pdfpage") && (
               <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Also print the original imported PDF pages (one extra page each). Off = condensed structured sheet.":"Imprimer aussi les pages originales du PDF importé (une page de plus chacune). Désactivé = feuille structurée condensée."}>
                 <input type="checkbox" checked={!!r.showOriginal} onChange={e=>setField("showOriginal",e.target.checked)}/>
-                📄 {LANG==="en"?"Original pages":"Pages originales"}
+                {LANG==="en"?"Original pages":"Pages originales"}
               </label>
             )}
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer",fontFamily:"'Archivo'",fontWeight:700,color:"#475569"}} title={LANG==="en"?"Attach a presentation letter as the first page":"Joindre une lettre de présentation en première page"}>
@@ -2369,18 +2370,18 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
                 } : {};
                 setField("letter",{...base,...seed,show:on});
               }}/>
-              ✉ {LANG==="en"?"Cover letter":"Lettre de présentation"}
+              {LANG==="en"?"Cover letter":"Lettre de présentation"}
             </label>
           </div>
           {(r.cover||{}).show!==false && (
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
               <input style={{...S.input,flex:1,minWidth:180}} value={(r.cover||{}).subtitle||""} placeholder={t("coverSubtitle")} onChange={e=>setField("cover",{...(r.cover||{}),subtitle:e.target.value})}/>
-              <button style={S.btnGhost} onClick={()=>setShowCover(true)}>🎨 {t("coverCustomize")}</button>
+              <button style={S.btnGhost} onClick={()=>setShowCover(true)}>{t("coverCustomize")}</button>
             </div>
           )}
           {(r.letter&&r.letter.show) && (
             <div style={{marginTop:10}}>
-              <button style={S.btnGhost} onClick={()=>setShowLetter(true)}>✉ {LANG==="en"?"Edit the cover letter":"Éditer la lettre de présentation"}</button>
+              <button style={S.btnGhost} onClick={()=>setShowLetter(true)}>{LANG==="en"?"Edit the cover letter":"Éditer la lettre de présentation"}</button>
             </div>
           )}
         </div>
@@ -2392,7 +2393,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
         <div style={S.overlay} className="screen-only" onClick={()=>setShowCover(false)}>
           <div style={{...S.modal,maxWidth:560,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <h2 style={{...S.h2,margin:0}}>🎨 {t("coverCustomize")}</h2>
+              <h2 style={{...S.h2,margin:0}}>{t("coverCustomize")}</h2>
               <button style={S.miniBtn} onClick={()=>setShowCover(false)}>✕</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -2439,7 +2440,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
       {/* BLOCS ÉDITABLES */}
       <div className="screen-only" style={{paddingBottom:80}}>
         {r.blocks.map((b,idx)=>{
-          const icon = b.type==="zone"?"🗂":b.type==="dga"?"🧪":b.type==="section"?"§":b.type==="photos"?"🖼":b.type==="pdfpage"?"📄":b.type==="table"?"▦":b.type==="inspect"?"☑":"¶";
+          const icon = b.type==="zone"?<LuFolder size={14} style={{verticalAlign:"-2px"}} />:b.type==="dga"?<LuFlask size={14} style={{verticalAlign:"-2px"}} />:b.type==="section"?"§":b.type==="photos"?<LuImage size={14} style={{verticalAlign:"-2px"}} />:b.type==="pdfpage"?<LuFileText size={14} style={{verticalAlign:"-2px"}} />:b.type==="table"?"▦":b.type==="inspect"?"✓":"¶";
           const label = (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone") ? (b.title||"").trim() : b.type==="pdfpage" ? (b.name||t("pdfPageZone")) : b.type==="dga" ? ("DGA · "+((b.summary||{}).equipment||"")) : (b.value||"").trim().slice(0,40);
           const fallback = b.type==="zone"?(LANG==="en"?"Zone":"Zone"):b.type==="dga"?"DGA":b.type==="section"?t("addSection").replace("+ ",""):b.type==="photos"?t("photoZone"):b.type==="table"?t("tableTitle"):b.type==="inspect"?t("inspectTitle"):b.type==="pdfpage"?t("pdfPageZone"):t("freeText").replace("…","");
           const startsNewPage = (b.type==="section" && (b.newPage || (r.sectionPerPage && idx!==r.blocks.findIndex(x=>x.type==="section")))) || (b.type==="zone" && b.newPage!==false);
@@ -2448,7 +2449,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
           {startsNewPage && (
             <div className="screen-only" style={{display:"flex",alignItems:"center",gap:8,margin:"12px 2px 4px",color:"#94a3b8",fontSize:10.5,fontFamily:"'Archivo'",fontWeight:700,letterSpacing:1}}>
               <span style={{flex:1,height:0,borderTop:"2px dashed #cbd5e1"}}/>
-              📄 {LANG==="en"?"NEW PAGE":"NOUVELLE PAGE"}
+              {LANG==="en"?"NEW PAGE":"NOUVELLE PAGE"}
               <span style={{flex:1,height:0,borderTop:"2px dashed #cbd5e1"}}/>
             </div>
           )}
@@ -2463,7 +2464,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
               <span style={S.blockType}><span style={{...S.dragHandle,cursor:"grab"}} draggable onDragStart={(e)=>{ setDragId(b.id); e.dataTransfer.effectAllowed="move"; }} title={t("dragHint")}>⠿</span> {icon} {label||fallback}
                 {(()=>{ const on=peers.filter(p=>p.blockId===b.id); return on.length>0 ? (
                   <span style={{marginLeft:8,display:"inline-flex",alignItems:"center",gap:4,fontSize:10.5,fontWeight:800,fontFamily:"'Archivo'",color:on[0].color||"#9d0208",background:"#fff",border:`1.5px solid ${on[0].color||"#9d0208"}`,borderRadius:20,padding:"1px 8px"}} title={on.map(p=>p.name).join(", ")}>
-                    🔒 {on.map(p=>p.name.split(" ")[0]).join(", ")} {LANG==="en"?"editing":"édite"}
+                    {on.map(p=>p.name.split(" ")[0]).join(", ")} {LANG==="en"?"editing":"édite"}
                   </span>
                 ) : null; })()}
               </span>
@@ -2473,10 +2474,10 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
                   <button style={S.miniBtn} onClick={()=>moveBlock(b.id,1)} disabled={idx===r.blocks.length-1}>↓</button>
                   <button style={S.miniBtn} onClick={()=>duplicateBlock(b.id)} title={t("dupBlock")}>⧉</button>
                   {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>duplicateGroup(b.id)} title={t("dupEquip")}>⧉⧉</button>}
-                  {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>convertToInspect(b.id)} title={t("convertInspect")}>☑</button>}
-                  {b.type==="section" && <button style={{...S.miniBtn,...(b.newPage?{color:"#2a6f97",borderColor:"#2a6f97",background:"#eef5fa"}:{})}} onClick={()=>updBlock(b.id,{newPage:!b.newPage})} title={LANG==="en"?"Start this section on a new page":"Commencer cette section sur une nouvelle page"}>📄</button>}
+                  {b.type==="section" && <button style={{...S.miniBtn,color:"#2a9d8f",borderColor:"#9bd4cc"}} onClick={()=>convertToInspect(b.id)} title={t("convertInspect")}>✓</button>}
+                  {b.type==="section" && <button style={{...S.miniBtn,...(b.newPage?{color:"#2a6f97",borderColor:"#2a6f97",background:"#eef5fa"}:{})}} onClick={()=>updBlock(b.id,{newPage:!b.newPage})} title={LANG==="en"?"Start this section on a new page":"Commencer cette section sur une nouvelle page"}><LuFileText size={14} /></button>}
                   {b.type==="inspect" && <button style={{...S.miniBtn,color:"#1e293b",borderColor:"#a9cddc"}} onClick={()=>convertToSection(b.id)} title={t("convertSection")}>§</button>}
-                  <button style={{...S.miniBtn,...(b.updated?{color:"#b45309",borderColor:"#e0a96d",background:"#fff7ed"}:{})}} onClick={()=>updBlock(b.id,{updated:!b.updated})} title={LANG==="en"?"Mark as updated (for the 'updates only' export)":"Marquer comme mis à jour (pour l'export « MAJ seulement »)"}>🔁</button>
+                  <button style={{...S.miniBtn,...(b.updated?{color:"#b45309",borderColor:"#e0a96d",background:"#fff7ed"}:{})}} onClick={()=>updBlock(b.id,{updated:!b.updated})} title={LANG==="en"?"Mark as updated (for the 'updates only' export)":"Marquer comme mis à jour (pour l'export « MAJ seulement »)"}><LuRefresh size={14} /></button>
                   <button style={S.miniBtnDel} onClick={()=>removeBlock(b.id)}>✕</button>
                 </> : <>
                   <button style={S.miniBtn} onClick={()=>setOpenMenuId(openMenuId===b.id?null:b.id)} title={t("blockActions")}>⋯</button>
@@ -2486,10 +2487,10 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
                       <button style={{...S.blockMenuItem,...(idx===r.blocks.length-1?{opacity:.4,pointerEvents:"none"}:{})}} onClick={()=>{moveBlock(b.id,1);}}>↓ {t("moveDown")}</button>
                       <button style={S.blockMenuItem} onClick={()=>{duplicateBlock(b.id);setOpenMenuId(null);}}>⧉ {t("dupBlock")}</button>
                       {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{duplicateGroup(b.id);setOpenMenuId(null);}}>⧉⧉ {t("dupEquip")}</button>}
-                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{convertToInspect(b.id);setOpenMenuId(null);}}>☑ {t("convertInspect")}</button>}
-                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{newPage:!b.newPage});setOpenMenuId(null);}}>📄 {b.newPage?(LANG==="en"?"No page break":"Sans saut de page"):(LANG==="en"?"Page break before":"Saut de page avant")}</button>}
+                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{convertToInspect(b.id);setOpenMenuId(null);}}>✓ {t("convertInspect")}</button>}
+                      {b.type==="section" && <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{newPage:!b.newPage});setOpenMenuId(null);}}>{b.newPage?(LANG==="en"?"No page break":"Sans saut de page"):(LANG==="en"?"Page break before":"Saut de page avant")}</button>}
                       {b.type==="inspect" && <button style={S.blockMenuItem} onClick={()=>{convertToSection(b.id);setOpenMenuId(null);}}>§ {t("convertSection")}</button>}
-                      <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{updated:!b.updated});setOpenMenuId(null);}}>🔁 {b.updated?(LANG==="en"?"Unmark updated":"Retirer « mis à jour »"):(LANG==="en"?"Mark updated":"Marquer mis à jour")}</button>
+                      <button style={S.blockMenuItem} onClick={()=>{updBlock(b.id,{updated:!b.updated});setOpenMenuId(null);}}>{b.updated?(LANG==="en"?"Unmark updated":"Retirer « mis à jour »"):(LANG==="en"?"Mark updated":"Marquer mis à jour")}</button>
                       <button style={{...S.blockMenuItem,color:"#9d0208"}} onClick={()=>{removeBlock(b.id);setOpenMenuId(null);}}>✕ {t("removeBlock")}</button>
                     </div>
                   )}
@@ -2498,10 +2499,10 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
             </div>
             {b.type==="zone" && (
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                <span style={{fontSize:20}}>🗂</span>
+                <LuFolder size={20} />
                 <input style={{...S.input,fontWeight:900,fontFamily:"'Archivo'",fontSize:16,background:"#eef2ff",borderColor:"#a9b6e8"}} value={b.title||""} onChange={e=>updBlock(b.id,{title:e.target.value})} placeholder={LANG==="en"?"Zone name (e.g. North Building)":"Nom de la zone (ex. Bâtiment Nord)"}/>
                 <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,fontWeight:700,color:b.newPage!==false?"#2a6f97":"#94a3b8",cursor:"pointer",whiteSpace:"nowrap"}} title={LANG==="en"?"Start this zone on a new page":"Démarrer cette zone sur une nouvelle page"}>
-                  <input type="checkbox" checked={b.newPage!==false} onChange={e=>updBlock(b.id,{newPage:e.target.checked})}/>📄
+                  <input type="checkbox" checked={b.newPage!==false} onChange={e=>updBlock(b.id,{newPage:e.target.checked})}/><LuFileText size={14} />
                 </label>
               </div>
             )}
@@ -2512,7 +2513,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
             {b.type==="dga" && (
               <div style={{border:"1px solid #bfdbfe",background:"#eff6ff",borderRadius:8,padding:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span style={{fontFamily:"'Archivo'",fontWeight:800,fontSize:12,color:"#1e40af"}}>🧪 {LANG==="en"?"DGA analysis (snapshot)":"Analyse DGA (instantané)"}</span>
+                  <span style={{fontFamily:"'Archivo'",fontWeight:800,fontSize:12,color:"#1e40af"}}>{LANG==="en"?"DGA analysis (snapshot)":"Analyse DGA (instantané)"}</span>
                   <span style={{fontSize:10.5,color:"#64748b"}}>{(b.importedAt||"").slice(0,10)}</span>
                 </div>
                 <DgaSummaryView s={b.summary}/>
@@ -2533,9 +2534,9 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
             {insertAt===idx+1 ? (
               <div style={S.insertMenu} onMouseLeave={()=>setInsertAt(null)}>
                 <button style={S.insertChip} onClick={()=>{ const id=addBlock("section",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>§ {t("addSection").replace("+ ","")}</button>
-                <button style={S.insertChip} onClick={()=>{ const id=addBlock("inspect",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>☑ {t("inspectTitle")}</button>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("inspect",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>✓ {t("inspectTitle")}</button>
                 <button style={S.insertChip} onClick={()=>{ const id=addBlock("table",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>▦ {t("tableTitle")}</button>
-                <button style={S.insertChip} onClick={()=>{ const id=addBlock("photos",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>🖼 {t("photoZone")}</button>
+                <button style={S.insertChip} onClick={()=>{ const id=addBlock("photos",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>{t("photoZone")}</button>
                 <button style={S.insertChip} onClick={()=>{ const id=addBlock("text",idx+1); setInsertAt(null); setTimeout(()=>jumpToBlock(id),60); }}>¶ {t("freeText").replace("…","")}</button>
                 <button style={{...S.insertChip,color:"#9d0208"}} onClick={()=>setInsertAt(null)}>✕</button>
               </div>
@@ -2551,7 +2552,7 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
       {/* NAVIGATION INTERNE — bouton flottant + panneau de sauts */}
       <button className="screen-only" style={S.navFab} onClick={()=>setShowNav(s=>!s)} title={t("navTitle")}>☰ {t("navTitle")}</button>
       {showNav && (()=>{
-        const TYPE_META={ zone:{ic:"🗂",col:"#4f46e5",key:"navTypeZone"}, section:{ic:"§",col:"#1e293b",key:"navTypeSection"}, dga:{ic:"🧪",col:"#1e40af",key:"navTypeDga"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"☑",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:"🖼",col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:"📄",col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#64748b",key:"navTypeText"} };
+        const TYPE_META={ zone:{ic:<LuFolder size={14} style={{verticalAlign:"-2px"}} />,col:"#4f46e5",key:"navTypeZone"}, section:{ic:"§",col:"#1e293b",key:"navTypeSection"}, dga:{ic:<LuFlask size={14} style={{verticalAlign:"-2px"}} />,col:"#1e40af",key:"navTypeDga"}, table:{ic:"▦",col:"#6b4e9d",key:"navTypeTable"}, inspect:{ic:"✓",col:"#2a9d8f",key:"navTypeInspect"}, photos:{ic:<LuImage size={14} style={{verticalAlign:"-2px"}} />,col:"#e0a96d",key:"navTypePhotos"}, pdfpage:{ic:<LuFileText size={14} style={{verticalAlign:"-2px"}} />,col:"#577590",key:"navTypePdf"}, text:{ic:"¶",col:"#64748b",key:"navTypeText"} };
         const blkLabel=(b)=> (b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):b.type==="dga"?("DGA · "+((b.summary||{}).equipment||"")):(b.value||"").trim().slice(0,40);
         const filtered = r.blocks.map((b,i)=>({b,i})).filter(({b})=> navFilter==="all" || b.type===navFilter);
         return (
@@ -2590,15 +2591,15 @@ function Editor({ report, logo, customTpls, onUpdate, onDuplicate, onSaveTemplat
         <div className="screen-only" style={S.addPanel} onMouseLeave={()=>setShowAdd(false)}>
           <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#1e293b",marginBottom:8}}>{t("addBlockBtn")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            <button style={{...S.addPanelItem,background:"#eef2ff",borderColor:"#a9b6e8"}} onClick={()=>{ addBlock("zone"); setShowAdd(false); }}>🗂 {LANG==="en"?"Zone (separator)":"Zone (séparateur)"}</button>
+            <button style={{...S.addPanelItem,background:"#eef2ff",borderColor:"#a9b6e8"}} onClick={()=>{ addBlock("zone"); setShowAdd(false); }}>{LANG==="en"?"Zone (separator)":"Zone (séparateur)"}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("section"); setShowAdd(false); }}>§ {t("addSection").replace("+ ","")}</button>
-            <button style={{...S.addPanelItem,background:"#e6f5f1",borderColor:"#9bd4cc"}} onClick={()=>{ addEquipment(); setShowAdd(false); }}>🔧 {t("addEquip").replace("+ ","")}</button>
-            <button style={S.addPanelItem} onClick={()=>{ addBlock("inspect"); setShowAdd(false); }}>☑ {t("addInspect").replace("+ ","")}</button>
+            <button style={{...S.addPanelItem,background:"#e6f5f1",borderColor:"#9bd4cc"}} onClick={()=>{ addEquipment(); setShowAdd(false); }}>{t("addEquip").replace("+ ","")}</button>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("inspect"); setShowAdd(false); }}>✓ {t("addInspect").replace("+ ","")}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("table"); setShowAdd(false); }}>▦ {t("addTable").replace("+ ","")}</button>
-            <button style={S.addPanelItem} onClick={()=>{ addBlock("photos"); setShowAdd(false); }}>🖼 {t("addPhotos").replace("+ ","")}</button>
+            <button style={S.addPanelItem} onClick={()=>{ addBlock("photos"); setShowAdd(false); }}>{t("addPhotos").replace("+ ","")}</button>
             <button style={S.addPanelItem} onClick={()=>{ addBlock("text"); setShowAdd(false); }}>¶ {t("addText").replace("+ ","")}</button>
-            <button style={{...S.addPanelItem,background:"#eff6ff",borderColor:"#93c5fd"}} onClick={()=>{ setShowAdd(false); setShowDga(true); }}>🧪 {LANG==="en"?"DGA analysis":"Analyse DGA"}</button>
-            <label style={{...S.addPanelItem,cursor:"pointer"}}>📄 {pdfBusy?t("importingPdf"):t("addPdfPage").replace("+ ","")}
+            <button style={{...S.addPanelItem,background:"#eff6ff",borderColor:"#93c5fd"}} onClick={()=>{ setShowAdd(false); setShowDga(true); }}>{LANG==="en"?"DGA analysis":"Analyse DGA"}</button>
+            <label style={{...S.addPanelItem,cursor:"pointer"}}>{pdfBusy?t("importingPdf"):t("addPdfPage").replace("+ ","")}
               <input type="file" accept="application/pdf" style={{display:"none"}} disabled={pdfBusy} onChange={e=>{ const f=e.target.files?.[0]; if(f){ addPdfPageBlock(f); setShowAdd(false); } e.target.value=""; }}/>
             </label>
           </div>
@@ -2704,8 +2705,8 @@ function TableEditor({ block, onChange }){
                   </div>
                   {menu&&menu.ri===ri&&menu.ci===ci && (
                     <div style={S.cellMenu} onMouseLeave={()=>setMenu(null)}>
-                      <button style={S.cellMenuItem} onClick={()=>clearCell(ri,ci)}>🧹 {t("cellClear")}</button>
-                      <button style={S.cellMenuItem} onClick={()=>splitCell(ri,ci)}>✂ {t("cellSplit")}</button>
+                      <button style={S.cellMenuItem} onClick={()=>clearCell(ri,ci)}>{t("cellClear")}</button>
+                      <button style={S.cellMenuItem} onClick={()=>splitCell(ri,ci)}>{t("cellSplit")}</button>
                       <button style={{...S.cellMenuItem,...(ci>=columns.length-1?{opacity:.4,pointerEvents:"none"}:{})}} onClick={()=>mergeRight(ri,ci)}>⇥ {t("cellMerge")}</button>
                     </div>
                   )}
@@ -2741,7 +2742,7 @@ function InspectEditor({ block, onChange, onZoom }){
       <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
         <input style={{...S.input,fontWeight:700,fontFamily:"'Archivo'",flex:"1 1 200px"}} value={block.title} onChange={e=>onChange({title:e.target.value})}/>
         <div style={{position:"relative"}}>
-          <button style={{...S.btnGhost,fontSize:12,padding:"7px 12px"}} onClick={()=>setShowLib(s=>!s)}>📋 {t("inspLoadList")}</button>
+          <button style={{...S.btnGhost,fontSize:12,padding:"7px 12px"}} onClick={()=>setShowLib(s=>!s)}>{t("inspLoadList")}</button>
           {showLib && (
             <div style={{position:"absolute",right:0,top:"110%",zIndex:30,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,boxShadow:"0 6px 20px rgba(0,0,0,.2)",padding:6,minWidth:200}} onMouseLeave={()=>setShowLib(false)}>
               <div style={{fontSize:10,color:"#64748b",padding:"2px 8px 6px"}}>{t("inspLoadHint")}</div>
@@ -2874,7 +2875,7 @@ function LinkPanel({ report, onSet, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:640,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <h2 style={{...S.h2,margin:0}}>🔗 {LANG==="en"?"Link the report":"Lier le rapport"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Link the report":"Lier le rapport"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Linking a project makes the report status visible to the project & invoicing; linking a scheduler event attaches the report to that event.":"Lier un projet rend le statut du rapport visible au projet et à la facturation ; lier un événement rattache le rapport à cet événement."}</p>
@@ -2882,9 +2883,9 @@ function LinkPanel({ report, onSet, onClose }){
         {(link.projectId||link.jobId) && (
           <div style={{background:"#eef7f4",border:"1.5px solid #2a9d8f",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:13}}>
             <b>{LANG==="en"?"Current link":"Lien actuel"} :</b>{" "}
-            {link.projectNumber?`📁 ${link.projectNumber}${link.projectTitle?" — "+link.projectTitle:""}`:""}
-            {link.jobNumber?`  ·  📅 ${link.jobNumber}`:""}
-            {link.clientName?`  ·  👤 ${link.clientName}`:""}
+            {link.projectNumber?`${link.projectNumber}${link.projectTitle?" — "+link.projectTitle:""}`:""}
+            {link.jobNumber?`  ·  ${link.jobNumber}`:""}
+            {link.clientName?`  ·  ${link.clientName}`:""}
             <button style={{...S.btnGhost,fontSize:11,padding:"3px 8px",marginLeft:10}} onClick={()=>onSet({projectId:"",projectNumber:"",projectTitle:"",jobId:"",jobNumber:""})}>{LANG==="en"?"Detach":"Détacher"}</button>
           </div>
         )}
@@ -2892,7 +2893,7 @@ function LinkPanel({ report, onSet, onClose }){
         {loading ? <div style={{textAlign:"center",color:"#64748b",padding:"20px 0"}}>…</div> : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,220px),1fr))",gap:14}}>
           <div>
-            <label style={S.label}>📁 {LANG==="en"?"Project":"Projet"}</label>
+            <label style={S.label}>{LANG==="en"?"Project":"Projet"}</label>
             <input style={S.input} placeholder={LANG==="en"?"Search…":"Rechercher…"} value={qp} onChange={e=>setQp(e.target.value)}/>
             <div style={{maxHeight:240,overflowY:"auto",marginTop:6,border:"1px solid #e2e8f0",borderRadius:8}}>
               {fp.length===0 ? <div style={{padding:10,fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No project":"Aucun projet"}</div> :
@@ -2902,7 +2903,7 @@ function LinkPanel({ report, onSet, onClose }){
             </div>
           </div>
           <div>
-            <label style={S.label}>📅 {LANG==="en"?"Scheduler event":"Événement (planner)"}</label>
+            <label style={S.label}>{LANG==="en"?"Scheduler event":"Événement (planner)"}</label>
             <input style={S.input} placeholder={LANG==="en"?"Search…":"Rechercher…"} value={qj} onChange={e=>setQj(e.target.value)}/>
             <div style={{maxHeight:240,overflowY:"auto",marginTop:6,border:"1px solid #e2e8f0",borderRadius:8}}>
               {fj.length===0 ? <div style={{padding:10,fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"No event":"Aucun événement"}</div> :
@@ -2926,7 +2927,7 @@ function DefectsModal({ busy, result, onFiles, onClose }){
     <div style={S.overlay} onClick={()=>{ if(!busy) onClose(); }}>
       <div style={{...S.modal,maxWidth:480}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🔍 {LANG==="en"?"Detect defects (AI)":"Détecter les défauts (IA)"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Detect defects (AI)":"Détecter les défauts (IA)"}</h2>
           {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
         </div>
         <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Photograph the equipment. The AI flags visible defects (corrosion, leak, crack, overheating…) and adds them as anomalies — to review before export.":"Photographiez l'équipement. L'IA repère les défauts visibles (corrosion, fuite, fissure, surchauffe…) et les ajoute en anomalies — à valider avant l'export."}</p>
@@ -2941,7 +2942,7 @@ function DefectsModal({ busy, result, onFiles, onClose }){
           <div>
             <div style={{fontSize:13,background:result.count>0?"#fdf0ee":"#eef7f4",border:`1.5px solid ${result.count>0?"#e3a0a0":"#2a9d8f"}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
               {result.count>0
-                ? <>⚠ <b>{result.count}</b> {LANG==="en"?"defect(s) detected and added as anomalies":"défaut(s) détecté(s) et ajouté(s) en anomalies"}. {LANG==="en"?"Open 💬 Annotations to review/adjust.":"Ouvrez 💬 Annotations pour valider/ajuster."}</>
+                ? <>⚠ <b>{result.count}</b> {LANG==="en"?"defect(s) detected and added as anomalies":"défaut(s) détecté(s) et ajouté(s) en anomalies"}. {LANG==="en"?"Open Annotations to review/adjust.":"Ouvrez Annotations pour valider/ajuster."}</>
                 : <>✓ {LANG==="en"?"No visible defect detected.":"Aucun défaut visible détecté."}</>}
             </div>
             <div style={{fontSize:11,color:"#94a3b8",marginBottom:10}}>{LANG==="en"?"Always verify the AI findings on site.":"Vérifiez toujours les constats de l'IA sur le terrain."}</div>
@@ -2960,7 +2961,7 @@ function NameplateModal({ busy, result, onFiles, onClose }){
     <div style={S.overlay} onClick={()=>{ if(!busy) onClose(); }}>
       <div style={{...S.modal,maxWidth:460}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🔖 {LANG==="en"?"Nameplate OCR":"Plaque signalétique (OCR)"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Nameplate OCR":"Plaque signalétique (OCR)"}</h2>
           {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
         </div>
         <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Photograph the equipment nameplate. The AI reads the specs (serial, manufacturer, rating…) and adds them as a section.":"Photographiez la plaque signalétique de l'équipement. L'IA lit les caractéristiques (n° série, fabricant, tension…) et les ajoute en section."}</p>
@@ -3006,21 +3007,21 @@ function VoiceModal({ busy, result, onStructure, onClose }){
     <div style={S.overlay} onClick={()=>{ if(!busy){ try{recRef.current&&recRef.current.stop();}catch{} onClose(); } }}>
       <div style={{...S.modal,maxWidth:560,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🎤 {LANG==="en"?"Voice report":"Rapport vocal"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Voice report":"Rapport vocal"}</h2>
           {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
         </div>
         <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Describe freely what you observed. The AI will structure it into sections and merge it into the report.":"Décrivez librement ce que vous avez constaté. L'IA structurera le tout en sections et l'assemblera dans le rapport."}</p>
         {!result && <>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
             {supported
-              ? <button style={{...S.btnDark,background:listening?"#9d0208":"#0e7490"}} onClick={toggleMic} disabled={busy}>{listening?"⏹ "+(LANG==="en"?"Stop":"Arrêter"):"🎤 "+(LANG==="en"?"Dictate":"Dicter")}</button>
+              ? <button style={{...S.btnDark,background:listening?"#9d0208":"#0e7490"}} onClick={toggleMic} disabled={busy}>{listening?(LANG==="en"?"Stop":"Arrêter"):(LANG==="en"?"Dictate":"Dicter")}</button>
               : <span style={{fontSize:11,color:"#94a3b8"}}>{LANG==="en"?"Voice capture unavailable on this browser — type or use your phone keyboard mic.":"Dictée vocale indisponible sur ce navigateur — tapez ou utilisez le micro du clavier."}</span>}
             {listening && <span style={{fontSize:12,color:"#9d0208",fontWeight:700}}>● {LANG==="en"?"listening…":"écoute…"}</span>}
           </div>
           <textarea style={{...S.input,minHeight:140,resize:"vertical",fontFamily:"'Spline Sans'"}} value={text} onChange={e=>setText(e.target.value)} placeholder={LANG==="en"?"e.g. North transformer, oil level normal, slight corrosion on bushing 2, recommend cleaning…":"ex. Transformateur nord, niveau d'huile normal, légère corrosion sur la traverse 2, recommander un nettoyage…"}/>
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10}}>
             <button style={S.btnGhost} onClick={onClose} disabled={busy}>{t("cancel")}</button>
-            <button style={S.btnPrimary} onClick={()=>{ try{recRef.current&&recRef.current.stop();}catch{} onStructure(text); }} disabled={busy||!text.trim()}>{busy?(LANG==="en"?"Structuring…":"Structuration…"):"✨ "+(LANG==="en"?"Structure & merge":"Structurer & assembler")}</button>
+            <button style={S.btnPrimary} onClick={()=>{ try{recRef.current&&recRef.current.stop();}catch{} onStructure(text); }} disabled={busy||!text.trim()}>{busy?(LANG==="en"?"Structuring…":"Structuration…"):(LANG==="en"?"Structure & merge":"Structurer & assembler")}</button>
           </div>
         </>}
         {result && result.error && <div style={{fontSize:13,color:"#9d0208",background:"#fdf0ee",border:"1px solid #e3a0a0",borderRadius:8,padding:"10px 12px"}}>{LANG==="en"?"Error":"Erreur"} : {result.error}</div>}
@@ -3045,7 +3046,7 @@ function AssembleModal({ busy, result, onFiles, onClose }){
     <div style={S.overlay} onClick={()=>{ if(!busy) onClose(); }}>
       <div style={{...S.modal,maxWidth:480}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🤝 {LANG==="en"?"Merge handwritten pages":"Assembler des pages manuscrites"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Merge handwritten pages":"Assembler des pages manuscrites"}</h2>
           {!busy && <button style={S.miniBtnDel} onClick={onClose}>✕</button>}
         </div>
         <p style={{fontSize:12.5,color:"#64748b",marginTop:0}}>{LANG==="en"?"Photograph the handwritten pages of this report. The AI reads them and places each section at the right spot (matching titles), filling the values. Unmatched pages are appended.":"Photographiez les pages manuscrites de ce rapport. L'IA les lit et replace chaque section au bon endroit (mêmes titres) en remplissant les valeurs. Les pages non reconnues sont ajoutées à la fin."}</p>
@@ -3062,7 +3063,7 @@ function AssembleModal({ busy, result, onFiles, onClose }){
               ✓ {LANG==="en"?"Assembled":"Assemblé"} : <b>{result.mergedSections}</b> {LANG==="en"?"section(s) merged":"section(s) fusionnée(s)"}, <b>{result.filledFields}</b> {LANG==="en"?"value(s) filled":"valeur(s) remplie(s)"}, <b>{result.addedBlocks}</b> {LANG==="en"?"page(s) added":"page(s) ajoutée(s)"}.
               {result.truncated && <div style={{color:"#b45309",marginTop:4,fontSize:12}}>⚠ {LANG==="en"?"AI answer was truncated — check the result.":"Réponse IA tronquée — vérifiez le résultat."}</div>}
             </div>
-            <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>{LANG==="en"?"Merged/added blocks are marked 🔁 (updated).":"Les blocs fusionnés/ajoutés sont marqués 🔁 (mis à jour)."}</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>{LANG==="en"?"Merged/added blocks are marked as updated.":"Les blocs fusionnés/ajoutés sont marqués « mis à jour »."}</div>
             <div style={{display:"flex",justifyContent:"flex-end"}}><button style={S.btnPrimary} onClick={onClose}>{LANG==="en"?"Done":"Terminé"}</button></div>
           </div>
         )}
@@ -3134,7 +3135,7 @@ function DgaPicker({ onPick, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:560,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🧪 {LANG==="en"?"Insert a DGA analysis":"Insérer une analyse DGA"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Insert a DGA analysis":"Insérer une analyse DGA"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"A printable summary of the latest measurement is embedded into the report.":"Un résumé imprimable de la dernière mesure est embarqué dans le rapport."}</p>
@@ -3192,7 +3193,7 @@ function ShareModal({ report, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:600,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>📤 {LANG==="en"?"Share with a verifier":"Partager à un vérificateur"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Share with a verifier":"Partager à un vérificateur"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Generate a private link. The verifier opens the report without an account.":"Générez un lien privé. Le vérificateur ouvre le rapport sans compte."}</p>
@@ -3200,9 +3201,9 @@ function ShareModal({ report, onClose }){
           <div>
             <label style={S.label}>{LANG==="en"?"Access":"Accès"}</label>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button style={{...S.chip,...(mode==="view"?S.chipOn:{})}} onClick={()=>setMode("view")}>👁 {LANG==="en"?"Read":"Lecture"}</button>
-              <button style={{...S.chip,...(mode==="review"?S.chipOn:{})}} onClick={()=>setMode("review")}>✍ {LANG==="en"?"Review":"Révision"}</button>
-              <button style={{...S.chip,...(mode==="edit"?S.chipOn:{})}} onClick={()=>setMode("edit")} title={LANG==="en"?"External subcontractor can fill values within the allowed window":"Le sous-traitant externe peut saisir les valeurs dans la fenêtre autorisée"}>🛠 {LANG==="en"?"Edit (values)":"Édition (valeurs)"}</button>
+              <button style={{...S.chip,...(mode==="view"?S.chipOn:{})}} onClick={()=>setMode("view")}>{LANG==="en"?"Read":"Lecture"}</button>
+              <button style={{...S.chip,...(mode==="review"?S.chipOn:{})}} onClick={()=>setMode("review")}>{LANG==="en"?"Review":"Révision"}</button>
+              <button style={{...S.chip,...(mode==="edit"?S.chipOn:{})}} onClick={()=>setMode("edit")} title={LANG==="en"?"External subcontractor can fill values within the allowed window":"Le sous-traitant externe peut saisir les valeurs dans la fenêtre autorisée"}>{LANG==="en"?"Edit (values)":"Édition (valeurs)"}</button>
             </div>
           </div>
           {mode==="edit" ? (
@@ -3237,14 +3238,14 @@ function ShareModal({ report, onClose }){
             <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>{LANG==="en"?"Active links":"Liens actifs"} ({active.length})</div>
             {active.map(s=>(
               <div key={s.token} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,border:"1px solid #e2e8f0",borderRadius:8,padding:"7px 10px",marginBottom:6,fontSize:12}}>
-                <span>{s.mode==="edit"?"🛠":s.mode==="review"?"✍":"👁"} {s.mode==="edit"?(LANG==="en"?"Edit":"Édition"):s.mode==="review"?(LANG==="en"?"Review":"Révision"):(LANG==="en"?"Read":"Lecture")} · {String(s.created_at).slice(0,10)}{s.expires_at?` · ${LANG==="en"?"until":"jusqu'au"} ${String(s.expires_at).slice(0,10)}`:""}</span>
+                <span>{s.mode==="edit"?(LANG==="en"?"Edit":"Édition"):s.mode==="review"?(LANG==="en"?"Review":"Révision"):(LANG==="en"?"Read":"Lecture")} · {String(s.created_at).slice(0,10)}{s.expires_at?` · ${LANG==="en"?"until":"jusqu'au"} ${String(s.expires_at).slice(0,10)}`:""}</span>
                 <button style={S.miniBtnDel} onClick={()=>revoke(s.token)}>{LANG==="en"?"Revoke":"Révoquer"}</button>
               </div>
             ))}
           </div>
         )}
         <div>
-          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>💬 {LANG==="en"?"Reviewer comments":"Commentaires de révision"} {reviews.length>0?`(${reviews.length})`:""}</div>
+          <div style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:"#475569",marginBottom:6}}>{LANG==="en"?"Reviewer comments":"Commentaires de révision"} {reviews.length>0?`(${reviews.length})`:""}</div>
           {reviews.length===0 ? <div style={{fontSize:12,color:"#94a3b8"}}>{LANG==="en"?"None yet.":"Aucun pour le moment."}</div> :
             reviews.map(rv=>(
               <div key={rv.id} style={{border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px",marginBottom:6}}>
@@ -3285,7 +3286,7 @@ function QrPanel({ report, qr, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:460,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>🔳 {LANG==="en"?"Report QR":"QR de la feuille"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Report QR":"QR de la feuille"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"One QR per test sheet. Scanned, it opens the full report (all pages). Print it as a label or keep it in the export footer.":"Un seul QR par feuille de test. Scanné, il ouvre le rapport complet (toutes les pages). Imprimez-le en étiquette ou gardez-le dans le pied de page de l'export."}</p>
@@ -3300,7 +3301,7 @@ function QrPanel({ report, qr, onClose }){
           <span style={{fontSize:11,color:"#64748b"}}>{LANG==="en"?"Label size":"Taille étiquette"}:</span>
           {["S","M","L"].map(s=>(<button key={s} onClick={()=>setSize(s)} style={{...S.miniBtn,...(size===s?{background:"#1e293b",color:"#fff",borderColor:"#1e293b"}:{})}}>{s}</button>))}
           <button style={{...S.miniBtn}} onClick={()=>copy(qr&&qr.url)} disabled={!qr}>{copied?"✓":(LANG==="en"?"Copy link":"Copier le lien")}</button>
-          <button style={{...S.btnPrimary,padding:"6px 12px",fontSize:12}} onClick={printLabel} disabled={!qr}>🖨 {LANG==="en"?"Print label":"Imprimer l'étiquette"}</button>
+          <button style={{...S.btnPrimary,padding:"6px 12px",fontSize:12}} onClick={printLabel} disabled={!qr}>{LANG==="en"?"Print label":"Imprimer l'étiquette"}</button>
         </div>
       </div>
     </div>
@@ -3335,17 +3336,17 @@ function SoumissionBuilder({ report, items, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:620,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>💲 {LANG==="en"?"Create a quote":"Faire une soumission"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Create a quote":"Faire une soumission"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Select the anomalies/recommendations the client wants priced — each becomes a quote item.":"Sélectionnez les anomalies/recommandations que le client veut faire chiffrer — chacune devient un item de la soumission."}</p>
-        {!link.projectId && <div style={{fontSize:12,color:"#b45309",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:8,padding:"7px 10px",marginBottom:10}}>{LANG==="en"?"Tip: link a project first (🔗) so the quote attaches to it.":"Astuce : liez d'abord un projet (🔗) pour y rattacher la soumission."}</div>}
+        {!link.projectId && <div style={{fontSize:12,color:"#b45309",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:8,padding:"7px 10px",marginBottom:10}}>{LANG==="en"?"Tip: link a project first () so the quote attaches to it.":"Astuce : liez d'abord un projet () pour y rattacher la soumission."}</div>}
         <div style={{maxHeight:"48vh",overflowY:"auto"}}>
           {(items||[]).map(a=>(
             <label key={a.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 10px",border:"1px solid #e2e8f0",borderRadius:9,marginBottom:7,cursor:"pointer",background:sel[a.id]?"#f0f7fb":"#fff"}}>
               <input type="checkbox" checked={!!sel[a.id]} onChange={()=>toggle(a.id)} style={{marginTop:3}}/>
               <span style={{fontSize:13}}>
-                <b style={{color:a.kind==="anomaly"?"#9d0208":"#2a6f97"}}>{a.kind==="anomaly"?"⚠ ":"➤ "}{a.title||(LANG==="en"?"(untitled)":"(sans titre)")}</b>
+                <b style={{color:a.kind==="anomaly"?"#9d0208":"#2a6f97"}}>{a.kind==="anomaly"?"⚠ ":"→ "}{a.title||(LANG==="en"?"(untitled)":"(sans titre)")}</b>
                 {a.equipment?<span style={{color:"#64748b"}}> · {a.equipment}</span>:null}
                 {a.desc?<><br/><span style={{color:"#475569",fontSize:12}}>{a.desc}</span></>:null}
               </span>
@@ -3356,7 +3357,7 @@ function SoumissionBuilder({ report, items, onClose }){
           <span style={{fontSize:12,color:"#64748b"}}>{chosen.length} {LANG==="en"?"item(s) selected":"item(s) sélectionné(s)"}</span>
           <div style={{display:"flex",gap:8}}>
             <button style={S.btnGhost} onClick={onClose}>{t("cancel")}</button>
-            <button style={S.btnPrimary} onClick={go}>💲 {LANG==="en"?"Open the quote":"Ouvrir la soumission"}</button>
+            <button style={S.btnPrimary} onClick={go}>{LANG==="en"?"Open the quote":"Ouvrir la soumission"}</button>
           </div>
         </div>
       </div>
@@ -3395,7 +3396,7 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",fontSize:11,color:"#64748b",marginBottom:10}}>
           <span>⚠ {LANG==="en"?"Anomalies":"Anomalies"} : <b>{cAnom}</b></span>
-          <span>➤ {LANG==="en"?"Reco.":"Reco."} : <b>{cReco}</b></span>
+          <span>→ {LANG==="en"?"Reco.":"Reco."} : <b>{cReco}</b></span>
           <span style={{color:"#b45309"}}>○ {LANG==="en"?"Open":"À traiter"} : <b>{cOpen}</b></span>
           <span style={{color:"#2a9d8f"}}>✓ {LANG==="en"?"Corrected":"Corrigées"} : <b>{cCorr}</b></span>
         </div>
@@ -3403,7 +3404,7 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
           <button style={chip(kind==="all")} onClick={()=>setKind("all")}>{LANG==="en"?"All types":"Tous"}</button>
           <button style={chip(kind==="anomaly")} onClick={()=>setKind("anomaly")}>⚠ {LANG==="en"?"Anomalies":"Anomalies"}</button>
-          <button style={chip(kind==="reco")} onClick={()=>setKind("reco")}>➤ {LANG==="en"?"Recommendations":"Recommandations"}</button>
+          <button style={chip(kind==="reco")} onClick={()=>setKind("reco")}>→ {LANG==="en"?"Recommendations":"Recommandations"}</button>
           <span style={{width:1,height:20,background:"#e2e8f0"}}/>
           <button style={chip(stat==="open")} onClick={()=>setStat("open")}>○ {LANG==="en"?"To handle":"À traiter"}</button>
           <button style={chip(stat==="corrected")} onClick={()=>setStat("corrected")}>✓ {LANG==="en"?"Corrected":"Corrigées"}</button>
@@ -3411,7 +3412,7 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
           <span style={{width:1,height:20,background:"#e2e8f0"}}/>
           {["all","critical","major","minor"].map(sv=>(<button key={sv} style={chip(sev===sv)} onClick={()=>setSev(sv)}>{sv==="all"?(LANG==="en"?"All sev.":"Toute grav."):sevLabel(sv)}</button>))}
           <span style={{width:1,height:20,background:"#e2e8f0"}}/>
-          <button style={chip(byEquip)} onClick={()=>setByEquip(v=>!v)} title={LANG==="en"?"Group by equipment (history)":"Regrouper par équipement (historique)"}>🔧 {LANG==="en"?"By equipment":"Par équipement"}</button>
+          <button style={chip(byEquip)} onClick={()=>setByEquip(v=>!v)} title={LANG==="en"?"Group by equipment (history)":"Regrouper par équipement (historique)"}>{LANG==="en"?"By equipment":"Par équipement"}</button>
         </div>
         <div style={{fontSize:11,color:"#94a3b8",margin:"4px 0 8px"}}>{filtered.length} {LANG==="en"?"result(s)":"résultat(s)"}</div>
         {(()=>{
@@ -3421,10 +3422,10 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
                 <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
                   <div style={{flex:"1 1 280px",minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:13,textDecoration:f.corrected?"line-through":"none"}}>
-                      {f.kind==="anomaly"?"⚠ ":"➤ "}{f.title||(LANG==="en"?"(untitled)":"(sans titre)")}
+                      {f.kind==="anomaly"?"⚠ ":"→ "}{f.title||(LANG==="en"?"(untitled)":"(sans titre)")}
                       {f.kind==="anomaly" && <span style={{...S.uncertainTag,marginLeft:8,color:sevColor(f.severity),background:"#fff",borderColor:sevColor(f.severity)}}>{sevLabel(f.severity)}</span>}
                     </div>
-                    <div style={{fontSize:11,color:"#64748b",marginTop:2}}>📄 {f.reportTitle||"—"}{f.reportDate?`  ·  ${f.reportDate}`:""}{!byEquip&&f.equipment?`  ·  🔧 ${f.equipment}`:""}{f.source==="inspect"?`  ·  ☑`:""}</div>
+                    <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{f.reportTitle||"—"}{f.reportDate?`  ·  ${f.reportDate}`:""}{!byEquip&&f.equipment?`  ·  ${f.equipment}`:""}{f.source==="inspect"?`  ·  ✓`:""}</div>
                     {f.desc && <div style={{fontSize:12,color:"#475569",marginTop:3}}>{f.desc}</div>}
                     {f.correctedAt && <div style={{fontSize:10.5,color:"#2a9d8f",marginTop:2}}>✓ {LANG==="en"?"Corrected":"Corrigée"} {String(f.correctedAt).slice(0,10)}</div>}
                   </div>
@@ -3451,7 +3452,7 @@ function AnomalyDashboard({ db, onClose, onOpen, onUpdate }){
             return (
               <div key={name} style={{marginBottom:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,background:"#f1f5f9",borderRadius:8,padding:"7px 11px",marginBottom:6}}>
-                  <span style={{fontFamily:"'Archivo'",fontWeight:800,fontSize:13}}>🔧 {name}</span>
+                  <span style={{fontFamily:"'Archivo'",fontWeight:800,fontSize:13}}>{name}</span>
                   <span style={{fontSize:11,color:"#64748b"}}>{items.length} {LANG==="en"?"finding(s)":"constat(s)"} · <b style={{color:"#b45309"}}>{open}</b> {LANG==="en"?"open":"à traiter"} · <b style={{color:"#2a9d8f"}}>{corr}</b> {LANG==="en"?"corrected":"corrigé(s)"}</span>
                 </div>
                 {items.map(Row)}
@@ -3486,7 +3487,7 @@ function LetterModal({ report, onSet, onClose }){
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:640,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{...S.h2,margin:0}}>✉ {LANG==="en"?"Cover letter":"Lettre de présentation"}</h2>
+          <h2 style={{...S.h2,margin:0}}>{LANG==="en"?"Cover letter":"Lettre de présentation"}</h2>
           <button style={S.miniBtnDel} onClick={onClose}>✕</button>
         </div>
         <p style={{fontSize:12,color:"#64748b",marginTop:0}}>{LANG==="en"?"Editable letter attached as the first page of the export.":"Lettre éditable jointe en première page de l'export."}</p>
@@ -3506,7 +3507,7 @@ function LetterModal({ report, onSet, onClose }){
         <div style={{marginTop:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <label style={S.label}>{LANG==="en"?"Body":"Corps de la lettre"}</label>
-            <button style={{...S.miniBtn,marginBottom:4}} onClick={genBody}>✨ {LANG==="en"?"Generate text":"Générer le texte type"}</button>
+            <button style={{...S.miniBtn,marginBottom:4}} onClick={genBody}>{LANG==="en"?"Generate text":"Générer le texte type"}</button>
           </div>
           <textarea style={{...S.input,minHeight:120,resize:"vertical",fontFamily:"'Spline Sans'"}} value={L.body||""} onChange={e=>set("body",e.target.value)}/>
         </div>
@@ -3526,7 +3527,7 @@ function AnnotationsPanel({ annotations, onAdd, onUpd, onDel, onClose, onZoom })
     <div style={S.overlay} onClick={onClose}>
       <div style={{...S.modal,maxWidth:680,maxHeight:"86vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <h2 style={{...S.h2,margin:0}}>💬 {t("annotations")}</h2>
+          <h2 style={{...S.h2,margin:0}}>{t("annotations")}</h2>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button style={{...S.btnDark,background:"#9d0208",fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("anomaly")}>{t("addAnomaly")}</button>
             <button style={{...S.btnDark,background:"#2a6f97",fontSize:12,padding:"7px 12px"}} onClick={()=>onAdd("reco")}>{LANG==="en"?"+ Recommendation":"+ Recommandation"}</button>
@@ -3538,13 +3539,13 @@ function AnnotationsPanel({ annotations, onAdd, onUpd, onDel, onClose, onZoom })
             <div key={a.id} style={{border:`1.5px solid ${a.kind==="anomaly"?"#e3a0a0":a.kind==="reco"?"#9ec5db":"#aebdc8"}`,borderRadius:10,padding:12,marginBottom:10,background:a.kind==="anomaly"?"#fdf0ee":a.kind==="reco"?"#eef5fa":"#eef2f5"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8,flexWrap:"wrap"}}>
                 <span style={{fontFamily:"'Archivo'",fontWeight:700,fontSize:12,color:a.kind==="anomaly"?"#9d0208":a.kind==="reco"?"#2a6f97":"#34607a"}}>
-                  {a.kind==="anomaly"?"⚠ "+t("anomaly"):a.kind==="reco"?(LANG==="en"?"➤ Recommendation":"➤ Recommandation"):"💬 "+t("comment")} #{i+1}
+                  {a.kind==="anomaly"?"⚠ "+t("anomaly"):a.kind==="reco"?(LANG==="en"?"→ Recommendation":"→ Recommandation"):t("comment")} #{i+1}
                 </span>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   {(a.kind==="anomaly"||a.kind==="reco") && (
                     <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,fontWeight:700,color:a.priceWanted!==false?"#2a6f97":"#94a3b8",cursor:"pointer"}} title={LANG==="en"?"Include in the quote (client wants a price)":"Inclure dans la soumission (le client veut un prix)"}>
                       <input type="checkbox" checked={a.priceWanted!==false} onChange={e=>onUpd(a.id,{priceWanted:e.target.checked})}/>
-                      💲 {LANG==="en"?"To price":"À chiffrer"}
+                      {LANG==="en"?"To price":"À chiffrer"}
                     </label>
                   )}
                   <button style={S.miniBtnDel} onClick={()=>onDel(a.id)}>✕</button>
@@ -3599,7 +3600,7 @@ function InsertPageForm({ blocks, customTpls, onInsert, onCancel }){
       <label style={S.label}>{t("insertWhere")}</label>
       <select style={S.input} value={afterIdx} onChange={e=>setAfterIdx(parseInt(e.target.value))}>
         <option value={-1}>{LANG==="en"?"At the very beginning":"Tout au début"}</option>
-        {blocks.map((b,i)=>(<option key={b.id} value={i}>#{i+1} — {b.type==="section"?b.title:b.type==="photos"?"🖼 "+b.title:"¶ "+(b.value||t("freeText")).slice(0,30)}</option>))}
+        {blocks.map((b,i)=>(<option key={b.id} value={i}>#{i+1} — {b.type==="section"?b.title:b.type==="photos"?b.title:"¶ "+(b.value||t("freeText")).slice(0,30)}</option>))}
       </select>
       <div style={{display:"flex",gap:10,marginTop:16}}>
         <button style={S.btnPrimary} onClick={()=>onInsert(tplId,afterIdx)}>{t("insertConfirm")}</button>
@@ -3618,7 +3619,7 @@ function PrintDoc({ report, logo, pale, qr, updatesOnly }){
   // Pages originales (image fidèle du PDF importé) : EXCLUES par défaut pour CONDENSER la feuille
   // de test sur la reproduction structurée. Réactivables via l'option « Pages originales ».
   const visible = r.showOriginal ? (r.blocks||[]) : (r.blocks||[]).filter(b=>b.type!=="pdfpage");
-  // Export « mises à jour seulement » : ne garder que les blocs marqués 🔁 (addendum).
+  // Export « mises à jour seulement » : ne garder que les blocs marqués (addendum).
   const printBlocks = updatesOnly ? visible.filter(b=>b.updated) : visible;
   return (
     <div className={"print-only"+(pale?" pale":"")+(r.condensed?" cond":"")+(r.sectionPerPage?" secpage":"")} style={DP.wrap}>
@@ -3714,7 +3715,7 @@ function PrintDoc({ report, logo, pale, qr, updatesOnly }){
               const isZone=b.type==="zone";
               const isHead=b.type==="section";
               if(isHead) secNo++;
-              const ic = b.type==="section"?"":b.type==="zone"?"🗂 ":b.type==="dga"?"🧪 ":b.type==="photos"?"🖼 ":b.type==="pdfpage"?"📄 ":b.type==="table"?"▦ ":b.type==="inspect"?"☑ ":"¶ ";
+              const ic = b.type==="section"?"":b.type==="zone"?"":b.type==="dga"?"":b.type==="photos"?"":b.type==="pdfpage"?"":b.type==="table"?"▦ ":b.type==="inspect"?"✓ ":"¶ ";
               const lbl=(b.type==="photos"||b.type==="section"||b.type==="table"||b.type==="inspect"||b.type==="zone")?(b.title||"").trim():b.type==="pdfpage"?(b.name||t("pdfPageZone")):b.type==="dga"?("DGA · "+((b.summary||{}).equipment||"")):(b.value||"").trim().slice(0,60);
               if(isZone) return <div key={b.id} style={{fontFamily:"'Archivo'",fontWeight:900,fontSize:13,color:THEME.title,marginTop:i?12:0,marginBottom:3,borderBottom:"1px solid "+THEME.border,paddingBottom:2}}>{ic}{lbl}</div>;
               return <div key={b.id} style={isHead?DP.tocHead:DP.tocSub}>
@@ -3834,7 +3835,7 @@ function PrintDoc({ report, logo, pale, qr, updatesOnly }){
 
       {updatesOnly && (
         <div style={{background:"#fff7ed",border:"1.5px solid #e0a96d",color:"#9a3412",borderRadius:8,padding:"8px 14px",margin:"10px 0",fontFamily:"'Archivo'",fontWeight:800,fontSize:13}}>
-          🔁 {LANG==="en"?"UPDATE / ADDENDUM":"MISE À JOUR / ADDENDA"} — {today}
+          {LANG==="en"?"UPDATE / ADDENDUM":"MISE À JOUR / ADDENDA"} — {today}
         </div>
       )}
       {(()=>{ const firstSecIdx=printBlocks.findIndex(x=>x.type==="section"); return printBlocks.map((b,bi)=>{
@@ -3860,7 +3861,7 @@ function PrintDoc({ report, logo, pale, qr, updatesOnly }){
           </>}
           {b.type==="text" && <p style={DP.text}>{b.value}</p>}
           {b.type==="dga" && <>
-            <div className="secBar-print" style={DP.secBar}>🧪 {LANG==="en"?"DGA analysis":"Analyse DGA"}{(b.summary||{}).equipment?` — ${b.summary.equipment}`:""}</div>
+            <div className="secBar-print" style={DP.secBar}>{LANG==="en"?"DGA analysis":"Analyse DGA"}{(b.summary||{}).equipment?` — ${b.summary.equipment}`:""}</div>
             <DgaSummaryView s={b.summary} print/>
           </>}
           {b.type==="inspect" && (b.items||[]).length>0 && (()=>{

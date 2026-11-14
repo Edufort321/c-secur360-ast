@@ -74,7 +74,7 @@ export function DemoStartButton({ fr = true, className = '', label }: { fr?: boo
         onClick={() => { setOpen(true); setResult(null); }}
         className={className || 'rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-orange-600'}
       >
-        {label || (fr ? '🚀 Démarrer maintenant' : '🚀 Start now')}
+        {label || (fr ? 'Démarrer maintenant' : 'Start now')}
       </button>
 
       {open && (
@@ -131,7 +131,7 @@ export function DemoStartButton({ fr = true, className = '', label }: { fr?: boo
               </>
             ) : (
               <>
-                <h3 className="text-xl font-black text-emerald-400">{fr ? 'Démo de 4 heures activée ! 🎉' : '4-hour demo activated! 🎉'}</h3>
+                <h3 className="text-xl font-black text-emerald-400">{fr ? 'Démo de 4 heures activée !' : '4-hour demo activated!'}</h3>
                 <p className="mt-2 text-sm text-slate-300">
                   {fr ? `Accès démo de 4 heures au total. Temps restant : ${remStr}.` : `4-hour total demo access. Time left: ${remStr}.`}
                 </p>

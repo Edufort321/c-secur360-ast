@@ -96,7 +96,7 @@ export default function AdminAccountsTab() {
     if (!confirm(`SUPPRIMER définitivement le compte ${u.email} ?\n\nCette action est irréversible : le compte et ses sessions sont supprimés (admin ET accès ${TENANT}).`)) return;
     const r = await fetch(`/api/admin/users?id=${encodeURIComponent(u.id)}`, { method: 'DELETE', credentials: 'include' });
     const j = await r.json().catch(() => ({}));
-    setNotice(r.ok ? `🗑 Compte ${u.email} supprimé définitivement.` : 'Erreur : ' + (j.error || 'suppression impossible'));
+    setNotice(r.ok ? `Compte ${u.email} supprimé définitivement.` : 'Erreur : ' + (j.error || 'suppression impossible'));
     if (r.ok) load();
   }
 

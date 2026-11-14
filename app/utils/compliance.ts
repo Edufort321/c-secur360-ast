@@ -532,21 +532,21 @@ export function generateTenantRecommendations(
 
   if (complianceReport.overallScore < 70) {
     recommendations.push(
-      "🚨 Score de conformité critique. Révision immédiate nécessaire.",
-      "📋 Prioriser les actions critiques avant tout nouveau projet.",
-      "👥 Envisager une formation supplémentaire pour l'équipe."
+      "Score de conformité critique. Révision immédiate nécessaire.",
+      "Prioriser les actions critiques avant tout nouveau projet.",
+      "Envisager une formation supplémentaire pour l'équipe."
     );
   } else if (complianceReport.overallScore < 85) {
     recommendations.push(
-      "⚠️ Amélioration de la conformité recommandée.",
-      "📝 Réviser les procédures existantes.",
-      "🔍 Audit interne suggéré dans les 30 jours."
+      "⚠ Amélioration de la conformité recommandée.",
+      "Réviser les procédures existantes.",
+      "Audit interne suggéré dans les 30 jours."
     );
   } else {
     recommendations.push(
-      "✅ Excellente conformité maintenue.",
-      "🔄 Maintenir les bonnes pratiques actuelles.",
-      "📈 Envisager la certification ISO 45001."
+      "✓ Excellente conformité maintenue.",
+      "Maintenir les bonnes pratiques actuelles.",
+      "Envisager la certification ISO 45001."
     );
   }
 

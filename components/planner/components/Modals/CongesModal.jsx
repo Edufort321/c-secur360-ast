@@ -50,13 +50,13 @@ export function CongesModal({
 
     // ===== TYPES DE CONGÉS =====
     const typesConges = [
-        { value: 'vacances', label: '🏖️ Vacances', couleur: '#3b82f6', paye: true },
-        { value: 'maladie', label: '🤒 Maladie', couleur: '#ef4444', paye: true },
-        { value: 'personnel', label: '👤 Personnel', couleur: '#8b5cf6', paye: false },
-        { value: 'formation', label: '📚 Formation', couleur: '#10b981', paye: true },
-        { value: 'maternite', label: '🍼 Maternité/Paternité', couleur: '#f59e0b', paye: true },
-        { value: 'deces', label: '⚱️ Décès', couleur: '#6b7280', paye: true },
-        { value: 'autre', label: '📝 Autre', couleur: '#6b7280', paye: false }
+        { value: 'vacances', label: 'Vacances', couleur: '#3b82f6', paye: true },
+        { value: 'maladie', label: 'Maladie', couleur: '#ef4444', paye: true },
+        { value: 'personnel', label: 'Personnel', couleur: '#8b5cf6', paye: false },
+        { value: 'formation', label: 'Formation', couleur: '#10b981', paye: true },
+        { value: 'maternite', label: 'Maternité/Paternité', couleur: '#f59e0b', paye: true },
+        { value: 'deces', label: 'Décès', couleur: '#6b7280', paye: true },
+        { value: 'autre', label: 'Autre', couleur: '#6b7280', paye: false }
     ];
 
     // ===== INITIALISATION =====
@@ -333,8 +333,8 @@ export function CongesModal({
                                             onChange={(e) => setFormData(prev => ({ ...prev, typeDemiJournee: e.target.value }))}
                                             className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm"
                                         >
-                                            <option value="matin">🌅 Matin</option>
-                                            <option value="apres_midi">🌇 Après-midi</option>
+                                            <option value="matin">Matin</option>
+                                            <option value="apres_midi">Après-midi</option>
                                         </select>
                                     )}
                                 </div>
@@ -457,7 +457,7 @@ export function CongesModal({
                                         onChange={(e) => setFormData(prev => ({ ...prev, urgent: e.target.checked }))}
                                         className="mr-2"
                                     />
-                                    <span className="text-sm">🚨 Urgent</span>
+                                    <span className="text-sm">Urgent</span>
                                 </label>
 
                                 <label className="flex items-center">
@@ -467,7 +467,7 @@ export function CongesModal({
                                         onChange={(e) => setFormData(prev => ({ ...prev, paye: e.target.checked }))}
                                         className="mr-2"
                                     />
-                                    <span className="text-sm">💰 Payé</span>
+                                    <span className="text-sm">Payé</span>
                                 </label>
                             </div>
 
@@ -501,10 +501,10 @@ export function CongesModal({
                                         formData.statut === 'refuse' ? 'bg-red-100 text-red-800' :
                                         'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100'
                                     }`}>
-                                        {formData.statut === 'en_attente' && '⏳ En attente'}
-                                        {formData.statut === 'approuve' && '✅ Approuvé'}
-                                        {formData.statut === 'refuse' && '❌ Refusé'}
-                                        {formData.statut === 'annule' && '🚫 Annulé'}
+                                        {formData.statut === 'en_attente' && 'En attente'}
+                                        {formData.statut === 'approuve' && '✓ Approuvé'}
+                                        {formData.statut === 'refuse' && '✕ Refusé'}
+                                        {formData.statut === 'annule' && 'Annulé'}
                                     </span>
 
                                     {formData.dateApprobation && (
@@ -606,7 +606,7 @@ export function CongesModal({
                             {formData.remplacant && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                     <p className="text-sm text-blue-800">
-                                        📋 Le remplaçant sera notifié automatiquement de son assignation
+                                        Le remplaçant sera notifié automatiquement de son assignation
                                     </p>
                                 </div>
                             )}

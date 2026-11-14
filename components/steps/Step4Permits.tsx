@@ -106,7 +106,7 @@ interface Coordinates {
 
 const translations = {
   fr: {
-    title: "🛡️ Gestion des Permis de Travail",
+    title: "Gestion des Permis de Travail",
     subtitle: "Sélection et validation des permis requis selon le type de travaux",
     
     // Types de permis
@@ -136,9 +136,9 @@ const translations = {
     },
     
     priority: {
-      high: "🔴 Critique",
-      medium: "🟡 Important",
-      low: "🟢 Standard"
+      high: "Critique",
+      medium: "Important",
+      low: "Standard"
     },
     
     // Actions
@@ -243,7 +243,7 @@ const translations = {
   },
   
   en: {
-    title: "🛡️ Work Permit Management",
+    title: "Work Permit Management",
     subtitle: "Selection and validation of required permits based on work type",
     
     // Permit types
@@ -273,9 +273,9 @@ const translations = {
     },
     
     priority: {
-      high: "🔴 Critical",
-      medium: "🟡 Important", 
-      low: "🟢 Standard"
+      high: "Critical",
+      medium: "Important", 
+      low: "Standard"
     },
     
     // Actions
@@ -1130,7 +1130,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
                               color: '#3b82f6',
                               fontWeight: '500'
                             }}>
-                              {permit.priority === 'high' ? '🔴' : permit.priority === 'medium' ? '🟡' : '🟢'}
+                              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: permit.priority === 'high' ? '#ef4444' : permit.priority === 'medium' ? '#eab308' : '#22c55e' }} />
                             </span>
                           )}
                         </div>

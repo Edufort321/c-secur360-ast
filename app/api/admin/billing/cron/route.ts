@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { job } = body;
 
-    console.log(`🤖 Exécution tâche cron: ${job}`);
+    console.log(`Exécution tâche cron: ${job}`);
 
     let result;
     
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Erreur tâche cron:', error);
+    console.error('Erreur tâche cron:', error);
     
     return NextResponse.json(
       { 
@@ -109,7 +109,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Erreur statut cron:', error);
+    console.error('Erreur statut cron:', error);
     
     return NextResponse.json(
       { 

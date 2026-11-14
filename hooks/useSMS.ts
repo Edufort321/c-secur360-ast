@@ -72,28 +72,28 @@ const formatCanadianPhoneNumber = (phone: string): string => {
 
 const quickMessages = {
   fr: [
-    '🚨 URGENCE: Arrêt immédiat des travaux',
-    '⚠️ Vérification LOTO requise',
-    '🔒 Nouveaux cadenas appliqués',
-    '📋 Réunion sécurité dans 15min',
-    '🎯 Fin des travaux - Retirer tous cadenas',
-    '⏰ Pause obligatoire dans 10min',
-    '🚪 Évacuation préventive en cours',
-    '🔧 Maintenance d\'urgence - Zone fermée',
-    '📞 Contactez superviseur immédiatement',
-    '✅ Travaux autorisés à reprendre'
+    'URGENCE: Arrêt immédiat des travaux',
+    'Vérification LOTO requise',
+    'Nouveaux cadenas appliqués',
+    'Réunion sécurité dans 15min',
+    'Fin des travaux - Retirer tous cadenas',
+    'Pause obligatoire dans 10min',
+    'Évacuation préventive en cours',
+    'Maintenance d\'urgence - Zone fermée',
+    'Contactez superviseur immédiatement',
+    'Travaux autorisés à reprendre'
   ],
   en: [
-    '🚨 EMERGENCY: Stop work immediately',
-    '⚠️ LOTO verification required',
-    '🔒 New locks applied',
-    '📋 Safety meeting in 15min',
-    '🎯 Work complete - Remove all locks',
-    '⏰ Mandatory break in 10min',
-    '🚪 Preventive evacuation in progress',
-    '🔧 Emergency maintenance - Area closed',
-    '📞 Contact supervisor immediately',
-    '✅ Work authorized to resume'
+    'EMERGENCY: Stop work immediately',
+    'LOTO verification required',
+    'New locks applied',
+    'Safety meeting in 15min',
+    'Work complete - Remove all locks',
+    'Mandatory break in 10min',
+    'Preventive evacuation in progress',
+    'Emergency maintenance - Area closed',
+    'Contact supervisor immediately',
+    'Work authorized to resume'
   ]
 };
 
@@ -201,7 +201,7 @@ export const useSMS = (): UseSMSReturn => {
       return [];
       
     } catch (error) {
-      console.error('❌ Erreur historique SMS:', error);
+      console.error('Erreur historique SMS:', error);
       return [];
     }
   }, []);
@@ -247,7 +247,7 @@ export const useLOTOSMS = (astId: string) => {
     equipment: string,
     recipients: string[]
   ) => {
-    const message = `🔒 ${workerName} a appliqué le cadenas ${lockNumber} sur ${equipment}`;
+    const message = `${workerName} a appliqué le cadenas ${lockNumber} sur ${equipment}`;
     return sms.sendSMS({
       astId,
       type: 'lock_applied',
@@ -263,7 +263,7 @@ export const useLOTOSMS = (astId: string) => {
     equipment: string,
     recipients: string[]
   ) => {
-    const message = `🔓 ${workerName} a retiré le cadenas ${lockNumber} de ${equipment}`;
+    const message = `${workerName} a retiré le cadenas ${lockNumber} de ${equipment}`;
     return sms.sendSMS({
       astId,
       type: 'lock_removed',
@@ -280,7 +280,7 @@ export const useLOTOSMS = (astId: string) => {
   ) => {
     const message = activeLockCount > 0 
       ? `⚠️ ${workerName} termine ses travaux mais a encore ${activeLockCount} cadenas actifs!`
-      : `✅ ${workerName} a terminé ses travaux et retiré tous ses cadenas`;
+      : `✓ ${workerName} a terminé ses travaux et retiré tous ses cadenas`;
       
     return sms.sendSMS({
       astId,
@@ -298,7 +298,7 @@ export const useLOTOSMS = (astId: string) => {
     return sms.sendSMS({
       astId,
       type: 'emergency',
-      message: `🚨 URGENCE: ${message}`,
+      message: `URGENCE: ${message}`,
       recipients,
       sentBy: 'Système d\'urgence'
     });

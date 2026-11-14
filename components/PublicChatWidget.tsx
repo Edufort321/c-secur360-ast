@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { MessageCircle, Send } from 'lucide-react';
 
 // Widget du chatbot PUBLIC (marketing). Bouton flottant + panneau. Anonyme. Bilingue (prop fr).
 // Ouverture auto une fois par session. CTA démo + contact. Disclaimer. Appelle /api/assistant/public-chat.
@@ -63,7 +64,7 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
         aria-label="Assistant C-Secur360"
         className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a]"
       >
-        {open ? '×' : '💬'}
+        {open ? '×' : <MessageCircle size={22} />}
       </button>
 
       {open && (
@@ -78,7 +79,7 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
           <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
             {messages.length === 0 && (
               <div className="space-y-2">
-                <p className="text-gray-600">{tr('Bonjour ! Je peux vous présenter C-Secur360 et organiser une démo. 👋', 'Hi! I can introduce C-Secur360 and set up a demo. 👋')}</p>
+                <p className="text-gray-600">{tr('Bonjour ! Je peux vous présenter C-Secur360 et organiser une démo.', 'Hi! I can introduce C-Secur360 and set up a demo.')}</p>
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-orange-400">
                     {s}
@@ -110,7 +111,7 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
               placeholder={tr('Votre question…', 'Your question…')}
               className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-            <button type="submit" disabled={loading || !input.trim()} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">➤</button>
+            <button type="submit" disabled={loading || !input.trim()} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" aria-label="Envoyer"><Send size={16} /></button>
           </form>
           <p className="px-3 pb-2 text-[10px] leading-tight text-gray-400">{tr('Assistant informatif — peut faire des erreurs. Pour une réponse officielle, contactez-nous.', 'Informational assistant — may make mistakes. For an official answer, contact us.')}</p>
         </div>

@@ -553,10 +553,10 @@ const PlanificateurFullscreen: React.FC<PlanificateurFullscreenProps> = ({ tenan
                                 {job.heureDebut} - {job.heureFin}
                               </div>
                               <div className="text-xs mt-1">
-                                {job.priorite === 'urgent' && '🔴'}
-                                {job.priorite === 'haute' && '🟡'}
-                                {job.priorite === 'normale' && '🔵'}
-                                {job.priorite === 'faible' && '🟢'}
+                                {job.priorite === 'urgent' && <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />}
+                                {job.priorite === 'haute' && <span className="inline-block h-2.5 w-2.5 rounded-full bg-yellow-400" />}
+                                {job.priorite === 'normale' && <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />}
+                                {job.priorite === 'faible' && <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />}
                               </div>
                             </div>
                           ) : (
@@ -890,10 +890,10 @@ const PlanificateurFullscreen: React.FC<PlanificateurFullscreenProps> = ({ tenan
                     defaultValue={selectedJob.priorite}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
                   >
-                    <option value="faible">🟢 Faible</option>
-                    <option value="normale">🔵 Normale</option>
-                    <option value="haute">🟡 Haute</option>
-                    <option value="urgent">🔴 Urgent</option>
+                    <option value="faible">Faible</option>
+                    <option value="normale">Normale</option>
+                    <option value="haute">Haute</option>
+                    <option value="urgent">Urgent</option>
                   </select>
                 </div>
                 
@@ -904,10 +904,10 @@ const PlanificateurFullscreen: React.FC<PlanificateurFullscreenProps> = ({ tenan
                     defaultValue={selectedJob.statut}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
                   >
-                    <option value="planifie">📋 Planifié</option>
-                    <option value="en_cours">⚙️ En cours</option>
-                    <option value="termine">✅ Terminé</option>
-                    <option value="annule">❌ Annulé</option>
+                    <option value="planifie">Planifié</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="termine">✓ Terminé</option>
+                    <option value="annule">✕ Annulé</option>
                   </select>
                 </div>
               </div>

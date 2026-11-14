@@ -105,22 +105,22 @@ export function EquipementModal({
 
     // ===== TYPES D'ÉQUIPEMENTS =====
     const typesEquipements = [
-        { value: 'test_electrique', label: '⚡ Test Électrique', couleur: '#3b82f6' },
-        { value: 'mesure', label: '📏 Mesure', couleur: '#10b981' },
-        { value: 'securite', label: '🛡️ Sécurité', couleur: '#f59e0b' },
-        { value: 'communication', label: '📡 Communication', couleur: '#8b5cf6' },
-        { value: 'informatique', label: '💻 Informatique', couleur: '#06b6d4' },
-        { value: 'vehicule', label: '🚗 Véhicule', couleur: '#84cc16' },
-        { value: 'outillage', label: '🔧 Outillage', couleur: '#6b7280' },
-        { value: 'autre', label: '📦 Autre', couleur: '#6b7280' }
+        { value: 'test_electrique', label: 'Test Électrique', couleur: '#3b82f6' },
+        { value: 'mesure', label: 'Mesure', couleur: '#10b981' },
+        { value: 'securite', label: 'Sécurité', couleur: '#f59e0b' },
+        { value: 'communication', label: 'Communication', couleur: '#8b5cf6' },
+        { value: 'informatique', label: 'Informatique', couleur: '#06b6d4' },
+        { value: 'vehicule', label: 'Véhicule', couleur: '#84cc16' },
+        { value: 'outillage', label: 'Outillage', couleur: '#6b7280' },
+        { value: 'autre', label: 'Autre', couleur: '#6b7280' }
     ];
 
     const statutsEquipement = [
-        { value: 'disponible', label: '✅ Disponible', couleur: '#10b981' },
-        { value: 'utilise', label: '🔄 Utilisé', couleur: '#3b82f6' },
-        { value: 'maintenance', label: '🔧 Maintenance', couleur: '#f59e0b' },
-        { value: 'hors_service', label: '❌ Hors service', couleur: '#ef4444' },
-        { value: 'reserve', label: '📅 Réservé', couleur: '#8b5cf6' }
+        { value: 'disponible', label: '✓ Disponible', couleur: '#10b981' },
+        { value: 'utilise', label: 'Utilisé', couleur: '#3b82f6' },
+        { value: 'maintenance', label: 'Maintenance', couleur: '#f59e0b' },
+        { value: 'hors_service', label: '✕ Hors service', couleur: '#ef4444' },
+        { value: 'reserve', label: 'Réservé', couleur: '#8b5cf6' }
     ];
 
     // ===== SUCCURSALES DISPONIBLES =====
@@ -589,7 +589,7 @@ export function EquipementModal({
                                         ))}
                                     </select>
                                     <p className="text-xs text-blue-500 mt-1">
-                                        💡 Détermine la couleur au calendrier
+                                        Détermine la couleur au calendrier
                                     </p>
                                 </div>
 

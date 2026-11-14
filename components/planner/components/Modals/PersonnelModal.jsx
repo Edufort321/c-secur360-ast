@@ -463,10 +463,10 @@ export function PersonnelModal({
                                             onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                            <option value="actif">✅ Actif</option>
-                                            <option value="inactif">⏸️ Inactif</option>
-                                            <option value="conge">🏖️ En congé</option>
-                                            <option value="maladie">🤒 Maladie</option>
+                                            <option value="actif">✓ Actif</option>
+                                            <option value="inactif">Inactif</option>
+                                            <option value="conge">En congé</option>
+                                            <option value="maladie">Maladie</option>
                                         </select>
                                     </div>
                                 </div>

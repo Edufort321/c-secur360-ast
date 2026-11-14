@@ -2,6 +2,7 @@
 // Composant pour basculer entre français et anglais
 
 import React from 'react';
+import { Globe } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export function LanguageSelector({ showLabel = false, size = 'normal', className = '' }) {
@@ -17,7 +18,7 @@ export function LanguageSelector({ showLabel = false, size = 'normal', className
         <div className={`flex items-center gap-2 ${className}`}>
             {showLabel && (
                 <span className={`${sizeClasses[size]} text-gray-700 dark:text-gray-300 font-medium`}>
-                    🌐
+                    <Globe size={16} />
                 </span>
             )}
             <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">

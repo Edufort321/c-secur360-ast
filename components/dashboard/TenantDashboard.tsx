@@ -64,7 +64,7 @@ const TenantDashboard: React.FC = () => {
         <h3>Aucune donnée de travailleurs disponible</h3>
         <p>Connectez-vous à un projet actif pour voir les statistiques.</p>
         <div style={{ fontSize: '12px', marginTop: '8px' }}>
-          Statut: {isConnected ? '🟢 Connecté' : '🔴 Déconnecté'}
+          Statut: {isConnected ? 'Connecté' : 'Déconnecté'}
         </div>
       </div>
     );

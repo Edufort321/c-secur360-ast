@@ -502,42 +502,42 @@ function generateBasicRecommendations(riskLevel: RiskLevel, score: number): stri
   switch (riskLevel) {
     case RiskLevel.CRITICAL:
       recommendations.push(
-        "🚨 ARRÊT IMMÉDIAT - Risque critique inacceptable",
-        "📋 Révision complète de l'analyse requise",
-        "👥 Consultation d'experts en sécurité obligatoire",
-        "🔒 Mise en place de mesures d'élimination prioritaires"
+        "ARRÊT IMMÉDIAT - Risque critique inacceptable",
+        "Révision complète de l'analyse requise",
+        "Consultation d'experts en sécurité obligatoire",
+        "Mise en place de mesures d'élimination prioritaires"
       );
       break;
     
     case RiskLevel.HIGH:
       recommendations.push(
-        "⚠️ Mesures de contrôle renforcées requises",
-        "📝 Plan d'action détaillé à élaborer",
-        "👨‍💼 Approbation supervision nécessaire",
-        "🔍 Surveillance continue pendant l'exécution"
+        "⚠ Mesures de contrôle renforcées requises",
+        "Plan d'action détaillé à élaborer",
+        "Approbation supervision nécessaire",
+        "Surveillance continue pendant l'exécution"
       );
       break;
     
     case RiskLevel.MEDIUM:
       recommendations.push(
-        "📋 Mesures de contrôle à implémenter avant début",
-        "🔄 Révision périodique pendant l'exécution",
-        "📊 Documentation des mesures prises"
+        "Mesures de contrôle à implémenter avant début",
+        "Révision périodique pendant l'exécution",
+        "Documentation des mesures prises"
       );
       break;
     
     case RiskLevel.LOW:
       recommendations.push(
-        "✅ Risque acceptable avec précautions standard",
-        "📝 Application des bonnes pratiques",
-        "🔍 Surveillance de routine"
+        "✓ Risque acceptable avec précautions standard",
+        "Application des bonnes pratiques",
+        "Surveillance de routine"
       );
       break;
     
     default:
       recommendations.push(
-        "✅ Risque très faible",
-        "📋 Maintenir les bonnes pratiques"
+        "✓ Risque très faible",
+        "Maintenir les bonnes pratiques"
       );
   }
 
@@ -555,19 +555,19 @@ function generateDetailedRecommendations(
   // Recommandations basées sur l'efficacité des contrôles
   if (controlEffectiveness < 50) {
     recommendations.unshift(
-      "⚡ Efficacité des contrôles insuffisante (<50%)",
-      "🔄 Révision des mesures de contrôle nécessaire",
-      "⬆️ Privilégier les mesures de niveau hiérarchique supérieur"
+      "Efficacité des contrôles insuffisante (<50%)",
+      "Révision des mesures de contrôle nécessaire",
+      "Privilégier les mesures de niveau hiérarchique supérieur"
     );
   } else if (controlEffectiveness < 75) {
     recommendations.push(
-      "📈 Possibilité d'amélioration des contrôles",
-      "🔍 Évaluer l'ajout de mesures complémentaires"
+      "Possibilité d'amélioration des contrôles",
+      "Évaluer l'ajout de mesures complémentaires"
     );
   } else {
     recommendations.push(
-      "✅ Excellente efficacité des contrôles",
-      "🔄 Maintenir l'efficacité par formation et maintenance"
+      "✓ Excellente efficacité des contrôles",
+      "Maintenir l'efficacité par formation et maintenance"
     );
   }
 
@@ -575,8 +575,8 @@ function generateDetailedRecommendations(
   const hierarchyLevels = new Set(controlMeasures.map(cm => cm.hierarchyLevel));
   if (hierarchyLevels.size < 2) {
     recommendations.push(
-      "🛡️ Envisager la défense en profondeur",
-      "🔄 Ajouter des mesures de niveaux hiérarchiques différents"
+      "Envisager la défense en profondeur",
+      "Ajouter des mesures de niveaux hiérarchiques différents"
     );
   }
 

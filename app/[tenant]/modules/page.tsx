@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck,
+  Lock, ArrowRight, Sparkles, X, Clock, Loader2, LayoutGrid, List, ShieldCheck, BookOpen,
 } from 'lucide-react';
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -371,7 +371,7 @@ export default function ModulesPage() {
 
       <div className="px-4 pt-3 lg:px-6">
         <Link href={`/${tenant}/guide`} className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300">
-          📖 Guide / Mode d&apos;emploi des modules
+          <BookOpen size={16} /> Guide / Mode d&apos;emploi des modules
         </Link>
       </div>
 
@@ -550,8 +550,8 @@ function AiTokenAlert({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
     <div className={`mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm ${exhausted ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300' : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300'}`}>
       <span className="font-semibold">
         {exhausted
-          ? tr('⛔ Forfait de jetons IA épuisé — les assistants IA sont en pause.', '⛔ AI token plan exhausted — AI assistants are paused.')
-          : tr(`🟠 Forfait IA presque épuisé (${b.remainingPct}% restant).`, `🟠 AI plan almost depleted (${b.remainingPct}% left).`)}
+          ? tr('Forfait de jetons IA épuisé — les assistants IA sont en pause.', 'AI token plan exhausted — AI assistants are paused.')
+          : tr(`Forfait IA presque épuisé (${b.remainingPct}% restant).`, `AI plan almost depleted (${b.remainingPct}% left).`)}
       </span>
       <Link href={`/${tenant}/admin`} className="shrink-0 rounded-lg bg-current/10 px-3 py-1 font-semibold underline">
         {tr('Demander un renouvellement', 'Request a renewal')}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '../../components/UI/Icon';
+import { Trash2 } from 'lucide-react';
 
 export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, onDeleteConge }) {
     const [activeTab, setActiveTab] = useState('demandes');
@@ -26,12 +27,12 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
     const persOf = (c) => (personnel || []).find(p => String(p.id) === String(cPid(c)));
 
     const typesConge = [
-        { value: 'vacances', label: '🏖️ Vacances', couleur: '#3B82F6' },
-        { value: 'maladie', label: '🤒 Maladie', couleur: '#EF4444' },
-        { value: 'personnel', label: '👨‍👩‍👧‍👦 Personnel', couleur: '#8B5CF6' },
-        { value: 'formation', label: '📚 Formation', couleur: '#10B981' },
-        { value: 'maternite', label: '👶 Maternité/Paternité', couleur: '#F59E0B' },
-        { value: 'autre', label: '📝 Autre', couleur: '#6B7280' }
+        { value: 'vacances', label: 'Vacances', couleur: '#3B82F6' },
+        { value: 'maladie', label: 'Maladie', couleur: '#EF4444' },
+        { value: 'personnel', label: 'Personnel', couleur: '#8B5CF6' },
+        { value: 'formation', label: 'Formation', couleur: '#10B981' },
+        { value: 'maternite', label: 'Maternité/Paternité', couleur: '#F59E0B' },
+        { value: 'autre', label: 'Autre', couleur: '#6B7280' }
     ];
 
     const resetForm = () => {
@@ -183,7 +184,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                 : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                        📋 Demandes ({congesEnAttente.length})
+                        Demandes ({congesEnAttente.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('nouvelle')}
@@ -193,7 +194,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                 : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                        ➕ Nouvelle Demande
+                        Nouvelle Demande
                     </button>
                     <button
                         onClick={() => setActiveTab('historique')}
@@ -203,7 +204,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                 : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                        📈 Historique ({congesApprouves.length + congesRefuses.length})
+                        Historique ({congesApprouves.length + congesRefuses.length})
                     </button>
                 </div>
 
@@ -212,7 +213,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                     {/* Filtres par structure/site + département (toutes les demandes) */}
                     {(sites.length > 0 || departements.length > 0) && (
                         <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-500">🔎 Filtrer :</span>
+                            <span className="text-xs font-semibold text-gray-500">Filtrer :</span>
                             {sites.length > 0 && (
                                 <select value={filterSite} onChange={e => setFilterSite(e.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
                                     <option value="">Tous les sites</option>
@@ -272,14 +273,14 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                                     className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                                     title="Refuser"
                                                 >
-                                                    ✗
+                                                    ✕
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteConge(conge.id)}
                                                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                                                     title="Supprimer"
                                                 >
-                                                    🗑️
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </div>
@@ -392,7 +393,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                     disabled={isSubmitting}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                                 >
-                                    {isSubmitting ? '⏳ Sauvegarde...' : '💾 Créer la demande'}
+                                    {isSubmitting ? 'Sauvegarde...' : 'Créer la demande'}
                                 </button>
                             </div>
                         </form>
@@ -438,7 +439,7 @@ export function CongesModal({ isOpen, onClose, personnel, conges, onSaveConge, o
                                                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors ml-4"
                                                     title="Supprimer"
                                                 >
-                                                    🗑️
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </div>

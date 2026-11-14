@@ -48,7 +48,7 @@ interface ValidationCriteria {
 // =================== SYSTÈME DE TRADUCTIONS ===================
 const translations = {
   fr: {
-    title: "✅ Validation et Approbation",
+    title: "✓ Validation et Approbation",
     subtitle: "Validation finale de l'AST par les superviseurs et responsables sécurité",
     
     // Sections
@@ -113,7 +113,7 @@ const translations = {
   },
   
   en: {
-    title: "✅ Validation and Approval",
+    title: "✓ Validation and Approval",
     subtitle: "Final JSA validation by supervisors and safety personnel",
     
     // Sections
@@ -270,19 +270,19 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
 
   // =================== CALLBACKS EXPORT SYSTÈME ===================
   const handleWorkersExport = (data: any) => {
-    console.log('🔄 Export Workers Data:', data);
+    console.log('Export Workers Data:', data);
     // Ici, les données peuvent être envoyées à un store global, API, ou autre système
     // Exemple : dispatch(updateWorkersData(data));
   };
 
   const handleHRDataExport = (hrData: any[]) => {
-    console.log('👥 Export HR Data:', hrData);
+    console.log('Export HR Data:', hrData);
     // Données formatées pour le module RH
     // Exemple : sendToHRSystem(hrData);
   };
 
   const handleDashboardSummaryExport = (summary: any) => {
-    console.log('📊 Export Dashboard Summary:', summary);
+    console.log('Export Dashboard Summary:', summary);
     // Données pour le dashboard principal tenant
     // Exemple : updateTenantDashboard(tenant, summary);
   };
@@ -295,12 +295,12 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
     const currentDataString = JSON.stringify(workersData);
     
     if (lastWorkersDataRef.current === currentDataString) {
-      console.log('🚫 Évite mise à jour identique Workers:', workersData.length);
+      console.log('Évite mise à jour identique Workers:', workersData.length);
       return; // Éviter les mises à jour inutiles
     }
     
     lastWorkersDataRef.current = currentDataString;
-    console.log('💾 Sauvegarde Workers dans formData:', workersData);
+    console.log('Sauvegarde Workers dans formData:', workersData);
     
     // Sauvegarder les données des travailleurs dans formData pour persistance entre étapes
     onDataChange('workers', {
@@ -603,7 +603,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               fontSize: window.innerWidth < 768 ? '11px' : '12px',
               color: '#93c5fd',
               fontWeight: '500'
-            }}>👷‍♂️ Travailleurs Actifs</div>
+            }}>Travailleurs Actifs</div>
           </div>
 
           {/* Cadenas Status */}
@@ -625,7 +625,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               fontSize: window.innerWidth < 768 ? '11px' : '12px',
               color: '#86efac',
               fontWeight: '500'
-            }}>🔒 Cadenas Apposés</div>
+            }}>Cadenas Apposés</div>
           </div>
 
           {/* Signatures AST */}
@@ -647,7 +647,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               fontSize: window.innerWidth < 768 ? '11px' : '12px',
               color: '#c4b5fd',
               fontWeight: '500'
-            }}>✍️ Signatures AST</div>
+            }}>Signatures AST</div>
           </div>
 
           {/* Temps Total */}
@@ -669,7 +669,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               fontSize: window.innerWidth < 768 ? '11px' : '12px',
               color: '#fbbf24',
               fontWeight: '500'
-            }}>⏱️ Temps Total</div>
+            }}>Temps Total</div>
           </div>
         </div>
 
@@ -687,7 +687,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               color: '#94a3b8',
               marginBottom: '6px',
               fontWeight: '600'
-            }}>📍 Emplacements actifs:</div>
+            }}>Emplacements actifs:</div>
             <div style={{
               display: 'flex',
               flexWrap: 'wrap',
@@ -815,7 +815,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               fontWeight: '600',
               margin: '0 0 12px 0'
             }}>
-              🎯 {language === 'fr' ? 'Cibler les destinataires' : 'Target Recipients'}
+              {language === 'fr' ? 'Cibler les destinataires' : 'Target Recipients'}
             </h4>
             
             <div style={{
@@ -839,7 +839,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                 }}
                 onClick={() => setSmsTargetMode('all')}
               >
-                👥 {language === 'fr' ? `Tous (${currentWorkers.length})` : `All (${currentWorkers.length})`}
+                {language === 'fr' ? `Tous (${currentWorkers.length})` : `All (${currentWorkers.length})`}
               </button>
 
               {/* Par emplacement */}
@@ -857,7 +857,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                 }}
                 onClick={() => setSmsTargetMode('location')}
               >
-                📍 {language === 'fr' ? 'Par emplacement' : 'By Location'}
+                {language === 'fr' ? 'Par emplacement' : 'By Location'}
               </button>
 
               {/* Sélection manuelle */}
@@ -875,7 +875,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                 }}
                 onClick={() => setSmsTargetMode('custom')}
               >
-                ✋ {language === 'fr' ? 'Sélection manuelle' : 'Manual Selection'}
+                {language === 'fr' ? 'Sélection manuelle' : 'Manual Selection'}
               </button>
             </div>
 
@@ -914,7 +914,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               borderRadius: '6px',
               border: '1px solid rgba(100, 116, 139, 0.2)'
             }}>
-              📱 {language === 'fr' ? 'Destinataires ciblés' : 'Targeted recipients'}: {getTargetedPhoneNumbers().length} {language === 'fr' ? 'numéro(s)' : 'number(s)'}
+              {language === 'fr' ? 'Destinataires ciblés' : 'Targeted recipients'}: {getTargetedPhoneNumbers().length} {language === 'fr' ? 'numéro(s)' : 'number(s)'}
               {getTargetedPhoneNumbers().length > 0 && (
                 <div style={{ marginTop: '4px', fontSize: '11px' }}>
                   {getTargetedPhoneNumbers().slice(0, 3).join(', ')}

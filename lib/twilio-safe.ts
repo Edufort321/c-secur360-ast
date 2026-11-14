@@ -34,7 +34,7 @@ export function createTwilioClient(accountSid: string, authToken: string): Twili
     }
 
     if (accountSid.includes('placeholder') || authToken.includes('placeholder')) {
-      console.log('📝 Mode simulation - credentials placeholder détectés');
+      console.log('Mode simulation - credentials placeholder détectés');
       return createMockTwilioClient();
     }
 
@@ -42,12 +42,12 @@ export function createTwilioClient(accountSid: string, authToken: string): Twili
     const twilio = require('twilio');
     const client = twilio(accountSid, authToken);
     
-    console.log('✅ Client Twilio créé avec succès');
+    console.log('Client Twilio créé avec succès');
     return client;
     
   } catch (error) {
     console.warn('⚠️ Erreur création client Twilio:', error);
-    console.log('📝 Basculement en mode simulation');
+    console.log('Basculement en mode simulation');
     return createMockTwilioClient();
   }
 }
@@ -58,7 +58,7 @@ export function createMockTwilioClient(): TwilioClient {
       async create(options) {
         const mockSid = `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        console.log('📝 SMS Simulation:', {
+        console.log('SMS Simulation:', {
           to: options.to,
           body: options.body.substring(0, 50) + '...',
           sid: mockSid
@@ -82,7 +82,7 @@ export function createMockTwilioClient(): TwilioClient {
       async create(options) {
         const mockSid = `call_sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        console.log('📞 Call Simulation:', {
+        console.log('Call Simulation:', {
           to: options.to,
           from: options.from,
           url: options.url,

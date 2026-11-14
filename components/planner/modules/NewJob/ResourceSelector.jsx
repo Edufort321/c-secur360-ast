@@ -39,7 +39,7 @@ export function ResourceSelector({
                             : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                     }`}
                 >
-                    👥 Personnel ({selectedPersonnel.length})
+                    Personnel ({selectedPersonnel.length})
                 </button>
                 <button
                     type="button"
@@ -50,7 +50,7 @@ export function ResourceSelector({
                             : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                     }`}
                 >
-                    🔧 Équipements ({selectedEquipements.length})
+                    Équipements ({selectedEquipements.length})
                 </button>
                 <button
                     type="button"
@@ -61,7 +61,7 @@ export function ResourceSelector({
                             : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                     }`}
                 >
-                    🏢 Sous-traitants ({selectedSousTraitants.length})
+                    Sous-traitants ({selectedSousTraitants.length})
                 </button>
             </div>
 
@@ -108,7 +108,7 @@ export function ResourceSelector({
                                     </div>
                                     {!available && (
                                         <div className="text-xs text-red-600 mt-1 font-medium">
-                                            ⚠️ Non disponible pour cette période
+                                            ⚠ Non disponible pour cette période
                                         </div>
                                     )}
                                 </div>
@@ -156,7 +156,7 @@ export function ResourceSelector({
                                     </div>
                                     {!available && (
                                         <div className="text-xs text-red-600 mt-1 font-medium">
-                                            ⚠️ Non disponible pour cette période
+                                            ⚠ Non disponible pour cette période
                                         </div>
                                     )}
                                 </div>
@@ -201,7 +201,7 @@ export function ResourceSelector({
                             </button>
                         </div>
                         <p className="text-xs text-blue-600 mt-2">
-                            💡 Ajoutez des sous-traitants pour ce projet en tapant leur nom ci-dessus
+                            Ajoutez des sous-traitants pour ce projet en tapant leur nom ci-dessus
                         </p>
                     </div>
 
@@ -237,7 +237,7 @@ export function ResourceSelector({
                                         </div>
                                         {!available && (
                                             <div className="text-xs text-red-600 mt-1 font-medium">
-                                                ⚠️ Non disponible pour cette période
+                                                ⚠ Non disponible pour cette période
                                             </div>
                                         )}
                                     </div>

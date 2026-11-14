@@ -384,7 +384,7 @@ class SafetyContentFilter {
   
   private handleGeneralQuery(message: string, context?: any) {
     return {
-      response: `👋 Bonjour ! Je suis votre assistant IA spécialisé en **santé-sécurité au travail** pour la plateforme C-SECUR360.\n\n**Je peux vous aider avec :**\n• AST et permis de travail\n• Conformité aux normes provinciales\n• Procédures de sécurité\n• Utilisation de la plateforme\n• Formation et certification\n\nComment puis-je vous assister aujourd'hui ?`,
+      response: `Bonjour ! Je suis votre assistant IA spécialisé en **santé-sécurité au travail** pour la plateforme C-SECUR360.\n\n**Je peux vous aider avec :**\n• AST et permis de travail\n• Conformité aux normes provinciales\n• Procédures de sécurité\n• Utilisation de la plateforme\n• Formation et certification\n\nComment puis-je vous assister aujourd'hui ?`,
       suggestions: this.getSafetySuggestions(context),
       confidence: 0.8
     };
@@ -412,7 +412,7 @@ export async function POST(request: NextRequest) {
     if (!safetyCheck.isSafe) {
       return NextResponse.json({
         success: true,
-        response: `🚫 **Limitation de contenu**\n\nJe suis strictement limité aux domaines de **santé-sécurité au travail**. ${safetyCheck.reason}\n\n**Je peux vous aider avec :**\n• Normes et conformité provinciales\n• AST et permis de travail\n• Procédures de sécurité\n• Utilisation de la plateforme C-SECUR360\n\nComment puis-je vous assister dans ces domaines?`,
+        response: `**Limitation de contenu**\n\nJe suis strictement limité aux domaines de **santé-sécurité au travail**. ${safetyCheck.reason}\n\n**Je peux vous aider avec :**\n• Normes et conformité provinciales\n• AST et permis de travail\n• Procédures de sécurité\n• Utilisation de la plateforme C-SECUR360\n\nComment puis-je vous assister dans ces domaines?`,
         suggestions: safetyCheck.suggestions || [
           "Questions sur les AST",
           "Normes provinciales",
@@ -434,7 +434,7 @@ export async function POST(request: NextRequest) {
     
     // Si question sur conformité provinciale spécifique
     if (safetyCheck.domain === 'compliance' || safetyCheck.domain === 'provincial_standards') {
-      response += "\n\n⚖️ **Note légale :** Ces informations sont fournies à titre indicatif. Consultez toujours les textes réglementaires officiels et votre service de sécurité.";
+      response += "\n\n**Note légale :** Ces informations sont fournies à titre indicatif. Consultez toujours les textes réglementaires officiels et votre service de sécurité.";
     }
     
     return NextResponse.json({
@@ -451,7 +451,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true, // Toujours success pour éviter les erreurs côté client
-      response: "🔧 **Erreur technique temporaire**\n\nJe rencontre des difficultés techniques. Veuillez réessayer dans un moment.\n\nEn attendant, vous pouvez :\n• Consulter la documentation intégrée\n• Contacter le support technique\n• Utiliser les ressources d'aide contextuelle",
+      response: "**Erreur technique temporaire**\n\nJe rencontre des difficultés techniques. Veuillez réessayer dans un moment.\n\nEn attendant, vous pouvez :\n• Consulter la documentation intégrée\n• Contacter le support technique\n• Utiliser les ressources d'aide contextuelle",
       suggestions: [
         "Réessayer la question",
         "Consulter l'aide contextuelle",

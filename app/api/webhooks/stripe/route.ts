@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 // === HANDLERS D'ÉVÉNEMENTS ===
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log('🎉 Checkout complété:', session.id);
+  console.log('Checkout complété:', session.id);
 
   // === Connect : paiement d'une FACTURE de tenant (Commerce) ===
   // La session a été créée avec metadata.kind = 'commerce_invoice' (route /api/stripe/connect/pay).
@@ -108,7 +108,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         await supabase.from('commerce_invoices')
           .update({ stripe_payment_intent: (session.payment_intent as string) || null })
           .eq('id', invoiceId).eq('tenant_id', tenant);
-        console.log(`✅ Facture ${invoiceId} (${tenant}) payée via Stripe Connect.`);
+        console.log(`Facture ${invoiceId} (${tenant}) payée via Stripe Connect.`);
       } catch (error) {
         console.error('Erreur paiement facture Connect:', error);
       }
@@ -165,7 +165,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  console.log('💳 Facture payée:', invoice.id);
+  console.log('Facture payée:', invoice.id);
   
   try {
     // Enregistrer la facture
@@ -212,7 +212,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  console.log('❌ Échec paiement facture:', invoice.id);
+  console.log('Échec paiement facture:', invoice.id);
   
   try {
     // Enregistrer l'échec de paiement
@@ -262,7 +262,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  console.log('🆕 Abonnement créé:', subscription.id);
+  console.log('Abonnement créé:', subscription.id);
   
   try {
     // Créer l'enregistrement d'abonnement
@@ -288,7 +288,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('🔄 Abonnement mis à jour:', subscription.id);
+  console.log('Abonnement mis à jour:', subscription.id);
   
   try {
     await supabase
@@ -316,7 +316,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('🗑️ Abonnement supprimé:', subscription.id);
+  console.log('Abonnement supprimé:', subscription.id);
   
   try {
     await supabase
@@ -344,7 +344,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 // Suivi de l'onboarding Connect d'un tenant : active l'encaissement quand Stripe confirme charges_enabled.
 async function handleAccountUpdated(account: Stripe.Account) {
-  console.log('🔗 Compte Connect mis à jour:', account.id, 'charges_enabled=', account.charges_enabled);
+  console.log('Compte Connect mis à jour:', account.id, 'charges_enabled=', account.charges_enabled);
   try {
     await supabase
       .from('company_settings')
@@ -356,7 +356,7 @@ async function handleAccountUpdated(account: Stripe.Account) {
 }
 
 async function handleMandateUpdated(mandate: Stripe.Mandate) {
-  console.log('📝 Mandat PAD mis à jour:', mandate.id);
+  console.log('Mandat PAD mis à jour:', mandate.id);
   
   try {
     // Enregistrer l'état du mandat PAD/ACSS

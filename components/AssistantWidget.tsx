@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import type { PointerEvent as ReactPointerEvent, CSSProperties } from 'react';
 import { scopeForModule } from '@/lib/norms/registry';
+import { MessageCircle, Send } from 'lucide-react';
 
 // Assistant TENANT (dashboard). Ne s'affiche que pour un utilisateur connecté.
 // Envoie le token Bearer de la session Supabase (le cookie de session sert de repli côté serveur).
@@ -199,7 +200,7 @@ export function AssistantWidget() {
         style={pos ? { left: pos.x, top: pos.y, touchAction: 'none' } : { right: 20, bottom: 20, touchAction: 'none' }}
         className="fixed z-[60] grid h-14 w-14 cursor-grab touch-none select-none place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a] active:cursor-grabbing"
       >
-        {open ? '×' : '💬'}
+        {open ? '×' : <MessageCircle size={22} />}
       </button>
 
       {open && (
@@ -212,8 +213,8 @@ export function AssistantWidget() {
               <span className="ml-auto h-2 w-2 rounded-full bg-orange-500" aria-hidden />
             </div>
             <div className="mt-2 flex gap-1">
-              <button onClick={() => setMode('chat')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${mode === 'chat' ? 'bg-white text-[#0D1F3C]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}>💬 Assistant</button>
-              <button onClick={() => setMode('norms')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${mode === 'norms' ? 'bg-white text-[#0D1F3C]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}>📋 Normes à jour</button>
+              <button onClick={() => setMode('chat')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${mode === 'chat' ? 'bg-white text-[#0D1F3C]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}>Assistant</button>
+              <button onClick={() => setMode('norms')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${mode === 'norms' ? 'bg-white text-[#0D1F3C]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}>Normes à jour</button>
             </div>
           </div>
 
@@ -260,7 +261,7 @@ export function AssistantWidget() {
           <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
             {messages.length === 0 && (
               <div className="space-y-2">
-                <p className="text-gray-600">Bonjour ! Je peux vous aider à utiliser la plateforme. Je ne vois aucune donnée de votre organisation. 🔒</p>
+                <p className="text-gray-600">Bonjour ! Je peux vous aider à utiliser la plateforme. Je ne vois aucune donnée de votre organisation.</p>
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-orange-400">
                     {s}
@@ -287,7 +288,7 @@ export function AssistantWidget() {
               placeholder={mode === 'norms' ? 'Préciser (facultatif) puis Entrée…' : 'Votre question…'}
               className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
-            <button type="submit" disabled={mode === 'norms' ? normsLoading : (loading || !input.trim())} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40">➤</button>
+            <button type="submit" disabled={mode === 'norms' ? normsLoading : (loading || !input.trim())} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40" aria-label="Envoyer"><Send size={16} /></button>
           </form>
           <p className="px-3 pb-2 text-[10px] leading-tight text-gray-400">{mode === 'norms' ? 'Normes indicatives à jour au mieux de la recherche — la source officielle prévaut.' : 'Assistant informatif — ne voit aucune donnée réelle. Validez toute décision de sécurité avec votre responsable HSE/SST.'}</p>
         </div>

@@ -56,12 +56,12 @@ export async function audit(
       .insert([auditEntry]);
 
     if (error) {
-      console.error("❌ Audit log failed:", error);
+      console.error("Audit log failed:", error);
     } else {
-      console.log(`📝 Audit logged: ${area}.${action} by ${actor}`);
+      console.log(`Audit logged: ${area}.${action} by ${actor}`);
     }
   } catch (error) {
-    console.error("❌ Audit error:", error);
+    console.error("Audit error:", error);
   }
 }
 
@@ -145,13 +145,13 @@ export async function getAuditLogs(
     const { data, error } = await query;
 
     if (error) {
-      console.error("❌ Failed to fetch audit logs:", error);
+      console.error("Failed to fetch audit logs:", error);
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error("❌ Audit logs fetch error:", error);
+    console.error("Audit logs fetch error:", error);
     return [];
   }
 }

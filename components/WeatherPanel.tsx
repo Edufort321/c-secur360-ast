@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CloudLightning } from 'lucide-react';
 
 // Panneau meteo reutilisable (planificateur + AST). Interroge /api/weather (cle cote serveur).
 // Affiche la meteo courante, une prevision pour une date optionnelle, et une ALERTE ORAGE proeminente.
@@ -33,7 +34,7 @@ export function WeatherPanel({ location, date, className = '' }: { location?: st
   }, [location, date]);
 
   if (!location || !location.trim()) return null;
-  if (loading) return <div className={`text-xs text-gray-400 ${className}`}>🌤️ Météo…</div>;
+  if (loading) return <div className={`text-xs text-gray-400 ${className}`}>Météo…</div>;
   if (!data || !data.available || !data.current) return null; // silencieux si indisponible
 
   const icon = (code: string | null) => (code ? `https://openweathermap.org/img/wn/${code}@2x.png` : null);
@@ -43,7 +44,7 @@ export function WeatherPanel({ location, date, className = '' }: { location?: st
     <div className={`rounded-lg border border-gray-200 bg-gradient-to-br from-sky-50 to-white p-3 ${className}`}>
       {storm.length > 0 && (
         <div className="mb-2 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-800">
-          <span className="text-lg leading-none">⛈️</span>
+          <CloudLightning size={18} className="shrink-0" />
           <div className="text-xs">
             <div className="font-bold">Alerte orage</div>
             <div>{storm[0].when === 'maintenant' ? 'Orage en cours sur le lieu des travaux.' : `Orage prévu : ${storm[0].when}.`}</div>
@@ -62,7 +63,7 @@ export function WeatherPanel({ location, date, className = '' }: { location?: st
             <span className="ml-1 font-normal text-gray-500">(ressenti {data.current.feels}°C)</span>
           </div>
           <div className="capitalize text-gray-600">{data.current.description}</div>
-          <div className="text-xs text-gray-500">💨 {data.current.wind} km/h{data.current.humidity != null ? ` · 💧 ${data.current.humidity}%` : ''}</div>
+          <div className="text-xs text-gray-500">Vent {data.current.wind} km/h{data.current.humidity != null ? ` · Humidité ${data.current.humidity}%` : ''}</div>
         </div>
       </div>
       {data.dayForecast && (
@@ -73,7 +74,7 @@ export function WeatherPanel({ location, date, className = '' }: { location?: st
           )}
           <span>
             <b>{data.dayForecast.date}</b> : {data.dayForecast.tempMin}° / {data.dayForecast.tempMax}°C · <span className="capitalize">{data.dayForecast.description}</span>
-            {data.dayForecast.storm && <span className="ml-1 font-semibold text-amber-700">⛈️ orage</span>}
+            {data.dayForecast.storm && <span className="ml-1 font-semibold text-amber-700">orage</span>}
           </span>
         </div>
       )}

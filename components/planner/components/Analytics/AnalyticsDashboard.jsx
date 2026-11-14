@@ -381,7 +381,7 @@ export function AnalyticsDashboard({
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            📊 Dashboard Analytique
+                            Dashboard Analytique
                         </h2>
                         <p className="text-gray-600 dark:text-gray-300">
                             Analyse de performance et achalandage - {filterBureau === 'tous' ? 'Tous les bureaux' : filterBureau}
@@ -404,10 +404,10 @@ export function AnalyticsDashboard({
                 {/* Onglets */}
                 <div className="flex border-b mt-4">
                     {[
-                        { id: 'performance', label: '📈 Performance', icon: 'barChart' },
-                        { id: 'achalandage', label: '📊 Achalandage', icon: 'users' },
-                        { id: 'comparatif', label: '🏢 Comparatif', icon: 'building' },
-                        { id: 'individuel', label: '👤 Analyse Individuelle', icon: 'user' }
+                        { id: 'performance', label: 'Performance', icon: 'barChart' },
+                        { id: 'achalandage', label: 'Achalandage', icon: 'users' },
+                        { id: 'comparatif', label: 'Comparatif', icon: 'building' },
+                        { id: 'individuel', label: 'Analyse Individuelle', icon: 'user' }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -495,7 +495,7 @@ export function AnalyticsDashboard({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Performance — timeline composee (evenements + travailleurs actifs + occupation %) */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 lg:col-span-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">📈 Performance (30 derniers jours)</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Performance (30 derniers jours)</h3>
                         <ResponsiveContainer width="100%" height={320}>
                             <ComposedChart data={analyticsData.tendances}>
                                 <defs>
@@ -523,7 +523,7 @@ export function AnalyticsDashboard({
 
                     {/* Répartition par statut */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">📊 Répartition par Statut</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Répartition par Statut</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
@@ -549,7 +549,7 @@ export function AnalyticsDashboard({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Heures par jour */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">⏰ Heures par Jour</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Heures par Jour</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <AreaChart data={analyticsData.tendances}>
                                 <defs>
@@ -569,7 +569,7 @@ export function AnalyticsDashboard({
 
                     {/* Répartition par priorité */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🚨 Répartition par Priorité</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Répartition par Priorité</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
@@ -597,7 +597,7 @@ export function AnalyticsDashboard({
                 <div className="space-y-6">
                     {/* Comparatif par bureau */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🏢 Performance par Bureau</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Performance par Bureau</h3>
                         <ResponsiveContainer width="100%" height={400}>
                             <BarChart data={analyticsData.repartitionBureau}>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -615,7 +615,7 @@ export function AnalyticsDashboard({
                     {/* Tableau détaillé */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📊 Détails par Bureau</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Détails par Bureau</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
@@ -671,7 +671,7 @@ export function AnalyticsDashboard({
                 <div className="space-y-6">
                     {/* Sélecteurs pour l'analyse individuelle */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">👤 Sélection pour Analyse Individuelle</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sélection pour Analyse Individuelle</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Type d'analyse */}
                             <div>
@@ -784,7 +784,7 @@ export function AnalyticsDashboard({
                                 {/* Tendances individuelles */}
                                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                        📈 Tendances - {analyseIndividuelle.nom}
+                                        Tendances - {analyseIndividuelle.nom}
                                     </h3>
                                     <ResponsiveContainer width="100%" height={300}>
                                         <LineChart data={analyseIndividuelle.tendances}>
@@ -801,7 +801,7 @@ export function AnalyticsDashboard({
                                 {/* Répartition des statuts individuels */}
                                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                        📊 Répartition par Statut - {analyseIndividuelle.nom}
+                                        Répartition par Statut - {analyseIndividuelle.nom}
                                     </h3>
                                     {analyseIndividuelle.repartitionStatut.length > 0 ? (
                                         <ResponsiveContainer width="100%" height={300}>
@@ -835,7 +835,7 @@ export function AnalyticsDashboard({
                             {/* Détails des événements */}
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                    📋 Événements Assignés - {analyseIndividuelle.nom}
+                                    Événements Assignés - {analyseIndividuelle.nom}
                                 </h3>
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">

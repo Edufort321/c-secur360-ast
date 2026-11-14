@@ -4,7 +4,7 @@ import ModernPermitForm from '@/components/permits/ModernPermitForm';
 // Travail sous pression (CSA B51) — dépressurisation/isolement, purge à zéro, essai hydro privilégié.
 export default function Page() {
   return <ModernPermitForm config={{
-    type: 'pressure', title: '⚙ Permis — travail sous pression', color: 'text-slate-700', btn: 'bg-slate-700 hover:bg-slate-800', prefix: 'PR',
+    type: 'pressure', title: 'Permis — travail sous pression', color: 'text-slate-700', btn: 'bg-slate-700 hover:bg-slate-800', prefix: 'PR',
     intro: 'CSA B51 — dépressurisation/isolement (voir LOTO), purge de l’énergie résiduelle à zéro, essai hydrostatique privilégié au pneumatique.',
     sections: [{
       title: 'Mise en sécurité', fields: [

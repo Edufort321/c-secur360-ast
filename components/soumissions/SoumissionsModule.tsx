@@ -327,7 +327,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     const scat = catalogues.find(c => c.id === s.catalogue_id) || cat;
     const reqLevel = approvalForAmount(scat, Number(s.total) || 0);
     if (reqLevel && !(s as any).approved_by) {
-      setNotice(tr(`⛔ Approbation de niveau requise avant d'accepter (${reqLevel.level_name}${reqLevel.approver_label ? ' — ' + reqLevel.approver_label : ''}). Ouvre la soumission, fais approuver, puis enregistre.`, `⛔ Level approval required before accepting (${reqLevel.level_name}). Open the quote, get it approved, then save.`));
+      setNotice(tr(`Approbation de niveau requise avant d'accepter (${reqLevel.level_name}${reqLevel.approver_label ? ' — ' + reqLevel.approver_label : ''}). Ouvre la soumission, fais approuver, puis enregistre.`, `Level approval required before accepting (${reqLevel.level_name}). Open the quote, get it approved, then save.`));
       return;
     }
     try { const r = await accepterSoumission(tenant, s.id!); setNotice(tr(`Soumission acceptée → projet ${r.projectNumber} créé/mis à jour.${r.commission ? ' Commission : ' + r.commission : ''}`, `Quote accepted → project ${r.projectNumber}.${r.commission ? ' Commission: ' + r.commission : ''}`)); await load(); }
@@ -577,7 +577,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {/* Restauration d'un catalogue EN COURS perdu (refresh / pause) */}
           {catDraftAvail && !catForm && canEdit && (() => { const d = readDraft<CatalogueTaux>(CAT_DRAFT_KEY); if (!d) return null; return (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
-              <span className="font-semibold text-amber-800 dark:text-amber-200">💾 {tr('Brouillon de catalogue non enregistré retrouvé', 'Unsaved catalogue draft found')}{d.name ? ` — « ${d.name} »` : ''}</span>
+              <span className="font-semibold text-amber-800 dark:text-amber-200">{tr('Brouillon de catalogue non enregistré retrouvé', 'Unsaved catalogue draft found')}{d.name ? ` — « ${d.name} »` : ''}</span>
               <span className="flex gap-2">
                 <button onClick={() => { setCatForm(d); setCatDraftAvail(false); }} className="rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700">{tr('Restaurer', 'Restore')}</button>
                 <button onClick={() => { clearDraft(CAT_DRAFT_KEY); setCatDraftAvail(false); }} className="rounded-lg border border-amber-300 px-3 py-1 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-300">{tr('Ignorer', 'Discard')}</button>
@@ -595,7 +595,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             const inp = 'w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700';
             return (
               <details className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                <summary className="cursor-pointer text-sm font-bold text-gray-700 dark:text-gray-200">⚙️ {tr('Paramètres de présentation (lettre + conditions)', 'Presentation settings (cover letter + terms)')}</summary>
+                <summary className="cursor-pointer text-sm font-bold text-gray-700 dark:text-gray-200">{tr('Paramètres de présentation (lettre + conditions)', 'Presentation settings (cover letter + terms)')}</summary>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Ville (lettre)', 'City (letter)')}<input className={`mt-1 ${inp}`} value={cl.ville || ''} onChange={e => setCL({ ville: e.target.value })} placeholder="Sherbrooke" /></label>
                   <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Signataire — nom', 'Signatory — name')}<input className={`mt-1 ${inp}`} value={cl.signataire_nom || ''} onChange={e => setCL({ signataire_nom: e.target.value })} /></label>
@@ -611,7 +611,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('Salutation', 'Closing')}<input className={`mt-1 ${inp}`} value={cl.salutation || ''} onChange={e => setCL({ salutation: e.target.value })} /></label>
                 <label className="mt-2 block text-xs text-gray-600 dark:text-gray-300">{tr('URL signature (image, optionnel)', 'Signature image URL (optional)')}<input className={`mt-1 ${inp}`} value={cl.signature_url || ''} onChange={e => setCL({ signature_url: e.target.value })} /></label>
 
-                <div className="mt-4 mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">📑 {tr('Conditions et modalités (cochables à l\'export)', 'Terms & conditions (selectable at export)')}</div>
+                <div className="mt-4 mb-1 text-xs font-bold text-gray-600 dark:text-gray-300">{tr('Conditions et modalités (cochables à l\'export)', 'Terms & conditions (selectable at export)')}</div>
                 <div className="space-y-2">
                   {conds.map((c, i) => (
                     <div key={c.id} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
@@ -682,7 +682,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
                 {/* Main-d'œuvre (-> sections MO bureau / MO chantier) */}
                 <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
-                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">👷 {tr("Main-d'œuvre", 'Labor')}</div>
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">{tr("Main-d'œuvre", 'Labor')}</div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {rateField('mo_bureau', tr('Taux MO bureau ($/h)', 'Office labor ($/h)'), cf.taux_mo_bureau, v => setCatForm({ ...cf, taux_mo_bureau: v }))}
                     {rateField('mo_chantier', tr('Taux MO chantier ($/h)', 'Field labor ($/h)'), cf.taux_mo_chantier, v => setCatForm({ ...cf, taux_mo_chantier: v }))}
@@ -693,7 +693,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
                 {/* Voyagement (-> section Voyagement) */}
                 <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
-                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">🚚 {tr('Voyagement', 'Travel')}</div>
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">{tr('Voyagement', 'Travel')}</div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {rateField('km', tr('Kilométrage ($/km)', 'Mileage ($/km)'), cf.extras?.km || 0, v => setExtra('km', v))}
                   </div>
@@ -701,7 +701,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
                 {/* Subsistance (-> section Subsistance) */}
                 <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
-                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">🍽️ {tr('Subsistance', 'Per diem')}</div>
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">{tr('Subsistance', 'Per diem')}</div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {rateField('sub_h5', tr('Subsistance 5h ($)', 'Per diem 5h ($)'), cf.extras?.sub_h5 || 0, v => setExtra('sub_h5', v))}
                     {rateField('sub_h12', tr('Subsistance 12h ($)', 'Per diem 12h ($)'), cf.extras?.sub_h12 || 0, v => setExtra('sub_h12', v))}
@@ -712,7 +712,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
                 {/* Hébergement (-> section Hébergement) */}
                 <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
-                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">🏨 {tr('Hébergement', 'Lodging')}</div>
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">{tr('Hébergement', 'Lodging')}</div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {rateField('hebergement', tr('Hébergement ($/nuit)', 'Lodging ($/night)'), cf.extras?.hebergement || 0, v => setExtra('hebergement', v))}
                   </div>
@@ -721,7 +721,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 {/* Barèmes additionnels libres — classés par catégorie (s'injectent dans la bonne section de soumission) */}
                 <div className="rounded-lg border border-dashed border-gray-200 p-2 dark:border-gray-700">
                   <div className="mb-1 flex items-center justify-between">
-                    <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">➕ {tr('Barèmes additionnels (autres taux)', 'Additional rates (other)')}</div>
+                    <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">{tr('Barèmes additionnels (autres taux)', 'Additional rates (other)')}</div>
                     <button type="button" onClick={() => addList('custom_rates', { label: '', value: 0, categorie: 'mo_chantier' })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Barème', 'Rate')}</button>
                   </div>
                   {(cf.custom_rates || []).length > 0 && (
@@ -902,7 +902,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {/* Restauration d'une soumission EN COURS perdue (refresh / pause) */}
           {soumDraftAvail && canEdit && (() => { const d = readDraft<{ hdr: Soumission; items: SoumissionItem[]; clientName: string }>(SOUM_DRAFT_KEY); if (!d?.hdr) return null; return (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
-              <span className="font-semibold text-amber-800 dark:text-amber-200">💾 {tr('Brouillon de soumission non enregistré retrouvé', 'Unsaved quote draft found')}</span>
+              <span className="font-semibold text-amber-800 dark:text-amber-200">{tr('Brouillon de soumission non enregistré retrouvé', 'Unsaved quote draft found')}</span>
               <span className="flex gap-2">
                 <button onClick={() => { setHdr(d.hdr); setItems(d.items?.length ? d.items : items); setClientName(d.clientName || ''); setSoumDraftAvail(false); }} className="rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700">{tr('Restaurer', 'Restore')}</button>
                 <button onClick={() => { clearDraft(SOUM_DRAFT_KEY); setSoumDraftAvail(false); }} className="rounded-lg border border-amber-300 px-3 py-1 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-300">{tr('Ignorer', 'Discard')}</button>
@@ -912,18 +912,18 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {/* Soumission ACCEPTÉE = figée (telle qu'envoyée). On verrouille l'enregistrement. */}
           {hdr.status === 'accepted' && (
             <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
-              🔒 {tr('Soumission acceptée — figée telle qu\'envoyée (lecture seule). Pour modifier, créez une révision.', 'Quote accepted — frozen as sent (read-only). To change it, create a revision.')}
+              {tr('Soumission acceptée — figée telle qu\'envoyée (lecture seule). Pour modifier, créez une révision.', 'Quote accepted — frozen as sent (read-only). To change it, create a revision.')}
             </div>
           )}
           {/* Gabarits de soumission : charger une structure récurrente (on n'ajuste que les prix) / enregistrer la courante */}
           {canEdit && (
             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm dark:border-indigo-800 dark:bg-indigo-900/20">
-              <span className="font-bold text-gray-700 dark:text-gray-200">🧩 {tr('Gabarits', 'Templates')}</span>
+              <span className="font-bold text-gray-700 dark:text-gray-200">{tr('Gabarits', 'Templates')}</span>
               <select value="" onChange={e => { const t = templates.find(x => x.id === e.target.value); if (t) applyTemplate(t); }} className={`${inputCls} max-w-[16rem]`}>
                 <option value="">{templates.length ? tr('— Charger un gabarit —', '— Load a template —') : tr('(aucun gabarit)', '(no template)')}</option>
                 {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-              <button type="button" onClick={saveAsTemplate} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-white dark:border-gray-600 dark:text-gray-300">💾 {tr('Enregistrer comme gabarit', 'Save as template')}</button>
+              <button type="button" onClick={saveAsTemplate} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-white dark:border-gray-600 dark:text-gray-300">{tr('Enregistrer comme gabarit', 'Save as template')}</button>
               {templates.length > 0 && (
                 <span className="flex flex-wrap items-center gap-1 text-[11px] text-gray-400">
                   {templates.map(t => <button key={t.id} type="button" onClick={() => removeTemplate(t.id)} className="inline-flex items-center gap-0.5 rounded border border-gray-200 px-1.5 py-0.5 hover:text-red-600 dark:border-gray-700" title={tr('Supprimer', 'Delete')}>{t.name} <Trash2 size={10} /></button>)}
@@ -992,10 +992,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               {/* Note : la récurrence des taux passe par le Catalogue des prix (Admin → Catalogue de taux). */}
               <div className={`sm:col-span-2 rounded-lg border px-3 py-2 text-xs ${catalogues.length === 0 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200' : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200'}`}>
                 {catalogues.length === 0
-                  ? tr('⚠️ Aucun catalogue de taux. Créez votre liste de taux horaires et le détail des coûts dans Admin → « Catalogue de taux ». Vous pouvez saisir des montants manuellement ci-dessous, mais pour des taux récurrents et cohérents d’une soumission à l’autre, passez par le Catalogue des prix.',
-                       '⚠️ No rate catalogue. Create your hourly-rate list and cost details in Admin → “Rate catalogue”. You can enter amounts manually below, but for recurring, consistent rates across quotes, use the price Catalogue.')
-                  : tr('💡 Les taux et coûts proviennent du Catalogue de taux (Admin). La saisie manuelle reste possible, mais la récurrence (taux standards) doit passer par le Catalogue des prix.',
-                       '💡 Rates and costs come from the Rate catalogue (Admin). Manual entry stays possible, but recurring (standard) rates should go through the price Catalogue.')}
+                  ? tr('⚠ Aucun catalogue de taux. Créez votre liste de taux horaires et le détail des coûts dans Admin → « Catalogue de taux ». Vous pouvez saisir des montants manuellement ci-dessous, mais pour des taux récurrents et cohérents d’une soumission à l’autre, passez par le Catalogue des prix.',
+                       '⚠ No rate catalogue. Create your hourly-rate list and cost details in Admin → “Rate catalogue”. You can enter amounts manually below, but for recurring, consistent rates across quotes, use the price Catalogue.')
+                  : tr('Les taux et coûts proviennent du Catalogue de taux (Admin). La saisie manuelle reste possible, mais la récurrence (taux standards) doit passer par le Catalogue des prix.',
+                       'Rates and costs come from the Rate catalogue (Admin). Manual entry stays possible, but recurring (standard) rates should go through the price Catalogue.')}
               </div>
               <label className="text-xs font-semibold text-gray-500">{tr('Statut de suivi', 'Tracking status')}
                 <select value={hdr.status || 'draft'} onChange={e => setHdr(h => ({ ...h, status: e.target.value as any }))} className={`mt-1 w-full ${inputCls}`}>
@@ -1027,7 +1027,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
           {/* Navigation : Sommaire + un onglet par item + « + Item » (chaque item = sa page) */}
           <div className="flex flex-wrap items-center gap-1 overflow-x-auto border-b border-gray-200 pb-2 dark:border-gray-700">
-            <button type="button" onClick={() => setTab('sommaire')} className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === 'sommaire' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>📋 {tr('Sommaire', 'Summary')}</button>
+            <button type="button" onClick={() => setTab('sommaire')} className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === 'sommaire' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{tr('Sommaire', 'Summary')}</button>
             {items.map((it, i) => (
               <button key={i} type="button" onClick={() => setTab(i)} className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === i ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{it.name || `Item ${i + 1}`}</button>
             ))}
@@ -1063,7 +1063,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 {/* Marge / balance ($) — rouge si négative (total final sous le coût) : « à réattribuer ». */}
                 <span className={`rounded-lg px-2 py-1 text-xs font-bold ${marginNeg ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}
                   title={tr('Marge = total final − (heures + frais + matériel). Négative = sous le coût, à réattribuer.', 'Margin = final total − (hours + costs + materials). Negative = below cost, reallocate.')}>
-                  {marginNeg ? '⚠️ ' : ''}{tr('Marge', 'Margin')} : {mny(marginAmt)}{marginNeg ? ` — ${tr('à réattribuer', 'reallocate')}` : ''}
+                  {marginNeg ? '⚠ ' : ''}{tr('Marge', 'Margin')} : {mny(marginAmt)}{marginNeg ? ` — ${tr('à réattribuer', 'reallocate')}` : ''}
                 </span>
                 {hasOverride && <button type="button" onClick={() => setHdr(h => ({ ...h, final_override: null }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700" title={tr('Revenir au calcul par % (retirer le prix cible)', 'Back to %-driven (clear target price)')}>↺ {tr('Prix cible', 'Target price')}</button>}
                 <span className="ml-auto text-[11px] text-gray-400">{tr('Total final éditable — le % se déduit ; rouge si sous le coût.', 'Final total editable — % is derived; red if below cost.')}</span>
@@ -1107,7 +1107,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             const nuitees = resPeople * (Number(planDays) || 0);
             return (
               <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
-                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">{tr('Calculateur de ressources', 'Resource calculator')}</div>
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
                   <label className="text-xs font-semibold text-gray-500">{tr('Heures / quart', 'Hours / shift')}<input type="number" min={1} max={12} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
@@ -1130,7 +1130,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 </div>
                 {plan2424 && pChantier > 0 && (
                   <div className="mt-2 rounded-lg bg-indigo-100/60 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                    🕐 {tr('24/24', '24/7')} : {pChantier} {tr('personnes au total réparties sur', 'people total across')} {shifts} {tr('quarts', 'shifts')} → ≈ {perShift} {tr('personnes / quart', 'people / shift')}.
+                    {tr('24/24', '24/7')} : {pChantier} {tr('personnes au total réparties sur', 'people total across')} {shifts} {tr('quarts', 'shifts')} → ≈ {perShift} {tr('personnes / quart', 'people / shift')}.
                   </div>
                 )}
                 <p className="mt-2 text-[11px] text-gray-400">{tr('Personnes (total) = heures ÷ (jours × heures par QUART). Le total sert aux véhicules/subsistances/hébergement ; en 24/24 il se répartit sur les quarts (≈ personnes/quart).', 'People (total) = hours ÷ (days × hours per SHIFT). Total feeds vehicles/meals/lodging; with 24/7 it splits across shifts (≈ people/shift).')}</p>
@@ -1147,7 +1147,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             return (
               <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm font-bold">👥 {tr('Vendeurs & approbation', 'Sellers & approval')}</span>
+                  <span className="text-sm font-bold">{tr('Vendeurs & approbation', 'Sellers & approval')}</span>
                   {editAppr && <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: (editAppr.color || '#64748b') + '22', color: editAppr.color || '#64748b' }}>{tr('Niveau requis', 'Required level')} : {editAppr.level_name}{editAppr.approver_label ? ` (${editAppr.approver_label})` : ''}</span>}
                 </div>
 
@@ -1177,14 +1177,14 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
                     {hdr.approved_by ? (
                       <>
-                        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✅ {tr('Approuvée par', 'Approved by')} {approverName}{hdr.approved_at ? ` · ${String(hdr.approved_at).slice(0, 10)}` : ''}</span>
+                        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✓ {tr('Approuvée par', 'Approved by')} {approverName}{hdr.approved_at ? ` · ${String(hdr.approved_at).slice(0, 10)}` : ''}</span>
                         <button type="button" onClick={() => setHdr(h => ({ ...h, approved_by: null, approved_at: null }))} className="text-xs text-gray-400 hover:underline">{tr('Retirer', 'Remove')}</button>
                       </>
                     ) : canApprove ? (
                       <button type="button" onClick={() => { setHdr(h => ({ ...h, approved_by: meId, approved_at: new Date().toISOString() })); setNotice(tr('Approuvée — enregistre pour confirmer.', 'Approved — save to confirm.')); }}
                         className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">✓ {tr('Approuver', 'Approve')}</button>
                     ) : (
-                      <span className="text-xs font-semibold text-amber-600">⛔ {tr('Au-dessus de ton plafond d\'approbation', 'Above your approval limit')}{meApprovalMax ? ` (${mny(meApprovalMax)})` : ''} — {tr('escalade requise', 'escalation required')}</span>
+                      <span className="text-xs font-semibold text-amber-600">{tr('Au-dessus de ton plafond d\'approbation', 'Above your approval limit')}{meApprovalMax ? ` (${mny(meApprovalMax)})` : ''} — {tr('escalade requise', 'escalation required')}</span>
                     )}
                     <button type="button" onClick={() => { const n = window.prompt(tr('Note de révision :', 'Revision note:'), hdr.approval_note || ''); if (n != null) { setHdr(h => ({ ...h, approval_note: n, status: 'draft', approved_by: null, approved_at: null })); setNotice(tr('Révision demandée — enregistre.', 'Revision requested — save.')); } }}
                       className="rounded-lg border border-amber-300 px-3 py-1.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-700">✎ {tr('Demander une révision', 'Request revision')}</button>
@@ -1235,13 +1235,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {/* Export PDF (façon DGA : cases à cocher) + partage par lien — onglet Sommaire */}
           {tab === 'sommaire' && (
             <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <div className="mb-2 text-sm font-bold">📄 {tr('Export PDF / partage', 'PDF export / share')}</div>
+              <div className="mb-2 text-sm font-bold">{tr('Export PDF / partage', 'PDF export / share')}</div>
               <p className="mb-3 text-xs text-gray-500">{tr('Toutes les options d’export (sections, ventilation, lettre, conditions, pièces jointes) sont dans le bouton « Exporter (PDF — rapport) ».', 'All export options (sections, breakdown, letter, terms, attachments) are inside the “Export (PDF — report)” button.')}</p>
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => setShowPrint(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">📄 {tr('Exporter (PDF — rapport)', 'Export (PDF — report)')}</button>
+                <button type="button" onClick={() => setShowPrint(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">{tr('Exporter (PDF — rapport)', 'Export (PDF — report)')}</button>
                 <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-300">{pdfBusy ? '…' : tr('PDF simple (jsPDF)', 'Simple PDF (jsPDF)')}</button>
-                {hdr.id && <button type="button" onClick={transmitForApproval} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">✍️ {tr('Transmettre au client (approbation)', 'Send to client (approval)')}</button>}
-                {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">🔗 {tr('Copier le lien', 'Copy link')}</button>}
+                {hdr.id && <button type="button" onClick={transmitForApproval} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Transmettre au client (approbation)', 'Send to client (approval)')}</button>}
+                {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">{tr('Copier le lien', 'Copy link')}</button>}
               </div>
             </div>
           )}
@@ -1275,7 +1275,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 {/* Lettre de présentation : destinataire + préparé par + date (si section cover) */}
                 {printSections.cover && (
                   <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
-                    <div className="mb-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">✉️ {tr('Lettre de présentation', 'Cover letter')}</div>
+                    <div className="mb-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">{tr('Lettre de présentation', 'Cover letter')}</div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="text-xs text-gray-600 dark:text-gray-300">{tr('Destinataire (nom)', 'Recipient (name)')}
                         <input value={coverTo} onChange={e => setCoverTo(e.target.value)} placeholder={tr('Ex. Mme Marie-Ève Bédard', 'E.g. Ms. Marie-Ève Bédard')} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700" />
@@ -1478,7 +1478,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-500">{soumissions.length} {tr('soumission(s)', 'quote(s)')}</span>
             <div className="flex items-center gap-2">
-              {soumissions.length > 0 && <button onClick={exportListCsv} title={tr('Exporter la liste en CSV', 'Export the list to CSV')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">⬇️ {tr('CSV', 'CSV')}</button>}
+              {soumissions.length > 0 && <button onClick={exportListCsv} title={tr('Exporter la liste en CSV', 'Export the list to CSV')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">{tr('CSV', 'CSV')}</button>}
               <div className="flex items-center rounded-lg border border-gray-200 p-0.5 text-xs dark:border-gray-600">
                 <button onClick={() => setListView('grid')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Grille', 'Grid')}</button>
                 <button onClick={() => setListView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
@@ -1496,7 +1496,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 const ri = relanceInfo(s);
                 const hours = Number(s.total_hours) || 0;
                 const statusBadge = <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[s.status]}`}>{STATUS[s.status]}</span>;
-                const relanceBadge = ri.needsRelance ? <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300">⏰ {tr('Relance requise', 'Follow-up due')} ({ri.sinceSentDays} j)</span> : null;
+                const relanceBadge = ri.needsRelance ? <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300">{tr('Relance requise', 'Follow-up due')} ({ri.sinceSentDays} j)</span> : null;
                 const apprBadge = appr ? <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: (appr.color || '#64748b') + '22', color: appr.color || '#64748b' }} title={tr('Niveau d\'approbation', 'Approval level')}>✓ {appr.level_name}</span> : null;
                 const actions = canEdit && (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">

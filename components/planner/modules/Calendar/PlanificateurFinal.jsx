@@ -5,6 +5,7 @@ import { JobModal } from '../NewJob/JobModal';
 import { AnalyticsDashboard } from '../../components/Analytics/AnalyticsDashboard';
 import { BUREAU_COLORS } from '@/components/planner/config/constants.js';
 import { useLanguage } from '../../contexts/LanguageContext.jsx';
+import { Plus, Search, Building2, Briefcase, Eye, ClipboardList, Zap, Hourglass, PauseCircle } from 'lucide-react';
 import {
     generateLocalizedDays,
     formatLocalizedDate,
@@ -186,7 +187,7 @@ export function PlanificateurFinal({
     // Fonction pour afficher la date complète lors du double-clic
     const handleDateDoubleClick = (date) => {
         const dateComplete = formatLocalizedDate(date, currentLanguage, 'full');
-        alert(`📅 ${t('calendar.fullDate')} :\n${dateComplete}`);
+        alert(`${t('calendar.fullDate')} :\n${dateComplete}`);
     };
 
     // Période prédéfinies
@@ -681,7 +682,7 @@ export function PlanificateurFinal({
                 {/* Congé : bande ROUGE = en attente d'approbation ; verte = approuvé */}
                 {dayConge && (
                     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-1 overflow-hidden px-1" style={{ height: 13, backgroundColor: congePending ? '#ef4444' : '#10b981' }} title={congePending ? tr('Congé EN ATTENTE d\'approbation', 'Leave PENDING approval') : tr('Congé approuvé', 'Approved leave')}>
-                        <span className="truncate text-[8px] font-bold text-white">{congePending ? `⏳ ${tr('Congé — en attente', 'Leave — pending')}` : `🌴 ${tr('Congé', 'Leave')}`}</span>
+                        <span className="truncate text-[8px] font-bold text-white">{congePending ? `${tr('Congé — en attente', 'Leave — pending')}` : `${tr('Congé', 'Leave')}`}</span>
                     </div>
                 )}
                 {/* Grille d'heures en arrière-plan */}
@@ -736,7 +737,7 @@ export function PlanificateurFinal({
                                     }}
                                     title={`${job.numeroJob || `Job-${job.id}`}${job.client ? ` — ${job.client}` : ''}${isMorningSpill ? `\n${tr('↳ Fin du quart de nuit (00:00→fin)', '↳ End of night shift (00:00→end)')}` : ''}${aControler ? `\n⚠ ${jobControlReasons(job).join(' · ')}` : ''}`}
                                 >
-                                    {aControler && <span className="absolute right-0 top-0 text-[10px] leading-none" title={jobControlReasons(job).join(' · ')}>⚠️</span>}
+                                    {aControler && <span className="absolute right-0 top-0 text-[10px] leading-none" title={jobControlReasons(job).join(' · ')}>⚠</span>}
                                     {/* Contenu de l'événement (tronqué si étroit) */}
                                     <div className="text-center leading-tight overflow-hidden">
                                         <div className="font-bold truncate">
@@ -776,7 +777,7 @@ export function PlanificateurFinal({
                         return (
                             <div key={`ovl-${i}`} className="pointer-events-none absolute top-0 bottom-3 z-10 border-x-2 border-red-500 bg-red-500/30"
                                 style={{ left: `${left}%`, width: `${width}%` }}
-                                title={tr("⚠️ Conflit d'horaire (chevauchement)", '⚠️ Schedule conflict (overlap)')} />
+                                title={tr("⚠ Conflit d'horaire (chevauchement)", '⚠ Schedule conflict (overlap)')} />
                         );
                     });
                 })()}
@@ -864,9 +865,9 @@ export function PlanificateurFinal({
                             {/* Bascule Grille (ressources) / Mois (calendrier classique) — visible aussi en mobile. */}
                             <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                                 <button onClick={() => setCalendarMode('grid')}
-                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📊 Grille</button>
+                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Grille</button>
                                 <button onClick={() => setCalendarMode('month')}
-                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📅 Mois</button>
+                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Mois</button>
                             </div>
                             {/* Créer/Congés : visibles desktop ; sur mobile → onglet « Actions » du hamburger. */}
                             {onCreateEvent && (
@@ -1033,11 +1034,11 @@ export function PlanificateurFinal({
                                             {/* Onglets */}
                                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
                                                 {[
-                                                    { key: 'actions', label: tr('Actions', 'Actions'), icon: '➕' },
-                                                    { key: 'type', label: t ? t('filter.type') : 'Type', icon: '🔍' },
-                                                    { key: 'bureau', label: 'Site', icon: '🏢' },
-                                                    { key: 'poste', label: t ? t('filter.position') : 'Poste', icon: '👔' },
-                                                    { key: 'vue', label: t ? t('filter.view') : 'Vue', icon: '👁️' }
+                                                    { key: 'actions', label: tr('Actions', 'Actions'), icon: <Plus size={14} className="inline" /> },
+                                                    { key: 'type', label: t ? t('filter.type') : 'Type', icon: <Search size={14} className="inline" /> },
+                                                    { key: 'bureau', label: 'Site', icon: <Building2 size={14} className="inline" /> },
+                                                    { key: 'poste', label: t ? t('filter.position') : 'Poste', icon: <Briefcase size={14} className="inline" /> },
+                                                    { key: 'vue', label: t ? t('filter.view') : 'Vue', icon: <Eye size={14} className="inline" /> }
                                                 ].map((tab) => (
                                                     <button
                                                         key={tab.key}
@@ -1063,7 +1064,7 @@ export function PlanificateurFinal({
                                                         {/* Poinçon intégré au hamburger (composant autonome PunchWidget). */}
                                                         {tenant && (
                                                             <div className="space-y-1">
-                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">⏱ {tr('Poinçon', 'Time clock')}</label>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Poinçon', 'Time clock')}</label>
                                                                 <PunchWidget tenant={tenant} />
                                                             </div>
                                                         )}
@@ -1195,9 +1196,9 @@ export function PlanificateurFinal({
                                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t('calendar.display') || 'Affichage'}</label>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <button onClick={() => setCalendarMode('grid')}
-                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📊 Grille</button>
+                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Grille</button>
                                                                 <button onClick={() => setCalendarMode('month')}
-                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'month' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📅 Mois</button>
+                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'month' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Mois</button>
                                                             </div>
                                                         </div>
 
@@ -1248,7 +1249,7 @@ export function PlanificateurFinal({
                                                                             : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-transparent'
                                                                     }`}
                                                                 >
-                                                                    🎯 {tr('Couleur par priorité', 'Color by priority')}
+                                                                    {tr('Couleur par priorité', 'Color by priority')}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => setColorMode('succursale')}
@@ -1258,7 +1259,7 @@ export function PlanificateurFinal({
                                                                             : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-transparent'
                                                                     }`}
                                                                 >
-                                                                    🏢 {tr('Couleur par bureau', 'Color by office')}
+                                                                    {tr('Couleur par bureau', 'Color by office')}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -1292,10 +1293,10 @@ export function PlanificateurFinal({
                                                                         )}
                                                                         {filterType === 'global' && [
                                                                             ...personnel.map(person =>
-                                                                                <option key={person.id} value={person.id}>👤 {person.nom}</option>
+                                                                                <option key={person.id} value={person.id}>{person.nom}</option>
                                                                             ),
                                                                             ...equipements.map(equipement =>
-                                                                                <option key={equipement.id} value={equipement.id}>🔧 {equipement.nom}</option>
+                                                                                <option key={equipement.id} value={equipement.id}>{equipement.nom}</option>
                                                                             )
                                                                         ]}
                                                                     </select>
@@ -1384,7 +1385,7 @@ export function PlanificateurFinal({
                                                         <span className={`text-xs font-semibold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{d.getDate()}</span>
                                                         {evs.length > 0 && <span className="rounded-full bg-blue-600 px-1.5 text-[9px] font-bold leading-4 text-white">{evs.length}</span>}
                                                     </div>
-                                                    {evs.slice(0, 2).map(e => { const ctrl = jobNeedsControl(e); return <div key={e.id} title={ctrl ? jobControlReasons(e).join(' · ') : undefined} className={`mt-0.5 truncate rounded px-1 text-[9px] ${ctrl ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'}`}>{ctrl ? '⚠️ ' : ''}{e.numeroJob || e.nom}</div>; })}
+                                                    {evs.slice(0, 2).map(e => { const ctrl = jobNeedsControl(e); return <div key={e.id} title={ctrl ? jobControlReasons(e).join(' · ') : undefined} className={`mt-0.5 truncate rounded px-1 text-[9px] ${ctrl ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'}`}>{ctrl ? '⚠ ' : ''}{e.numeroJob || e.nom}</div>; })}
                                                     {evs.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500">+{evs.length - 2}</div>}
                                                 </button>
                                             );
@@ -1395,13 +1396,13 @@ export function PlanificateurFinal({
                                         {utilisateurConnecte?.id && (
                                             <button onClick={() => setMineOnly(v => !v)}
                                                 className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                                                {mineOnly ? `👤 ${tr('Mes tâches', 'My tasks')}` : tr('Toutes les tâches', 'All tasks')}
+                                                {mineOnly ? `${tr('Mes tâches', 'My tasks')}` : tr('Toutes les tâches', 'All tasks')}
                                             </button>
                                         )}
                                         <button onClick={() => setControleOnly(v => !v)}
                                             title={tr('Afficher seulement les mandats à contrôler', 'Show only jobs needing control')}
                                             className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${controleOnly ? 'bg-amber-500 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                                            ⚠️ {tr('À contrôler', 'To control')}
+                                            ⚠ {tr('À contrôler', 'To control')}
                                         </button>
                                     </div>
                                     <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -1412,7 +1413,7 @@ export function PlanificateurFinal({
                                             {(selectedCalDay ? jobsOnDay(selectedCalDay) : []).map(e => (
                                                 <button key={e.id} onClick={() => setSelectedJob(e)} className="flex w-full flex-col gap-1 px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-900/20">
                                                     <div className="flex w-full items-center gap-2">
-                                                        {jobNeedsControl(e) && <span className="shrink-0" title={jobControlReasons(e).join(' · ')}>⚠️</span>}
+                                                        {jobNeedsControl(e) && <span className="shrink-0" title={jobControlReasons(e).join(' · ')}>⚠</span>}
                                                         <span className="shrink-0 text-xs font-bold text-blue-700 dark:text-blue-400">{e.numeroJob || `Job-${e.id}`}</span>
                                                         <span className="flex-1 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{e.client || e.nom || '—'}</span>
                                                         <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{e.heureDebut || '08:00'}–{e.heureFin || '17:00'}</span>
@@ -1444,7 +1445,7 @@ export function PlanificateurFinal({
                     /* Ancien Dashboard Simple */
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">📊 Dashboard C-Secur360</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Dashboard C-Secur360</h2>
                             <p className="text-gray-600 dark:text-gray-300">
                                 Vue d'ensemble des activités sur {dashboardStats.periode} jours
                                 {dashboardFilter === 'personnel' && ' - Focus Personnel'}
@@ -1460,7 +1461,7 @@ export function PlanificateurFinal({
                                         <p className="text-sm font-medium text-blue-600">Total Événements</p>
                                         <p className="text-2xl font-bold text-blue-900">{dashboardStats.total}</p>
                                     </div>
-                                    <div className="text-blue-500 text-2xl">📋</div>
+                                    <ClipboardList size={24} className="text-blue-500" />
                                 </div>
                             </div>
 
@@ -1470,7 +1471,7 @@ export function PlanificateurFinal({
                                         <p className="text-sm font-medium text-green-600">En Cours</p>
                                         <p className="text-2xl font-bold text-green-900">{dashboardStats.enCours}</p>
                                     </div>
-                                    <div className="text-green-500 text-2xl">⚡</div>
+                                    <Zap size={24} className="text-green-500" />
                                 </div>
                             </div>
 
@@ -1480,7 +1481,7 @@ export function PlanificateurFinal({
                                         <p className="text-sm font-medium text-yellow-600">Tentatif</p>
                                         <p className="text-2xl font-bold text-yellow-900">{dashboardStats.tentatif}</p>
                                     </div>
-                                    <div className="text-yellow-500 text-2xl">⏳</div>
+                                    <Hourglass size={24} className="text-yellow-500" />
                                 </div>
                             </div>
 
@@ -1490,7 +1491,7 @@ export function PlanificateurFinal({
                                         <p className="text-sm font-medium text-red-600">En Attente</p>
                                         <p className="text-2xl font-bold text-red-900">{dashboardStats.enAttente}</p>
                                     </div>
-                                    <div className="text-red-500 text-2xl">⏸️</div>
+                                    <PauseCircle size={24} className="text-red-500" />
                                 </div>
                             </div>
                         </div>
@@ -1498,7 +1499,7 @@ export function PlanificateurFinal({
                         {/* Section planification personnel */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                             <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">👥 Planification Personnel</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Planification Personnel</h3>
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-600 dark:text-gray-300">Personnel requis:</span>
@@ -1530,7 +1531,7 @@ export function PlanificateurFinal({
                             </div>
 
                             <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">📊 Répartition par Priorité</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Répartition par Priorité</h3>
                                 <div className="space-y-3">
                                     {Object.entries(dashboardStats.parPriorite).map(([priorite, count]) => (
                                         <div key={priorite} className="flex justify-between items-center">
@@ -1539,9 +1540,9 @@ export function PlanificateurFinal({
                                                 priorite === 'haute' ? 'text-orange-600' :
                                                 priorite === 'normale' ? 'text-yellow-600' : 'text-green-600'
                                             }`}>
-                                                {priorite === 'urgente' ? '🔴 Urgente' :
-                                                 priorite === 'haute' ? '🟠 Haute' :
-                                                 priorite === 'normale' ? '🟡 Normale' : '🟢 Basse'}:
+                                                {priorite === 'urgente' ? 'Urgente' :
+                                                 priorite === 'haute' ? 'Haute' :
+                                                 priorite === 'normale' ? 'Normale' : 'Basse'}:
                                             </span>
                                             <span className="font-semibold">{count}</span>
                                         </div>
@@ -1553,7 +1554,7 @@ export function PlanificateurFinal({
                         {/* Section par bureau */}
                         {Object.keys(dashboardStats.parBureau).length > 1 && (
                             <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🏢 Répartition par Bureau</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Répartition par Bureau</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {Object.entries(dashboardStats.parBureau).map(([bureau, count]) => (
                                         <div key={bureau} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -1572,19 +1573,19 @@ export function PlanificateurFinal({
                         Remplace la grille horizontale (cachée < lg). Affiche par défaut les tâches de l'utilisateur
                         connecté (mineOnly, défaut ON sur mobile), basculable via le bouton ci-dessous. */}
                     <div className="lg:hidden space-y-2">
-                        <div className="px-1 text-xs font-semibold text-gray-500 dark:text-gray-400">📅 {tr("Agenda — touchez un événement pour l'ouvrir", 'Agenda — tap an event to open it')}</div>
+                        <div className="px-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{tr("Agenda — touchez un événement pour l'ouvrir", 'Agenda — tap an event to open it')}</div>
                         {/* Bascule Mes tâches / Toutes + À contrôler (cohérent avec la vue Mois) */}
                         <div className="flex justify-center gap-2">
                             {utilisateurConnecte?.id && (
                                 <button onClick={() => setMineOnly(v => !v)}
                                     className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                                    {mineOnly ? `👤 ${tr('Mes tâches', 'My tasks')}` : tr('Toutes les tâches', 'All tasks')}
+                                    {mineOnly ? `${tr('Mes tâches', 'My tasks')}` : tr('Toutes les tâches', 'All tasks')}
                                 </button>
                             )}
                             <button onClick={() => setControleOnly(v => !v)}
                                 title={tr('Afficher seulement les mandats à contrôler', 'Show only jobs needing control')}
                                 className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${controleOnly ? 'bg-amber-500 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                                ⚠️ {tr('À contrôler', 'To control')}
+                                ⚠ {tr('À contrôler', 'To control')}
                             </button>
                         </div>
                         {/* Liste VERTICALE des journées de la période (équivalent vertical de la grille horizontale
@@ -1620,7 +1621,7 @@ export function PlanificateurFinal({
                                                 {evs.map(j => (
                                                     <button key={j.id} type="button" onClick={() => setSelectedJob(j)}
                                                         className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                                                        {jobNeedsControl(j) && <span className="shrink-0" title={jobControlReasons(j).join(' · ')}>⚠️</span>}
+                                                        {jobNeedsControl(j) && <span className="shrink-0" title={jobControlReasons(j).join(' · ')}>⚠</span>}
                                                         <span className="shrink-0 text-xs font-bold text-blue-700 dark:text-blue-400">{j.numeroJob || `Job-${j.id}`}</span>
                                                         <span className="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{j.client || j.nom || '—'}</span>
                                                         <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{j.heureDebut || '08:00'}–{j.heureFin || '17:00'}</span>
@@ -1641,7 +1642,7 @@ export function PlanificateurFinal({
                     {filterType === 'global' && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📊 {tr("Vue d'ensemble", 'Overview')} - {dashboardStats.periode} {tr('jours', 'days')}</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{tr("Vue d'ensemble", 'Overview')} - {dashboardStats.periode} {tr('jours', 'days')}</h3>
                                 <div className="text-sm text-gray-600 dark:text-gray-300">
                                     {tr('Taux de planification', 'Planning rate')}: <span className={`font-semibold ${
                                         dashboardStats.pourcentagePlanification >= 80 ? 'text-green-600' :
@@ -1855,7 +1856,7 @@ export function PlanificateurFinal({
                                     <div className="flex-shrink-0 flex items-center justify-between p-4 bg-orange-600 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center">
-                                                ⚠️
+                                                ⚠
                                             </div>
                                             <div>
                                                 <h2 className="text-lg font-bold text-white">
@@ -1904,7 +1905,7 @@ export function PlanificateurFinal({
                                                 <div className="space-y-2">
                                                     {conflictJob.personnel?.length > 0 && (
                                                         <div>
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">👥 {t('resource.personnel')}:</span>
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('resource.personnel')}:</span>
                                                             <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                                                                 {conflictJob.personnel.map(id => {
                                                                     const person = personnel.find(p => p.id === id);
@@ -1915,7 +1916,7 @@ export function PlanificateurFinal({
                                                     )}
                                                     {conflictJob.equipements?.length > 0 && (
                                                         <div>
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">🔧 {t('resource.equipment')}:</span>
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('resource.equipment')}:</span>
                                                             <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                                                                 {conflictJob.equipements.map(id => {
                                                                     const equipement = equipements.find(e => e.id === id);
@@ -1926,7 +1927,7 @@ export function PlanificateurFinal({
                                                     )}
                                                     {conflictJob.sousTraitants?.length > 0 && (
                                                         <div>
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">🏢 {tr('Sous-traitants', 'Subcontractors')}:</span>
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Sous-traitants', 'Subcontractors')}:</span>
                                                             <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                                                                 {conflictJob.sousTraitants.map(id => {
                                                                     const sousTraitant = sousTraitants.find(s => s.id === id);
@@ -1953,7 +1954,7 @@ export function PlanificateurFinal({
                                     {/* Footer */}
                                     <div className="flex-shrink-0 flex justify-between items-center p-4 border-t bg-gray-50 dark:bg-gray-700/50">
                                         <div className="text-sm text-orange-600 font-medium">
-                                            ⚠️ {t('event.conflictWarning')}
+                                            ⚠ {t('event.conflictWarning')}
                                         </div>
                                         <button
                                             onClick={() => {
@@ -1962,7 +1963,7 @@ export function PlanificateurFinal({
                                             }}
                                             className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
                                         >
-                                            ✏️ {t('event.modifyEvent')}
+                                            {t('event.modifyEvent')}
                                         </button>
                                     </div>
                                 </div>

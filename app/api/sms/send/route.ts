@@ -51,7 +51,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Configuration Supabase manquante pour SMS API (SUPABASE_SERVICE_ROLE_KEY requise)');
+  console.error('Configuration Supabase manquante pour SMS API (SUPABASE_SERVICE_ROLE_KEY requise)');
 }
 
 const supabase = createClient(supabaseUrl!, supabaseKey!);
@@ -142,7 +142,7 @@ async function sendSMSWithTwilio(phone: string, message: string): Promise<{ succ
       messagingService: !!messagingServiceSid
     });
     
-    console.log(`✅ SMS envoyé [${config.mode}]:`, {
+    console.log(`SMS envoyé [${config.mode}]:`, {
       to: phone,
       sid: messageResponse.sid,
       status: messageResponse.status
@@ -164,7 +164,7 @@ async function sendSMSWithTwilio(phone: string, message: string): Promise<{ succ
       success: false
     });
 
-    console.error('❌ Erreur envoi SMS:', {
+    console.error('Erreur envoi SMS:', {
       to: phone,
       error: error.message,
       code: error.code
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (alertError) {
-      console.error('❌ Erreur Supabase:', alertError);
+      console.error('Erreur Supabase:', alertError);
       return NextResponse.json(
         { 
           success: false, 
@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
       .eq('id', alertData.id);
     
     // Log pour debugging
-    console.log(`📱 SMS Alert [${type}]:`, {
+    console.log(`SMS Alert [${type}]:`, {
       astId,
       message: message.substring(0, 50) + '...',
       validRecipients: validRecipients.length,
@@ -339,7 +339,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('❌ Erreur API SMS:', error);
+    console.error('Erreur API SMS:', error);
     
     return NextResponse.json(
       { 
@@ -373,7 +373,7 @@ export async function GET(request: NextRequest) {
       .limit(10);
     
     if (error) {
-      console.error('❌ Erreur récupération SMS:', error);
+      console.error('Erreur récupération SMS:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
@@ -384,7 +384,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('❌ Erreur GET SMS:', error);
+    console.error('Erreur GET SMS:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

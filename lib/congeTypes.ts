@@ -11,11 +11,11 @@ export type CongeTypeDef = {
 
 // Défauts (alignés sur lib/conges CONGE_TYPES) + congé PARENTAL.
 export const DEFAULT_CONGE_TYPES: CongeTypeDef[] = [
-  { value: 'conge',     label_fr: 'Vacances',            label_en: 'Vacation',  emoji: '🏖️', requires_justification: false },
-  { value: 'maladie',   label_fr: 'Maladie',             label_en: 'Sick leave', emoji: '🤒', requires_justification: true, justification_label: 'Billet du médecin', justification_after_days: 3 },
-  { value: 'formation', label_fr: 'Formation',           label_en: 'Training',  emoji: '📚', requires_justification: false },
-  { value: 'parental',  label_fr: 'Parental / maternité', label_en: 'Parental', emoji: '👶', requires_justification: true, justification_label: 'Document RQAP/AE' },
-  { value: 'autre',     label_fr: 'Autre',               label_en: 'Other',     emoji: '📝', requires_justification: false },
+  { value: 'conge',     label_fr: 'Vacances',            label_en: 'Vacation',  emoji: '', requires_justification: false },
+  { value: 'maladie',   label_fr: 'Maladie',             label_en: 'Sick leave', emoji: '', requires_justification: true, justification_label: 'Billet du médecin', justification_after_days: 3 },
+  { value: 'formation', label_fr: 'Formation',           label_en: 'Training',  emoji: '', requires_justification: false },
+  { value: 'parental',  label_fr: 'Parental / maternité', label_en: 'Parental', emoji: '', requires_justification: true, justification_label: 'Document RQAP/AE' },
+  { value: 'autre',     label_fr: 'Autre',               label_en: 'Other',     emoji: '', requires_justification: false },
 ];
 
 export type Poste = { id: string; name: string };

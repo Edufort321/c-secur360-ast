@@ -39,7 +39,7 @@ function evaluate(rule: any, m: Awaited<ReturnType<typeof computeMetrics>>): { t
     case 'margin_pct_below': return m.marginPct < t ? { title: '⚠️ Marge sous le seuil', body: `Marge ${m.marginPct.toFixed(1)} % < seuil ${t} %.`, severity: 'warning' } : null;
     case 'ar_overdue_above': return m.arOverdue > t ? { title: '⚠️ Comptes à recevoir en retard', body: `En retard ${mny(m.arOverdue)} > seuil ${mny(t)}.`, severity: 'warning' } : null;
     case 'ebitda_below': return m.ebitda < t ? { title: '⚠️ EBITDA sous le seuil', body: `EBITDA ${mny(m.ebitda)} < seuil ${mny(t)}.`, severity: 'warning' } : null;
-    case 'altman_below': return m.altmanZ < t ? { title: '🚨 Risque de détresse (Altman Z″)', body: `Z″ ${m.altmanZ.toFixed(2)} < seuil ${t}. Surveiller / agir.`, severity: 'critical' } : null;
+    case 'altman_below': return m.altmanZ < t ? { title: 'Risque de détresse (Altman Z″)', body: `Z″ ${m.altmanZ.toFixed(2)} < seuil ${t}. Surveiller / agir.`, severity: 'critical' } : null;
     default: return null;
   }
 }

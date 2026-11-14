@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const ownerMobile = process.env.OWNER_MOBILE;
     
     if (!ownerMobile) {
-      console.error('❌ OWNER_MOBILE non configuré pour forward voice');
+      console.error('OWNER_MOBILE non configuré pour forward voice');
       
       // TwiML pour répondre que le service n'est pas disponible
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       action: 'dial_forwarded'
     });
 
-    console.log(`📞 Appel forwarded: ${from} → ${ownerMobile}`);
+    console.log(`Appel forwarded: ${from} → ${ownerMobile}`);
 
     return new NextResponse(twiml, {
       status: 200,
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       success: false
     });
 
-    console.error('❌ Erreur webhook voice entrant:', error);
+    console.error('Erreur webhook voice entrant:', error);
     
     // TwiML d'erreur générique
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>

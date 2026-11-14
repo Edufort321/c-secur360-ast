@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     if (dialCallStatus === 'completed') {
       // L'appel a été connecté et terminé normalement
-      console.log(`✅ Appel transféré complété: ${callSid} (${dialCallDuration}s)`);
+      console.log(`Appel transféré complété: ${callSid} (${dialCallDuration}s)`);
       
       // Pas besoin de TwiML, l'appel est déjà terminé
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     } else if (dialCallStatus === 'no-answer' || dialCallStatus === 'busy') {
       // Personne n'a répondu ou ligne occupée
-      console.log(`📞 Appel non répondu: ${callSid} - ${dialCallStatus}`);
+      console.log(`Appel non répondu: ${callSid} - ${dialCallStatus}`);
       
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     } else if (dialCallStatus === 'failed' || dialCallStatus === 'canceled') {
       // Échec du transfer
-      console.log(`❌ Échec transfer appel: ${callSid} - ${dialCallStatus}`);
+      console.log(`Échec transfer appel: ${callSid} - ${dialCallStatus}`);
       
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       action: 'dial_callback_error'
     });
 
-    console.error('❌ Erreur callback dial status:', error);
+    console.error('Erreur callback dial status:', error);
     
     // TwiML minimal en cas d'erreur
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>

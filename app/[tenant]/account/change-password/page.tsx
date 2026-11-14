@@ -47,7 +47,7 @@ export default function ChangePasswordPage() {
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-blue-600 text-white"><KeyRound size={22} /></div>
           <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white">Mot de passe</h1><p className="text-sm text-slate-500">Changez votre mot de passe</p></div>
         </div>
-        {first && <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">🔐 Première connexion : pour votre sécurité, choisissez un nouveau mot de passe personnel (différent de celui fourni par votre administrateur).</div>}
+        {first && <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">Première connexion : pour votre sécurité, choisissez un nouveau mot de passe personnel (différent de celui fourni par votre administrateur).</div>}
         <form onSubmit={submit} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <label className="block text-xs font-semibold text-slate-500">Mot de passe actuel<input type="password" className={`mt-1 ${inp}`} value={cur} onChange={e => setCur(e.target.value)} autoComplete="current-password" required /></label>
           <label className="block text-xs font-semibold text-slate-500">Nouveau mot de passe<input type="password" className={`mt-1 ${inp}`} value={next} onChange={e => setNext(e.target.value)} autoComplete="new-password" required /></label>

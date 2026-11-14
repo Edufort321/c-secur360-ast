@@ -51,18 +51,18 @@ function parsePhoneNumber(phone: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    console.log('📞 [WEBHOOK] Réception webhook SMS:', body);
+    console.log('[WEBHOOK] Réception webhook SMS:', body);
 
     // Parser les données du webhook (format application/x-www-form-urlencoded)
     const webhookData: TwilioWebhookData = Object.fromEntries(
       new URLSearchParams(body).entries()
     ) as any;
 
-    console.log('📞 [WEBHOOK] Données parsées:', webhookData);
+    console.log('[WEBHOOK] Données parsées:', webhookData);
 
     // Vérifier que c'est bien un message reçu (pas un statut d'envoi)
     if (!webhookData.Body || !webhookData.From) {
-      console.log('📞 [WEBHOOK] Webhook de statut ignoré (pas un message entrant)');
+      console.log('[WEBHOOK] Webhook de statut ignoré (pas un message entrant)');
       return NextResponse.json({ status: 'ignored' });
     }
 
@@ -78,13 +78,13 @@ export async function POST(request: NextRequest) {
       isValid: validation.isValid
     };
 
-    console.log('📞 [WEBHOOK] Confirmation analysée:', confirmation);
+    console.log('[WEBHOOK] Confirmation analysée:', confirmation);
 
     // Ici on pourrait enregistrer en base de données
     // await saveConfirmationToDatabase(confirmation);
 
     // Simuler l'enregistrement de la confirmation
-    console.log('✅ [WEBHOOK] Confirmation enregistrée:', {
+    console.log('[WEBHOOK] Confirmation enregistrée:', {
       worker: `Travailleur avec ${cleanPhone}`,
       response: validation.response,
       isValid: validation.isValid,
@@ -94,16 +94,16 @@ export async function POST(request: NextRequest) {
     // Envoyer confirmation automatique si la réponse est valide
     if (validation.isValid) {
       const confirmationMessage = validation.response.toLowerCase().includes('oui') || validation.response.toLowerCase().includes('yes')
-        ? `✅ CONFIRMATION REÇUE\n\nVotre confirmation "${validation.response}" a été enregistrée avec succès.\n\nHeure: ${new Date().toLocaleString('fr-CA', { timeZone: 'America/Montreal' })}\n\nMerci de prioriser votre sécurité.`
-        : `✅ RÉPONSE REÇUE\n\nVotre message "${validation.response}" a été enregistré.\n\nHeure: ${new Date().toLocaleString('fr-CA', { timeZone: 'America/Montreal' })}\n\nPour confirmer officiellement, répondez "OUI".`;
+        ? `✓ CONFIRMATION REÇUE\n\nVotre confirmation "${validation.response}" a été enregistrée avec succès.\n\nHeure: ${new Date().toLocaleString('fr-CA', { timeZone: 'America/Montreal' })}\n\nMerci de prioriser votre sécurité.`
+        : `✓ RÉPONSE REÇUE\n\nVotre message "${validation.response}" a été enregistré.\n\nHeure: ${new Date().toLocaleString('fr-CA', { timeZone: 'America/Montreal' })}\n\nPour confirmer officiellement, répondez "OUI".`;
 
       // En production, renvoyer un SMS de confirmation via Twilio
-      console.log(`📱 [AUTO-REPLY] Envoi confirmation à ${cleanPhone}:`, confirmationMessage);
+      console.log(`[AUTO-REPLY] Envoi confirmation à ${cleanPhone}:`, confirmationMessage);
     } else {
       // Réponse non reconnue - demander clarification
-      const clarificationMessage = `❓ RÉPONSE NON RECONNUE\n\nVotre message "${validation.response}" n'a pas été reconnu comme une confirmation.\n\nPour confirmer la réception de l'alerte LOTO, répondez:\n• "OUI" (français)\n• "YES" (anglais)\n• "OK"\n\nCette confirmation est OBLIGATOIRE pour votre sécurité.`;
+      const clarificationMessage = `RÉPONSE NON RECONNUE\n\nVotre message "${validation.response}" n'a pas été reconnu comme une confirmation.\n\nPour confirmer la réception de l'alerte LOTO, répondez:\n• "OUI" (français)\n• "YES" (anglais)\n• "OK"\n\nCette confirmation est OBLIGATOIRE pour votre sécurité.`;
       
-      console.log(`📱 [AUTO-REPLY] Demande clarification à ${cleanPhone}:`, clarificationMessage);
+      console.log(`[AUTO-REPLY] Demande clarification à ${cleanPhone}:`, clarificationMessage);
     }
 
     // Réponse de succès pour Twilio
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [WEBHOOK] Erreur traitement webhook:', error);
+    console.error('[WEBHOOK] Erreur traitement webhook:', error);
     
     return NextResponse.json(
       { 
@@ -154,7 +154,7 @@ export async function GET() {
     return NextResponse.json(webhookStatus);
     
   } catch (error) {
-    console.error('❌ [WEBHOOK] Erreur status webhook:', error);
+    console.error('[WEBHOOK] Erreur status webhook:', error);
     
     return NextResponse.json(
       { 

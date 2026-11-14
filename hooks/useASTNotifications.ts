@@ -51,13 +51,13 @@ export const useASTNotifications = () => {
         const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'}/notifications`);
         
         ws.onopen = () => {
-          console.log('✅ Connexion WebSocket notifications établie');
+          console.log('Connexion WebSocket notifications établie');
           setIsConnected(true);
         };
 
         ws.onmessage = (event) => {
           const notification = JSON.parse(event.data);
-          console.log('📧 Nouvelle notification reçue:', notification);
+          console.log('Nouvelle notification reçue:', notification);
           
           setNotifications(prev => [notification, ...prev]);
           
@@ -72,7 +72,7 @@ export const useASTNotifications = () => {
         };
 
         ws.onclose = () => {
-          console.log('❌ Connexion WebSocket fermée');
+          console.log('Connexion WebSocket fermée');
           setIsConnected(false);
           
           // Tentative de reconnexion après 5 secondes
@@ -80,13 +80,13 @@ export const useASTNotifications = () => {
         };
 
         ws.onerror = (error) => {
-          console.error('❌ Erreur WebSocket:', error);
+          console.error('Erreur WebSocket:', error);
           setIsConnected(false);
         };
 
         return ws;
       } catch (error) {
-        console.error('❌ Erreur connexion WebSocket:', error);
+        console.error('Erreur connexion WebSocket:', error);
         setIsConnected(false);
         return null;
       }
@@ -129,11 +129,11 @@ export const useASTNotifications = () => {
       }
 
       const result = await response.json();
-      console.log('✅ SMS envoyé avec succès:', result);
+      console.log('SMS envoyé avec succès:', result);
       
       return true;
     } catch (error) {
-      console.error('❌ Erreur envoi SMS:', error);
+      console.error('Erreur envoi SMS:', error);
       return false;
     }
   }, []);
@@ -178,7 +178,7 @@ export const useASTNotifications = () => {
       }
 
       const result = await response.json();
-      console.log('✅ Notification bulk envoyée:', result);
+      console.log('Notification bulk envoyée:', result);
 
       // Ajouter à l'historique local
       setNotifications(prev => [notification, ...prev]);
@@ -186,7 +186,7 @@ export const useASTNotifications = () => {
 
       return notification;
     } catch (error) {
-      console.error('❌ Erreur envoi bulk notification:', error);
+      console.error('Erreur envoi bulk notification:', error);
       throw error;
     }
   }, []);
@@ -221,9 +221,9 @@ export const useASTNotifications = () => {
         )
       );
 
-      console.log('✅ Confirmation enregistrée:', messageId, recipientId);
+      console.log('Confirmation enregistrée:', messageId, recipientId);
     } catch (error) {
-      console.error('❌ Erreur confirmation notification:', error);
+      console.error('Erreur confirmation notification:', error);
     }
   }, []);
 
@@ -237,7 +237,7 @@ export const useASTNotifications = () => {
     const templates = {
       fr: {
         LOTO_CHANGE: {
-          title: '🔒 MODIFICATION LOTO - ACTION REQUISE',
+          title: 'MODIFICATION LOTO - ACTION REQUISE',
           message: `ALERTE SÉCURITÉ: Modification du point de verrouillage "${context.equipmentName}" sur le projet AST-${context.astNumber}. Vous devez IMMÉDIATEMENT déplacer votre cadenas et valider. Répondez OUI pour confirmer. Urgence: ${context.priority}`
         },
         HAZARD_UPDATE: {
@@ -245,21 +245,21 @@ export const useASTNotifications = () => {
           message: `ATTENTION: Nouveau danger identifié sur votre zone de travail "${context.location}". Consultez la mise à jour AST-${context.astNumber} et confirmez réception par OUI.`
         },
         EQUIPMENT_CHANGE: {
-          title: '🔧 CHANGEMENT D\'ÉQUIPEMENT',
+          title: 'CHANGEMENT D\'ÉQUIPEMENT',
           message: `MODIFICATION: Changement d'équipement sur "${context.equipmentName}". Nouvelle procédure en vigueur. Confirmez par OUI la lecture du nouvel AST-${context.astNumber}.`
         },
         EMERGENCY: {
-          title: '🚨 URGENCE SÉCURITÉ',
+          title: 'URGENCE SÉCURITÉ',
           message: `URGENCE: ${context.message} Évacuez immédiatement la zone si nécessaire. Confirmez votre sécurité par OUI.`
         },
         REMINDER: {
-          title: '⏰ RAPPEL AST',
+          title: 'RAPPEL AST',
           message: `RAPPEL: Vous n'avez pas confirmé la notification AST-${context.astNumber}. Action requise. Répondez OUI pour confirmer.`
         }
       },
       en: {
         LOTO_CHANGE: {
-          title: '🔒 LOTO MODIFICATION - ACTION REQUIRED',
+          title: 'LOTO MODIFICATION - ACTION REQUIRED',
           message: `SAFETY ALERT: Lockout point "${context.equipmentName}" modified on AST-${context.astNumber}. You must IMMEDIATELY move your lock and validate. Reply YES to confirm. Priority: ${context.priority}`
         },
         HAZARD_UPDATE: {
@@ -267,15 +267,15 @@ export const useASTNotifications = () => {
           message: `WARNING: New hazard identified in your work area "${context.location}". Review AST-${context.astNumber} update and confirm receipt with YES.`
         },
         EQUIPMENT_CHANGE: {
-          title: '🔧 EQUIPMENT CHANGE',
+          title: 'EQUIPMENT CHANGE',
           message: `MODIFICATION: Equipment change on "${context.equipmentName}". New procedure in effect. Confirm reading of new AST-${context.astNumber} with YES.`
         },
         EMERGENCY: {
-          title: '🚨 SAFETY EMERGENCY',
+          title: 'SAFETY EMERGENCY',
           message: `EMERGENCY: ${context.message} Evacuate area immediately if necessary. Confirm your safety with YES.`
         },
         REMINDER: {
-          title: '⏰ AST REMINDER',
+          title: 'AST REMINDER',
           message: `REMINDER: You haven't confirmed AST-${context.astNumber} notification. Action required. Reply YES to confirm.`
         }
       }

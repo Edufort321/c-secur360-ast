@@ -42,7 +42,7 @@ export interface EquipmentChecklist {
 const harness: EquipmentChecklist = {
   type: 'harness',
   labelFr: 'Harnais antichute',
-  icon: '🦺',
+  icon: '',
   standard: 'CAN/CSA Z259.10-18',
   frequency: 'Avant chaque utilisation + annuelle par personne compétente',
   sections: [
@@ -104,7 +104,7 @@ const harness: EquipmentChecklist = {
 const forklift: EquipmentChecklist = {
   type: 'forklift',
   labelFr: 'Chariot élévateur',
-  icon: '🏗️',
+  icon: '',
   standard: 'CSA B335-15',
   frequency: 'Avant chaque quart de travail (obligatoire)',
   sections: [
@@ -159,7 +159,7 @@ const forklift: EquipmentChecklist = {
 const aerial: EquipmentChecklist = {
   type: 'aerial',
   labelFr: 'Nacelle / Plateforme élévatrice',
-  icon: '🚧',
+  icon: '',
   standard: 'CSA B354.7 / B354.8',
   frequency: 'Avant chaque utilisation',
   sections: [
@@ -222,7 +222,7 @@ const aerial: EquipmentChecklist = {
 const scaffold: EquipmentChecklist = {
   type: 'scaffold',
   labelFr: 'Échafaudage',
-  icon: '🏗️',
+  icon: '',
   standard: 'CSA Z797 / CSTC art. 3.15',
   frequency: 'Avant chaque quart + après tout événement compromettant l\'intégrité',
   sections: [
@@ -283,7 +283,7 @@ const scaffold: EquipmentChecklist = {
 const ladder: EquipmentChecklist = {
   type: 'ladder',
   labelFr: 'Échelle portative',
-  icon: '🪜',
+  icon: '',
   standard: 'CAN/CSA Z11-18 (R2022)',
   frequency: 'Avant et après chaque utilisation',
   sections: [
@@ -325,7 +325,7 @@ const ladder: EquipmentChecklist = {
 const powerTools: EquipmentChecklist = {
   type: 'power_tools',
   labelFr: 'Outillage électrique portatif',
-  icon: '🔧',
+  icon: '',
   standard: 'Code canadien de l\'électricité / CNESST',
   frequency: 'Avant chaque utilisation',
   sections: [
@@ -376,7 +376,7 @@ const powerTools: EquipmentChecklist = {
 const fireExtinguisher: EquipmentChecklist = {
   type: 'fire_extinguisher',
   labelFr: 'Extincteur portatif',
-  icon: '🧯',
+  icon: '',
   standard: 'NFPA 10 / ULC / CNPI',
   frequency: 'Mensuelle (visuelle) + annuelle par technicien certifié',
   sections: [
@@ -426,7 +426,7 @@ const fireExtinguisher: EquipmentChecklist = {
 const gasDetector: EquipmentChecklist = {
   type: 'gas_detector',
   labelFr: 'Détecteur multigaz',
-  icon: '📡',
+  icon: '',
   standard: 'CSA Z1006 / recommandations fabricant',
   frequency: 'Avant chaque quart (bump test quotidien recommandé)',
   sections: [
@@ -470,7 +470,7 @@ const gasDetector: EquipmentChecklist = {
 const respiratory: EquipmentChecklist = {
   type: 'respiratory',
   labelFr: 'Appareil de protection respiratoire',
-  icon: '😷',
+  icon: '',
   standard: 'CAN/CSA Z94.4 / Guide IRSST/CNESST',
   frequency: 'Avant et après chaque utilisation',
   sections: [
@@ -529,7 +529,7 @@ const respiratory: EquipmentChecklist = {
 const ppeGeneral: EquipmentChecklist = {
   type: 'ppe_general',
   labelFr: 'EPI général (casque, lunettes, gants, etc.)',
-  icon: '⛑️',
+  icon: '',
   standard: 'RSST / CSA Z94.1, Z94.3, Z195, Z94.2, Z96',
   frequency: 'Avant chaque utilisation + vérification mensuelle employeur',
   sections: [
@@ -588,7 +588,7 @@ const ppeGeneral: EquipmentChecklist = {
 const vehicle: EquipmentChecklist = {
   type: 'vehicle',
   labelFr: 'Véhicule (pré-inspection)',
-  icon: '🚗',
+  icon: '',
   standard: 'RSST / Recommandations fabricant',
   frequency: 'Avant chaque utilisation',
   sections: [

@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-    console.error('❌ SMS cleanup critical error:', error);
+    console.error('SMS cleanup critical error:', error);
     
     return NextResponse.json({
       success: false,

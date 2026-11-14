@@ -65,7 +65,7 @@ export function OnboardingWizard({ tenant, tr, canEdit, goTab }: { tenant: strin
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">🚀 {tr('Démarrage de votre espace', 'Set up your workspace')}</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{tr('Démarrage de votre espace', 'Set up your workspace')}</h2>
             <p className="text-sm text-gray-500">{done === STEPS.length ? tr('Tout est configuré — bravo !', 'All set — well done!') : tr(`${done}/${STEPS.length} étapes complétées`, `${done}/${STEPS.length} steps completed`)}</p>
           </div>
           {canEdit && autoLeft && <button onClick={autoConfig} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40">{busy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />} {tr('Configuration automatique', 'Auto-configure')}</button>}

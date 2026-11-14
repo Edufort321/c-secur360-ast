@@ -136,7 +136,7 @@ export function PrintReport(props: {
         <section className="title-page has-break" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', minHeight: '245mm', boxSizing: 'border-box', padding: '0 16px 30mm' }}>
           {logoUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={logoUrl} alt="" style={{ maxHeight: 90, maxWidth: 260, objectFit: 'contain', marginBottom: 12 }} />}
           {tenantName && <div style={{ fontWeight: 800, fontSize: 16, color: '#1a1a1a', marginBottom: siteText ? 4 : 22 }}>{tenantName}</div>}
-          {siteText && <div style={{ fontSize: 12, color: '#277da1', fontWeight: 600, marginBottom: 22 }}>📍 {siteText}</div>}
+          {siteText && <div style={{ fontSize: 12, color: '#277da1', fontWeight: 600, marginBottom: 22 }}>{siteText}</div>}
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: 3, color: '#277da1', marginBottom: 8 }}>{L("RAPPORT D'ANALYSE DE LABORATOIRE", 'LABORATORY ANALYSIS REPORT')}</div>
           {isOltc && <div style={{ display: 'inline-block', background: '#4f46e5', color: '#fff', fontWeight: 800, fontSize: 11, padding: '3px 10px', borderRadius: 6, marginBottom: 10 }}>{L('CHANGEUR DE PRISES EN CHARGE (OLTC)', 'ON-LOAD TAP CHANGER (OLTC)')}</div>}
           <h1 style={{ fontWeight: 900, fontSize: 32, margin: '0 0 8px', lineHeight: 1.1, maxWidth: 600, color: '#1a1a1a' }}>{dossier.ident || L("RAPPORT D'ANALYSE", 'ANALYSIS REPORT')}</h1>
@@ -273,7 +273,7 @@ export function PrintReport(props: {
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
             <div style={{ flex: 1 }}>
-              <div style={SP.h3}>🔍 {L('Interprétation DGA', 'DGA interpretation')}</div>
+              <div style={SP.h3}>{L('Interprétation DGA', 'DGA interpretation')}</div>
               {items.map((it, i) => <div key={i} style={{ ...SP.interp, ...interpStyle(it.lvl) }}>{it.txt}</div>)}
               <div style={SP.reco}><b style={{ color: '#ffd166' }}>{reco.title}</b><ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>{reco.steps.map((s, i) => <li key={i} style={{ fontSize: 10, marginBottom: 3 }}>{s}</li>)}</ul></div>
               {(() => {
@@ -284,7 +284,7 @@ export function PrintReport(props: {
                 if (!ta.length && !ex.full_next_date) return null;
                 return (
                   <div style={{ marginTop: 8, border: '1.5px solid #e63946', borderRadius: 8, padding: 10, background: '#fff5f5' }}>
-                    <div style={{ fontWeight: 900, fontSize: 11, color: '#b00020' }}>🗓 {L('Reprise d’échantillonnage recommandée', 'Recommended resampling')}</div>
+                    <div style={{ fontWeight: 900, fontSize: 11, color: '#b00020' }}>{L('Reprise d’échantillonnage recommandée', 'Recommended resampling')}</div>
                     {ta.length > 0 && (
                       <div style={{ fontSize: 10, marginTop: 4 }}>
                         <b>{L('Suivi ciblé', 'Targeted follow-up')}{tdays ? ` — ${L('URGENT', 'URGENT')}` : ''} : </b>{nextDate || ex.next_date_manual || '—'}
@@ -302,7 +302,7 @@ export function PrintReport(props: {
               <div style={{ maxWidth: 240, margin: '0 auto 8px' }}>
                 <DuvalTriangle1 samples={data.map((m, i) => ({ id: i + 1, date: m.sample_date || undefined, CH4: +(m.ch4 || 0), C2H4: +(m.c2h4 || 0), C2H2: +(m.c2h2 || 0) }))} />
               </div>
-              {oilEval.length > 0 && (<><div style={SP.h3}>🛢️ {L('Interprétation qualité huile', 'Oil quality interpretation')}{dossier.kv ? ` (${voltageClass(dossier.kv, lang).label})` : ''}</div>
+              {oilEval.length > 0 && (<><div style={SP.h3}>{L('Interprétation qualité huile', 'Oil quality interpretation')}{dossier.kv ? ` (${voltageClass(dossier.kv, lang).label})` : ''}</div>
                 {oilEval.map((it, i) => <div key={i} style={{ ...SP.interp, ...oilStyle(it.status) }}>{it.txt}</div>)}</>)}
               {furan && (<><div style={SP.h3}>{L("État de l'isolation papier", 'Paper insulation condition')}</div>
                 <div style={{ textAlign: 'center', background: '#f8f2e7', borderRadius: 8, padding: 10 }}>
@@ -358,7 +358,7 @@ export function PrintReport(props: {
             return (
               <div key={a.id} style={{ breakInside: 'avoid', border: '1px solid #e2e2e2', borderLeft: `4px solid ${isAnom ? '#e63946' : '#277da1'}`, borderRadius: 6, padding: 10, marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 11, color: isAnom ? '#9d0208' : '#277da1' }}>{isAnom ? '🔧 ' + L('Anomalie', 'Anomaly') : '💡 ' + L('Recommandation', 'Recommendation')}</span>
+                  <span style={{ fontWeight: 700, fontSize: 11, color: isAnom ? '#9d0208' : '#277da1' }}>{isAnom ? L('Anomalie', 'Anomaly') : L('Recommandation', 'Recommendation')}</span>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: done ? '#dcfce7' : '#fef3c7', color: done ? '#15803d' : '#b45309' }}>{done ? L('Corrigé', 'Corrected') : L('À corriger', 'To fix')}</span>
                 </div>
                 {a.title && <div style={{ fontWeight: 700, fontSize: 12 }}>{a.title}</div>}

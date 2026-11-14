@@ -249,7 +249,7 @@ function TrainingExpiryBanner({ tr, tenant, canHr }: any) {
   if (!canHr || (!s.expired && !s.soon)) return null;
   return (
     <div className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm text-rose-800 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-200">
-      🎓 {s.expired > 0 && <><b>{s.expired}</b> {tr('formation(s) expirée(s)', 'expired training record(s)')}{s.soon > 0 ? ' · ' : ' '}</>}{s.soon > 0 && <><b>{s.soon}</b> {tr('à renouveler (≤ 30 j)', 'to renew (≤ 30 d)')} </>}— {tr('voir le registre des formations.', 'see the training register.')}
+      {s.expired > 0 && <><b>{s.expired}</b> {tr('formation(s) expirée(s)', 'expired training record(s)')}{s.soon > 0 ? ' · ' : ' '}</>}{s.soon > 0 && <><b>{s.soon}</b> {tr('à renouveler (≤ 30 j)', 'to renew (≤ 30 d)')} </>}— {tr('voir le registre des formations.', 'see the training register.')}
     </div>
   );
 }
@@ -320,7 +320,7 @@ function KpiTab({ tr, EN, card, agg, kpiRows, rateBase, deadlines, registersDue,
           Seul endroit des compteurs (retirés de l'onglet) + réinit. par type + Diffuser (plein écran). */}
       <div className="space-y-3">
         <div className="flex justify-end">
-          <a href={`/${tenant}/accidents/affichage`} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200">📺 {tr('Diffuser (plein écran)', 'Broadcast (fullscreen)')}</a>
+          <a href={`/${tenant}/accidents/affichage`} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200">{tr('Diffuser (plein écran)', 'Broadcast (fullscreen)')}</a>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 dark:border-emerald-500/30 dark:from-emerald-500/10 dark:to-transparent">
@@ -612,7 +612,7 @@ function MeetingsTab({ tr, card, tenant, userEmail, lang }: any) {
                 <td><span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${m.kind === 'observation' ? 'bg-violet-100 text-violet-700' : 'bg-blue-100 text-blue-700'}`}>{kindLabel(m.kind)}</span></td>
                 <td className="text-gray-500">{m.location || '—'}</td><td className="text-gray-500">{m.topic || '—'}</td>
                 <td className="text-gray-500">{partCount(m) || '—'}</td>
-                <td className="text-gray-500">{mediaCount(m) > 0 ? `🎬 ${mediaCount(m)}` : '—'}</td>
+                <td className="text-gray-500">{mediaCount(m) > 0 ? `${mediaCount(m)}` : '—'}</td>
                 <td className="text-right" onClick={e => e.stopPropagation()}><button onClick={async () => { await deleteSafetyMeeting(tenant, m.id); await load(); }} className="text-rose-500 hover:text-rose-700"><Trash2 size={14} /></button></td>
               </tr>
             ))}</tbody>

@@ -9,7 +9,7 @@ export async function registerServiceWorker() {
         updateViaCache: 'none' // Toujours vérifier les mises à jour
       });
 
-      console.log('✅ Service Worker enregistré:', registration.scope);
+      console.log('✓ Service Worker enregistré:', registration.scope);
 
       // Vérifier si une mise à jour vient d'être effectuée
       checkForCompletedUpdate();
@@ -17,12 +17,12 @@ export async function registerServiceWorker() {
       // Écouter les mises à jour
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
-        console.log('🔄 Mise à jour du Service Worker détectée');
+        console.log('Mise à jour du Service Worker détectée');
 
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             // Nouvelle version disponible - mise à jour forcée automatique
-            console.log('📦 Nouvelle version disponible - rechargement automatique');
+            console.log('Nouvelle version disponible - rechargement automatique');
 
             // Stocker un flag pour afficher la notification après rechargement
             localStorage.setItem('app-update-completed', 'true');
@@ -52,10 +52,10 @@ export async function registerServiceWorker() {
 
       return registration;
     } catch (error) {
-      console.error('❌ Erreur lors de l\'enregistrement du Service Worker:', error);
+      console.error('✕ Erreur lors de l\'enregistrement du Service Worker:', error);
     }
   } else {
-    console.log('⚠️ Service Worker non supporté par ce navigateur');
+    console.log('⚠ Service Worker non supporté par ce navigateur');
   }
 }
 

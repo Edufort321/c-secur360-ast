@@ -25,7 +25,7 @@ async function sendBulkSMS(recipients: NotificationRecipient[], message: string)
   
   for (const recipient of recipients.filter(r => r.isActive)) {
     try {
-      console.log(`📱 [BULK] Envoi à ${recipient.name} (${recipient.phone})`);
+      console.log(`[BULK] Envoi à ${recipient.name} (${recipient.phone})`);
       console.log(`   Message: ${message.substring(0, 100)}...`);
       
       // Simuler un délai d'envoi
@@ -41,7 +41,7 @@ async function sendBulkSMS(recipients: NotificationRecipient[], message: string)
       });
       
     } catch (error) {
-      console.error(`❌ Erreur envoi à ${recipient.name}:`, error);
+      console.error(`Erreur envoi à ${recipient.name}:`, error);
       results.push({
         recipientId: recipient.id,
         name: recipient.name,
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`📧 [BULK] Envoi notification ${notification.type} à ${activeRecipients.length} destinataires`);
+    console.log(`[BULK] Envoi notification ${notification.type} à ${activeRecipients.length} destinataires`);
     console.log(`   Titre: ${notification.title}`);
     console.log(`   Priorité: ${notification.priority}`);
 
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     const failureCount = results.filter(r => r.status === 'failed').length;
 
     // Log pour audit
-    console.log(`✅ Notification bulk terminée:`, {
+    console.log(`Notification bulk terminée:`, {
       notificationId: notification.id,
       type: notification.type,
       priority: notification.priority,
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Erreur API bulk notification:', error);
+    console.error('Erreur API bulk notification:', error);
     
     return NextResponse.json(
       { 

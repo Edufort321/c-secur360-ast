@@ -10,7 +10,7 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
 
-// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-5 ===================
+// =================== IMPORTS DES COMPOSANTS STEPS 1-5 ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
 import Step2Equipment from '@/components/steps/Step2Equipment';
 import Step3Hazards from '@/components/steps/Step3Hazards';
@@ -49,7 +49,7 @@ interface FormDataStructure {
 // =================== TRADUCTIONS BILINGUES COMPLÈTES ===================
 const translations = {
   fr: {
-    title: "🛡️ C-Secur360",
+    title: "C-Secur360",
     subtitle: "Analyse Sécuritaire de Travail",
     systemOperational: "Système opérationnel",
     astStep: "AST • Étape",
@@ -102,7 +102,7 @@ const translations = {
     }
   },
   en: {
-    title: "🛡️ C-Secur360",
+    title: "C-Secur360",
     subtitle: "Job Safety Analysis",
     systemOperational: "System operational",
     astStep: "JSA • Step",
@@ -235,7 +235,7 @@ let updateOperations: any[] = [];
 // Error handler global pour JavaScript
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (e) => {
-    console.error('🚨 ERROR GLOBAL:', {
+    console.error('ERROR GLOBAL:', {
       message: e.message,
       filename: e.filename,
       line: e.lineno,
@@ -246,7 +246,7 @@ if (typeof window !== 'undefined') {
   });
 
   window.addEventListener('unhandledrejection', (e) => {
-    console.error('🚨 PROMISE REJECTION:', {
+    console.error('PROMISE REJECTION:', {
       reason: e.reason,
       promise: e.promise,
       timestamp: new Date().toISOString()
@@ -265,7 +265,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
   
   // =================== DEBUG COUNTER POUR TRACKING ===================
   const renderCount = ++debugCounter;
-  console.log('🔥 ASTForm RENDER #', renderCount, {
+  console.log('ASTForm RENDER #', renderCount, {
     currentStep: 'init',
     timestamp: new Date().toISOString()
   });
@@ -317,20 +317,20 @@ const ASTForm: React.FC<ASTFormProps> = ({
       
       // Éviter les doublons absolus
       if (lastUpdateKeyRef.current === updateKey) {
-        console.log('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
+        console.log('DOUBLON ÉVITÉ:', { section, updateKey });
         return;
       }
       
       // Éviter les conflits pendant update
       if (updateInProgressRef.current) {
-        console.log('🔒 UPDATE EN COURS, IGNORÉ:', { section });
+        console.log('UPDATE EN COURS, IGNORÉ:', { section });
         return;
       }
       
       lastUpdateKeyRef.current = updateKey;
       updateInProgressRef.current = true;
       
-      console.log('🔥 HANDLER ULTRA-STABLE:', { 
+      console.log('HANDLER ULTRA-STABLE:', { 
         section, 
         renderCount, 
         updateKey: updateKey.slice(0, 50),
@@ -359,7 +359,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
       // Sync parent avec debounce
       debounceTimersRef.current[sectionKey] = setTimeout(() => {
         try {
-          console.log('🔄 SYNC PARENT:', { section, timestamp: new Date().toISOString() });
+          console.log('SYNC PARENT:', { section, timestamp: new Date().toISOString() });
           onDataChange(section, data);
           updateOperations.push({
             section,
@@ -367,7 +367,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
             success: true
           });
         } catch (error: any) {
-          console.error('❌ Erreur sync parent:', { section, error });
+          console.error('Erreur sync parent:', { section, error });
           updateOperations.push({
             section,
             timestamp: new Date().toISOString(),
@@ -594,7 +594,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
   useEffect(() => {
     if (hasUnsavedChanges) {
       const saveTimer = setTimeout(() => {
-        console.log('🔄 Sauvegarde automatique...');
+        console.log('Sauvegarde automatique...');
         setHasUnsavedChanges(false);
       }, 1000);
 
@@ -651,7 +651,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
-            {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
+            {tenant === 'demo' ? t.title : `${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
           </h1>
           <div style={{
             color: 'var(--text-muted)',
@@ -742,7 +742,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
               fontWeight: '900',
               letterSpacing: '-0.025em'
             }}>
-              {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
+              {tenant === 'demo' ? t.title : `${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
             </h1>
             <p style={{
               color: 'rgba(251, 191, 36, 0.9)',
@@ -1197,7 +1197,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
       onDataChange: ultraStableHandler
     }), [currentLanguage, tenant, userId, userRole, ultraStableHandler]);
 
-    console.log('🔥 StepContent ULTRA-STABLE render - Step:', currentStep, 'RenderCount:', renderCount);
+    console.log('StepContent ULTRA-STABLE render - Step:', currentStep, 'RenderCount:', renderCount);
     
     switch (currentStep) {
       case 1:

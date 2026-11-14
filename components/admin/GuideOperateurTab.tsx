@@ -42,13 +42,13 @@ export default function GuideOperateurTab() {
 
   return (
     <div style={{ maxWidth: 920, margin: '0 auto' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>📘 Guide opérateur — travailler avec Claude</h2>
+      <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Guide opérateur — travailler avec Claude</h2>
       <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 16 }}>Dépannage ou développement sur C-Secur360 ou CERDIA, en autonomie.</p>
 
       {/* Qui travaille ? */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 700, alignSelf: 'center' }}>Qui travaille aujourd'hui ?</span>
-        {[['eric', '👨‍💻 Eric'], ['benjamin', '🧑‍🔧 Benjamin']].map(([v, l]) => (
+        {[['eric', 'Eric'], ['benjamin', 'Benjamin']].map(([v, l]) => (
           <button key={v} onClick={() => setWho(v as any)}
             style={{ padding: '8px 16px', borderRadius: 10, border: `2px solid ${who === v ? '#2563eb' : '#d1d5db'}`, background: who === v ? '#eff6ff' : '#fff', fontWeight: 600, cursor: 'pointer' }}>
             {l}
@@ -78,7 +78,7 @@ export default function GuideOperateurTab() {
 
       {/* Règles non négociables (commun) */}
       <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: 14, marginBottom: 18 }}>
-        <div style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 6 }}>⚠️ Règles non négociables</div>
+        <div style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 6 }}>⚠ Règles non négociables</div>
         <ul style={{ margin: 0, paddingLeft: 18, color: '#7f1d1d', fontSize: 13, lineHeight: 1.6 }}>
           <li>RLS obligatoire sur toute nouvelle table.</li>
           <li>Les routes serveur (service_role) ne sont JAMAIS appelées depuis un composant client.</li>
@@ -89,7 +89,7 @@ export default function GuideOperateurTab() {
 
       {/* Synchronisation Git (commun) */}
       <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: 14, marginBottom: 18 }}>
-        <div style={{ fontWeight: 700, color: '#3730a3', marginBottom: 6 }}>🔄 Toujours à jour via Git — JAMAIS de zip</div>
+        <div style={{ fontWeight: 700, color: '#3730a3', marginBottom: 6 }}>Toujours à jour via Git — JAMAIS de zip</div>
         <ul style={{ margin: 0, paddingLeft: 18, color: '#312e81', fontSize: 13, lineHeight: 1.7 }}>
           <li>Le code de référence vit sur <b>GitHub</b>, pas dans un fichier zip. On se synchronise avec <code>git pull</code> (récupérer la dernière version) et <code>git push</code> (envoyer ses modifs).</li>
           <li><b>Au début de chaque session</b>, on part de la dernière version : <code>cd</code> dans le dossier puis <code>git pull</code>. (Claude le fait aussi automatiquement avant de travailler.)</li>
@@ -97,9 +97,9 @@ export default function GuideOperateurTab() {
           <li>Pour que <code>git push</code> (et donc Claude) puisse pousser sur <code>main</code>, l'<b>authentification GitHub</b> doit être faite : <code>gh auth login</code> (recommandé) ou le gestionnaire d'identifiants Windows à la 1re opération. Sans ça, le push est refusé.</li>
         </ul>
       </div>
-      <Code>{`# Démarrer une session (déjà cloné) : RÉCUPÉRER la dernière version de GitHub\ncd C:\\C-Secur360        # ou  cd C:\\CERDIA\\investissement-cerdia-main\ngit pull\n\n# Si "git pull" coince (tu as des modifs locales en conflit) :\ngit stash        # met tes modifs locales de côté\ngit pull         # récupère la dernière version\n# git stash pop  # (pour reprendre tes modifs, sinon demande à Eric)\n\n# ⚠️ FORCER exactement la version GitHub (efface tes modifs locales NON commitées) :\n# git fetch origin && git reset --hard origin/main\n\n# Une seule fois, pour autoriser le push (nouveau portable) :\ngh auth login`}</Code>
+      <Code>{`# Démarrer une session (déjà cloné) : RÉCUPÉRER la dernière version de GitHub\ncd C:\\C-Secur360        # ou  cd C:\\CERDIA\\investissement-cerdia-main\ngit pull\n\n# Si "git pull" coince (tu as des modifs locales en conflit) :\ngit stash        # met tes modifs locales de côté\ngit pull         # récupère la dernière version\n# git stash pop  # (pour reprendre tes modifs, sinon demande à Eric)\n\n# ⚠ FORCER exactement la version GitHub (efface tes modifs locales NON commitées) :\n# git fetch origin && git reset --hard origin/main\n\n# Une seule fois, pour autoriser le push (nouveau portable) :\ngh auth login`}</Code>
 
-      {who === '' && <p style={{ color: '#6b7280' }}>👆 Choisis qui travaille pour afficher les consignes adaptées.</p>}
+      {who === '' && <p style={{ color: '#6b7280' }}>Choisis qui travaille pour afficher les consignes adaptées.</p>}
 
       {/* ───────── ERIC ───────── */}
       {who === 'eric' && (
@@ -120,11 +120,11 @@ export default function GuideOperateurTab() {
       {who === 'benjamin' && (
         <div style={{ fontSize: 14, lineHeight: 1.6 }}>
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: 12, marginBottom: 14 }}>
-            Salut Benjamin 👋 Suis les étapes dans l'ordre. <b>En cas de doute sur une migration ou un déploiement, écris à Eric avant de cliquer.</b> Claude t'expliquera chaque étape si tu lui demandes.
+            Salut Benjamin. Suis les étapes dans l'ordre. <b>En cas de doute sur une migration ou un déploiement, écris à Eric avant de cliquer.</b> Claude t'expliquera chaque étape si tu lui demandes.
           </div>
 
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>🧭 Avant de commencer (notions de base)</div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Avant de commencer (notions de base)</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7 }}>
               <li><b>PowerShell</b> = la fenêtre noire où on tape des commandes. Pour l'ouvrir : touche <b>Windows</b> → tape « <b>PowerShell</b> » → <b>Entrée</b>.</li>
               <li>Tu <b>tapes ou colles</b> une ligne, puis <b>Entrée</b> pour l'exécuter. Pour <b>coller</b> : <b>clic droit</b> dans la fenêtre (ou Ctrl+V).</li>
@@ -135,7 +135,7 @@ export default function GuideOperateurTab() {
           </div>
 
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>📖 Petit lexique</div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Petit lexique</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7 }}>
               <li><b>Repo / dépôt</b> : le dossier du code (versionné par Git).</li>
               <li><b>Commit</b> : enregistrer une modif (en local seulement).</li>
@@ -147,7 +147,7 @@ export default function GuideOperateurTab() {
           </div>
 
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12, marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, color: '#166534', marginBottom: 6 }}>🔑 Ce qu'Eric doit t'avoir donné (accès)</div>
+            <div style={{ fontWeight: 700, color: '#166534', marginBottom: 6 }}>Ce qu'Eric doit t'avoir donné (accès)</div>
             <ul style={{ margin: 0, paddingLeft: 18, color: '#14532d', fontSize: 13, lineHeight: 1.6 }}>
               <li>Un accès <b>Claude (Anthropic)</b> : soit un compte avec abonnement <b>Claude Pro/Max</b>, soit une <b>clé API</b> de la console Anthropic.</li>
               <li><b>Collaborateur GitHub</b> sur les 2 dépôts privés (c-secur360-ast et investissement-cerdia).</li>
@@ -185,7 +185,7 @@ export default function GuideOperateurTab() {
           <p>Puis colle exactement ce texte :</p>
           <Code>{OPENING_PROMPT}</Code>
 
-          <h3 style={{ fontWeight: 700, fontSize: 16 }}>5) Appliquer une migration Supabase (⚠️ accord d'Eric d'abord)</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 16 }}>5) Appliquer une migration Supabase (⚠ accord d'Eric d'abord)</h3>
           <ol style={{ paddingLeft: 18 }}>
             <li>Demande à Claude : « <i>quelles migrations sont en attente et lesquelles dois-je appliquer ?</i> » Il te donnera le ou les fichiers <code>.sql</code> exacts.</li>
             <li>Ouvre le fichier <code>.sql</code> dans le dossier <code>supabase/migrations/</code> (C-Secur) ou <code>supabase/migrations-investisseur/</code> (CERDIA) et <b>copie tout son contenu</b>.</li>
@@ -194,16 +194,16 @@ export default function GuideOperateurTab() {
             <li>Confirme à Claude « migration appliquée » pour qu'il mette la mémoire à jour.</li>
           </ol>
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: 10, color: '#92400e', fontSize: 13 }}>
-            ❗ Vérifie deux fois que tu es dans le BON projet Supabase avant de cliquer Run. Une migration C-Secur ne va PAS dans le projet CERDIA et inversement.
+            Vérifie deux fois que tu es dans le BON projet Supabase avant de cliquer Run. Une migration C-Secur ne va PAS dans le projet CERDIA et inversement.
           </div>
 
-          <h3 style={{ fontWeight: 700, fontSize: 16, marginTop: 14 }}>6) Déployer (⚠️ uniquement avec l'accord d'Eric)</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 16, marginTop: 14 }}>6) Déployer (⚠ uniquement avec l'accord d'Eric)</h3>
           <Code>{`git add .\ngit commit -m "fix: courte description"\ngit push\n# Vercel redéploie automatiquement (surveiller vercel.com/dashboard)`}</Code>
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: 10, color: '#7f1d1d', fontSize: 13 }}>
-            🚫 Ne pousse jamais en prod sans qu'Eric ait dit « ok ». En cas de doute : commit en local, demande à Eric, ne push pas.
+            Ne pousse jamais en prod sans qu'Eric ait dit « ok ». En cas de doute : commit en local, demande à Eric, ne push pas.
           </div>
 
-          <h3 style={{ fontWeight: 700, fontSize: 16, marginTop: 16 }}>🆘 En cas de pépin (problèmes fréquents)</h3>
+          <h3 style={{ fontWeight: 700, fontSize: 16, marginTop: 16 }}>En cas de pépin (problèmes fréquents)</h3>
           <ul style={{ paddingLeft: 18, fontSize: 13.5, lineHeight: 1.8 }}>
             <li><b>« git/node/claude n'est pas reconnu »</b> → l'outil n'est pas installé, OU tu n'as pas <b>fermé/rouvert</b> PowerShell après l'installation. Rouvre-le ; sinon réinstalle (étape 0).</li>
             <li><b>Erreur de permission (EACCES / accès refusé)</b> → rouvre PowerShell <b>« en tant qu'administrateur »</b> (clic droit sur PowerShell → Exécuter en administrateur).</li>
@@ -216,7 +216,7 @@ export default function GuideOperateurTab() {
           </ul>
 
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: 12, marginTop: 8, fontSize: 13 }}>
-            ✅ <b>Règle d'or</b> : tant que tu ne fais ni <code>git push</code> ni migration, tu ne risques rien. Explore, demande à Claude, et garde Eric dans la boucle pour la prod.
+            ✓ <b>Règle d'or</b> : tant que tu ne fais ni <code>git push</code> ni migration, tu ne risques rien. Explore, demande à Claude, et garde Eric dans la boucle pour la prod.
           </div>
         </div>
       )}

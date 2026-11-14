@@ -217,7 +217,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
         config: {}
       }
     ],
-    subject: '🚨 Alerte Risque Élevé - AST #{astNumber}',
+    subject: 'Alerte Risque Élevé - AST #{astNumber}',
     message: `
       Un risque élevé a été détecté dans l'AST #{astNumber} - {astTitle}.
       
@@ -262,7 +262,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
         config: {}
       }
     ],
-    subject: '📋 Demande d\'approbation - AST #{astNumber}',
+    subject: 'Demande d\'approbation - AST #{astNumber}',
     message: `
       Une nouvelle AST nécessite votre approbation.
       
@@ -308,7 +308,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
         }
       }
     ],
-    subject: '⚠️ Problème de Conformité Détecté',
+    subject: '⚠ Problème de Conformité Détecté',
     message: `
       Un problème de conformité a été détecté.
       
@@ -346,7 +346,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
         config: {}
       }
     ],
-    subject: '⏰ Rappel - AST #{astNumber} échéance dans {daysRemaining} jours',
+    subject: 'Rappel - AST #{astNumber} échéance dans {daysRemaining} jours',
     message: `
       Rappel d'échéance pour l'AST #{astNumber} - {astTitle}.
       

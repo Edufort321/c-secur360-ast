@@ -713,7 +713,7 @@ const AddItemModalComponent = React.memo(({
 
               {(!newItemData.locations || newItemData.locations.length === 0) && (
                 <p className="text-sm text-red-600 dark:text-red-400 mt-3">
-                  ⚠️ {t('articles.selectOneDepartment')}
+                  ⚠ {t('articles.selectOneDepartment')}
                 </p>
               )}
             </div>
@@ -987,7 +987,7 @@ const AddItemModalComponent = React.memo(({
                 )}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                💡 {t('articles.priceAlertMessage')}
+                {t('articles.priceAlertMessage')}
               </p>
             </div>
 
@@ -1781,7 +1781,7 @@ function AppContent() {
             localStorage.setItem(invKey('c-secur360-inventory-categories'), JSON.stringify(s.categories || []));
             localStorage.setItem(invKey('c-secur360-storage-units'), JSON.stringify(s.storageUnits || []));
           } catch { /* quota */ }
-          console.log('✅ Inventaire chargé depuis inventory_state (tenant ' + tenantId + ')');
+          console.log('✓ Inventaire chargé depuis inventory_state (tenant ' + tenantId + ')');
           cloudLoadOk.current = true;                                    // chargement nuage REUSSI -> on peut ecrire
           cloudItemCount.current = Array.isArray(s.items) ? s.items.length : 0;
           initialLoadDone.current = true;
@@ -1789,12 +1789,12 @@ function AppContent() {
           return;
         }
         // Aucune ligne nuage (PAS d'erreur) : tenant neuf -> on pourra creer la 1ere ligne.
-        console.log('ℹ️ Aucun instantané nuage pour ' + tenantId + ' — bascule sur le cache local.');
+        console.log('Aucun instantané nuage pour ' + tenantId + ' — bascule sur le cache local.');
         cloudLoadOk.current = true; cloudItemCount.current = 0;
       } catch (e) {
         // ERREUR de chargement nuage -> on NE marque PAS cloudLoadOk : l'autosave restera en LECTURE
         // SEULE pour ce chargement, afin de NE PAS ECRASER le nuage avec un etat local vide/perimé.
-        console.warn('⚠️ inventory_state indisponible (lecture seule, pas d\'écrasement):', e?.message || e);
+        console.warn('⚠ inventory_state indisponible (lecture seule, pas d\'écrasement):', e?.message || e);
       }
       if (!alive) return;
       fromLocal();
@@ -1883,9 +1883,9 @@ function AppContent() {
     // (cause de la perte des 925 articles). Une vidange totale doit etre faite sciemment, pas via
     // l'autosave silencieux.
     if ((items?.length || 0) === 0 && cloudItemCount.current > 0) {
-      console.warn('🛑 Autosave ignoré : refus d\'écraser ' + cloudItemCount.current + ' article(s) nuage par un état vide.');
+      console.warn('Autosave ignoré : refus d\'écraser ' + cloudItemCount.current + ' article(s) nuage par un état vide.');
       setSaveError(language === 'fr'
-        ? `🛡️ Sauvegarde bloquée (anti-perte) : inventaire vide non enregistré (le nuage garde ${cloudItemCount.current} articles). Recharge la page.`
+        ? `Sauvegarde bloquée (anti-perte) : inventaire vide non enregistré (le nuage garde ${cloudItemCount.current} articles). Recharge la page.`
         : `Save blocked (anti-loss): empty inventory not saved (cloud keeps ${cloudItemCount.current}).`);
       return;
     }
@@ -1898,10 +1898,10 @@ function AppContent() {
           data: { items, movements, categories, storageUnits, reasonCodes, baseEbitda, targetEbitda },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'tenant_id' });
-        if (error) { console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message); setSaveError(error.message || 'Erreur inconnue'); }
+        if (error) { console.warn('⚠ Sauvegarde inventory_state échouée:', error.message); setSaveError(error.message || 'Erreur inconnue'); }
         else { setSaveError(null); cloudItemCount.current = items?.length || 0; } // baseline a jour apres ecriture reussie
       } catch (e) {
-        console.warn('⚠️ Sauvegarde inventory_state échouée:', e?.message || e);
+        console.warn('⚠ Sauvegarde inventory_state échouée:', e?.message || e);
         setSaveError(e?.message || String(e));
       }
     }, 800);
@@ -1944,7 +1944,7 @@ function AppContent() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    console.log('🔔 Abonnement aux changements temps réel...');
+    console.log('Abonnement aux changements temps réel...');
 
     // Handler pour les changements d'items
     const handleItemChange = ({ type, item }) => {
@@ -1953,7 +1953,7 @@ function AppContent() {
 
         if (type === 'INSERT') {
           if (index === -1) {
-            console.log('✅ Nouvel item reçu:', item.name);
+            console.log('✓ Nouvel item reçu:', item.name);
             return [...currentItems, { ...item, locations: item.item_locations || [] }];
           }
           return currentItems;
@@ -1963,7 +1963,7 @@ function AppContent() {
             return currentItems;
           }
           if (index !== -1) {
-            console.log('✅ Item mis à jour:', item.name);
+            console.log('✓ Item mis à jour:', item.name);
             const updated = [...currentItems];
             updated[index] = { ...item, locations: item.item_locations || [] };
             return updated;
@@ -1971,7 +1971,7 @@ function AppContent() {
           return currentItems;
         } else if (type === 'DELETE') {
           if (index !== -1) {
-            console.log('✅ Item supprimé:', item.name);
+            console.log('✓ Item supprimé:', item.name);
             return currentItems.filter(i => i.id !== item.id);
           }
           return currentItems;
@@ -1987,13 +1987,13 @@ function AppContent() {
 
         if (type === 'INSERT') {
           if (index === -1) {
-            console.log('✅ Nouveau département reçu:', department.name);
+            console.log('✓ Nouveau département reçu:', department.name);
             return [...currentDepts, department];
           }
           return currentDepts;
         } else if (type === 'UPDATE') {
           if (index !== -1) {
-            console.log('✅ Département mis à jour:', department.name);
+            console.log('✓ Département mis à jour:', department.name);
             const updated = [...currentDepts];
             updated[index] = department;
             return updated;
@@ -2001,7 +2001,7 @@ function AppContent() {
           return currentDepts;
         } else if (type === 'DELETE') {
           if (index !== -1) {
-            console.log('✅ Département supprimé:', department.name);
+            console.log('✓ Département supprimé:', department.name);
             return currentDepts.filter(d => d.id !== department.id);
           }
           return currentDepts;
@@ -2017,13 +2017,13 @@ function AppContent() {
 
         if (type === 'INSERT') {
           if (index === -1) {
-            console.log('✅ Nouvelle catégorie reçue:', category.name);
+            console.log('✓ Nouvelle catégorie reçue:', category.name);
             return [...currentCats, category];
           }
           return currentCats;
         } else if (type === 'UPDATE') {
           if (index !== -1) {
-            console.log('✅ Catégorie mise à jour:', category.name);
+            console.log('✓ Catégorie mise à jour:', category.name);
             const updated = [...currentCats];
             updated[index] = category;
             return updated;
@@ -2031,7 +2031,7 @@ function AppContent() {
           return currentCats;
         } else if (type === 'DELETE') {
           if (index !== -1) {
-            console.log('✅ Catégorie supprimée:', category.name);
+            console.log('✓ Catégorie supprimée:', category.name);
             return currentCats.filter(c => c.id !== category.id);
           }
           return currentCats;
@@ -2466,7 +2466,7 @@ function AppContent() {
     };
     try {
       await Promise.all(Array.from({ length: Math.min(2, chunks.length) }, () => worker()));
-      if (exhausted) notify(language === 'fr' ? '⛔ Forfait IA épuisé — renouvelez votre forfait (Administration).' : '⛔ AI plan exhausted — renew your plan.', 'error');
+      if (exhausted) notify(language === 'fr' ? 'Forfait IA épuisé — renouvelez votre forfait (Administration).' : 'AI plan exhausted — renew your plan.', 'error');
       else if (failed) notify((language === 'fr' ? `${failed} lot(s) en échec — réessaie pour ces articles.` : `${failed} batch(es) failed.`), 'warning');
     } finally {
       // Comptabilise la dépense estimée des lots réellement traités (plafond annuel).
@@ -2487,7 +2487,7 @@ function AppContent() {
     // PLAFOND ANNUEL 200 $ : si l'estimation dépasse le reste, on confirme explicitement (le patron décide).
     if (spend.total + estimate > AI_ANNUAL_CAP) {
       askConfirm({
-        title: language === 'fr' ? '⚠️ Plafond IA annuel' : '⚠️ Annual AI cap',
+        title: language === 'fr' ? '⚠ Plafond IA annuel' : '⚠ Annual AI cap',
         message: language === 'fr'
           ? `Plafond annuel : ${AI_ANNUAL_CAP} $. Déjà dépensé (estimé) cette année : ${spend.total.toFixed(2)} $ · reste ${remaining.toFixed(2)} $.\nCette recherche (${list.length} articles) est estimée à ~${estimate.toFixed(2)} $ et dépasserait le plafond.\nAstuce : utilise « Périmés >3 mois » pour ne payer que le nécessaire. Lancer quand même ?`
           : `Annual cap: $${AI_ANNUAL_CAP}. Spent (est.) this year: $${spend.total.toFixed(2)} · remaining $${remaining.toFixed(2)}.\nThis search (${list.length} items) ≈ $${estimate.toFixed(2)} would exceed the cap. Run anyway?`,
@@ -2830,7 +2830,7 @@ function AppContent() {
     const instructions = [
       [fr ? 'GABARIT D\'IMPORT INVENTAIRE — C-Secur360' : 'INVENTORY IMPORT TEMPLATE — C-Secur360'],
       [''],
-      [fr ? '⚠️ COLONNES OBLIGATOIRES : SITE, DÉPARTEMENT, EMPLACEMENT.' : '⚠️ REQUIRED COLUMNS: SITE, DÉPARTEMENT, EMPLACEMENT.'],
+      [fr ? '⚠ COLONNES OBLIGATOIRES : SITE, DÉPARTEMENT, EMPLACEMENT.' : '⚠ REQUIRED COLUMNS: SITE, DÉPARTEMENT, EMPLACEMENT.'],
       [fr ? 'Sans ces 3 colonnes, la feuille est REFUSÉE à l\'import.' : 'Without these 3 columns, the sheet is REFUSED on import.'],
       [''],
       [fr ? 'COLONNES (ordre recommandé) :' : 'COLUMNS (recommended order):'],
@@ -3228,11 +3228,11 @@ function AppContent() {
       notify((language === 'fr' ? `IA : ${aiArticles.length} article(s) détecté(s) sur ${dataRowCount} ligne(s)` : `AI: ${aiArticles.length} article(s) detected from ${dataRowCount} row(s)`) + (extra ? ` — ${extra}` : '') + '.');
       if (refusedSiteCount > 0) {
         notify((language === 'fr'
-          ? `⛔ ${refusedSiteCount} article(s) refusé(s) — site inexistant ou non autorisé (limite d'abonnement). Crée le site dans Administration ou ajoute un site payant.`
-          : `⛔ ${refusedSiteCount} article(s) refused — site missing or not allowed (subscription limit).`), 'warning');
+          ? `${refusedSiteCount} article(s) refusé(s) — site inexistant ou non autorisé (limite d'abonnement). Crée le site dans Administration ou ajoute un site payant.`
+          : `${refusedSiteCount} article(s) refused — site missing or not allowed (subscription limit).`), 'warning');
       }
       if (siteSync && siteSync.error) {
-        notify((language === 'fr' ? "⚠️ Sites non vérifiés (admin indisponible) : " : '⚠️ Sites not verified (admin unavailable): ') + siteSync.error, 'warning');
+        notify((language === 'fr' ? "⚠ Sites non vérifiés (admin indisponible) : " : '⚠ Sites not verified (admin unavailable): ') + siteSync.error, 'warning');
       }
     } catch (e) {
       if (controller.signal.aborted || e?.name === 'AbortError') {
@@ -5193,7 +5193,7 @@ function AppContent() {
                 </tbody>
               </table>
             </div>
-          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Aucun article sous son seuil minimal. ✅' : 'No item below its minimum. ✅'}</p>}
+          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Aucun article sous son seuil minimal. ✓' : 'No item below its minimum. ✓'}</p>}
         </div>
 
         {/* STOCK DORMANT + ROTATION */}
@@ -5220,7 +5220,7 @@ function AppContent() {
                 </tbody>
               </table>
             </div>
-          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Aucun stock dormant. ✅' : 'No dead stock. ✅'}</p>}
+          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Aucun stock dormant. ✓' : 'No dead stock. ✓'}</p>}
         </div>
 
         {/* COMPTAGE CYCLIQUE */}
@@ -5246,7 +5246,7 @@ function AppContent() {
                 </tbody>
               </table>
             </div>
-          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Tous les comptages sont à jour. ✅' : 'All counts up to date. ✅'}</p>}
+          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Tous les comptages sont à jour. ✓' : 'All counts up to date. ✓'}</p>}
         </div>
       </div>
     );
@@ -8298,7 +8298,7 @@ function AppContent() {
               </p>
               {aiRefusal && (
                 <div className="mb-3 rounded-lg border-2 border-red-400 bg-red-50 p-3 text-sm dark:border-red-700 dark:bg-red-900/20">
-                  <p className="font-bold text-red-700 dark:text-red-300">⛔ {language === 'fr' ? 'Feuille refusée — non conforme' : 'Sheet refused — not conforming'}</p>
+                  <p className="font-bold text-red-700 dark:text-red-300">{language === 'fr' ? 'Feuille refusée — non conforme' : 'Sheet refused — not conforming'}</p>
                   <p className="mt-1 text-red-700 dark:text-red-300">{language === 'fr' ? 'Critère(s) minimum manquant(s) :' : 'Missing minimum criteria:'} <strong>{aiRefusal.missing.join(', ')}</strong></p>
                   <p className="mt-2 text-xs text-red-600 dark:text-red-400">{language === 'fr'
                     ? 'Le tableau doit contenir des colonnes claires SITE, DÉPARTEMENT et EMPLACEMENT (au minimum). Colonnes complètes recommandées : EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MIN · MAX · SITE · DÉPARTEMENT · FOURNISSEUR · CATÉGORIE · PRIX ($) · CODE ITEM.'
@@ -8317,7 +8317,7 @@ function AppContent() {
                       ? (language === 'fr' ? `Analyse IA… lot ${aiProgress.done}/${aiProgress.total}` : `AI analysis… batch ${aiProgress.done}/${aiProgress.total}`)
                       : (language === 'fr' ? 'Analyse IA…' : 'AI analysis…')}
                   </>
-                ) : (language === 'fr' ? '✨ Importer via IA (Excel)' : '✨ Import via AI (Excel)')}
+                ) : (language === 'fr' ? 'Importer via IA (Excel)' : 'Import via AI (Excel)')}
               </button>
               {aiImporting && (
                 <button onClick={cancelAiImport} className="mt-2 w-full rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
@@ -8561,7 +8561,7 @@ function AppContent() {
                 </p>
                 {aiRefusal && (
                   <div className="mb-3 rounded-lg border-2 border-red-400 bg-red-50 p-3 text-sm dark:border-red-700 dark:bg-red-900/20">
-                    <p className="font-bold text-red-700 dark:text-red-300">⛔ {language === 'fr' ? 'Feuille refusée — non conforme' : 'Sheet refused — not conforming'}</p>
+                    <p className="font-bold text-red-700 dark:text-red-300">{language === 'fr' ? 'Feuille refusée — non conforme' : 'Sheet refused — not conforming'}</p>
                     <p className="mt-1 text-red-700 dark:text-red-300">{language === 'fr' ? 'Critère(s) minimum manquant(s) :' : 'Missing minimum criteria:'} <strong>{aiRefusal.missing.join(', ')}</strong></p>
                     <p className="mt-2 text-xs text-red-600 dark:text-red-400">{language === 'fr'
                       ? 'Colonnes recommandées : EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MIN · MAX · SITE · DÉPARTEMENT · FOURNISSEUR · CATÉGORIE · PRIX ($) · CODE ITEM.'
@@ -8580,7 +8580,7 @@ function AppContent() {
                         ? (language === 'fr' ? `Analyse IA… lot ${aiProgress.done}/${aiProgress.total}` : `AI analysis… batch ${aiProgress.done}/${aiProgress.total}`)
                         : (language === 'fr' ? 'Analyse IA…' : 'AI analysis…')}
                     </>
-                  ) : (language === 'fr' ? '✨ Importer via IA (Excel)' : '✨ Import via AI (Excel)')}
+                  ) : (language === 'fr' ? 'Importer via IA (Excel)' : 'Import via AI (Excel)')}
                 </button>
                 {aiImporting && (
                   <button onClick={cancelAiImport} className="mt-2 w-full rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
@@ -8835,7 +8835,7 @@ function AppContent() {
       <div className="w-full px-2 py-3 sm:px-3">
         {saveError && (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-            <span>⚠️</span>
+            <span>⚠</span>
             <div className="flex-1">
               <b>{language === 'fr' ? 'Sauvegarde cloud échouée' : 'Cloud save failed'}</b> — {saveError}. {language === 'fr' ? 'Vos modifications ne sont pas encore enregistrées en ligne (réessai automatique à la prochaine modification).' : 'Your changes are not yet saved online (auto-retry on next change).'}
             </div>
@@ -8975,7 +8975,7 @@ function AppContent() {
         <div className="fixed top-4 right-4 z-[60] flex max-w-[90vw] flex-col gap-2" role="status" aria-live="polite">
           {toasts.map(x => (
             <div key={x.id} className={`flex items-start gap-2 rounded-xl px-4 py-3 text-sm shadow-lg ${x.type === 'error' ? 'bg-red-600 text-white' : x.type === 'warning' ? 'bg-amber-500 text-white' : x.type === 'info' ? 'bg-slate-800 text-white' : 'bg-emerald-600 text-white'}`}>
-              <span>{x.type === 'error' ? '⚠️' : x.type === 'warning' ? '⚠️' : x.type === 'info' ? 'ℹ️' : '✓'}</span>
+              <span>{x.type === 'error' ? '⚠' : x.type === 'warning' ? '⚠' : x.type === 'info' ? 'ℹ' : '✓'}</span>
               <span className="flex-1 whitespace-pre-line">{x.message}</span>
               <button aria-label="Fermer" className="opacity-70 hover:opacity-100" onClick={() => setToasts(prev => prev.filter(t => t.id !== x.id))}>✕</button>
             </div>
@@ -8998,7 +8998,7 @@ function AppContent() {
 
       {/* Assistant Prix IA — comparatif prix fournisseur (actuel) vs prix web (IA) */}
       {showPriceModal && (
-        <Modal isOpen onClose={() => setShowPriceModal(false)} title={language === 'fr' ? '💡 Assistant prix (IA — recherche web)' : '💡 Price assistant (AI — web search)'}>
+        <Modal isOpen onClose={() => setShowPriceModal(false)} title={language === 'fr' ? 'Assistant prix (IA — recherche web)' : 'Price assistant (AI — web search)'}>
           <div className="p-2">
             <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
               {language === 'fr'
@@ -9264,7 +9264,7 @@ function AppContent() {
                     <div className="mt-3 text-center">
                       <div className="text-base font-bold text-gray-900 dark:text-white">{selectedItemForView.name}</div>
                       <div className="text-xs text-gray-500">Code : {selectedItemForView.code}</div>
-                      {selectedItemForView.location && <div className="text-xs text-gray-500">📍 {selectedItemForView.location}</div>}
+                      {selectedItemForView.location && <div className="text-xs text-gray-500">{selectedItemForView.location}</div>}
                       {(selectedItemForView.minQuantity != null || selectedItemForView.maxQuantity != null) && (
                         <div className="mt-0.5 text-xs font-semibold text-blue-600">Min {selectedItemForView.minQuantity ?? '—'} · Max {selectedItemForView.maxQuantity ?? '—'}</div>
                       )}
@@ -9275,7 +9275,7 @@ function AppContent() {
                       <button
                         onClick={() => { try { navigator.clipboard.writeText(qrUrl); } catch { /* ignore */ } }}
                         className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
-                        📋 {language === 'fr' ? 'Copier le lien' : 'Copy link'}
+                        {language === 'fr' ? 'Copier le lien' : 'Copy link'}
                       </button>
                       <button
                         onClick={() => {
@@ -9288,7 +9288,7 @@ function AppContent() {
                           a.click(); URL.revokeObjectURL(a.href);
                         }}
                         className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
-                        ⬇ {language === 'fr' ? 'Télécharger' : 'Download'}
+                        ↓ {language === 'fr' ? 'Télécharger' : 'Download'}
                       </button>
                     </div>
                   </div>

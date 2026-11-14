@@ -178,13 +178,13 @@ export const useWeatherData = (coordinates: Coordinates) => {
 
   const getWeatherIcon = (conditions: string): string => {
     const icons: Record<string, string> = {
-      'ensoleillé': '☀️',
-      'nuageux': '☁️',
-      'pluvieux': '🌧️',
-      'neigeux': '❄️',
-      'orageux': '⛈️'
+      'ensoleillé': '',
+      'nuageux': '',
+      'pluvieux': '',
+      'neigeux': '',
+      'orageux': ''
     };
-    return icons[conditions] || '🌤️';
+    return icons[conditions] || '';
   };
 
   const getComfortLevel = (weather: WeatherData): 'excellent' | 'good' | 'acceptable' | 'poor' | 'dangerous' => {

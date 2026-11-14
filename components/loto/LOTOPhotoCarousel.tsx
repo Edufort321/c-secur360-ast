@@ -97,7 +97,7 @@ type PhotoType = 'isolation' | 'verification' | 'lock_application' | 'energy_tes
 
 const translations = {
   fr: {
-    title: "🔒 Carrousel Photo LOTO",
+    title: "Carrousel Photo LOTO",
     subtitle: "Documentation photographique des procédures de verrouillage",
     
     // États LOTO
@@ -131,21 +131,21 @@ const translations = {
     
     // Types d'énergie
     energyTypes: {
-      electrical: "⚡ Électrique",
-      mechanical: "⚙️ Mécanique", 
-      hydraulic: "🔧 Hydraulique",
-      pneumatic: "💨 Pneumatique",
-      thermal: "🔥 Thermique",
-      chemical: "🧪 Chimique",
-      gravitational: "⬇️ Gravitationnelle"
+      electrical: "Électrique",
+      mechanical: "Mécanique", 
+      hydraulic: "Hydraulique",
+      pneumatic: "Pneumatique",
+      thermal: "Thermique",
+      chemical: "Chimique",
+      gravitational: "Gravitationnelle"
     },
     
     // Priorités
     priorities: {
-      critical: "🔴 Critique",
-      high: "🟠 Élevée",
-      medium: "🟡 Moyenne", 
-      low: "🟢 Faible"
+      critical: "Critique",
+      high: "Élevée",
+      medium: "Moyenne", 
+      low: "Faible"
     },
     
     // Actions
@@ -225,7 +225,7 @@ const translations = {
   },
   
   en: {
-    title: "🔒 LOTO Photo Carousel",
+    title: "LOTO Photo Carousel",
     subtitle: "Photographic documentation of lockout procedures",
     
     // LOTO status
@@ -259,21 +259,21 @@ const translations = {
     
     // Energy types
     energyTypes: {
-      electrical: "⚡ Electrical",
-      mechanical: "⚙️ Mechanical",
-      hydraulic: "🔧 Hydraulic", 
-      pneumatic: "💨 Pneumatic",
-      thermal: "🔥 Thermal",
-      chemical: "🧪 Chemical",
-      gravitational: "⬇️ Gravitational"
+      electrical: "Electrical",
+      mechanical: "Mechanical",
+      hydraulic: "Hydraulic", 
+      pneumatic: "Pneumatic",
+      thermal: "Thermal",
+      chemical: "Chemical",
+      gravitational: "Gravitational"
     },
     
     // Priorities
     priorities: {
-      critical: "🔴 Critical",
-      high: "🟠 High",
-      medium: "🟡 Medium",
-      low: "🟢 Low"
+      critical: "Critical",
+      high: "High",
+      medium: "Medium",
+      low: "Low"
     },
     
     // Actions

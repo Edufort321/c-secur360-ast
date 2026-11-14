@@ -198,7 +198,7 @@ Support: +15146034519</Message>
       success: false
     });
 
-    console.error('❌ Erreur webhook SMS entrant:', error);
+    console.error('Erreur webhook SMS entrant:', error);
     
     // Réponse TwiML d'erreur
     return new NextResponse(

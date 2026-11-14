@@ -4,7 +4,7 @@ import ModernPermitForm from '@/components/permits/ModernPermitForm';
 // Travail à chaud (NFPA 51B) — soudage/coupage/meulage. Surveillance incendie ≥ 60 min après travaux.
 export default function Page() {
   return <ModernPermitForm config={{
-    type: 'hot_work', title: '🔥 Permis de travail à chaud', color: 'text-orange-600', btn: 'bg-orange-600 hover:bg-orange-700', prefix: 'HW',
+    type: 'hot_work', title: 'Permis de travail à chaud', color: 'text-orange-600', btn: 'bg-orange-600 hover:bg-orange-700', prefix: 'HW',
     intro: 'NFPA 51B — soudage, coupage, meulage. Surveillance incendie obligatoire pendant ET ≥ 60 min après les travaux.',
     sections: [{
       title: 'Prévention incendie', fields: [

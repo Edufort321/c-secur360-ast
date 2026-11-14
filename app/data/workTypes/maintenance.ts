@@ -6,7 +6,7 @@ export const generalMaintenance: WorkType = {
   name: 'Maintenance générale',
   category: 'Maintenance',
   description: 'Maintenance préventive et corrective générale',
-  icon: '🔧',
+  icon: '',
   baseHazards: [
     'PHY-001', // Brûlures/coupures
     'MECA-001', // Dangers mécaniques
@@ -51,7 +51,7 @@ export const mechanicalMaintenance: WorkType = {
   name: 'Maintenance mécanique',
   category: 'Maintenance',
   description: 'Maintenance d\'équipements mécaniques et machines',
-  icon: '⚙️',
+  icon: '',
   baseHazards: [
     'MECA-001', // Dangers mécaniques
     'LOTO-001', // Énergies dangereuses
@@ -98,7 +98,7 @@ export const hvacMaintenance: WorkType = {
   name: 'Maintenance CVCA',
   category: 'Maintenance',
   description: 'Maintenance systèmes chauffage, ventilation et climatisation',
-  icon: '🌡️',
+  icon: '',
   baseHazards: [
     'ELEC-001', // Choc électrique
     'REFR-001', // Fluides réfrigérants
@@ -150,7 +150,7 @@ export const plumbingMaintenance: WorkType = {
   name: 'Maintenance plomberie',
   category: 'Maintenance',
   description: 'Maintenance et réparation systèmes de plomberie',
-  icon: '🚰',
+  icon: '',
   baseHazards: [
     'CHIM-002', // Produits chimiques
     'BIO-001', // Agents biologiques
@@ -196,7 +196,7 @@ export const paintingMaintenance: WorkType = {
   name: 'Peinture et finition',
   category: 'Maintenance',
   description: 'Travaux de peinture et finition de surfaces',
-  icon: '🎨',
+  icon: '',
   baseHazards: [
     'CHIM-001', // Vapeurs solvants
     'PHY-003', // Chutes (échafaudages)

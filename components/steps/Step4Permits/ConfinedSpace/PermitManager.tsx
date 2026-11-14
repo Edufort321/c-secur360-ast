@@ -41,7 +41,7 @@ interface PermitHistoryEntry {
   qrCode?: string;
 }
 
-// ✅ TYPE GUARD FUNCTIONS POUR CORRIGER L'ERREUR BUILD
+// ✓ TYPE GUARD FUNCTIONS POUR CORRIGER L'ERREUR BUILD
 function isSiteInformationComplete(siteInfo: ConfinedSpaceDetails | {}): siteInfo is ConfinedSpaceDetails {
   return (
     siteInfo && 
@@ -63,7 +63,7 @@ function getSiteInfoValue<K extends keyof ConfinedSpaceDetails>(
   return undefined;
 }
 
-// ✅ TYPE GUARD POUR RESCUE PLAN
+// ✓ TYPE GUARD POUR RESCUE PLAN
 function isRescuePlanComplete(rescuePlan: any): boolean {
   return (
     rescuePlan && 
@@ -264,7 +264,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'history' | 'database'>('main');
 
-  // ✅ CORRECTION 1 & 2 : Validation globale avec vérifications SafetyManager
+  // ✓ CORRECTION 1 & 2 : Validation globale avec vérifications SafetyManager
   const validation = React.useMemo(() => {
     if (safetyManager) {
       try {
@@ -322,7 +322,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION 3 : Handler sauvegarde avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler sauvegarde avec vérifications SafetyManager
   const handleSave = async () => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
@@ -345,7 +345,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION 3 : Handler QR avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler QR avec vérifications SafetyManager
   const handleGenerateQR = async () => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
@@ -365,7 +365,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION 3 : Handler PDF avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler PDF avec vérifications SafetyManager
   const handleGeneratePDF = async () => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
@@ -390,7 +390,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION 3 : Handler partage avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler partage avec vérifications SafetyManager
   const handleShare = async () => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
@@ -421,7 +421,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION 3 : Handler recherche avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler recherche avec vérifications SafetyManager
   const handleSearch = useCallback(async (query: string) => {
     if (query.trim().length < 2) {
       setSearchResults([]);
@@ -470,7 +470,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, qrCodeUrl]);
 
-  // ✅ CORRECTION 3 : Handler chargement avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler chargement avec vérifications SafetyManager
   const handleLoadPermit = async (permitNumber: string) => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
@@ -487,7 +487,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION 3 : Handler nouveau permis avec vérifications SafetyManager
+  // ✓ CORRECTION 3 : Handler nouveau permis avec vérifications SafetyManager
   const handleCreateNewPermit = () => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
@@ -503,23 +503,23 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
-  // ✅ CORRECTION BUILD PRINCIPALE - Fonction getSectionValidation avec type guards
+  // ✓ CORRECTION BUILD PRINCIPALE - Fonction getSectionValidation avec type guards
   const getSectionValidation = (): ValidationSummary[] => {
     return [
       {
         sectionName: t.siteInformation,
         icon: <Building style={{ width: '20px', height: '20px' }} />,
-        // ✅ LIGNE 476 CORRIGÉE - Type guard pour éviter l'erreur union type
+        // ✓ LIGNE 476 CORRIGÉE - Type guard pour éviter l'erreur union type
         isComplete: Boolean(
           isSiteInformationComplete(permit.siteInformation) &&
           permit.siteInformation.projectNumber && 
           permit.siteInformation.workLocation
         ),
-        // ✅ LIGNE 477 CORRIGÉE - Type guard pour getFieldCompletionPercentage
+        // ✓ LIGNE 477 CORRIGÉE - Type guard pour getFieldCompletionPercentage
         completionPercentage: isSiteInformationComplete(permit.siteInformation)
           ? getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor'])
           : 0,
-        // ✅ LIGNE 478 CORRIGÉE - Type guard pour errors check
+        // ✓ LIGNE 478 CORRIGÉE - Type guard pour errors check
         errors: (
           isSiteInformationComplete(permit.siteInformation) &&
           permit.siteInformation.projectNumber
@@ -529,7 +529,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       {
         sectionName: t.rescuePlan,
         icon: <Shield style={{ width: '20px', height: '20px' }} />,
-        // ✅ LIGNES 521-523 CORRIGÉES - Type guard pour RescuePlan
+        // ✓ LIGNES 521-523 CORRIGÉES - Type guard pour RescuePlan
         isComplete: isRescuePlanComplete(permit.rescuePlan),
         completionPercentage: isRescuePlanComplete(permit.rescuePlan) ? 100 : 0,
         errors: isRescuePlanComplete(permit.rescuePlan) ? [] : ['Plan de sauvetage incomplet'],
@@ -538,7 +538,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       {
         sectionName: t.atmosphericTesting,
         icon: <Activity style={{ width: '20px', height: '20px' }} />,
-        // ✅ TYPE GUARD pour atmosphericTesting aussi
+        // ✓ TYPE GUARD pour atmosphericTesting aussi
         isComplete: Boolean(
           permit.atmosphericTesting && 
           typeof permit.atmosphericTesting === 'object' &&
@@ -565,7 +565,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       {
         sectionName: t.entryRegistry,
         icon: <Users style={{ width: '20px', height: '20px' }} />,
-        // ✅ TYPE GUARD pour entryRegistry aussi
+        // ✓ TYPE GUARD pour entryRegistry aussi
         isComplete: Boolean(
           permit.entryRegistry && 
           typeof permit.entryRegistry === 'object' &&
@@ -593,12 +593,12 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   };
 
   const getPermitStatistics = () => {
-    // ✅ CORRECTION 3 : Vérifications SafetyManager pour lastSaved
+    // ✓ CORRECTION 3 : Vérifications SafetyManager pour lastSaved
     const lastSaved = safetyManager?.lastSaved ? 
       new Date(safetyManager.lastSaved).toLocaleString() : 
       'Jamais';
 
-    // ✅ SÉCURISER ACCÈS AUX PROPRIÉTÉS AVEC TYPE GUARDS
+    // ✓ SÉCURISER ACCÈS AUX PROPRIÉTÉS AVEC TYPE GUARDS
     const totalPersonnel = (
       permit.entryRegistry && 
       typeof permit.entryRegistry === 'object' &&
@@ -740,15 +740,15 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
                         {result.permitNumber}
                       </h4>
                       <p style={{ color: 'white', margin: '0 0 4px 0', fontSize: '14px' }}>
-                        📋 {result.projectNumber} • 📍 {result.workLocation}
+                        {result.projectNumber} • {result.workLocation}
                       </p>
                       <p style={{ color: '#9ca3af', margin: 0, fontSize: '13px' }}>
-                        🏢 {result.contractor} • {t.spaceTypes[result.spaceType as keyof typeof t.spaceTypes] || result.spaceType}
+                        {result.contractor} • {t.spaceTypes[result.spaceType as keyof typeof t.spaceTypes] || result.spaceType}
                       </p>
                       <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
-                        <span>⚠️ {result.hazardCount} dangers</span>
+                        <span>⚠ {result.hazardCount} dangers</span>
                         <span>📷 {result.photoCount} photos</span>
-                        <span>🕒 {new Date(result.lastModified || Date.now()).toLocaleDateString()}</span>
+                        <span>{new Date(result.lastModified || Date.now()).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <span style={{
@@ -761,9 +761,9 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
                       fontSize: '11px',
                       fontWeight: '600'
                     }}>
-                      {result.status === 'active' ? '🟢 ACTIF' : 
-                       result.status === 'completed' ? '🔵 COMPLÉTÉ' :
-                       result.status === 'draft' ? '🟡 BROUILLON' : '⚪ AUTRE'}
+                      {result.status === 'active' ? 'ACTIF' : 
+                       result.status === 'completed' ? 'COMPLÉTÉ' :
+                       result.status === 'draft' ? 'BROUILLON' : 'AUTRE'}
                     </span>
                   </div>
                 </div>
@@ -776,7 +776,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-              <p>💡 {language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
+              <p>{language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
             </div>
           )}
         </div>
@@ -830,7 +830,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
                 marginBottom: '4px',
                 lineHeight: 1.2
               }}>
-                ⚙️ {t.title}
+                {t.title}
               </h1>
               <p style={{
                 color: '#d1d5db',
@@ -855,7 +855,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
               fontSize: currentIsMobile ? '12px' : '14px', 
               color: '#d1d5db' 
             }}>
-              {validation.isValid ? '✅ Valide' : '⚠️ Incomplet'}
+              {validation.isValid ? '✓ Valide' : '⚠ Incomplet'}
             </div>
           </div>
         </div>
@@ -1181,7 +1181,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
               />
             </div>
             <p style={{ color: '#d1d5db', fontSize: '14px', lineHeight: 1.5 }}>
-              📱 Scannez ce code QR pour accéder au permis depuis un appareil mobile
+              Scannez ce code QR pour accéder au permis depuis un appareil mobile
             </p>
           </div>
         </div>

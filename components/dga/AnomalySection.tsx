@@ -5,6 +5,7 @@
 // photos custom, statut (à corriger ↔ corrigé), archivage. Sélectionnable à l'export.
 // ============================================================================
 import React, { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import type { Anomaly } from '@/lib/dga/dossiers';
 import type { Lang } from '@/lib/dga/fields';
 
@@ -81,19 +82,19 @@ export function AnomalySection({ anomalies, onChange, lang, tr, setNotice }: {
               <div key={a.id} className={`rounded-xl border p-3 ${a.archived ? 'border-dashed border-gray-300 opacity-70 dark:border-gray-600' : 'border-gray-200 dark:border-gray-700'}`} style={!a.archived ? { borderLeft: `4px solid ${isAnom ? '#e63946' : '#277da1'}` } : undefined}>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <select className="rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs font-semibold dark:border-gray-600" value={a.kind} onChange={e => update(a.id, { kind: e.target.value as Anomaly['kind'] })}>
-                    <option value="anomalie">🔧 {tr('Anomalie', 'Anomaly')}</option>
-                    <option value="reco">💡 {tr('Recommandation', 'Recommendation')}</option>
+                    <option value="anomalie">{tr('Anomalie', 'Anomaly')}</option>
+                    <option value="reco">{tr('Recommandation', 'Recommendation')}</option>
                   </select>
                   <button onClick={() => update(a.id, { status: done ? 'a_corriger' : 'corrige' })}
                     className="rounded-full px-2.5 py-1 text-[11px] font-bold"
                     style={done ? { background: '#dcfce7', color: '#15803d' } : { background: '#fef3c7', color: '#b45309' }}>
-                    {done ? '✓ ' + tr('Corrigé', 'Corrected') : '⛏ ' + tr('À corriger', 'To fix')}
+                    {done ? '✓ ' + tr('Corrigé', 'Corrected') : tr('À corriger', 'To fix')}
                   </button>
                   <div className="ml-auto flex items-center gap-2">
                     <button onClick={() => update(a.id, { archived: !a.archived })} className="text-[11px] font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
-                      {a.archived ? '↺ ' + tr('Désarchiver', 'Unarchive') : '🗄 ' + tr('Archiver', 'Archive')}
+                      {a.archived ? '↺ ' + tr('Désarchiver', 'Unarchive') : tr('Archiver', 'Archive')}
                     </button>
-                    <button onClick={() => remove(a.id)} className="text-gray-300 hover:text-red-500">🗑</button>
+                    <button onClick={() => remove(a.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
                 </div>
                 <input className={INP + ' mb-2 font-semibold'} value={a.title || ''} placeholder={tr('Titre (ex. Fuite au radiateur nord)', 'Title (e.g. Leak on north radiator)')} onChange={e => update(a.id, { title: e.target.value })} />

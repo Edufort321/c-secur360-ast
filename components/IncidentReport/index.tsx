@@ -542,7 +542,7 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
     <div class="card"><div class="card-h">${esc(t.p.injuredN)} #${i + 1} — ${v(p.name)}</div>
       ${row(t.p.jobTitle, p.jobTitle)}${row(t.p.employer, p.company)}${row(t.p.empId, p.employeeId)}${row(t.p.phone, p.phone)}
       ${row(t.p.injuryType, p.injuryType === 'Autre' && p.injuryTypeOther ? `${tl(lang, 'Autre')} — ${p.injuryTypeOther}` : (p.injuryType ? tl(lang, p.injuryType) : ''))}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
-      ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}${p.restricted ? row(t.p.restricted, '✔') : ''}${p.fatality ? row(t.p.fatality, '✔') : ''}
+      ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}${p.restricted ? row(t.p.restricted, '✓') : ''}${p.fatality ? row(t.p.fatality, '✓') : ''}
       ${p.bodyRegions?.length ? row(lang === 'fr' ? 'Zones blessées' : 'Injured areas', p.bodyRegions.map(id => bodyLabel(id, lang)).join(', ')) : ''}
     </div>`).join('');
 

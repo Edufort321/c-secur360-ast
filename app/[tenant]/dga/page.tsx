@@ -13,7 +13,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 import { supabase } from '@/lib/supabase';
-import { FlaskConical, Lock, Loader2, Plus, Search, Upload, Trash2, ArrowLeft, Mail } from 'lucide-react';
+import { FlaskConical, Lock, Loader2, Plus, Search, Upload, Trash2, ArrowLeft, Mail, FileText } from 'lucide-react';
 import {
   EQUIP_GROUPS, EQUIP_FIELDS, listDossiers, listAllMeasures, listMeasures, saveDossier, deleteDossier,
   saveMeasure, deleteMeasure, matchDossier, setTreated, type Dossier, type Measure,
@@ -614,14 +614,14 @@ export default function DgaPage() {
         {view === 'list' && delMode && (
           <label className="mb-3 inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
             <input type="checkbox" checked={withCover} onChange={e => setWithCover(e.target.checked)} />
-            ✉️ {tr('Inclure une lettre de présentation au rapport', 'Include a cover letter in the report')}
+            {tr('Inclure une lettre de présentation au rapport', 'Include a cover letter in the report')}
           </label>
         )}
         {view === 'list' && filtered.length > 0 && (
           <div className="mb-3 flex justify-end">
             <button onClick={exportListCsv} title={tr('Exporter la liste filtrée en CSV (Excel)', 'Export the filtered list to CSV (Excel)')}
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-              ⬇️ {tr('Exporter CSV', 'Export CSV')} ({filtered.length})
+              {tr('Exporter CSV', 'Export CSV')} ({filtered.length})
             </button>
           </div>
         )}
@@ -711,13 +711,13 @@ function ListView(p: any) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold">{tr('Base de données', 'Database')} ({dossiers.length})</h2>
         <div className="flex flex-wrap gap-2">
-          {!delMode && dossiers.length > 1 && <button className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700" onClick={() => setDelMode(true)} title={tr('Sélectionner plusieurs transformateurs et assembler un rapport PDF', 'Select several transformers and assemble a PDF report')}>📄 {tr('Rapport multi-transfo', 'Multi-transformer report')}</button>}
-          {!delMode && dossiers.length > 0 && <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setDelMode(true)}>🗑 {tr('Gérer', 'Manage')}</button>}
+          {!delMode && dossiers.length > 1 && <button className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700" onClick={() => setDelMode(true)} title={tr('Sélectionner plusieurs transformateurs et assembler un rapport PDF', 'Select several transformers and assemble a PDF report')}>{tr('Rapport multi-transfo', 'Multi-transformer report')}</button>}
+          {!delMode && dossiers.length > 0 && <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setDelMode(true)}>{tr('Gérer', 'Manage')}</button>}
           {!delMode && <button onClick={openInbound} className="relative inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"><Mail size={15} /> {tr('Import par courriel', 'Email import')}{newDossiers.length > 0 && <span className="ml-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">{newDossiers.length}</span>}</button>}
           {!delMode && <button onClick={startNewT} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Nouveau transformateur', 'New transformer')}</button>}
           {delMode && (<>
             <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={selectAllFiltered}>{filtered.length > 0 && filtered.every((x: Dossier) => selected[x.id!]) ? tr('Tout désélectionner', 'Deselect all') : tr('Tout sélectionner', 'Select all')}</button>
-            <button className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled={!selCount || assembling} onClick={assembleReport} title={tr('Assembler un rapport PDF de tous les transformateurs sélectionnés (même client)', 'Assemble a PDF report of all selected transformers (same client)')}>{assembling ? <Loader2 size={15} className="animate-spin" /> : '📄'} {tr('Assembler le rapport', 'Assemble report')} ({selCount})</button>
+            <button className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled={!selCount || assembling} onClick={assembleReport} title={tr('Assembler un rapport PDF de tous les transformateurs sélectionnés (même client)', 'Assemble a PDF report of all selected transformers (same client)')}>{assembling ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} {tr('Assembler le rapport', 'Assemble report')} ({selCount})</button>
             <button className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled={!selCount} onClick={deleteSelected}>{tr('Supprimer la sélection', 'Delete selection')} ({selCount})</button>
             <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={exitDelMode}>{tr('Terminer', 'Done')}</button>
           </>)}
@@ -740,7 +740,7 @@ function ListView(p: any) {
           ? <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{tr(`Extraction IA… lot ${importProgress.done}/${importProgress.total}`, `AI extraction… batch ${importProgress.done}/${importProgress.total}`)}</p>
           : <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo OU un export Excel/CSV (InsideView/LIMS) ici — PDF : extraction IA par lots ; Excel : mappage direct, fusion par date', 'Drop a lab PDF OR an Excel/CSV export (InsideView/LIMS) here — PDF: batched AI extraction; Excel: direct mapping, merge by date')}</p>}
         <input ref={fileRef} type="file" multiple accept="application/pdf,.pdf,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) handleImportFiles(fs); e.currentTarget.value = ''; }} />
-        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF / Excel (plusieurs)', 'Import PDF / Excel (multiple)')}</button>
+        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">{tr('Importer PDF / Excel (plusieurs)', 'Import PDF / Excel (multiple)')}</button>
       </div>
 
       {/* Recherche + filtres (filtres repliés dans un hamburger sous 640px) */}
@@ -762,7 +762,7 @@ function ListView(p: any) {
         ))}
         <span className="mx-0.5 h-4 w-px bg-gray-300 dark:bg-gray-600" />
         <button onClick={pickCond} title={tr('Transformateurs en condition élevée (≥ 3) — suivi rapproché', 'Transformers in elevated condition (≥ 3) — close follow-up')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={condFilter ? { background: '#e63946', color: '#fff', borderColor: '#e63946' } : { color: '#e63946', borderColor: '#e63946' }}>⚠ {tr('Suivi rapproché', 'Close follow-up')}</button>
-        <button onClick={pickPcb} title={tr('BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm)', 'PCB detected (traces 2-50 ppm or present ≥ 50 ppm)')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={pcbFilter ? { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' } : { color: '#7c3aed', borderColor: '#7c3aed' }}>🧪 {tr('BPC détecté', 'PCB detected')}</button>
+        <button onClick={pickPcb} title={tr('BPC détecté (traces 2-50 ppm ou présent ≥ 50 ppm)', 'PCB detected (traces 2-50 ppm or present ≥ 50 ppm)')} className="rounded-full border px-3 py-1 text-xs font-semibold" style={pcbFilter ? { background: '#7c3aed', color: '#fff', borderColor: '#7c3aed' } : { color: '#7c3aed', borderColor: '#7c3aed' }}>{tr('BPC détecté', 'PCB detected')}</button>
         {sitesTree.length > 0 && (
           <select className={inp} value={siteFilter} onChange={e => setSiteFilter(e.target.value)} title={tr('Filtrer par site', 'Filter by site')}>
             <option value="">{tr('Tous les sites', 'All sites')}</option>
@@ -837,8 +837,8 @@ function ListView(p: any) {
                     {/* Ordre : Nom du client / Nom d'équipement / n° de série · emplacement */}
                     <div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-gray-100">{isOltc && <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold text-white">OLTC</span>}{d.company || d.client || tr('Client —', 'Client —')}</div>
                     <div className="text-[12px] font-semibold text-gray-700 dark:text-gray-200">{d.ident || '—'}</div>
-                    <div className="text-[11px] text-gray-500">{d.serie ? `SN ${d.serie}` : tr('SN —', 'SN —')}{d.client ? ` · 📍 ${d.client}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>
-                    {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">📍 {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}{isOltc && parentName && <div className="text-[11px] text-indigo-500">↳ {tr('Transfo.', 'Xfmr')} {parentName}</div>}
+                    <div className="text-[11px] text-gray-500">{d.serie ? `SN ${d.serie}` : tr('SN —', 'SN —')}{d.client ? ` · ${d.client}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>
+                    {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">{siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}{isOltc && parentName && <div className="text-[11px] text-indigo-500">↳ {tr('Transfo.', 'Xfmr')} {parentName}</div>}
                   </div>
                 </div>
                 {isOltc
@@ -847,15 +847,15 @@ function ListView(p: any) {
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 <button onClick={(e) => { e.stopPropagation(); onToggleTreated(d.id!, !treated); }} title={treated ? tr('Marquer à traiter', 'Mark as to-do') : tr('Marquer comme traité', 'Mark as treated')} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${treated ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-500 text-white'}`}>{treated ? `✓ ${tr('Traité', 'Treated')}` : `◦ ${tr('À traiter', 'To treat')}`}</button>
-                {newCount > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">✦ {tr('Nouveau', 'New')}{newCount > 1 ? ` ×${newCount}` : ''}</span>}
+                {newCount > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">{tr('Nouveau', 'New')}{newCount > 1 ? ` ×${newCount}` : ''}</span>}
                 {nextD && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: dueColor + '22', color: dueColor, borderColor: dueColor }}>
                   {due.code === 'overdue' ? '⚠ ' : due.code === 'soon' ? '◷ ' : '✓ '}{dueLabel} · {nextD}{due.days != null ? ` (${due.days < 0 ? `${-due.days} ${tr('j. de retard', 'days late')}` : `${due.days} ${tr('j. restants', 'days left')}`})` : ''}
                 </span>}
                 {inspNext && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: inspColor + '22', color: inspColor, borderColor: inspColor }}>
-                  🛠 {inspLabel} · {inspNext}{insp?.days != null ? ` (${insp.days < 0 ? `${-insp.days} ${tr('j. de retard', 'days late')}` : `${insp.days} ${tr('j. restants', 'days left')}`})` : ''}
+                  {inspLabel} · {inspNext}{insp?.days != null ? ` (${insp.days < 0 ? `${-insp.days} ${tr('j. de retard', 'days late')}` : `${insp.days} ${tr('j. restants', 'days left')}`})` : ''}
                 </span>}
                 {pcb.code !== 'unknown' && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: pcb.color + '22', color: pcb.color, borderColor: pcb.color }}>
-                  🧪 {pcb.label}{pcb.value != null ? ` · ${pcb.value} ppm` : ''}
+                  {pcb.label}{pcb.value != null ? ` · ${pcb.value} ppm` : ''}
                 </span>}
               </div>
               <div className="mt-auto flex items-center gap-2 border-t border-gray-100 pt-2 text-[11px] text-gray-500 dark:border-gray-700/60">
@@ -881,7 +881,7 @@ function ImportPreview({ tr, lang, importPreview, setImportPreview, applyImport 
   const furanRows = (measures: Measure[]) => FURAN_FIELDS.filter(f => measures.some(m => m.oil_quality?.[f.key] != null));
   return (
     <Modal onClose={() => setImportPreview(null)}>
-      <h2 className="mb-1 text-lg font-bold">📄 {tr("Vérifie les données extraites avant d'enregistrer.", 'Review extracted data before saving.')}</h2>
+      <h2 className="mb-1 text-lg font-bold">{tr("Vérifie les données extraites avant d'enregistrer.", 'Review extracted data before saving.')}</h2>
       {multi && <p className="mb-3 text-sm font-semibold text-rose-600">{items.length} {tr('transformateurs détectés — séparés ci-dessous (un dossier chacun).', 'transformers detected — separated below (one record each).')}</p>}
       <div className="space-y-4">
         {items.map((it, i) => {
@@ -893,17 +893,17 @@ function ImportPreview({ tr, lang, importPreview, setImportPreview, applyImport 
                 <div className="text-sm"><b>{it.eq.ident || '—'}</b>{it.eq.serie ? ` · SN ${it.eq.serie}` : ''}{it.eq.kv ? ` · ${it.eq.kv} kV` : ''}{it.eq.manufacturer ? ` · ${it.eq.manufacturer}` : ''} <span className="ml-1 text-emerald-600">{measures.length} {tr('mesure(s)', 'meas.')}</span></div>
                 {it.match && (
                   <div className="flex gap-1">
-                    <button onClick={() => setMode(i, 'merge')} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${merging ? 'bg-emerald-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`}>🔗 {tr('Fusionner', 'Merge')}</button>
+                    <button onClick={() => setMode(i, 'merge')} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${merging ? 'bg-emerald-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`}>{tr('Fusionner', 'Merge')}</button>
                     <button onClick={() => setMode(i, 'create')} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${!merging ? 'bg-rose-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`}>＋ {tr('Créer', 'Create')}</button>
                   </div>
                 )}
               </div>
               {it.match && merging && (it.matchBy === 'name' ? (
                 <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-                  💡 {tr('Fusion suggérée avec', 'Suggested merge with')} <b>{it.match.ident}</b> — {tr('même identification, n° de série absent. Confirmez ou choisissez « Créer ».', 'same identification, serial number missing. Confirm or choose “Create”.')} <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}
+                  {tr('Fusion suggérée avec', 'Suggested merge with')} <b>{it.match.ident}</b> — {tr('même identification, n° de série absent. Confirmez ou choisissez « Créer ».', 'same identification, serial number missing. Confirm or choose “Create”.')} <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}
                 </div>
               ) : (
-                <div className="mb-2 text-xs text-emerald-700 dark:text-emerald-300">🔗 {tr('Fusion avec', 'Merge with')} <b>{it.match.ident}</b> <span className="text-emerald-600">(✓ {tr('n° de série', 'serial no.')})</span> — <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span className="text-amber-600"> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}</div>
+                <div className="mb-2 text-xs text-emerald-700 dark:text-emerald-300">{tr('Fusion avec', 'Merge with')} <b>{it.match.ident}</b> <span className="text-emerald-600">(✓ {tr('n° de série', 'serial no.')})</span> — <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span className="text-amber-600"> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}</div>
               ))}
               {merging && (it.conflicts || []).length > 0 && (
                 <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">

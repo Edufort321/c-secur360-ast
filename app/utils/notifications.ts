@@ -245,7 +245,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
         config: { template: 'risk-alert-email' }
       }
     ],
-    subject: '🚨 Alerte Risque Élevé - AST #{astNumber}',
+    subject: 'Alerte Risque Élevé - AST #{astNumber}',
     message: 'Un risque élevé a été détecté dans l\'AST #{astNumber}.',
     variables: [
       { name: 'astNumber', type: 'string', description: 'Numéro AST', required: true }

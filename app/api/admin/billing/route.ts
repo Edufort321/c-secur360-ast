@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     // Si export demandé, générer le fichier comptable
     if (export_type) {
-      console.log('📊 Génération export comptable:', export_type);
+      console.log('Génération export comptable:', export_type);
       
       // Générer les factures pour export
       const billingRecords = [];
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Erreur API facturation:', error);
+    console.error('Erreur API facturation:', error);
     
     return NextResponse.json(
       { 
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, subscriptionId, data } = body;
 
-    console.log('💳 Action facturation:', { action, subscriptionId });
+    console.log('Action facturation:', { action, subscriptionId });
 
     switch (action) {
       case 'generate_invoice':
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
         );
         
         // Ici, sauvegarder en DB
-        console.log('📄 Facture générée:', invoice);
+        console.log('Facture générée:', invoice);
         
         return NextResponse.json({
           success: true,
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
         const settings = data.settings;
         
         // Ici, sauvegarder les paramètres en DB
-        console.log('⚙️ Paramètres facturation mis à jour:', settings);
+        console.log('Paramètres facturation mis à jour:', settings);
         
         return NextResponse.json({
           success: true,
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
 
       case 'process_failed_payment':
         // Traiter un paiement échoué
-        console.log('💳 Traitement paiement échoué:', subscriptionId);
+        console.log('Traitement paiement échoué:', subscriptionId);
         
         // Logique de traitement des paiements échoués
         // - Envoyer notification
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ Erreur action facturation:', error);
+    console.error('Erreur action facturation:', error);
     
     return NextResponse.json(
       { 
@@ -265,7 +265,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { invoiceId, status, notes } = body;
 
-    console.log('📝 Mise à jour statut facture:', { invoiceId, status });
+    console.log('Mise à jour statut facture:', { invoiceId, status });
 
     // Ici, mettre à jour la facture en DB
     const updatedInvoice = {
@@ -282,7 +282,7 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Erreur mise à jour facture:', error);
+    console.error('Erreur mise à jour facture:', error);
     
     return NextResponse.json(
       { 

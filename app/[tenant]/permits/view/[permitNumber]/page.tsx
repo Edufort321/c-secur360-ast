@@ -391,7 +391,7 @@ export default function ConfinedSpacePublicView() {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">
-                {entryAction === 'entry' ? '👷 Enregistrer entrée' : '🚪 Enregistrer sortie'}
+                {entryAction === 'entry' ? 'Enregistrer entrée' : 'Enregistrer sortie'}
               </h2>
               <button onClick={() => setEntryModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
             </div>

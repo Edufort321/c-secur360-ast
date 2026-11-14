@@ -268,7 +268,7 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 
       {/* Fiche 360 */}
       {!sel ? (
-        <div className="grid place-items-center rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400 dark:border-gray-600">👈 {tr('Sélectionnez un employé pour voir son dossier RH 360.', 'Pick an employee to view their 360 HR file.')}</div>
+        <div className="grid place-items-center rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400 dark:border-gray-600">{tr('Sélectionnez un employé pour voir son dossier RH 360.', 'Pick an employee to view their 360 HR file.')}</div>
       ) : (
         <div className="space-y-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">

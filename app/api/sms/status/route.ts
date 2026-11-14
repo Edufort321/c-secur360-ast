@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         if (updateError) {
           console.error('Erreur mise à jour SMS status:', updateError);
         } else {
-          console.log(`✅ SMS status mis à jour: ${messageSid} -> ${messageStatus}`);
+          console.log(`SMS status mis à jour: ${messageSid} -> ${messageStatus}`);
         }
       }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       success: false
     });
 
-    console.error('❌ Erreur webhook SMS status:', error);
+    console.error('Erreur webhook SMS status:', error);
     
     // Toujours 200 pour Twilio pour éviter les retry
     return NextResponse.json({ success: false, error: errorMsg });

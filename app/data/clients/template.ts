@@ -31,7 +31,7 @@ export interface ClientConfiguration {
 export const clientTemplate: ClientConfiguration = {
   id: 'nouveau-client',
   name: 'Nouveau Client',
-  logo: '🏢',
+  logo: '',
   primaryColor: '#6b7280',
   secondaryColor: '#9ca3af',
   emergencyProtocol: {

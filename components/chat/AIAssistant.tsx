@@ -47,25 +47,25 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
 
   // Messages d'accueil contextuels
   const getWelcomeMessage = (): Message => {
-    let content = "👋 Bonjour ! Je suis votre assistant IA pour C-SECUR360. Comment puis-je vous aider ?";
+    let content = "Bonjour ! Je suis votre assistant IA pour C-SECUR360. Comment puis-je vous aider ?";
     let suggestions: string[] = [];
 
     if (context?.page === 'ast-form') {
-      content = "🔧 Je suis là pour vous aider avec votre AST. Posez-moi des questions sur la sécurité, les procédures ou les exigences provinciales.";
+      content = "Je suis là pour vous aider avec votre AST. Posez-moi des questions sur la sécurité, les procédures ou les exigences provinciales.";
       suggestions = [
         "Quelles sont les exigences pour les espaces clos au Québec ?",
         "Comment remplir la section des dangers ?",
         "Quels EPI sont requis pour ce type de travail ?"
       ];
     } else if (context?.page === 'dashboard') {
-      content = "📊 Besoin d'aide avec votre tableau de bord ? Je peux vous expliquer les statistiques et vous guider.";
+      content = "Besoin d'aide avec votre tableau de bord ? Je peux vous expliquer les statistiques et vous guider.";
       suggestions = [
         "Comment interpréter mes statistiques AST ?",
         "Pourquoi ai-je des alertes de conformité ?",
         "Comment améliorer mon score de sécurité ?"
       ];
     } else if (context?.page === 'inspections') {
-      content = "🔍 Je peux vous aider avec les inspections d'équipement et la planification.";
+      content = "Je peux vous aider avec les inspections d'équipement et la planification.";
       suggestions = [
         "À quelle fréquence inspecter un harnais ?",
         "Que faire si j'identifie un défaut ?",

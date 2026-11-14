@@ -715,7 +715,7 @@ export default function LandingPage() {
               <p className="text-slate-400 text-sm mb-2">{fr ? 'Tarification annuelle · prix définis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
               <p className="text-xs mb-6" aria-live="polite">
                 {!modulesLoaded
-                  ? <span className="text-slate-500">{fr ? '⏳ Chargement des tarifs en direct…' : '⏳ Loading live pricing…'}</span>
+                  ? <span className="text-slate-500">{fr ? 'Chargement des tarifs en direct…' : 'Loading live pricing…'}</span>
                   : hasPrices
                     ? <span className="text-emerald-400/80">{fr ? '● Tarifs en direct depuis l\'administration' : '● Live pricing from administration'}</span>
                     : <span className="text-slate-500">{fr ? 'Tarifs indicatifs — contactez-nous pour un devis exact.' : 'Indicative pricing — contact us for an exact quote.'}</span>}
@@ -1081,7 +1081,7 @@ export default function LandingPage() {
                     } catch { /* annulé */ }
                   }}
                   className="flex-1 rounded-lg border border-white/20 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-white/5">
-                  {fr ? '🔗 Partager' : '🔗 Share'}
+                  {fr ? 'Partager' : 'Share'}
                 </button>
               </div>
             </div>

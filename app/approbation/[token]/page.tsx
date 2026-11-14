@@ -84,7 +84,7 @@ export default function ApprobationPage() {
         <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
           {decided ? (
             <div className={`rounded-xl border px-4 py-3 text-sm ${share!.status === 'approved' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
-              <p className="font-bold">{share!.status === 'approved' ? '✓ Document approuvé' : '✗ Document refusé'}</p>
+              <p className="font-bold">{share!.status === 'approved' ? '✓ Document approuvé' : '✕ Document refusé'}</p>
               <p className="mt-1">Par <strong>{share!.approver_name}</strong>{share!.decided_at ? ` le ${new Date(share!.decided_at).toLocaleDateString('fr-CA')}` : ''}.</p>
               {share!.note && <p className="mt-1 italic">« {share!.note} »</p>}
             </div>
@@ -99,7 +99,7 @@ export default function ApprobationPage() {
               {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button onClick={() => decide('approved')} disabled={busy} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{busy ? '…' : '✓ J\'approuve'}</button>
-                <button onClick={() => decide('declined')} disabled={busy} className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">✗ Je refuse</button>
+                <button onClick={() => decide('declined')} disabled={busy} className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">✕ Je refuse</button>
               </div>
               <p className="mt-2 text-[11px] text-gray-400">En cliquant « J'approuve », vous signez électroniquement ce document (nom + date enregistrés).</p>
             </>

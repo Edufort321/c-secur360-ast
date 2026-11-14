@@ -10,7 +10,7 @@ export type Gabarit = { id: string; name: string; num?: string | null; blocks: G
 export const BLOCK_LABELS: Record<GBlockType, string> = {
   section: 'Champs (section)', inspect: 'Points d’inspection', mesures: 'Mesures', photos: 'Photos', note: 'Note / texte',
 };
-export const BLOCK_ICON: Record<GBlockType, string> = { section: '§', inspect: '☑', mesures: '📏', photos: '🖼', note: '¶' };
+export const BLOCK_ICON: Record<GBlockType, string> = { section: '§', inspect: '✓', mesures: '#', photos: '📷', note: '¶' };
 
 const newId = () => (globalThis.crypto?.randomUUID?.() || `g${Date.now()}${Math.round(Math.random() * 1e6)}`);
 

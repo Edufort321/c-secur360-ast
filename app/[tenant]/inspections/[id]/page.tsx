@@ -240,7 +240,7 @@ export default function InspectionPublicPage() {
 
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
               {row.equipment_location && (
-                <span>📍 {row.equipment_location}</span>
+                <span>{row.equipment_location}</span>
               )}
               {row.inspection_date && (
                 <span className="flex items-center gap-1">
@@ -249,10 +249,10 @@ export default function InspectionPublicPage() {
                 </span>
               )}
               {row.inspector_name && (
-                <span>👤 {row.inspector_name}</span>
+                <span>{row.inspector_name}</span>
               )}
               {freqLabel && (
-                <span>🔄 {freqLabel}</span>
+                <span>{freqLabel}</span>
               )}
             </div>
 

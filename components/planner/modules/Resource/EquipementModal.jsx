@@ -327,7 +327,7 @@ export function EquipementModal({ isOpen, onClose, equipement = null, onSave, on
                                             onChange={() => handleInputChange('disponible', true)}
                                             className="mr-2"
                                         />
-                                        <span className="text-green-600">🟢 Disponible</span>
+                                        <span className="text-green-600">Disponible</span>
                                     </label>
                                     <label className="flex items-center cursor-pointer">
                                         <input
@@ -336,7 +336,7 @@ export function EquipementModal({ isOpen, onClose, equipement = null, onSave, on
                                             onChange={() => handleInputChange('disponible', false)}
                                             className="mr-2"
                                         />
-                                        <span className="text-red-600">🔴 Indisponible</span>
+                                        <span className="text-red-600">Indisponible</span>
                                     </label>
                                 </div>
                             </div>
@@ -356,7 +356,7 @@ export function EquipementModal({ isOpen, onClose, equipement = null, onSave, on
                                             <div className="flex items-center">
                                                 <Icon name="alert-triangle" className="text-yellow-600 mr-2" size={20} />
                                                 <span className="text-yellow-800">
-                                                    ⚠️ Maintenance prévue dans {diffDays} jour{diffDays > 1 ? 's' : ''}
+                                                    ⚠ Maintenance prévue dans {diffDays} jour{diffDays > 1 ? 's' : ''}
                                                 </span>
                                             </div>
                                         </div>
@@ -367,7 +367,7 @@ export function EquipementModal({ isOpen, onClose, equipement = null, onSave, on
                                             <div className="flex items-center">
                                                 <Icon name="alert-triangle" className="text-red-600 mr-2" size={20} />
                                                 <span className="text-red-800">
-                                                    🚨 Maintenance en retard de {Math.abs(diffDays)} jour{Math.abs(diffDays) > 1 ? 's' : ''}
+                                                    Maintenance en retard de {Math.abs(diffDays)} jour{Math.abs(diffDays) > 1 ? 's' : ''}
                                                 </span>
                                             </div>
                                         </div>
@@ -398,7 +398,7 @@ export function EquipementModal({ isOpen, onClose, equipement = null, onSave, on
                                     onClick={handleDelete}
                                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                                 >
-                                    🗑️ Supprimer
+                                    Supprimer
                                 </button>
                             )}
 
@@ -415,7 +415,7 @@ export function EquipementModal({ isOpen, onClose, equipement = null, onSave, on
                                     disabled={isSubmitting}
                                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                                 >
-                                    {isSubmitting ? '⏳ Sauvegarde...' : '💾 Sauvegarder'}
+                                    {isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}
                                 </button>
                             </div>
                         </div>

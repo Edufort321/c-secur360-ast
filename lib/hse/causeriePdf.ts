@@ -74,7 +74,7 @@ export async function generateCauseriePdf(opts: { meeting: HseSafetyMeeting; lan
   const media = m.media || [];
   if (media.length) {
     sectionTitle(tr('Enregistrements & médias', 'Recordings & media'));
-    media.forEach(md => { ensure(12); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(37, 99, 235); const tag = md.kind === 'video' ? '🎥' : md.kind === 'audio' ? '🎙️' : '🔗'; const lines = doc.splitTextToSize(`${tag} ${md.label || md.url}`, W - 2 * M); doc.text(lines, M, y); y += Math.max(12, lines.length * 11); });
+    media.forEach(md => { ensure(12); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(37, 99, 235); const tag = md.kind === 'video' ? tr('Vidéo :', 'Video:') : md.kind === 'audio' ? 'Audio :' : tr('Lien :', 'Link:'); const lines = doc.splitTextToSize(`${tag} ${md.label || md.url}`, W - 2 * M); doc.text(lines, M, y); y += Math.max(12, lines.length * 11); });
   }
 
   // Feuille de présence (avec ligne de signature)
@@ -94,7 +94,7 @@ export async function generateCauseriePdf(opts: { meeting: HseSafetyMeeting; lan
     doc.text(String(i + 1), M, y);
     doc.text(doc.splitTextToSize(p.name || '—', 225), cN, y);
     doc.text(doc.splitTextToSize(p.role || '', 100), cR, y);
-    doc.text(p.present === false ? '—' : '☑', cP, y);
+    doc.text(p.present === false ? '—' : 'X', cP, y);
     // Signature : image si capturée, sinon ligne à signer.
     if (p.signature && String(p.signature).startsWith('data:')) {
       try { doc.addImage(p.signature, 'PNG', cS, y - 12, 120, 22); } catch { doc.setDrawColor(170); doc.line(cS, y, W - M, y); }

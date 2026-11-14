@@ -92,7 +92,7 @@ type FireWatchStage = 'pre_work' | 'during_work' | 'fire_watch' | 'extended_moni
 
 const translations = {
   fr: {
-    title: "🔥 Surveillance Feu - Permis à Chaud",
+    title: "Surveillance Feu - Permis à Chaud",
     subtitle: "Surveillance NFPA 51B conforme",
     
     stages: {
@@ -191,7 +191,7 @@ const translations = {
     },
     
     alerts: {
-      fireDetected: "🔥 FEU DÉTECTÉ!",
+      fireDetected: "FEU DÉTECTÉ!",
       timerExpired: "Temps de surveillance écoulé",
       equipmentIssue: "Problème d'équipement",
       personnelChange: "Changement de personnel",
@@ -210,7 +210,7 @@ const translations = {
   },
   
   en: {
-    title: "🔥 Fire Watch - Hot Work Permit",
+    title: "Fire Watch - Hot Work Permit",
     subtitle: "NFPA 51B Compliant Monitoring",
     
     stages: {
@@ -309,7 +309,7 @@ const translations = {
     },
     
     alerts: {
-      fireDetected: "🔥 FIRE DETECTED!",
+      fireDetected: "FIRE DETECTED!",
       timerExpired: "Monitoring time expired",
       equipmentIssue: "Equipment issue",
       personnelChange: "Personnel change",

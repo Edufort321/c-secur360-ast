@@ -24,10 +24,10 @@ export type Personnel = { id: string; name: string | null; email: string | null;
 
 // Types valides cote DB (CHECK de planner_conges) + libellés bilingues.
 export const CONGE_TYPES: { value: CongeType; fr: string; en: string; emoji: string }[] = [
-  { value: 'conge', fr: 'Vacances', en: 'Vacation', emoji: '🏖️' },
-  { value: 'maladie', fr: 'Maladie', en: 'Sick leave', emoji: '🤒' },
-  { value: 'formation', fr: 'Formation', en: 'Training', emoji: '📚' },
-  { value: 'autre', fr: 'Autre', en: 'Other', emoji: '📝' },
+  { value: 'conge', fr: 'Vacances', en: 'Vacation', emoji: '' },
+  { value: 'maladie', fr: 'Maladie', en: 'Sick leave', emoji: '' },
+  { value: 'formation', fr: 'Formation', en: 'Training', emoji: '' },
+  { value: 'autre', fr: 'Autre', en: 'Other', emoji: '' },
 ];
 
 /** Nombre de jours inclusifs entre deux dates ISO (YYYY-MM-DD). */

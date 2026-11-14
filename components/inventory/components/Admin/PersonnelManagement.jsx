@@ -19,18 +19,23 @@ import {
   Check,
   AlertCircle,
   Copy,
-  CheckCircle
+  CheckCircle,
+  LayoutDashboard,
+  Package,
+  Camera,
+  TrendingUp,
+  Settings
 } from 'lucide-react';
 import { generatePassword, generateUsername, generatePasswordSuggestions } from '../../utils/passwordGenerator';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const TABS = [
-  { key: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { key: 'articles', label: 'Articles', icon: '📦' },
-  { key: 'scanner', label: 'Scanner', icon: '📷' },
-  { key: 'movements', label: 'Mouvements', icon: '🔄' },
-  { key: 'reports', label: 'Rapports', icon: '📈' },
-  { key: 'administration', label: 'Administration', icon: '⚙️' }
+  { key: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
+  { key: 'articles', label: 'Articles', icon: <Package size={16} /> },
+  { key: 'scanner', label: 'Scanner', icon: <Camera size={16} /> },
+  { key: 'movements', label: 'Mouvements', icon: <RefreshCw size={16} /> },
+  { key: 'reports', label: 'Rapports', icon: <TrendingUp size={16} /> },
+  { key: 'administration', label: 'Administration', icon: <Settings size={16} /> }
 ];
 
 export const PersonnelManagement = ({ departments = [], onSave, defaultDepartmentId = null }) => {
@@ -590,7 +595,7 @@ export const PersonnelManagement = ({ departments = [], onSave, defaultDepartmen
                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           Peut activer le mode inventaire, bloquer les départements pendant l'inventaire, et générer les rapports d'irrégularités.
                           <span className="block mt-1 text-orange-700 dark:text-orange-400 font-medium">
-                            ⚠️ Permission réservée aux gestionnaires et administrateurs
+                            ⚠ Permission réservée aux gestionnaires et administrateurs
                           </span>
                         </div>
                       </div>

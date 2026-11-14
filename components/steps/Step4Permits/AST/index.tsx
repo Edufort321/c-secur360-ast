@@ -1744,7 +1744,7 @@ function TaskSection({ ast, onChange, language, readOnly, personnel = [], projec
               className={`flex-1 rounded-xl border-2 px-4 py-3 text-left transition-all ${model === 'complet' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-600 hover:border-teal-300'}`}
             >
               <div className="font-semibold text-sm text-slate-800 dark:text-slate-100">
-                {language === 'fr' ? 'Complet ✦' : 'Complete ✦'}
+                {language === 'fr' ? 'Complet' : 'Complete'}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {language === 'fr'
@@ -1757,7 +1757,7 @@ function TaskSection({ ast, onChange, language, readOnly, personnel = [], projec
       )}
       {readOnly && model === 'complet' && (
         <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-teal-100 dark:bg-teal-900/30 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
-          ✦ {language === 'fr' ? 'Modèle complet' : 'Complete model'}
+          {language === 'fr' ? 'Modèle complet' : 'Complete model'}
         </div>
       )}
 
@@ -2911,7 +2911,7 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
                       <div className="flex flex-wrap items-center gap-2">
                         {(ast.supervisorSigAttachments || []).map((a, i) => (
                           <span key={i} className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-800">
-                            {a.type?.startsWith('image/') ? <img src={a.url} alt={a.name} className="h-8 w-8 rounded object-cover" /> : <span>📄</span>}
+                            {a.type?.startsWith('image/') ? <img src={a.url} alt={a.name} className="h-8 w-8 rounded object-cover" /> : <FileText size={16} className="text-slate-500" />}
                             <span className="max-w-[8rem] truncate">{a.name}</span>
                             <button type="button" onClick={() => onChange(p => ({ ...p, supervisorSigAttachments: (p.supervisorSigAttachments || []).filter((_, j) => j !== i) }))} className="text-slate-400 hover:text-red-500">✕</button>
                           </span>
@@ -3411,7 +3411,7 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
       {/* BLOCAGE STRICT : non-conformité signalée sans explication + pièce → finalisation impossible. */}
       {ncBlocked && !readOnly && (
         <div className="mb-4 rounded-lg border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
-          🚫 {tr('Non-conformité signalée : impossible de finaliser tant qu’une EXPLICATION (≥ 10 caractères) ET au moins une PIÈCE (photo/document) ne sont pas fournies (section Superviseur).', 'Non-compliance reported: cannot finalize until an EXPLANATION (≥ 10 chars) AND at least one FILE (photo/document) are provided (Supervisor section).')}
+          {tr('Non-conformité signalée : impossible de finaliser tant qu’une EXPLICATION (≥ 10 caractères) ET au moins une PIÈCE (photo/document) ne sont pas fournies (section Superviseur).', 'Non-compliance reported: cannot finalize until an EXPLANATION (≥ 10 chars) AND at least one FILE (photo/document) are provided (Supervisor section).')}
         </div>
       )}
       {!readOnly && (

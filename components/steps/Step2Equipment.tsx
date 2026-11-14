@@ -38,7 +38,7 @@ interface Equipment {
 const translations = {
   fr: {
     // En-tête
-    title: "🛡️ Équipements de Protection",
+    title: "Équipements de Protection",
     subtitle: "Sélectionnez tous les EPI requis pour cette tâche",
     
     // Statistiques
@@ -52,10 +52,10 @@ const translations = {
     
     // Priorités
     priorities: {
-      high: "🔴 Critique",
-      medium: "🟡 Important",
-      low: "🟢 Standard",
-      default: "⚪ Normal"
+      high: "Critique",
+      medium: "Important",
+      low: "Standard",
+      default: "Normal"
     },
     
     // Messages
@@ -145,7 +145,7 @@ const translations = {
   
   en: {
     // Header
-    title: "🛡️ Personal Protective Equipment",
+    title: "Personal Protective Equipment",
     subtitle: "Select all PPE required for this task",
     
     // Statistics
@@ -159,10 +159,10 @@ const translations = {
     
     // Priorities
     priorities: {
-      high: "🔴 Critical",
-      medium: "🟡 Important", 
-      low: "🟢 Standard",
-      default: "⚪ Normal"
+      high: "Critical",
+      medium: "Important", 
+      low: "Standard",
+      default: "Normal"
     },
     
     // Messages
@@ -264,7 +264,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.1', 
       priority: 'high', 
-      icon: '🪖' 
+      icon: '' 
     },
     { 
       id: 'helmet-standard', 
@@ -273,7 +273,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.1', 
       priority: 'medium', 
-      icon: '⛑️' 
+      icon: '' 
     },
     { 
       id: 'bump-cap', 
@@ -282,7 +282,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.1', 
       priority: 'low', 
-      icon: '🧢' 
+      icon: '' 
     },
 
     // Protection oculaire
@@ -293,7 +293,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'high', 
-      icon: '👓' 
+      icon: '' 
     },
     { 
       id: 'safety-goggles', 
@@ -302,7 +302,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'medium', 
-      icon: '🥽' 
+      icon: '' 
     },
     { 
       id: 'face-shield', 
@@ -311,7 +311,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'medium', 
-      icon: '🛡️' 
+      icon: '' 
     },
     { 
       id: 'welding-mask', 
@@ -320,7 +320,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'high', 
-      icon: '😎' 
+      icon: '' 
     },
 
     // Protection respiratoire
@@ -331,7 +331,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NIOSH N95', 
       priority: 'medium', 
-      icon: '😷' 
+      icon: '' 
     },
     { 
       id: 'p100-mask', 
@@ -340,7 +340,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NIOSH P100', 
       priority: 'high', 
-      icon: '😷' 
+      icon: '' 
     },
     { 
       id: 'half-face-respirator', 
@@ -349,7 +349,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NIOSH', 
       priority: 'high', 
-      icon: '😷' 
+      icon: '' 
     },
     { 
       id: 'full-face-respirator', 
@@ -358,7 +358,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NIOSH', 
       priority: 'high', 
-      icon: '🎭' 
+      icon: '' 
     },
     { 
       id: 'scba', 
@@ -367,7 +367,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NIOSH', 
       priority: 'high', 
-      icon: '🎒' 
+      icon: '' 
     },
 
     // Protection mains
@@ -378,7 +378,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
-      icon: '🧤' 
+      icon: '' 
     },
     { 
       id: 'electrical-gloves', 
@@ -387,7 +387,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'ASTM D120', 
       priority: 'high', 
-      icon: '🧤' 
+      icon: '' 
     },
     { 
       id: 'cut-resistant-gloves', 
@@ -396,7 +396,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'ANSI A4', 
       priority: 'high', 
-      icon: '🧤' 
+      icon: '' 
     },
     { 
       id: 'chemical-gloves', 
@@ -405,7 +405,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'EN 374', 
       priority: 'high', 
-      icon: '🧤' 
+      icon: '' 
     },
     { 
       id: 'welding-gloves', 
@@ -414,7 +414,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
-      icon: '🧤' 
+      icon: '' 
     },
 
     // Protection pieds
@@ -425,7 +425,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z195', 
       priority: 'high', 
-      icon: '👢' 
+      icon: '' 
     },
     { 
       id: 'steel-toe-boots', 
@@ -434,7 +434,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
-      icon: '👢' 
+      icon: '' 
     },
     { 
       id: 'chemical-boots', 
@@ -443,7 +443,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
-      icon: '👢' 
+      icon: '' 
     },
     { 
       id: 'slip-resistant-shoes', 
@@ -452,7 +452,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z195', 
       priority: 'low', 
-      icon: '👟' 
+      icon: '' 
     },
 
     // Protection corps
@@ -463,7 +463,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z96', 
       priority: 'medium', 
-      icon: '🦺' 
+      icon: '' 
     },
     { 
       id: 'arc-flash-suit', 
@@ -472,7 +472,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NFPA 70E', 
       priority: 'high', 
-      icon: '🦺' 
+      icon: '' 
     },
     { 
       id: 'chemical-suit', 
@@ -481,7 +481,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'EN 14325', 
       priority: 'high', 
-      icon: '🦺' 
+      icon: '' 
     },
     { 
       id: 'coveralls', 
@@ -490,7 +490,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA', 
       priority: 'low', 
-      icon: '👔' 
+      icon: '' 
     },
     { 
       id: 'lab-coat', 
@@ -499,7 +499,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'NFPA', 
       priority: 'medium', 
-      icon: '🥼' 
+      icon: '' 
     },
 
     // Protection chute
@@ -510,7 +510,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z259.10', 
       priority: 'high', 
-      icon: '🪢' 
+      icon: '' 
     },
     { 
       id: 'safety-lanyard', 
@@ -519,7 +519,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z259.11', 
       priority: 'high', 
-      icon: '🔗' 
+      icon: '' 
     },
     { 
       id: 'self-retracting-lifeline', 
@@ -528,7 +528,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z259.2.2', 
       priority: 'high', 
-      icon: '⚙️' 
+      icon: '' 
     },
     { 
       id: 'positioning-belt', 
@@ -537,7 +537,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z259.1', 
       priority: 'medium', 
-      icon: '🔗' 
+      icon: '' 
     },
 
     // Détection et mesure
@@ -548,7 +548,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA C22.2', 
       priority: 'high', 
-      icon: '📡' 
+      icon: '' 
     },
     { 
       id: 'radiation-detector', 
@@ -557,7 +557,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'IEC 61526', 
       priority: 'high', 
-      icon: '☢️' 
+      icon: '' 
     },
     { 
       id: 'noise-dosimeter', 
@@ -566,7 +566,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'IEC 61252', 
       priority: 'medium', 
-      icon: '🔊' 
+      icon: '' 
     },
     { 
       id: 'vibration-meter', 
@@ -575,7 +575,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'ISO 8041', 
       priority: 'medium', 
-      icon: '📳' 
+      icon: '' 
     },
 
     // Protection auditive
@@ -586,7 +586,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.2', 
       priority: 'medium', 
-      icon: '🔇' 
+      icon: '' 
     },
     { 
       id: 'ear-muffs', 
@@ -595,7 +595,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.2', 
       priority: 'medium', 
-      icon: '🎧' 
+      icon: '' 
     },
     { 
       id: 'communication-headset', 
@@ -604,7 +604,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'CSA Z94.2', 
       priority: 'low', 
-      icon: '🎧' 
+      icon: '' 
     },
 
     // Éclairage et signalisation
@@ -615,7 +615,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'Ex ia', 
       priority: 'medium', 
-      icon: '🔦' 
+      icon: '' 
     },
     { 
       id: 'headlamp', 
@@ -624,7 +624,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'Ex ia', 
       priority: 'medium', 
-      icon: '💡' 
+      icon: '' 
     },
     { 
       id: 'emergency-beacon', 
@@ -633,7 +633,7 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
       required: false, 
       certification: 'Transport Canada', 
       priority: 'low', 
-      icon: '🚨' 
+      icon: '' 
     }
   ];
 };
@@ -867,7 +867,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
           fontWeight: '500'
         }}
       >
-        🔴 Sélectionner critiques
+        Sélectionner critiques
       </button>
       
       <button
@@ -991,6 +991,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
           gap: '12px',
           marginBottom: '12px'
         }}>
+          {item.icon && (
           <div className="equipment-icon" style={{
             fontSize: '24px',
             width: '32px',
@@ -998,6 +999,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
           }}>
             {item.icon}
           </div>
+          )}
           <div className="equipment-content" style={{ flex: 1 }}>
             <h3 className="equipment-name" style={{
               color: '#ffffff',

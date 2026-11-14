@@ -8,12 +8,12 @@ export const LANGUAGES = {
     fr: {
         code: 'fr',
         name: 'Français',
-        flag: '🇫🇷'
+        flag: 'FR'
     },
     en: {
         code: 'en',
         name: 'English',
-        flag: '🇺🇸'
+        flag: 'EN'
     }
 };
 
@@ -344,14 +344,14 @@ const translations = {
         'event.assignedResources': 'Ressources assignées',
 
         // Types de vue
-        'viewType.personnel': '👥 Personnel',
-        'viewType.equipment': '🔧 Équipements',
-        'viewType.global': '🌐 Vue globale',
-        'viewType.events': '📋 Événements seulement',
-        'viewType.dashboard': '📊 Dashboard',
-        'viewType.globalFocus': '📊 Vue globale',
-        'viewType.personnelFocus': '👥 Focus Personnel',
-        'viewType.equipmentFocus': '🔧 Focus Équipements',
+        'viewType.personnel': 'Personnel',
+        'viewType.equipment': 'Équipements',
+        'viewType.global': 'Vue globale',
+        'viewType.events': 'Événements seulement',
+        'viewType.dashboard': 'Dashboard',
+        'viewType.globalFocus': 'Vue globale',
+        'viewType.personnelFocus': 'Focus Personnel',
+        'viewType.equipmentFocus': 'Focus Équipements',
 
         // États et validation
         'validation.required': 'Champ requis',
@@ -361,7 +361,7 @@ const translations = {
 
         // Interface générale
         'ui.loading': 'Chargement...',
-        'ui.saving': '⏳ Sauvegarde...',
+        'ui.saving': 'Sauvegarde...',
         'ui.deleting': 'Suppression...',
         'ui.noData': 'Aucune donnée disponible',
         'ui.noResults': 'Aucun résultat trouvé',
@@ -369,7 +369,7 @@ const translations = {
         'ui.selectAll': 'Tout sélectionner',
         'ui.viewAll': 'Voir tout',
         'ui.viewDetails': 'Voir les détails',
-        'ui.hide': '🔼 Masquer',
+        'ui.hide': 'Masquer',
 
         // Analytics et dashboard
         'analytics.dashboard': 'Dashboard Analytique',
@@ -467,7 +467,7 @@ const translations = {
         'leave.type': 'Type de congé',
         'leave.reasonOptional': 'Motif (optionnel)',
         'leave.reasonPlaceholder': 'Ajoutez des détails sur la demande de congé...',
-        'leave.createRequest': '💾 Créer la demande',
+        'leave.createRequest': 'Créer la demande',
         'leave.noHistory': 'Aucun congé dans l\'historique',
         'leave.processedOn': 'Traité le',
         'leave.day': 'jour',
@@ -511,8 +511,8 @@ const translations = {
         'equipment.nextMaintenance': 'Prochaine maintenance',
         'equipment.displayColor': 'Couleur d\'affichage',
         'equipment.status': 'Statut',
-        'equipment.available': '🟢 Disponible',
-        'equipment.unavailable': '🔴 Indisponible',
+        'equipment.available': 'Disponible',
+        'equipment.unavailable': 'Indisponible',
         'equipment.maintenanceScheduled': 'Maintenance prévue dans {days} {unit}',
         'equipment.maintenanceOverdue': 'Maintenance en retard de {days} {unit}',
         'equipment.notes': 'Notes',
@@ -731,10 +731,10 @@ const translations = {
         'personnel.branch': 'Succursale',
         'personnel.hireDate': 'Date d\'embauche',
         'personnel.status': 'Statut',
-        'personnel.statusActive': '✅ Actif',
-        'personnel.statusInactive': '⏸️ Inactif',
-        'personnel.statusOnLeave': '🏖️ En congé',
-        'personnel.statusSick': '🤒 Maladie',
+        'personnel.statusActive': '✓ Actif',
+        'personnel.statusInactive': 'Inactif',
+        'personnel.statusOnLeave': 'En congé',
+        'personnel.statusSick': 'Maladie',
         'personnel.hourlyRate': 'Taux horaire ($)',
         'personnel.hourlyRatePlaceholder': 'Ex: 25.00',
         'personnel.annualSalary': 'Salaire annuel ($)',
@@ -843,25 +843,25 @@ const translations = {
         'personnel.hidePassword': 'Masquer le mot de passe',
         'personnel.showPassword': 'Afficher le mot de passe',
         'personnel.passwordInfo': 'Requis pour accéder à l\'application. Reconnaissance 24h puis mot de passe requis à nouveau.',
-        'personnel.generatePasswordHint': '💡 Cliquez sur 🔄 pour générer automatiquement un mot de passe basé sur le nom/prénom',
+        'personnel.generatePasswordHint': 'Cliquez sur le bouton de génération pour générer automatiquement un mot de passe basé sur le nom/prénom',
         'personnel.generateAutoPassword': 'Générer un mot de passe automatique',
         'personnel.generate': 'Générer',
         'personnel.accessLevel': 'Niveau d\'accès',
-        'personnel.accessConsultation': '👁️ Consultation seule',
-        'personnel.accessModification': '✏️ Modification limitée',
-        'personnel.accessCoordination': '🎯 Coordination',
-        'personnel.accessAdministration': '🔑 Administration complète',
+        'personnel.accessConsultation': 'Consultation seule',
+        'personnel.accessModification': 'Modification limitée',
+        'personnel.accessCoordination': 'Coordination',
+        'personnel.accessAdministration': 'Administration complète',
         'personnel.accessLevelInfo': 'Définit les permissions de l\'utilisateur dans le système',
         'personnel.salaryOptional': 'Salaire (optionnel)',
         'personnel.specialties': 'Spécialités',
         'personnel.addSpecialty': 'Ajouter une spécialité...',
-        'personnel.statusAvailable': '🟢 Disponible',
-        'personnel.statusUnavailable': '🔴 Indisponible',
+        'personnel.statusAvailable': 'Disponible',
+        'personnel.statusUnavailable': 'Indisponible',
         'personnel.display': 'Affichage',
         'personnel.visibilityInfo': 'Décochez pour masquer cette personne du calendrier principal',
         'personnel.notes': 'Notes',
         'personnel.notesPlaceholder': 'Ajoutez des notes sur ce personnel...',
-        'personnel.save': '💾 Sauvegarder'
+        'personnel.save': 'Sauvegarder'
     },
 
     en: {
@@ -1189,14 +1189,14 @@ const translations = {
         'event.assignedResources': 'Assigned Resources',
 
         // Types de vue
-        'viewType.personnel': '👥 Personnel',
-        'viewType.equipment': '🔧 Equipment',
-        'viewType.global': '🌐 Global View',
-        'viewType.events': '📋 Events Only',
-        'viewType.dashboard': '📊 Dashboard',
-        'viewType.globalFocus': '📊 Global View',
-        'viewType.personnelFocus': '👥 Personnel Focus',
-        'viewType.equipmentFocus': '🔧 Equipment Focus',
+        'viewType.personnel': 'Personnel',
+        'viewType.equipment': 'Equipment',
+        'viewType.global': 'Global View',
+        'viewType.events': 'Events Only',
+        'viewType.dashboard': 'Dashboard',
+        'viewType.globalFocus': 'Global View',
+        'viewType.personnelFocus': 'Personnel Focus',
+        'viewType.equipmentFocus': 'Equipment Focus',
 
         // États et validation
         'validation.required': 'Required field',
@@ -1206,7 +1206,7 @@ const translations = {
 
         // Interface générale
         'ui.loading': 'Loading...',
-        'ui.saving': '⏳ Saving...',
+        'ui.saving': 'Saving...',
         'ui.deleting': 'Deleting...',
         'ui.noData': 'No data available',
         'ui.noResults': 'No results found',
@@ -1214,7 +1214,7 @@ const translations = {
         'ui.selectAll': 'Select all',
         'ui.viewAll': 'View all',
         'ui.viewDetails': 'View details',
-        'ui.hide': '🔼 Hide',
+        'ui.hide': 'Hide',
 
         // Analytics et dashboard
         'analytics.dashboard': 'Analytics Dashboard',
@@ -1312,7 +1312,7 @@ const translations = {
         'leave.type': 'Leave type',
         'leave.reasonOptional': 'Reason (optional)',
         'leave.reasonPlaceholder': 'Add details about the leave request...',
-        'leave.createRequest': '💾 Create request',
+        'leave.createRequest': 'Create request',
         'leave.noHistory': 'No leave history',
         'leave.processedOn': 'Processed on',
         'leave.day': 'day',
@@ -1356,8 +1356,8 @@ const translations = {
         'equipment.nextMaintenance': 'Next Maintenance',
         'equipment.displayColor': 'Display Color',
         'equipment.status': 'Status',
-        'equipment.available': '🟢 Available',
-        'equipment.unavailable': '🔴 Unavailable',
+        'equipment.available': 'Available',
+        'equipment.unavailable': 'Unavailable',
         'equipment.maintenanceScheduled': 'Maintenance scheduled in {days} {unit}',
         'equipment.maintenanceOverdue': 'Maintenance overdue by {days} {unit}',
         'equipment.notes': 'Notes',
@@ -1576,10 +1576,10 @@ const translations = {
         'personnel.branch': 'Branch',
         'personnel.hireDate': 'Hire Date',
         'personnel.status': 'Status',
-        'personnel.statusActive': '✅ Active',
-        'personnel.statusInactive': '⏸️ Inactive',
-        'personnel.statusOnLeave': '🏖️ On Leave',
-        'personnel.statusSick': '🤒 Sick',
+        'personnel.statusActive': '✓ Active',
+        'personnel.statusInactive': 'Inactive',
+        'personnel.statusOnLeave': 'On Leave',
+        'personnel.statusSick': 'Sick',
         'personnel.hourlyRate': 'Hourly Rate ($)',
         'personnel.hourlyRatePlaceholder': 'Ex: 25.00',
         'personnel.annualSalary': 'Annual Salary ($)',
@@ -1688,25 +1688,25 @@ const translations = {
         'personnel.hidePassword': 'Hide password',
         'personnel.showPassword': 'Show password',
         'personnel.passwordInfo': 'Required to access the application. 24h recognition then password required again.',
-        'personnel.generatePasswordHint': '💡 Click on 🔄 to automatically generate a password based on first/last name',
+        'personnel.generatePasswordHint': 'Click the generate button to automatically generate a password based on first/last name',
         'personnel.generateAutoPassword': 'Generate automatic password',
         'personnel.generate': 'Generate',
         'personnel.accessLevel': 'Access Level',
-        'personnel.accessConsultation': '👁️ View Only',
-        'personnel.accessModification': '✏️ Limited Modification',
-        'personnel.accessCoordination': '🎯 Coordination',
-        'personnel.accessAdministration': '🔑 Full Administration',
+        'personnel.accessConsultation': 'View Only',
+        'personnel.accessModification': 'Limited Modification',
+        'personnel.accessCoordination': 'Coordination',
+        'personnel.accessAdministration': 'Full Administration',
         'personnel.accessLevelInfo': 'Defines user permissions in the system',
         'personnel.salaryOptional': 'Salary (optional)',
         'personnel.specialties': 'Specialties',
         'personnel.addSpecialty': 'Add a specialty...',
-        'personnel.statusAvailable': '🟢 Available',
-        'personnel.statusUnavailable': '🔴 Unavailable',
+        'personnel.statusAvailable': 'Available',
+        'personnel.statusUnavailable': 'Unavailable',
         'personnel.display': 'Display',
         'personnel.visibilityInfo': 'Uncheck to hide this person from the main calendar',
         'personnel.notes': 'Notes',
         'personnel.notesPlaceholder': 'Add notes about this personnel...',
-        'personnel.save': '💾 Save'
+        'personnel.save': 'Save'
     }
 };
 
@@ -1753,7 +1753,7 @@ export function LanguageProvider({ children }) {
 
     // Fonction pour obtenir le drapeau de la langue actuelle
     const getCurrentLanguageFlag = () => {
-        return LANGUAGES[currentLanguage]?.flag || '🇫🇷';
+        return LANGUAGES[currentLanguage]?.flag || 'FR';
     };
 
     const value = {

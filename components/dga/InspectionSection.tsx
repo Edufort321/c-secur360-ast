@@ -229,13 +229,13 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, ten
   return (
     <section className={CARD}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">🛠️ {tr('Inspection de routine', 'Routine inspection')}</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{tr('Inspection de routine', 'Routine inspection')}</h3>
         <button onClick={() => (open ? setOpen(false) : openNew())} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{open ? tr('Fermer', 'Close') : '+ ' + tr('Nouvelle inspection', 'New inspection')}</button>
       </div>
 
       {/* Séquence de reprise d'inspection (autonome, hors formulaire) */}
       <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10">
-        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">🔁 {tr("Séquence de reprise d'inspection", 'Inspection recurrence')}</div>
+        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">{tr("Séquence de reprise d'inspection", 'Inspection recurrence')}</div>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Fréquence', 'Frequency')}</span>
             <select className={INP} value={intervalId} onChange={e => changeInterval(e.target.value)}>
@@ -265,7 +265,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, ten
                 <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${ins.anomalyCount ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                   {ins.anomalyCount ? `${ins.anomalyCount} ${tr('anomalie(s)', 'anomaly(ies)')}` : tr('Conforme', 'Compliant')}
                 </span>
-                <button type="button" onClick={() => generateInspectionPdf({ dossier, inspection: ins, logoUrl, lang, tenant })} className="rounded border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">📄 PDF</button>
+                <button type="button" onClick={() => generateInspectionPdf({ dossier, inspection: ins, logoUrl, lang, tenant })} className="rounded border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">PDF</button>
               </div>
               {/* Détail (lecture seule) */}
               {viewId === ins.id && (
@@ -291,7 +291,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, ten
                     );
                   })}
                   {(lang === 'en' ? ins.advice?.en : ins.advice?.fr) && (
-                    <p className="mt-1 whitespace-pre-wrap rounded bg-violet-50 p-2 text-[11px] text-gray-700 dark:bg-violet-500/10 dark:text-gray-200">🤖 {(lang === 'en' ? ins.advice?.en : ins.advice?.fr)}</p>
+                    <p className="mt-1 whitespace-pre-wrap rounded bg-violet-50 p-2 text-[11px] text-gray-700 dark:bg-violet-500/10 dark:text-gray-200">{(lang === 'en' ? ins.advice?.en : ins.advice?.fr)}</p>
                   )}
                 </div>
               )}
@@ -408,14 +408,14 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, ten
           {/* Aide technique IA */}
           <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 dark:border-violet-500/30 dark:bg-violet-500/10">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-violet-800 dark:text-violet-300">🤖 {tr('Aide technique IA — correctifs', 'AI technical aid — corrective actions')}</span>
-              <button onClick={runAI} disabled={aiBusy} className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{aiBusy ? tr('Analyse…', 'Analyzing…') : '✨ ' + tr('Analyser les anomalies', 'Analyze anomalies')}</button>
+              <span className="text-sm font-bold text-violet-800 dark:text-violet-300">{tr('Aide technique IA — correctifs', 'AI technical aid — corrective actions')}</span>
+              <button onClick={runAI} disabled={aiBusy} className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{aiBusy ? tr('Analyse…', 'Analyzing…') : tr('Analyser les anomalies', 'Analyze anomalies')}</button>
             </div>
             {advice && <p className="mt-2 whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-200">{lang === 'en' ? advice.en : advice.fr}</p>}
           </div>
 
           <div className="flex gap-2">
-            <button onClick={save} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">💾 {tr("Enregistrer l'inspection", 'Save inspection')}</button>
+            <button onClick={save} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{tr("Enregistrer l'inspection", 'Save inspection')}</button>
             <button onClick={() => setOpen(false)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
           </div>
         </div>

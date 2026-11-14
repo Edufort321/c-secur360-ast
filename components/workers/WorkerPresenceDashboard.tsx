@@ -108,7 +108,7 @@ interface WorkerPresenceDashboardProps {
 
 const translations = {
   fr: {
-    title: "👥 Tableau de Bord - Présence des Travailleurs",
+    title: "Tableau de Bord - Présence des Travailleurs",
     subtitle: "Suivi en temps réel du personnel sur site",
     
     stats: {
@@ -202,12 +202,12 @@ const translations = {
     loto: {
       title: "Cadenas LOTO",
       energyTypes: {
-        electrical: "⚡ Électrique",
-        mechanical: "⚙️ Mécanique", 
-        hydraulic: "🔧 Hydraulique",
-        pneumatic: "💨 Pneumatique",
-        thermal: "🔥 Thermique",
-        chemical: "🧪 Chimique"
+        electrical: "Électrique",
+        mechanical: "Mécanique", 
+        hydraulic: "Hydraulique",
+        pneumatic: "Pneumatique",
+        thermal: "Thermique",
+        chemical: "Chimique"
       },
       status: {
         applied: "Appliqué",
@@ -222,7 +222,7 @@ const translations = {
   },
   
   en: {
-    title: "👥 Worker Presence Dashboard", 
+    title: "Worker Presence Dashboard", 
     subtitle: "Real-time personnel tracking on site",
     
     stats: {
@@ -316,12 +316,12 @@ const translations = {
     loto: {
       title: "LOTO Locks",
       energyTypes: {
-        electrical: "⚡ Electrical",
-        mechanical: "⚙️ Mechanical",
-        hydraulic: "🔧 Hydraulic",
-        pneumatic: "💨 Pneumatic",
-        thermal: "🔥 Thermal",
-        chemical: "🧪 Chemical"
+        electrical: "Electrical",
+        mechanical: "Mechanical",
+        hydraulic: "Hydraulic",
+        pneumatic: "Pneumatic",
+        thermal: "Thermal",
+        chemical: "Chemical"
       },
       status: {
         applied: "Applied",
@@ -918,7 +918,7 @@ const WorkerPresenceDashboard: React.FC<WorkerPresenceDashboardProps> = ({
         {/* Banner d'urgence */}
         {emergencyMode && (
           <div className="emergency-banner">
-            🚨 MODE URGENCE ACTIVÉ - COMPTABILISATION DES TRAVAILLEURS EN COURS 🚨
+            MODE URGENCE ACTIVÉ - COMPTABILISATION DES TRAVAILLEURS EN COURS
           </div>
         )}
 
@@ -963,14 +963,14 @@ const WorkerPresenceDashboard: React.FC<WorkerPresenceDashboardProps> = ({
             </div>
             
             <div className="stat-card">
-              <div className="stat-label">🔒 {t.stats.totalLocks}</div>
+              <div className="stat-label">{t.stats.totalLocks}</div>
               <div className="stat-value" style={{ color: '#f59e0b' }}>
                 {stats.totalLocks}
               </div>
             </div>
             
             <div className="stat-card">
-              <div className="stat-label">🔓 {t.stats.activeLocks}</div>
+              <div className="stat-label">{t.stats.activeLocks}</div>
               <div className="stat-value" style={{ color: stats.activeLocks > 0 ? '#ef4444' : '#22c55e' }}>
                 {stats.activeLocks}
               </div>

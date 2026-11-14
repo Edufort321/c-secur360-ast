@@ -11,6 +11,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { Trash2, Printer, XOctagon, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -176,7 +177,7 @@ export function TransfoView(props: {
             <TransfoHead dossier={dossier} lang={lang} />
             <div className="flex gap-2">
               <button className={BTN_GHOST} onClick={() => setShowEdit(true)}>✎ {tr('Éditer les infos', 'Edit info')}</button>
-              <button className={BTN_GHOST + ' !text-red-600 !border-red-300'} onClick={onDeleteDossier}>🗑</button>
+              <button className={BTN_GHOST + ' !text-red-600 !border-red-300'} onClick={onDeleteDossier}><Trash2 size={15} /></button>
             </div>
           </div>
         </div>
@@ -260,7 +261,7 @@ export function TransfoView(props: {
       `<div class="qrbox">${svg}</div>` +
       `<div class="name">${esc(dossier.ident)}</div>` +
       (sub ? `<div class="sub">${esc(sub)}</div>` : '') +
-      (siteText ? `<div class="site">📍 ${esc(siteText)}</div>` : '') +
+      (siteText ? `<div class="site">${esc(siteText)}</div>` : '') +
       pcbBadge +
       `<div class="url">${esc(publicUrl)}</div>` +
       `</body></html>`,
@@ -419,9 +420,9 @@ export function TransfoView(props: {
                 </div>
               )}
               <button className={BTN_GHOST} onClick={() => setShowEdit(true)}>✎ <span className="hidden sm:inline">{tr('Éditer les infos', 'Edit info')}</span></button>
-              <button className={BTN_DARK} onClick={() => setShowExport(true)}>🖨 <span className="hidden sm:inline">{tr('Exporter PDF', 'Export PDF')}</span></button>
+              <button className={BTN_DARK} onClick={() => setShowExport(true)}><Printer size={15} /> <span className="hidden sm:inline">{tr('Exporter PDF', 'Export PDF')}</span></button>
               <button className={BTN_PRIMARY} onClick={onNewMeasure}>+ <span className="hidden sm:inline">{tr('Nouveau prélèvement', 'New sample')}</span><span className="sm:hidden">{tr('Prélèv.', 'Sample')}</span></button>
-              <button className={BTN_GHOST + ' !text-red-600 !border-red-300'} onClick={onDeleteDossier}>🗑</button>
+              <button className={BTN_GHOST + ' !text-red-600 !border-red-300'} onClick={onDeleteDossier}><Trash2 size={15} /></button>
             </div>
           </div>
         </div>
@@ -430,7 +431,7 @@ export function TransfoView(props: {
         <div className="flex flex-wrap gap-2">
           {data.map((d, i) => (
             <button key={d.id || i} onClick={() => setSelIdx(i)} className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${i === selIdx ? 'border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' : 'border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'}`}>
-              <span className="mr-1 inline-grid h-4 w-4 place-items-center rounded-full bg-gray-200 text-[9px] text-gray-700 dark:bg-gray-600 dark:text-gray-100">{i + 1}</span>{d.sample_date || '—'}{d.source === 'pdf' ? ' 📄' : ''}
+              <span className="mr-1 inline-grid h-4 w-4 place-items-center rounded-full bg-gray-200 text-[9px] text-gray-700 dark:bg-gray-600 dark:text-gray-100">{i + 1}</span>{d.sample_date || '—'}{d.source === 'pdf' ? ' · PDF' : ''}
             </button>
           ))}
         </div>
@@ -501,7 +502,7 @@ export function TransfoView(props: {
         {/* BANNIÈRE TENDANCE */}
         <section className={CARD} style={{ borderLeft: `6px solid ${trendA.lvl === 'crit' ? '#9d0208' : trendA.lvl === 'fair' ? '#f4a261' : trendA.lvl === 'good' ? '#2a9d8f' : '#577590'}` }}>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-2xl">{trendA.lvl === 'crit' ? '⛔' : trendA.lvl === 'fair' ? '⚠️' : trendA.lvl === 'good' ? '✓' : 'ℹ️'}</span>
+            <span className="text-2xl">{trendA.lvl === 'crit' ? <XOctagon size={26} className="text-[#9d0208]" /> : trendA.lvl === 'fair' ? <AlertTriangle size={26} className="text-[#f4a261]" /> : trendA.lvl === 'good' ? <CheckCircle2 size={26} className="text-[#2a9d8f]" /> : <Info size={26} className="text-[#577590]" />}</span>
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{tr('ANALYSE DE TENDANCE', 'TREND ANALYSIS')}</div>
               <div className="text-base font-extrabold text-gray-900 dark:text-gray-100">{trendA.verdict}</div>
@@ -608,7 +609,7 @@ export function TransfoView(props: {
             <section className={CARD}>
               <h2 className={H2}>{tr('Historique complet', 'Full history')}</h2>
               <Tbl>
-                  <thead><Tr><Th>{tr('Paramètre', 'Parameter')}</Th>{data.map((d, i) => <ThR key={d.id || i}>{d.sample_date}{d.source === 'pdf' ? ' 📄' : ''}</ThR>)}</Tr></thead>
+                  <thead><Tr><Th>{tr('Paramètre', 'Parameter')}</Th>{data.map((d, i) => <ThR key={d.id || i}>{d.sample_date}{d.source === 'pdf' ? ' · PDF' : ''}</ThR>)}</Tr></thead>
                   <tbody>
                     {GAS_FIELDS.map(g => <Tr key={g.u}><Td>{gl(g.u, lang)}</Td>{data.map((d, i) => <TdR key={d.id || i}>{(d as any)[g.key] ?? '—'}</TdR>)}</Tr>)}
                     <Tr><Td className="font-semibold">TDCG</Td>{data.map((d, i) => <TdR key={d.id || i}>{Math.round(Number(d.tdcg) || 0)}</TdR>)}</Tr>
@@ -730,7 +731,7 @@ export function TransfoView(props: {
 
             {/* INTERPRÉTATION DGA */}
             <section className={CARD} style={{ borderTop: '4px solid #9d0208' }}>
-              <h2 className={H2}>🔍 {tr('Interprétation DGA', 'DGA interpretation')}</h2>
+              <h2 className={H2}>{tr('Interprétation DGA', 'DGA interpretation')}</h2>
               {items.map((it, i) => <InterpRow key={i} lvl={it.lvl} txt={it.txt} />)}
               <div className="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-900/40">
                 <div className="text-xs font-bold text-gray-800 dark:text-gray-100">{reco.title}</div>
@@ -742,14 +743,14 @@ export function TransfoView(props: {
             {/* INTERPRÉTATION HUILE */}
             {oilEval.length > 0 && (
               <section className={CARD} style={{ borderTop: '4px solid #277da1' }}>
-                <h2 className={H2}>🛢️ {tr('Interprétation qualité huile', 'Oil quality interpretation')}{dossier.kv ? ` · ${tr('seuils classe', 'class thresholds')} ${voltageClass(dossier.kv, lang).label}` : ''}</h2>
+                <h2 className={H2}>{tr('Interprétation qualité huile', 'Oil quality interpretation')}{dossier.kv ? ` · ${tr('seuils classe', 'class thresholds')} ${voltageClass(dossier.kv, lang).label}` : ''}</h2>
                 {oilEval.map((it, i) => <InterpRow key={i} lvl={it.status === 'poor' ? 'crit' : it.status === 'fair' ? 'warn' : 'ok'} txt={it.txt} />)}
               </section>
             )}
 
             {/* PROCHAINE ANALYSE + INTERVALLE */}
             <section className={CARD} style={{ borderTop: `4px solid ${dueColor}` }}>
-              <h2 className={H2}>📅 {tr('Prochaine analyse', 'Next analysis')}</h2>
+              <h2 className={H2}>{tr('Prochaine analyse', 'Next analysis')}</h2>
               <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Intervalle de reprise', 'Recheck interval')}</div>
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {INTERVAL_OPTIONS.map(opt => {
@@ -772,14 +773,14 @@ export function TransfoView(props: {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {extra.targeted_analyses && extra.targeted_analyses.length > 0 && (
                     <div className="flex-1 rounded-lg border border-rose-300 bg-rose-50 p-2.5 dark:border-rose-500/40 dark:bg-rose-500/10" style={{ minWidth: 220 }}>
-                      <div className="text-xs font-bold text-rose-700 dark:text-rose-300">🎯 {tr('Suivi ciblé rapproché', 'Targeted close follow-up')}{extra.targeted_days ? ` ⚠ ${tr('URGENT', 'URGENT')}` : ''}</div>
+                      <div className="text-xs font-bold text-rose-700 dark:text-rose-300">{tr('Suivi ciblé rapproché', 'Targeted close follow-up')}{extra.targeted_days ? ` ⚠ ${tr('URGENT', 'URGENT')}` : ''}</div>
                       {extra.next_date_manual && <div className="mt-0.5 text-xs">{extra.next_date_manual}{extra.targeted_days ? ` · ${tr('dans', 'in')} ${extra.targeted_days} ${tr('jour(s)', 'day(s)')}` : extra.targeted_months ? ` · ${extra.targeted_months} ${tr('mois', 'months')}` : ''}</div>}
                       <div className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">{tr('Analyses à reprendre', 'Analyses to repeat')} : <b>{extra.targeted_analyses.join(', ')}</b></div>
                     </div>
                   )}
                   {extra.full_next_date && (
                     <div className="flex-1 rounded-lg border border-gray-300 bg-gray-50 p-2.5 dark:border-gray-600 dark:bg-gray-900/40" style={{ minWidth: 180 }}>
-                      <div className="text-xs font-bold text-gray-700 dark:text-gray-200">🗓 {tr('Suivi complet (annuel)', 'Full follow-up (annual)')}</div>
+                      <div className="text-xs font-bold text-gray-700 dark:text-gray-200">{tr('Suivi complet (annuel)', 'Full follow-up (annual)')}</div>
                       <div className="mt-0.5 text-xs">{extra.full_next_date}</div>
                       <div className="mt-1 text-[11px] text-gray-500">{tr('Toutes les analyses', 'All analyses')}</div>
                     </div>
@@ -799,7 +800,7 @@ export function TransfoView(props: {
 
             {/* CATALOGUE D'ANALYSES */}
             <section className={CARD}>
-              <h2 className={H2}>🧪 {tr('Analyses à effectuer / effectuées', 'Analyses to perform / performed')}</h2>
+              <h2 className={H2}>{tr('Analyses à effectuer / effectuées', 'Analyses to perform / performed')}</h2>
               {ANALYSIS_GROUPS.map(grp => (
                 <div key={grp.id} className="mb-2">
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-400">{al(grp, lang)}</div>
@@ -836,7 +837,7 @@ export function TransfoView(props: {
 
             {/* QR PUBLIC DU TRANSFORMATEUR */}
             <section className={CARD}>
-              <h2 className={H2}>🔳 {tr('QR public du transformateur', 'Transformer public QR')}</h2>
+              <h2 className={H2}>{tr('QR public du transformateur', 'Transformer public QR')}</h2>
               {dossier.id ? (
                 <div className="flex flex-col items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -844,8 +845,8 @@ export function TransfoView(props: {
                   <div className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700"><QRCodeSVG id="dga-qr-svg" value={publicUrl || ' '} size={148} level="M" /></div>
                   <a href={publicUrl || undefined} target="_blank" rel="noopener noreferrer" className="max-w-full break-all text-center text-[11px] font-medium text-rose-600 underline decoration-dotted hover:text-rose-700">{publicUrl}</a>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <button className={BTN_GHOST + ' !px-3 !py-1.5 text-xs'} onClick={copyQR}>📋 {tr('Copier le lien', 'Copy link')}</button>
-                    <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} onClick={printQR}>🖨 {tr("Imprimer l'étiquette", 'Print label')}</button>
+                    <button className={BTN_GHOST + ' !px-3 !py-1.5 text-xs'} onClick={copyQR}>{tr('Copier le lien', 'Copy link')}</button>
+                    <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} onClick={printQR}>{tr("Imprimer l'étiquette", 'Print label')}</button>
                   </div>
                   <p className="text-center text-[11px] text-gray-400">{tr('Scanné sans compte : fiche en lecture seule (BPC en premier). Connecté : édition.', 'Scanned without an account: read-only sheet (PCB first). Logged in: editing.')}</p>
                 </div>
@@ -855,17 +856,17 @@ export function TransfoView(props: {
             {/* RECOMMANDATION / IA */}
             <section className={CARD}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className={H2 + ' !mb-0'}>✍️ {tr('Recommandation manuelle', 'Manual recommendation')}</h2>
+                <h2 className={H2 + ' !mb-0'}>{tr('Recommandation manuelle', 'Manual recommendation')}</h2>
                 <div className="flex items-center gap-2">
                   <label className="flex cursor-pointer items-center gap-1 text-[11px] text-gray-500" title={tr('Traduit automatiquement le texte dans l’autre langue (selon le header)', 'Auto-translate the text into the other language (per header)')}>
                     <input type="checkbox" className="accent-violet-600" checked={autoTrans} onChange={() => { const v = !autoTrans; setAutoTrans(v); if (v) translateOther(recoDraft); }} />
-                    🌐 {tr('Trad. auto', 'Auto-translate')}
+                    {tr('Trad. auto', 'Auto-translate')}
                   </label>
-                  <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} disabled={aiBusy} onClick={runAI}>{aiBusy ? tr('Génération…', 'Generating…') : '✨ ' + tr("Générer avec l'IA", 'Generate with AI')}</button>
+                  <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} disabled={aiBusy} onClick={runAI}>{aiBusy ? tr('Génération…', 'Generating…') : tr("Générer avec l'IA", 'Generate with AI')}</button>
                 </div>
               </div>
               <textarea className={INP + ' mt-2'} rows={5} value={recoDraft} onChange={e => setRecoDraft(e.target.value)} onBlur={() => { updateExtra({ ['manual_reco_' + lang]: recoDraft, manual_reco: recoDraft }); if (autoTrans) translateOther(recoDraft); }} placeholder={tr('Ajoute ta recommandation ici…', 'Add your recommendation here…')} />
-              {autoTrans && <p className="mt-1 text-[11px] text-violet-500">🌐 {tr('Traduction auto activée : le texte sera traduit dans l’autre langue à l’enregistrement.', 'Auto-translate on: text will be translated to the other language on save.')}</p>}
+              {autoTrans && <p className="mt-1 text-[11px] text-violet-500">{tr('Traduction auto activée : le texte sera traduit dans l’autre langue à l’enregistrement.', 'Auto-translate on: text will be translated to the other language on save.')}</p>}
             </section>
         </div>
 
@@ -1053,7 +1054,7 @@ function EditInfoModal({ dossier, lang, tr, tenant, allDossiers = [], onSave, on
 
 function InterpRow({ lvl, txt }: { lvl: 'crit' | 'warn' | 'info' | 'ok'; txt: string }) {
   const style = lvl === 'crit' ? 'border-l-[#9d0208] bg-rose-50 dark:bg-rose-500/10' : lvl === 'warn' ? 'border-l-[#f4a261] bg-amber-50 dark:bg-amber-500/10' : lvl === 'ok' ? 'border-l-[#2a9d8f] bg-emerald-50 dark:bg-emerald-500/10' : 'border-l-[#577590] bg-sky-50 dark:bg-sky-500/10';
-  const icon = lvl === 'crit' ? '⛔' : lvl === 'warn' ? '⚠️' : lvl === 'ok' ? '✓' : 'ℹ️';
+  const icon = lvl === 'crit' ? <XOctagon size={15} className="mt-0.5 shrink-0 text-[#9d0208]" /> : lvl === 'warn' ? <AlertTriangle size={15} className="mt-0.5 shrink-0 text-[#f4a261]" /> : lvl === 'ok' ? <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#2a9d8f]" /> : <Info size={15} className="mt-0.5 shrink-0 text-[#577590]" />;
   return <div className={`mb-1.5 flex items-start gap-2 rounded border-l-4 p-2 text-sm text-gray-700 dark:text-gray-200 ${style}`}><span>{icon}</span><span>{txt}</span></div>;
 }
 

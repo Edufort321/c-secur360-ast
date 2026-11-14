@@ -6,7 +6,7 @@ export const telecomInstallation: WorkType = {
   name: 'Installation télécom',
   category: 'Télécommunications',
   description: 'Installation d\'équipements de télécommunication',
-  icon: '📡',
+  icon: '',
   baseHazards: [
     'PHY-003', // Chutes de hauteur
     'ELEC-001', // Choc électrique
@@ -57,7 +57,7 @@ export const fiberOptic: WorkType = {
   name: 'Fibre optique',
   category: 'Télécommunications',
   description: 'Installation et maintenance de fibre optique',
-  icon: '💡',
+  icon: '',
   baseHazards: [
     'OPT-001', // Rayonnement laser
     'PHY-004', // Coupures/lacérations
@@ -103,7 +103,7 @@ export const antennaWork: WorkType = {
   name: 'Travaux d\'antennes',
   category: 'Télécommunications',
   description: 'Installation et maintenance d\'antennes de télécommunication',
-  icon: '📶',
+  icon: '',
   baseHazards: [
     'PHY-003', // Chutes de hauteur
     'EM-001', // Rayonnement RF intense
@@ -159,7 +159,7 @@ export const cableInstallation: WorkType = {
   name: 'Installation câblage',
   category: 'Télécommunications',
   description: 'Installation de câblage et infrastructure télécom',
-  icon: '🔌',
+  icon: '',
   baseHazards: [
     'ELEC-001', // Choc électrique
     'PHY-003', // Chutes (échelles)

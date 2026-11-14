@@ -77,7 +77,7 @@ export default function CameraRecorder({ uploadFile, saveClip, onNotice }: {
 
   return (
     <div className="card">
-      <h2>🎥 Enregistrer une vidéo réelle <span className="chip">caméra + micro</span></h2>
+      <h2>Enregistrer une vidéo réelle <span className="chip">caméra + micro</span></h2>
       <p className="hint">Filme une vraie personne ou une scène avec la caméra de ton appareil, puis monte-la avec des slides dans l’assembleur (la vidéo devient un présentateur sélectionnable). Mobile : bascule caméra avant/arrière.</p>
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 520, margin: '0 auto' }}>

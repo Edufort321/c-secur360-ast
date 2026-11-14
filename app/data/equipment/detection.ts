@@ -1,5 +1,5 @@
 // app/data/equipment/detection.ts
-// ⭐ IMPORT CORRIGÉ - Utilise les types depuis types/
+// IMPORT CORRIGÉ - Utilise les types depuis types/
 import { SafetyEquipment } from '../../types/equipment';
 
 // Fonction helper pour créer un équipement
@@ -48,8 +48,8 @@ export const multiGasDetector = createNewEquipment({
     o2Range: '0-30% vol',
     coRange: '0-1000 ppm',
     h2sRange: '0-500 ppm',
-    batteryLife: 14, // ✅ CORRIGÉ : number au lieu de string
-    responseTime: 30, // ✅ CORRIGÉ : number (secondes)
+    batteryLife: 14, // ✓ CORRIGÉ : number au lieu de string
+    responseTime: 30, // ✓ CORRIGÉ : number (secondes)
     alarmTypes: 'Visuel, audible, vibration',
     certification: 'ATEX, CSA, UL'
   },

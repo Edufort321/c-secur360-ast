@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { Lock } from 'lucide-react';
 
 // Page PUBLIQUE du vérificateur : ouvre un rapport partagé via un lien tokenisé (lecture seule, ou
 // révision avec dépôt de commentaires). Aucune authentification ; tout passe par /api/rapports/share
@@ -83,7 +84,7 @@ export default function ShareViewerPage() {
   }
 
   if (state === 'loading') return <Center>…</Center>;
-  if (state === 'error') return <Center><div style={{ textAlign: 'center' }}><div style={{ fontSize: 40 }}>🔒</div><h1 style={{ fontFamily: 'Archivo, sans-serif' }}>Lien indisponible</h1><p style={{ color: '#64748b' }}>{err}</p></div></Center>;
+  if (state === 'error') return <Center><div style={{ textAlign: 'center' }}><div style={{ display: 'flex', justifyContent: 'center' }}><Lock size={40} /></div><h1 style={{ fontFamily: 'Archivo, sans-serif' }}>Lien indisponible</h1><p style={{ color: '#64748b' }}>{err}</p></div></Center>;
 
   const r = report; const d = r.data || {}; const blocks: Block[] = d.blocks || [];
   return (
@@ -94,7 +95,7 @@ export default function ShareViewerPage() {
           {logo && <img src={logo} alt="" style={{ maxHeight: 30, maxWidth: 110, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2 }} />}
           <span style={{ fontFamily: 'Archivo, sans-serif', fontWeight: 800 }}>Rapport partagé</span>
         </div>
-        <span style={{ fontSize: 12, background: mode === 'edit' ? '#b45309' : mode === 'review' ? '#2a6f97' : '#475569', padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>{mode === 'edit' ? '🛠 Édition (valeurs)' : mode === 'review' ? '✍ Révision' : '👁 Lecture seule'}</span>
+        <span style={{ fontSize: 12, background: mode === 'edit' ? '#b45309' : mode === 'review' ? '#2a6f97' : '#475569', padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>{mode === 'edit' ? 'Édition (valeurs)' : mode === 'review' ? 'Révision' : 'Lecture seule'}</span>
       </div>
 
       <div style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(12px,3vw,28px)' }}>
@@ -109,7 +110,7 @@ export default function ShareViewerPage() {
           </div>
         </div>
 
-        {canEdit && <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', color: '#9a3412', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>🛠 Vous pouvez saisir les <b>valeurs</b> (champs et inspections) puis enregistrer. La structure du rapport ne peut pas être modifiée.</div>}
+        {canEdit && <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', color: '#9a3412', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>Vous pouvez saisir les <b>valeurs</b> (champs et inspections) puis enregistrer. La structure du rapport ne peut pas être modifiée.</div>}
 
         {/* Contenu (lecture seule, ou saisie des valeurs en mode édition) */}
         <div style={{ background: '#fff', borderRadius: 14, padding: 'clamp(16px,3vw,26px)', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
@@ -126,7 +127,7 @@ export default function ShareViewerPage() {
 
         {/* Révision */}
         <div style={{ background: '#fff', borderRadius: 14, padding: 'clamp(16px,3vw,26px)', boxShadow: '0 2px 10px rgba(0,0,0,.05)', marginTop: 16 }}>
-          <h2 style={{ fontFamily: 'Archivo, sans-serif', fontWeight: 800, fontSize: 16, marginTop: 0 }}>💬 Commentaires de révision {reviews.length > 0 ? `(${reviews.length})` : ''}</h2>
+          <h2 style={{ fontFamily: 'Archivo, sans-serif', fontWeight: 800, fontSize: 16, marginTop: 0 }}>Commentaires de révision {reviews.length > 0 ? `(${reviews.length})` : ''}</h2>
           {reviews.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun commentaire pour le moment.</div>}
           {reviews.map(rv => (
             <div key={rv.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
@@ -233,7 +234,7 @@ function BlockView({ b, edit, onField, onInspect }: { b: Block; edit?: boolean; 
   );
   if (b.type === 'pdfpage') return (
     <div>
-      <SecBar>📄 {b.name || 'Document'}</SecBar>
+      <SecBar>{b.name || 'Document'}</SecBar>
       {(b.pages || []).map((pg: string, i: number) => <img key={i} src={pg} alt="" style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 8 }} />)}
     </div>
   );

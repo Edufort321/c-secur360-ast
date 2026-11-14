@@ -4,7 +4,7 @@ import ModernPermitForm from '@/components/permits/ModernPermitForm';
 // Excavation / tranchée (CSTC) — localisation des services AVANT + classification du sol + étançonnement.
 export default function Page() {
   return <ModernPermitForm config={{
-    type: 'excavation', title: '⛏ Permis d’excavation / tranchée', color: 'text-amber-700', btn: 'bg-amber-700 hover:bg-amber-800', prefix: 'EX',
+    type: 'excavation', title: 'Permis d’excavation / tranchée', color: 'text-amber-700', btn: 'bg-amber-700 hover:bg-amber-800', prefix: 'EX',
     intro: 'CSTC — localisation des services (Info-Excavation) AVANT de creuser, classification du sol, étançonnement/talutage selon la profondeur.',
     sections: [{
       title: 'Excavation', fields: [

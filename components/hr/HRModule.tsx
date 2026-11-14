@@ -398,9 +398,9 @@ const HRModule: React.FC = () => {
               {filteredData.map((worker, index) => {
                 const status = WorkerRegistryUtils.getPresenceStatus(worker);
                 const statusColors = {
-                  present: { bg: '#dcfce7', text: '#16a34a', label: '🟢 Présent' },
-                  absent: { bg: '#fee2e2', text: '#dc2626', label: '🔴 Absent' },
-                  completed: { bg: '#e0e7ff', text: '#4f46e5', label: '✅ Terminé' }
+                  present: { bg: '#dcfce7', text: '#16a34a', label: 'Présent' },
+                  absent: { bg: '#fee2e2', text: '#dc2626', label: 'Absent' },
+                  completed: { bg: '#e0e7ff', text: '#4f46e5', label: '✓ Terminé' }
                 };
                 const statusColor = statusColors[status];
 
@@ -440,9 +440,9 @@ const HRModule: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
                       {worker.consentAST ? (
-                        <span style={{ color: '#22c55e' }}>✅</span>
+                        <span style={{ color: '#22c55e' }}>✓</span>
                       ) : (
-                        <span style={{ color: '#ef4444' }}>❌</span>
+                        <span style={{ color: '#ef4444' }}>✕</span>
                       )}
                     </td>
                   </tr>

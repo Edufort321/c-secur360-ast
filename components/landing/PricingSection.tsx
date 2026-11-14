@@ -162,7 +162,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
           <div className="relative bg-white rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden ring-2 ring-blue-500 scale-105">
             {/* Popular Badge */}
             <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center py-3 text-sm font-medium">
-              ⭐ Plan Recommandé - Tout Inclus
+              Plan Recommandé - Tout Inclus
             </div>
 
             <div className="p-8 pt-16">
@@ -263,7 +263,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
 
               {/* Trial Info */}
               <p className="text-center text-sm text-slate-500 mt-4">
-                ✨ Essai gratuit de 14 jours - Aucune carte requise
+                Essai gratuit de 14 jours - Aucune carte requise
               </p>
             </div>
           </div>
@@ -327,7 +327,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
 
               {/* Contact Info */}
               <p className="text-center text-sm text-slate-500 mt-4">
-                💼 Contactez notre équipe commerciale
+                Contactez notre équipe commerciale
               </p>
             </div>
           </div>

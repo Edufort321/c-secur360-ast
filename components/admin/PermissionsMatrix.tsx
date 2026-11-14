@@ -11,16 +11,16 @@ import { supabase } from '@/lib/supabase';
 
 // Niveaux (Guide des niveaux d'accès) — tier 1..8 (+ tier 0 « Externe » pour les modules QR).
 const LEVELS = [
-  { tier: 1, emoji: '👁️', fr: 'Consultation', en: 'View only' },
-  { tier: 2, emoji: '✏️', fr: 'Modification', en: 'Edit' },
-  { tier: 3, emoji: '🗓️', fr: 'Coordination', en: 'Coordinate' },
-  { tier: 4, emoji: '⚙️', fr: 'Administration', en: 'Admin' },
-  { tier: 5, emoji: '💵', fr: 'Admin paie', en: 'Payroll admin' },
-  { tier: 6, emoji: '🤝', fr: 'RH', en: 'HR' },
-  { tier: 7, emoji: '🏢', fr: 'Direction', en: 'Management' },
-  { tier: 8, emoji: '👑', fr: 'Super-utilisateur', en: 'Super-user' },
+  { tier: 1, fr: 'Consultation', en: 'View only' },
+  { tier: 2, fr: 'Modification', en: 'Edit' },
+  { tier: 3, fr: 'Coordination', en: 'Coordinate' },
+  { tier: 4, fr: 'Administration', en: 'Admin' },
+  { tier: 5, fr: 'Admin paie', en: 'Payroll admin' },
+  { tier: 6, fr: 'RH', en: 'HR' },
+  { tier: 7, fr: 'Direction', en: 'Management' },
+  { tier: 8, fr: 'Super-utilisateur', en: 'Super-user' },
 ];
-const EXT_LEVEL = { tier: 0, emoji: '🌐', fr: 'Externe (QR)', en: 'External (QR)' };
+const EXT_LEVEL = { tier: 0, fr: 'Externe (QR)', en: 'External (QR)' };
 
 export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const [perms, setPerms] = useState<PermMap | null>(null);
@@ -78,7 +78,7 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
     <div className="flex items-center gap-1.5">
       <select value={perms[cap]} disabled={!canEdit} onChange={e => onChange(cap, Number(e.target.value))}
         className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800 disabled:opacity-60">
-        {(includeExt ? [EXT_LEVEL, ...LEVELS] : LEVELS).map(l => <option key={l.tier} value={l.tier}>{l.emoji} {tr(l.fr, l.en)}{l.tier > 0 ? ` (niv. ${l.tier}+)` : ''}</option>)}
+        {(includeExt ? [EXT_LEVEL, ...LEVELS] : LEVELS).map(l => <option key={l.tier} value={l.tier}>{tr(l.fr, l.en)}{l.tier > 0 ? ` (niv. ${l.tier}+)` : ''}</option>)}
       </select>
       {savingKey === cap && <Loader2 size={13} className="animate-spin text-gray-400" />}
     </div>
@@ -130,12 +130,12 @@ export function PermissionsMatrix({ tenant, tr, canEdit }: { tenant: string; tr:
         <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40">
-              <tr><th className="px-4 py-2">{tr('Module / sous-module', 'Module / sub-module')}</th><th className="px-4 py-2">👁️ {tr('Voir (min.)', 'View (min.)')}</th><th className="px-4 py-2">✏️ {tr('Éditer (min.)', 'Edit (min.)')}</th></tr>
+              <tr><th className="px-4 py-2">{tr('Module / sous-module', 'Module / sub-module')}</th><th className="px-4 py-2">{tr('Voir (min.)', 'View (min.)')}</th><th className="px-4 py-2">{tr('Éditer (min.)', 'Edit (min.)')}</th></tr>
             </thead>
             <tbody>
               {MODULE_ROWS.map(r => (
                 <tr key={`${r.modKey}:${r.sub || ''}`} className="border-t border-gray-100 dark:border-gray-700/50">
-                  <td className={`px-4 py-2 font-medium text-gray-800 dark:text-gray-100 ${r.isSub ? 'pl-8 text-gray-600 dark:text-gray-300' : ''}`}>{r.emoji} {tr(r.fr, r.en)}{r.externalCapable && !r.isSub ? <span className="ml-1.5 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Édition externe possible (QR)', 'External edit possible (QR)')}>QR</span> : null}</td>
+                  <td className={`px-4 py-2 font-medium text-gray-800 dark:text-gray-100 ${r.isSub ? 'pl-8 text-gray-600 dark:text-gray-300' : ''}`}>{tr(r.fr, r.en)}{r.externalCapable && !r.isSub ? <span className="ml-1.5 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={tr('Édition externe possible (QR)', 'External edit possible (QR)')}>QR</span> : null}</td>
                   <td className="px-4 py-2"><TierSelect cap={viewCap(r.modKey, r.sub)} includeExt={r.externalCapable} /></td>
                   <td className="px-4 py-2"><TierSelect cap={editCap(r.modKey, r.sub)} includeExt={r.externalCapable} /></td>
                 </tr>

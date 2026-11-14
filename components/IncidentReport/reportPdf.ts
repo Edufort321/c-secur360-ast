@@ -191,8 +191,8 @@ export async function generateIncidentReportPdf(opts: {
       rowKV(tr('Traitement médical', 'Medical treatment'), p.medicalTreatment ? lbl(TREATMENT, p.medicalTreatment) : '');
       if (p.injuryDescription) rowKV(tr('Description', 'Description'), p.injuryDescription);
       if (p.lostTime) rowKV(tr('Arrêt de travail', 'Lost time'), `${p.lostTimeDays || 0} ${tr('jour(s)', 'day(s)')}`);
-      if (p.restricted) rowKV(tr('Travail restreint / mutation', 'Restricted / transfer'), '✔');
-      if (p.fatality) rowKV(tr('Décès', 'Fatality'), '✔');
+      if (p.restricted) rowKV(tr('Travail restreint / mutation', 'Restricted / transfer'), tr('Oui', 'Yes'));
+      if (p.fatality) rowKV(tr('Décès', 'Fatality'), tr('Oui', 'Yes'));
       if (Array.isArray(p.bodyRegions) && p.bodyRegions.length) {
         const sel = new Set<string>(p.bodyRegions);
         rowKV(tr('Zones blessées', 'Injured areas'), p.bodyRegions.map((id: string) => (BODY_LABELS[id] ? (fr ? BODY_LABELS[id].fr : BODY_LABELS[id].en) : id)).join(', '));

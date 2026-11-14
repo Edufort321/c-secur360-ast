@@ -113,10 +113,10 @@ export const NOTIFICATION_CONFIG = {
     DURATION: 3000, // 3 secondes
     MAX_NOTIFICATIONS: 5,
     TYPES: {
-        success: { color: '#10b981', icon: '✅' },
-        error: { color: '#ef4444', icon: '❌' },
-        warning: { color: '#f59e0b', icon: '⚠️' },
-        info: { color: '#3b82f6', icon: 'ℹ️' }
+        success: { color: '#10b981', icon: '✓' },
+        error: { color: '#ef4444', icon: '✕' },
+        warning: { color: '#f59e0b', icon: '⚠' },
+        info: { color: '#3b82f6', icon: 'ℹ' }
     }
 };
 

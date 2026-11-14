@@ -14,7 +14,7 @@ export function useSupabaseSync() {
     syncInProgress.current = true;
 
     try {
-      console.log('🔄 Chargement des données depuis Supabase...');
+      console.log('Chargement des données depuis Supabase...');
 
       // Charger les départements
       const departments = await departmentsAPI.getAll();
@@ -39,10 +39,10 @@ export function useSupabaseSync() {
         localStorage.setItem(invKey('c-secur360-inventory-items'), JSON.stringify(transformedItems));
       }
 
-      console.log('✅ Données chargées depuis Supabase');
+      console.log('✓ Données chargées depuis Supabase');
       return true;
     } catch (error) {
-      console.error('❌ Erreur lors du chargement depuis Supabase:', error);
+      console.error('✕ Erreur lors du chargement depuis Supabase:', error);
       return false;
     } finally {
       syncInProgress.current = false;
@@ -60,9 +60,9 @@ export function useSupabaseSync() {
         // Update
         await itemsAPI.update(item.id, item);
       }
-      console.log(`✅ Article ${action} synchronisé:`, item.name);
+      console.log(`✓ Article ${action} synchronisé:`, item.name);
     } catch (error) {
-      console.error(`❌ Erreur sync article ${action}:`, error);
+      console.error(`✕ Erreur sync article ${action}:`, error);
     }
   }, []);
 
@@ -76,9 +76,9 @@ export function useSupabaseSync() {
       } else {
         await departmentsAPI.update(department.id, department);
       }
-      console.log(`✅ Département ${action} synchronisé:`, department.name);
+      console.log(`✓ Département ${action} synchronisé:`, department.name);
     } catch (error) {
-      console.error(`❌ Erreur sync département ${action}:`, error);
+      console.error(`✕ Erreur sync département ${action}:`, error);
     }
   }, []);
 
@@ -92,9 +92,9 @@ export function useSupabaseSync() {
       } else {
         await categoriesAPI.update(category.id, category);
       }
-      console.log(`✅ Catégorie ${action} synchronisée:`, category.name);
+      console.log(`✓ Catégorie ${action} synchronisée:`, category.name);
     } catch (error) {
-      console.error(`❌ Erreur sync catégorie ${action}:`, error);
+      console.error(`✕ Erreur sync catégorie ${action}:`, error);
     }
   }, []);
 
@@ -102,9 +102,9 @@ export function useSupabaseSync() {
   const syncMovementToSupabase = useCallback(async (movement) => {
     try {
       await movementsAPI.create(movement);
-      console.log('✅ Mouvement synchronisé');
+      console.log('✓ Mouvement synchronisé');
     } catch (error) {
-      console.error('❌ Erreur sync mouvement:', error);
+      console.error('✕ Erreur sync mouvement:', error);
     }
   }, []);
 
@@ -115,7 +115,7 @@ export function useSupabaseSync() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'items' },
         async (payload) => {
-          console.log('🔔 Changement détecté sur items:', payload);
+          console.log('Changement détecté sur items:', payload);
 
           if (payload.eventType === 'INSERT') {
             const newItem = payload.new;
@@ -143,7 +143,7 @@ export function useSupabaseSync() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'departments' },
         (payload) => {
-          console.log('🔔 Changement détecté sur departments:', payload);
+          console.log('Changement détecté sur departments:', payload);
 
           if (payload.eventType === 'INSERT') {
             onDepartmentChange({ type: 'INSERT', department: payload.new });
@@ -168,7 +168,7 @@ export function useSupabaseSync() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'categories' },
         (payload) => {
-          console.log('🔔 Changement détecté sur categories:', payload);
+          console.log('Changement détecté sur categories:', payload);
 
           if (payload.eventType === 'INSERT') {
             onCategoryChange({ type: 'INSERT', category: payload.new });

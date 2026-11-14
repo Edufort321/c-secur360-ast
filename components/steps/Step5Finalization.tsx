@@ -236,33 +236,33 @@ interface FinalizationStepProps {
 const translations = {
   fr: {
     // Titres principaux
-    title: "🛡️ Finalisation AST Complète",
+    title: "Finalisation AST Complète",
     subtitle: "Génération, Sauvegarde et Partage du Rapport AST Final",
     
     // Onglets
     tabs: {
-      validation: "✅ Validation Globale",
-      actions: "⚡ Actions Finales", 
-      sharing: "📤 Partage et Distribution",
-      reports: "📊 Rapports AST"
+      validation: "✓ Validation Globale",
+      actions: "Actions Finales", 
+      sharing: "Partage et Distribution",
+      reports: "Rapports AST"
     },
     
     // Actions principales
-    saveAST: "💾 Sauvegarder AST Complète",
-    printPDF: "🖨️ Générer Rapport PDF", 
-    generateQR: "📱 Code QR Mobile",
-    shareAST: "📤 Partager AST",
-    searchDatabase: "🔍 Base de Données AST",
-    lockAST: "🔒 Verrouiller AST",
+    saveAST: "Sauvegarder AST Complète",
+    printPDF: "Générer Rapport PDF", 
+    generateQR: "Code QR Mobile",
+    shareAST: "Partager AST",
+    searchDatabase: "Base de Données AST",
+    lockAST: "Verrouiller AST",
     copy: "Copier",
     
     // Steps AST
-    step1ProjectInfo: "📋 Step 1 - Informations Projet",
-    step2Equipment: "🛡️ Step 2 - Équipements Sécurité",
-    step3Hazards: "⚠️ Step 3 - Dangers et Contrôles",
-    step4Permits: "📄 Step 4 - Permis et Autorisations",
-    step5Validation: "✅ Step 5 - Validation Équipe",
-    step5Finalization: "🏁 Step 5 - Finalisation",
+    step1ProjectInfo: "Step 1 - Informations Projet",
+    step2Equipment: "Step 2 - Équipements Sécurité",
+    step3Hazards: "⚠ Step 3 - Dangers et Contrôles",
+    step4Permits: "Step 4 - Permis et Autorisations",
+    step5Validation: "✓ Step 5 - Validation Équipe",
+    step5Finalization: "Step 5 - Finalisation",
     
     // Validation
     validation: "Validation AST Complète",
@@ -271,7 +271,7 @@ const translations = {
     validationErrors: "Problèmes détectés dans l'AST",
     
     // Statistiques
-    statistics: "📊 Statistiques AST Complètes",
+    statistics: "Statistiques AST Complètes",
     sectionsComplete: "Sections AST Complétées",
     identifiedHazards: "Dangers Identifiés",
     selectedEquipment: "Équipements Sélectionnés",
@@ -283,17 +283,17 @@ const translations = {
     
     // Options rapports
     reportOptions: "Options de Rapport AST",
-    includePhotos: "📸 Inclure Photos de Terrain",
-    includeSignatures: "✍️ Inclure Signatures Équipe",
-    includeQRCode: "📱 Inclure Code QR",
-    includeBranding: "🏢 Inclure Logo C-Secur360",
-    includeTimestamps: "🕒 Inclure Horodatage",
-    includeComments: "💬 Inclure Commentaires",
-    includeStatistics: "📊 Inclure Statistiques",
-    includeValidation: "✅ Inclure Validation",
-    includePermits: "📄 Inclure Permis",
-    includeHazards: "⚠️ Inclure Dangers",
-    includeEquipment: "🛡️ Inclure Équipements",
+    includePhotos: "Inclure Photos de Terrain",
+    includeSignatures: "Inclure Signatures Équipe",
+    includeQRCode: "Inclure Code QR",
+    includeBranding: "Inclure Logo C-Secur360",
+    includeTimestamps: "Inclure Horodatage",
+    includeComments: "Inclure Commentaires",
+    includeStatistics: "Inclure Statistiques",
+    includeValidation: "✓ Inclure Validation",
+    includePermits: "Inclure Permis",
+    includeHazards: "⚠ Inclure Dangers",
+    includeEquipment: "Inclure Équipements",
     
     // Partage
     sharing: "Partage AST",
@@ -306,28 +306,28 @@ const translations = {
     ],
     
     // Commentaires
-    finalComments: "💬 Commentaires Finaux AST",
+    finalComments: "Commentaires Finaux AST",
     commentsPlaceholder: "Ajoutez des commentaires finaux sur cette AST, recommandations spéciales, leçons apprises, ou instructions particulières pour l'équipe...",
-    documentLocked: "🔒 AST verrouillée - Aucune modification possible",
+    documentLocked: "AST verrouillée - Aucune modification possible",
     
     // Verrouillage
-    confirmLock: "🔒 Confirmer Verrouillage AST",
+    confirmLock: "Confirmer Verrouillage AST",
     
     // Industries
     industries: {
-      construction: "🏗️ Construction",
-      industrial: "🏭 Industriel",
-      manufacturing: "⚙️ Manufacturier",
-      electrical: "⚡ Électrique",
-      mining: "⛏️ Minier",
-      oil_gas: "🛢️ Pétrole et Gaz",
-      transportation: "🚛 Transport",
-      healthcare: "🏥 Santé",
-      education: "🎓 Éducation",
-      office: "🏢 Bureau",
-      retail: "🛒 Commerce",
-      hospitality: "🏨 Hôtellerie",
-      other: "🔧 Autre"
+      construction: "Construction",
+      industrial: "Industriel",
+      manufacturing: "Manufacturier",
+      electrical: "Électrique",
+      mining: "Minier",
+      oil_gas: "Pétrole et Gaz",
+      transportation: "Transport",
+      healthcare: "Santé",
+      education: "Éducation",
+      office: "Bureau",
+      retail: "Commerce",
+      hospitality: "Hôtellerie",
+      other: "Autre"
     },
     
     // Statuts
@@ -340,8 +340,8 @@ const translations = {
     loading: "Chargement...",
     searching: "Recherche AST...",
     generating: "Génération...",
-    locked: "🔒 Verrouillé",
-    unlocked: "🔓 Déverrouillé",
+    locked: "Verrouillé",
+    unlocked: "Déverrouillé",
     
     // Messages
     saveSuccess: "AST sauvegardée avec succès dans la base de données!",
@@ -367,38 +367,38 @@ const translations = {
     import: "Importer",
     refresh: "Actualiser",
     back: "Retour",
-    database: "🗄️ Base de Données"
+    database: "Base de Données"
   },
   
   en: {
     // Main titles
-    title: "🛡️ Complete JSA Finalization", 
+    title: "Complete JSA Finalization", 
     subtitle: "Generation, Saving and Sharing of Final JSA Report",
     
     // Tabs
     tabs: {
-      validation: "✅ Global Validation",
-      actions: "⚡ Final Actions",
-      sharing: "📤 Sharing & Distribution", 
-      reports: "📊 JSA Reports"
+      validation: "✓ Global Validation",
+      actions: "Final Actions",
+      sharing: "Sharing & Distribution", 
+      reports: "JSA Reports"
     },
     
     // Main actions
-    saveAST: "💾 Save Complete JSA",
-    printPDF: "🖨️ Generate PDF Report", 
-    generateQR: "📱 Mobile QR Code",
-    shareAST: "📤 Share JSA",
-    searchDatabase: "🔍 JSA Database",
-    lockAST: "🔒 Lock JSA",
+    saveAST: "Save Complete JSA",
+    printPDF: "Generate PDF Report", 
+    generateQR: "Mobile QR Code",
+    shareAST: "Share JSA",
+    searchDatabase: "JSA Database",
+    lockAST: "Lock JSA",
     copy: "Copy",
     
     // JSA steps
-    step1ProjectInfo: "📋 Step 1 - Project Information",
-    step2Equipment: "🛡️ Step 2 - Safety Equipment",
-    step3Hazards: "⚠️ Step 3 - Hazards & Controls",
-    step4Permits: "📄 Step 4 - Permits & Authorizations",
-    step5Validation: "✅ Step 5 - Team Validation",
-    step6Finalization: "🏁 Step 6 - Finalization",
+    step1ProjectInfo: "Step 1 - Project Information",
+    step2Equipment: "Step 2 - Safety Equipment",
+    step3Hazards: "⚠ Step 3 - Hazards & Controls",
+    step4Permits: "Step 4 - Permits & Authorizations",
+    step5Validation: "✓ Step 5 - Team Validation",
+    step6Finalization: "Step 6 - Finalization",
     
     // Validation
     validation: "Complete JSA Validation",
@@ -407,7 +407,7 @@ const translations = {
     validationErrors: "Issues detected in JSA",
     
     // Statistics
-    statistics: "📊 Complete JSA Statistics",
+    statistics: "Complete JSA Statistics",
     sectionsComplete: "JSA Sections Completed",
     identifiedHazards: "Identified Hazards", 
     selectedEquipment: "Selected Equipment",
@@ -419,17 +419,17 @@ const translations = {
     
     // Report options
     reportOptions: "JSA Report Options",
-    includePhotos: "📸 Include Field Photos",
-    includeSignatures: "✍️ Include Team Signatures", 
-    includeQRCode: "📱 Include QR Code",
-    includeBranding: "🏢 Include C-Secur360 Logo",
-    includeTimestamps: "🕒 Include Timestamps",
-    includeComments: "💬 Include Comments",
-    includeStatistics: "📊 Include Statistics",
-    includeValidation: "✅ Include Validation",
-    includePermits: "📄 Include Permits",
-    includeHazards: "⚠️ Include Hazards",
-    includeEquipment: "🛡️ Include Equipment",
+    includePhotos: "Include Field Photos",
+    includeSignatures: "Include Team Signatures", 
+    includeQRCode: "Include QR Code",
+    includeBranding: "Include C-Secur360 Logo",
+    includeTimestamps: "Include Timestamps",
+    includeComments: "Include Comments",
+    includeStatistics: "Include Statistics",
+    includeValidation: "✓ Include Validation",
+    includePermits: "Include Permits",
+    includeHazards: "⚠ Include Hazards",
+    includeEquipment: "Include Equipment",
     
     // Sharing
     sharing: "JSA Sharing",
@@ -442,28 +442,28 @@ const translations = {
     ],
     
     // Comments
-    finalComments: "💬 Final JSA Comments",
+    finalComments: "Final JSA Comments",
     commentsPlaceholder: "Add final comments on this JSA, special recommendations, lessons learned, or particular instructions for the team...",
-    documentLocked: "🔒 JSA locked - No modifications possible",
+    documentLocked: "JSA locked - No modifications possible",
     
     // Locking
-    confirmLock: "🔒 Confirm JSA Lock",
+    confirmLock: "Confirm JSA Lock",
     
     // Industries
     industries: {
-      construction: "🏗️ Construction",
-      industrial: "🏭 Industrial",
-      manufacturing: "⚙️ Manufacturing",
-      electrical: "⚡ Electrical", 
-      mining: "⛏️ Mining",
-      oil_gas: "🛢️ Oil and Gas",
-      transportation: "🚛 Transportation",
-      healthcare: "🏥 Healthcare",
-      education: "🎓 Education",
-      office: "🏢 Office",
-      retail: "🛒 Retail",
-      hospitality: "🏨 Hospitality",
-      other: "🔧 Other"
+      construction: "Construction",
+      industrial: "Industrial",
+      manufacturing: "Manufacturing",
+      electrical: "Electrical", 
+      mining: "Mining",
+      oil_gas: "Oil and Gas",
+      transportation: "Transportation",
+      healthcare: "Healthcare",
+      education: "Education",
+      office: "Office",
+      retail: "Retail",
+      hospitality: "Hospitality",
+      other: "Other"
     },
     
     // Status
@@ -476,8 +476,8 @@ const translations = {
     loading: "Loading...",
     searching: "Searching JSA...",
     generating: "Generating...",
-    locked: "🔒 Locked",
-    unlocked: "🔓 Unlocked",
+    locked: "Locked",
+    unlocked: "Unlocked",
     
     // Messages
     saveSuccess: "JSA saved successfully to database!",
@@ -503,7 +503,7 @@ const translations = {
     import: "Import",
     refresh: "Refresh",
     back: "Back",
-    database: "🗄️ Database"
+    database: "Database"
   }
 };
 
@@ -565,7 +565,7 @@ function Step6Finalization({
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<NotificationType>('success');
   
-  // ✅ ÉTAT FINALISATION AST STABLE AVEC TYPE EXPLICITE
+  // ✓ ÉTAT FINALISATION AST STABLE AVEC TYPE EXPLICITE
   const [finalizationData, setFinalizationData] = useState<FinalizationData>(() => ({
     photos: [],
     finalComments: '',
@@ -595,7 +595,7 @@ function Step6Finalization({
   // =================== FONCTIONS UTILITAIRES OPTIMISÉES ===================
   
   /**
-   * ✅ FONCTION NOTIFICATION SYSTÈME STABLE
+   * ✓ FONCTION NOTIFICATION SYSTÈME STABLE
    */
   const showNotificationToast = useCallback((message: string, type: NotificationType = 'success') => {
     console.log(`[${type.toUpperCase()}] Step6 AST - ${message}`);
@@ -611,10 +611,10 @@ function Step6Finalization({
   }, []);
 
   /**
-   * ✅ EXTRACTION DONNÉES COMPLÈTES AST (FONCTION CORE)
+   * ✓ EXTRACTION DONNÉES COMPLÈTES AST (FONCTION CORE)
    */
   const extractCompleteASTData = useCallback((): ASTData => {
-    console.log('📊 Step6 AST - Extraction données complètes formData:', formData);
+    console.log('Step6 AST - Extraction données complètes formData:', formData);
     
     // Génération numéro AST unique si manquant
     const astNumber = formData?.astNumber || 
@@ -628,7 +628,7 @@ function Step6Finalization({
       updatedAt: new Date().toISOString(),
       status: formData?.status || 'draft',
       
-      // ✅ Step 1 - Informations projet (récupérées de ASTForm)
+      // ✓ Step 1 - Informations projet (récupérées de ASTForm)
       projectInfo: {
         client: formData?.projectInfo?.client || formData?.client || 'Non spécifié',
         projectNumber: formData?.projectInfo?.projectNumber || formData?.projectNumber || 'Non spécifié',
@@ -646,7 +646,7 @@ function Step6Finalization({
         accessRestrictions: formData?.projectInfo?.accessRestrictions || formData?.accessRestrictions
       },
       
-      // ✅ Step 2 - Équipements de sécurité
+      // ✓ Step 2 - Équipements de sécurité
       equipment: {
         selected: formData?.equipment?.selected || formData?.selectedEquipment || [],
         categories: formData?.equipment?.categories || [],
@@ -657,7 +657,7 @@ function Step6Finalization({
         certifications: formData?.equipment?.certifications || []
       },
       
-      // ✅ Step 3 - Dangers et contrôles
+      // ✓ Step 3 - Dangers et contrôles
       hazards: {
         identified: formData?.hazards?.identified || formData?.selectedHazards || [],
         riskLevel: formData?.hazards?.riskLevel || 'medium',
@@ -667,7 +667,7 @@ function Step6Finalization({
         monitoringRequired: formData?.hazards?.monitoringRequired || false
       },
       
-      // ✅ Step 4 - Permis et autorisations
+      // ✓ Step 4 - Permis et autorisations
       permits: {
         required: formData?.permits?.required || formData?.selectedPermits || [],
         authorities: formData?.permits?.authorities || [],
@@ -677,7 +677,7 @@ function Step6Finalization({
         specialRequirements: formData?.permits?.specialRequirements || []
       },
       
-      // ✅ Step 4 - Registre des travailleurs (nouveau)
+      // ✓ Step 4 - Registre des travailleurs (nouveau)
       workers: {
         list: formData?.workers?.list || [],
         totalCount: formData?.workers?.totalCount || 0,
@@ -693,7 +693,7 @@ function Step6Finalization({
         lastUpdated: formData?.workers?.lastUpdated || new Date().toISOString()
       },
       
-      // ✅ Step 5 - Validation équipe
+      // ✓ Step 5 - Validation équipe
       validation: {
         reviewers: formData?.validation?.reviewers || formData?.teamMembers || [],
         approvals: formData?.validation?.approvals || [],
@@ -703,13 +703,13 @@ function Step6Finalization({
         comments: formData?.validation?.comments || []
       },
       
-      // ✅ Step 5 - Finalisation (état actuel)
+      // ✓ Step 5 - Finalisation (état actuel)
       finalization: finalizationData
     };
   }, [formData, finalizationData, tenant, language]);
 
   /**
-   * ✅ VALIDATION GLOBALE AST AVEC MÉMO OPTIMISÉ
+   * ✓ VALIDATION GLOBALE AST AVEC MÉMO OPTIMISÉ
    */
   const getASTValidation = useMemo(() => {
     const astData = extractCompleteASTData();
@@ -789,7 +789,7 @@ function Step6Finalization({
   }, [extractCompleteASTData, language]);
 
   /**
-   * ✅ VALIDATION DÉTAILLÉE PAR SECTION AST
+   * ✓ VALIDATION DÉTAILLÉE PAR SECTION AST
    */
   const getSectionValidation = useCallback((): ValidationSummary[] => {
     const astData = extractCompleteASTData();
@@ -861,7 +861,7 @@ function Step6Finalization({
   }, [extractCompleteASTData, getASTValidation, t, language, finalizationData]);
 
   /**
-   * ✅ STATISTIQUES COMPLÈTES AST OPTIMISÉES
+   * ✓ STATISTIQUES COMPLÈTES AST OPTIMISÉES
    */
   const getASTStatistics = useCallback((): ASTStatistics => {
     const astData = extractCompleteASTData();
@@ -909,7 +909,7 @@ function Step6Finalization({
   }, [extractCompleteASTData, getASTValidation, tenant, language]);
 
   /**
-   * ✅ HANDLER MISE À JOUR COMMENTAIRES FINAUX
+   * ✓ HANDLER MISE À JOUR COMMENTAIRES FINAUX
    */
   const updateComments = useCallback((comments: string) => {
     const updatedData = {
@@ -922,11 +922,11 @@ function Step6Finalization({
   }, [finalizationData, onDataChange]);
 
   /**
-   * ✅ HANDLER TOGGLE OPTIONS DOCUMENT GÉNÉRATION (SÉCURISÉ)
+   * ✓ HANDLER TOGGLE OPTIONS DOCUMENT GÉNÉRATION (SÉCURISÉ)
    */
   const toggleDocumentOption = useCallback((option: keyof DocumentGeneration) => {
     try {
-      console.log('🔧 Step6 AST - Toggle option:', option);
+      console.log('Step6 AST - Toggle option:', option);
       
       const currentValue = finalizationData.documentGeneration[option];
       let newValue: any = currentValue;
@@ -947,14 +947,14 @@ function Step6Finalization({
       setFinalizationData(updatedData);
       onDataChange('finalization', updatedData);
       
-      console.log('✅ Step6 AST - Option mise à jour:', option, '=', newValue);
+      console.log('✓ Step6 AST - Option mise à jour:', option, '=', newValue);
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur toggle option:', error);
+      console.error('✕ Step6 AST - Erreur toggle option:', error);
     }
   }, [finalizationData, onDataChange]);
 
   /**
-   * ✅ MISE À JOUR AUTOMATIQUE POURCENTAGE COMPLÉTION
+   * ✓ MISE À JOUR AUTOMATIQUE POURCENTAGE COMPLÉTION
    */
   React.useEffect(() => {
     const validation = getASTValidation;
@@ -972,10 +972,10 @@ function Step6Finalization({
   // =================== HANDLERS PRINCIPAUX COMME PERMITMANAGER ===================
   
   /**
-   * ✅ HANDLER SAUVEGARDE SUPABASE AST COMPLÈTE
+   * ✓ HANDLER SAUVEGARDE SUPABASE AST COMPLÈTE
    */
   const handleSaveToSupabase = useCallback(async () => {
-    console.log('💾 Step6 AST - Début sauvegarde Supabase...');
+    console.log('Step6 AST - Début sauvegarde Supabase...');
     setIsSaving(true);
     
     try {
@@ -1076,7 +1076,7 @@ function Step6Finalization({
         }
       };
       
-      console.log('📤 Step6 AST - Données pour Supabase:', supabaseData);
+      console.log('Step6 AST - Données pour Supabase:', supabaseData);
       
       // TODO: Intégrer vraie API Supabase
       // const { data, error } = await supabase
@@ -1096,10 +1096,10 @@ function Step6Finalization({
       onDataChange('finalization', updatedData);
       
       showNotificationToast(t.saveSuccess, 'success');
-      console.log('✅ Step6 AST - Sauvegarde Supabase réussie');
+      console.log('✓ Step6 AST - Sauvegarde Supabase réussie');
       
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur sauvegarde Supabase:', error);
+      console.error('✕ Step6 AST - Erreur sauvegarde Supabase:', error);
       showNotificationToast(language === 'fr' ? 'Erreur lors de la sauvegarde AST' : 'Error saving JSA', 'error');
     } finally {
       setIsSaving(false);
@@ -1107,10 +1107,10 @@ function Step6Finalization({
   }, [extractCompleteASTData, getASTStatistics, finalizationData, onDataChange, t.saveSuccess, showNotificationToast, language]);
 
   /**
-   * ✅ HANDLER GÉNÉRATION QR CODE AST SÉCURISÉ
+   * ✓ HANDLER GÉNÉRATION QR CODE AST SÉCURISÉ
    */
   const handleGenerateQR = useCallback(async () => {
-    console.log('📱 Step6 AST - Début génération QR Code...');
+    console.log('Step6 AST - Début génération QR Code...');
     setIsGeneratingQR(true);
     
     try {
@@ -1130,10 +1130,10 @@ function Step6Finalization({
       onDataChange('finalization', updatedData);
       
       showNotificationToast(t.qrGenerated, 'success');
-      console.log('✅ Step6 AST - QR Code généré:', qrCodeUrl);
+      console.log('✓ Step6 AST - QR Code généré:', qrCodeUrl);
       
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur génération QR:', error);
+      console.error('✕ Step6 AST - Erreur génération QR:', error);
       showNotificationToast(language === 'fr' ? 'Erreur génération QR Code' : 'Error generating QR Code', 'error');
     } finally {
       setIsGeneratingQR(false);
@@ -1141,10 +1141,10 @@ function Step6Finalization({
   }, [extractCompleteASTData, tenant, finalizationData, onDataChange, t.qrGenerated, showNotificationToast, language]);
 
   /**
-   * ✅ HANDLER GÉNÉRATION PDF PROFESSIONNEL AVEC LOGO C-SECUR360
+   * ✓ HANDLER GÉNÉRATION PDF PROFESSIONNEL AVEC LOGO C-SECUR360
    */
   const handleGeneratePDF = useCallback(async (reportType: ReportType = 'standard') => {
-    console.log(`🖨️ Step6 AST - Début génération PDF ${reportType}...`);
+    console.log(`Step6 AST - Début génération PDF ${reportType}...`);
     setIsGeneratingPDF(true);
     
     try {
@@ -1155,7 +1155,7 @@ function Step6Finalization({
       const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA');
       const currentTime = new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA');
       
-      // ✅ GÉNÉRATION HTML PROFESSIONNEL OPTIMISÉ POUR 8.5x11
+      // ✓ GÉNÉRATION HTML PROFESSIONNEL OPTIMISÉ POUR 8.5x11
       const pdfContent = `
 <!DOCTYPE html>
 <html lang="${language}">
@@ -1188,7 +1188,7 @@ function Step6Finalization({
           margin: 0 auto;
         }
         
-        /* ✅ HEADER OPTIMISÉ POUR 8.5x11 */
+        /* ✓ HEADER OPTIMISÉ POUR 8.5x11 */
         .header { 
           background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
           color: white; 
@@ -1246,7 +1246,7 @@ function Step6Finalization({
           line-height: 1.2;
         }
         
-        /* ✅ WATERMARK DISCRET */
+        /* ✓ WATERMARK DISCRET */
         .watermark {
           position: fixed;
           top: 50%;
@@ -1442,7 +1442,7 @@ function Step6Finalization({
           box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
         }
         
-        /* ✅ RESPONSIVE POUR DIFFÉRENTES TAILLES */
+        /* ✓ RESPONSIVE POUR DIFFÉRENTES TAILLES */
         @media screen and (max-width: 8.5in) {
           body { padding: 10px; }
           .header { padding: 12px 15px; }
@@ -1454,17 +1454,17 @@ function Step6Finalization({
     </style>
 </head>
 <body>
-    <!-- ✅ WATERMARK DISCRET -->
+    <!-- ✓ WATERMARK DISCRET -->
     <div class="watermark">C-SECUR360</div>
     
     <div class="header">
         <div class="logo-container">
             <img src="/c-secur360-logo.png" alt="C-Secur360" class="logo-image"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-            <div class="logo-fallback">C🛡️</div>
+            <div class="logo-fallback">C</div>
         </div>
         <div class="header-content">
-            <h1>${language === 'en' ? '🛡️ COMPLETE JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL COMPLÈTE (AST)'}</h1>
+            <h1>${language === 'en' ? 'COMPLETE JOB SAFETY ANALYSIS (JSA)' : 'ANALYSE SÉCURITAIRE DE TRAVAIL COMPLÈTE (AST)'}</h1>
             <div class="subtitle">${language === 'en' ? 'Professional Safety Report' : 'Rapport de Sécurité Professionnel'} - ${tenant} | N° ${stats.astNumber}</div>
         </div>
     </div>
@@ -1598,21 +1598,21 @@ function Step6Finalization({
     </style>
 </head>
 <body>
-    <!-- ✅ WATERMARK LOGO EN ARRIÈRE-PLAN -->
+    <!-- ✓ WATERMARK LOGO EN ARRIÈRE-PLAN -->
     <div class="watermark">C-SECUR360</div>
     
     <div class="header">
         <div class="logo-container">
             <img src="/c-secur360-logo.png" alt="C-Secur360" class="logo-image"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-            <div class="logo-fallback">C🛡️</div>
+            <div class="logo-fallback">C</div>
         </div>
-        <h1>${language === 'en' ? '🛡️ COMPLETE JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL COMPLÈTE (AST)'}</h1>
+        <h1>${language === 'en' ? 'COMPLETE JOB SAFETY ANALYSIS (JSA)' : 'ANALYSE SÉCURITAIRE DE TRAVAIL COMPLÈTE (AST)'}</h1>
         <div class="subtitle">${language === 'en' ? 'Professional Safety Report' : 'Rapport de Sécurité Professionnel'} - ${tenant} | N° ${stats.astNumber}</div>
     </div>
     
     <div class="stats-summary">
-        <h3 style="margin-bottom: 15px; font-size: 16px;">📊 ${language === 'en' ? 'EXECUTIVE SUMMARY' : 'RÉSUMÉ EXÉCUTIF'}</h3>
+        <h3 style="margin-bottom: 15px; font-size: 16px;">${language === 'en' ? 'EXECUTIVE SUMMARY' : 'RÉSUMÉ EXÉCUTIF'}</h3>
         <div class="stats-grid">
             <div class="stat-item">
                 <div class="stat-number">${stats.completedSections}/${stats.totalSections}</div>
@@ -1643,7 +1643,7 @@ function Step6Finalization({
     
     <div class="info-grid">
         <div class="info-box">
-            <h3>🏢 ${language === 'en' ? 'PROJECT INFORMATION' : 'INFORMATIONS PROJET'}</h3>
+            <h3>${language === 'en' ? 'PROJECT INFORMATION' : 'INFORMATIONS PROJET'}</h3>
             <div class="info-row">
                 <span class="info-label">${language === 'en' ? 'Client:' : 'Client:'}</span>
                 <span class="info-value">${stats.client}</span>
@@ -1671,7 +1671,7 @@ function Step6Finalization({
         </div>
         
         <div class="info-box">
-            <h3>🛡️ ${language === 'en' ? 'SAFETY OVERVIEW' : 'APERÇU SÉCURITÉ'}</h3>
+            <h3>${language === 'en' ? 'SAFETY OVERVIEW' : 'APERÇU SÉCURITÉ'}</h3>
             <div class="info-row">
                 <span class="info-label">${language === 'en' ? 'Risk Level:' : 'Niveau Risque:'}</span>
                 <span class="info-value">${astData.hazards.riskLevel.toUpperCase()}</span>
@@ -1695,7 +1695,7 @@ function Step6Finalization({
             <div class="info-row">
                 <span class="info-label">${language === 'en' ? 'Status:' : 'Statut:'}</span>
                 <span class="info-value" style="color: ${astData.finalization.isLocked ? '#dc2626' : '#059669'}; font-weight: bold;">
-                    ${astData.finalization.isLocked ? (language === 'en' ? '🔒 LOCKED' : '🔒 VERROUILLÉ') : (language === 'en' ? '🔓 ACTIVE' : '🔓 ACTIF')}
+                    ${astData.finalization.isLocked ? (language === 'en' ? 'LOCKED' : 'VERROUILLÉ') : (language === 'en' ? 'ACTIVE' : 'ACTIF')}
                 </span>
             </div>
         </div>
@@ -1705,11 +1705,11 @@ function Step6Finalization({
     ${reportType === 'standard' || reportType === 'technical' ? `
     <div class="section">
         <div class="section-header">
-            <div class="section-title">📋 ${language === 'en' ? 'DETAILED BREAKDOWN BY STEPS' : 'DÉTAIL PAR ÉTAPES'}</div>
+            <div class="section-title">${language === 'en' ? 'DETAILED BREAKDOWN BY STEPS' : 'DÉTAIL PAR ÉTAPES'}</div>
         </div>
         <div class="section-content">
             <div class="step-section">
-                <div class="step-title">🏢 ${t.step1ProjectInfo}</div>
+                <div class="step-title">${t.step1ProjectInfo}</div>
                 <div class="step-content">
                     <strong>${language === 'en' ? 'Work Description:' : 'Description du travail:'}</strong> ${astData.projectInfo.workDescription}<br>
                     <strong>${language === 'en' ? 'Emergency Contact:' : 'Contact d\'urgence:'}</strong> ${astData.projectInfo.emergencyContact}<br>
@@ -1720,7 +1720,7 @@ function Step6Finalization({
             
             ${astData.equipment.selected.length > 0 ? `
             <div class="step-section">
-                <div class="step-title">🛡️ ${t.step2Equipment}</div>
+                <div class="step-title">${t.step2Equipment}</div>
                 <div class="step-content">
                     <ul class="step-list">
                         ${astData.equipment.selected.map(item => `<li>${item}</li>`).join('')}
@@ -1731,7 +1731,7 @@ function Step6Finalization({
             
             ${astData.hazards.identified.length > 0 ? `
             <div class="step-section">
-                <div class="step-title">⚠️ ${t.step3Hazards}</div>
+                <div class="step-title">⚠ ${t.step3Hazards}</div>
                 <div class="step-content">
                     <strong>${language === 'en' ? 'Identified Hazards:' : 'Dangers identifiés:'}</strong>
                     <ul class="step-list">
@@ -1749,7 +1749,7 @@ function Step6Finalization({
             
             ${astData.permits.required.length > 0 ? `
             <div class="step-section">
-                <div class="step-title">📄 ${t.step4Permits}</div>
+                <div class="step-title">${t.step4Permits}</div>
                 <div class="step-content">
                     <ul class="step-list">
                         ${astData.permits.required.map(permit => `<li>${permit}</li>`).join('')}
@@ -1760,7 +1760,7 @@ function Step6Finalization({
             
             ${astData.validation.reviewers.length > 0 ? `
             <div class="step-section">
-                <div class="step-title">✅ ${t.step5Validation}</div>
+                <div class="step-title">✓ ${t.step5Validation}</div>
                 <div class="step-content">
                     <strong>${language === 'en' ? 'Team Members:' : 'Membres de l\'équipe:'}</strong>
                     <ul class="step-list">
@@ -1776,7 +1776,7 @@ function Step6Finalization({
     <!-- Validation globale -->
     <div class="section">
         <div class="section-header">
-            <div class="section-title">✅ ${language === 'en' ? 'GLOBAL VALIDATION STATUS' : 'STATUT DE VALIDATION GLOBALE'}</div>
+            <div class="section-title">✓ ${language === 'en' ? 'GLOBAL VALIDATION STATUS' : 'STATUT DE VALIDATION GLOBALE'}</div>
         </div>
         <div class="section-content">
             <table class="validation-table">
@@ -1795,7 +1795,7 @@ function Step6Finalization({
                             <td><strong>${section.stepNumber}</strong></td>
                             <td><strong>${section.sectionName}</strong></td>
                             <td class="${section.isComplete ? 'status-complete' : 'status-incomplete'}">
-                                ${section.isComplete ? (language === 'en' ? '✅ Complete' : '✅ Complété') : (language === 'en' ? '⚠️ Incomplete' : '⚠️ Incomplet')}
+                                ${section.isComplete ? (language === 'en' ? '✓ Complete' : '✓ Complété') : (language === 'en' ? '⚠ Incomplete' : '⚠ Incomplet')}
                             </td>
                             <td><strong>${section.completionPercentage}%</strong></td>
                             <td>${section.errors.length > 0 ? section.errors[0] : (language === 'en' ? 'No issues' : 'Aucun problème')}</td>
@@ -1806,7 +1806,7 @@ function Step6Finalization({
             
             ${astData.finalization.finalComments ? `
                 <div style="margin-top: 25px; padding: 20px; background: #f9fafb; border-radius: 12px; border-left: 4px solid #3b82f6;">
-                    <h4 style="margin: 0 0 10px 0; color: #1f2937; font-size: 14px;">💬 ${language === 'en' ? 'Final Comments:' : 'Commentaires Finaux:'}</h4>
+                    <h4 style="margin: 0 0 10px 0; color: #1f2937; font-size: 14px;">${language === 'en' ? 'Final Comments:' : 'Commentaires Finaux:'}</h4>
                     <p style="margin: 0; color: #4b5563; font-size: 11px; line-height: 1.5;">${astData.finalization.finalComments}</p>
                 </div>
             ` : ''}
@@ -1815,7 +1815,7 @@ function Step6Finalization({
     
     ${astData.finalization.qrCodeUrl ? `
         <div class="qr-section">
-            <h3 style="margin-bottom: 20px; color: #1f2937;">📱 ${language === 'en' ? 'Mobile Access QR Code' : 'Code QR Accès Mobile'}</h3>
+            <h3 style="margin-bottom: 20px; color: #1f2937;">${language === 'en' ? 'Mobile Access QR Code' : 'Code QR Accès Mobile'}</h3>
             <div class="qr-code">
                 <img src="${astData.finalization.qrCodeUrl}" alt="QR Code AST" style="width: 180px; height: 180px; display: block;" />
             </div>
@@ -1856,12 +1856,12 @@ function Step6Finalization({
         <div class="footer-logo">
             <img src="/c-secur360-logo.png" alt="C-Secur360" style="width: 40px; height: 40px; object-fit: contain;"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-            <div style="display: none; color: #f59e0b; font-size: 16px; font-weight: bold;">C🛡️</div>
+            <div style="display: none; color: #f59e0b; font-size: 16px; font-weight: bold;">C</div>
         </div>
         <p><strong>${language === 'en' ? 'This JSA was automatically generated by the C-Secur360 system' : 'Cette AST a été générée automatiquement par le système C-Secur360'}</strong></p>
         <p>${language === 'en' ? 'Compliant with Canadian occupational health and safety standards' : 'Conforme aux normes de santé et sécurité au travail du Canada'} | ${language === 'en' ? 'Generated on' : 'Généré le'} ${currentDate} ${language === 'en' ? 'at' : 'à'} ${currentTime}</p>
         <p>${language === 'en' ? 'Official document valid for safety inspections, committees and investigations' : 'Document officiel valide pour inspections sécurité, comités et enquêtes'}</p>
-        ${astData.finalization.shareableLink ? `<p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${astData.finalization.shareableLink}</p>` : ''}
+        ${astData.finalization.shareableLink ? `<p>${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${astData.finalization.shareableLink}</p>` : ''}
     </div>
 </body>
 </html>`;
@@ -1899,23 +1899,23 @@ function Step6Finalization({
           showNotificationToast(t.pdfGenerated, 'success');
         };
         
-        console.log(`✅ Step6 AST - PDF ${reportType} généré avec logo officiel`);
+        console.log(`✓ Step6 AST - PDF ${reportType} généré avec logo officiel`);
       } else {
         throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
       }
       
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur génération PDF:', error);
+      console.error('✕ Step6 AST - Erreur génération PDF:', error);
       showNotificationToast(language === 'fr' ? 'Erreur génération PDF' : 'Error generating PDF', 'error');
       setIsGeneratingPDF(false);
     }
   }, [extractCompleteASTData, getASTStatistics, getSectionValidation, finalizationData, onDataChange, language, t, showNotificationToast]);
 
   /**
-   * ✅ HANDLER PARTAGE AST MULTI-CANAUX SÉCURISÉ
+   * ✓ HANDLER PARTAGE AST MULTI-CANAUX SÉCURISÉ
    */
   const handleShare = useCallback(async () => {
-    console.log(`📤 Step6 AST - Début partage via ${selectedShareMethod}...`);
+    console.log(`Step6 AST - Début partage via ${selectedShareMethod}...`);
     
     try {
       const astData = extractCompleteASTData();
@@ -1923,14 +1923,14 @@ function Step6Finalization({
       const shareUrl = astData.finalization.shareableLink || `https://${tenant}.csecur360.com/ast/view/${astData.astNumber}`;
       
       const shareText = language === 'fr' ? 
-        `🛡️ AST Complète - ${stats.client}\n\n📋 Analyse Sécuritaire de Travail\nProjet: ${stats.projectNumber}\n📍 Lieu: ${stats.workLocation}\n👥 Équipe: ${stats.teamMembers} membres\n⚠️ Dangers: ${stats.identifiedHazards} identifiés\n🛡️ Équipements: ${stats.selectedEquipment} requis\n📄 Permis: ${stats.requiredPermits} nécessaires\n\n✅ Complétion: ${stats.overallCompletion}%\n🔗 Accès: ${shareUrl}\n\nCette AST doit être consultée avant le début des travaux.\n\n${tenant} - Équipe Sécurité C-Secur360` :
-        `🛡️ Complete JSA - ${stats.client}\n\n📋 Job Safety Analysis\nProject: ${stats.projectNumber}\n📍 Location: ${stats.workLocation}\n👥 Team: ${stats.teamMembers} members\n⚠️ Hazards: ${stats.identifiedHazards} identified\n🛡️ Equipment: ${stats.selectedEquipment} required\n📄 Permits: ${stats.requiredPermits} needed\n\n✅ Completion: ${stats.overallCompletion}%\n🔗 Access: ${shareUrl}\n\nThis JSA must be reviewed before work begins.\n\n${tenant} - C-Secur360 Safety Team`;
+        `AST Complète - ${stats.client}\n\nAnalyse Sécuritaire de Travail\nProjet: ${stats.projectNumber}\nLieu: ${stats.workLocation}\nÉquipe: ${stats.teamMembers} membres\n⚠ Dangers: ${stats.identifiedHazards} identifiés\nÉquipements: ${stats.selectedEquipment} requis\nPermis: ${stats.requiredPermits} nécessaires\n\n✓ Complétion: ${stats.overallCompletion}%\nAccès: ${shareUrl}\n\nCette AST doit être consultée avant le début des travaux.\n\n${tenant} - Équipe Sécurité C-Secur360` :
+        `Complete JSA - ${stats.client}\n\nJob Safety Analysis\nProject: ${stats.projectNumber}\nLocation: ${stats.workLocation}\nTeam: ${stats.teamMembers} members\n⚠ Hazards: ${stats.identifiedHazards} identified\nEquipment: ${stats.selectedEquipment} required\nPermits: ${stats.requiredPermits} needed\n\n✓ Completion: ${stats.overallCompletion}%\nAccess: ${shareUrl}\n\nThis JSA must be reviewed before work begins.\n\n${tenant} - C-Secur360 Safety Team`;
       
       switch (selectedShareMethod) {
         case 'email':
           const emailSubject = encodeURIComponent(language === 'fr' ? 
-            `🛡️ AST ${astData.astNumber} - ${stats.projectNumber}` : 
-            `🛡️ JSA ${astData.astNumber} - ${stats.projectNumber}`);
+            `AST ${astData.astNumber} - ${stats.projectNumber}` : 
+            `JSA ${astData.astNumber} - ${stats.projectNumber}`);
           const emailBody = encodeURIComponent(shareText);
           window.open(`mailto:?subject=${emailSubject}&body=${emailBody}`);
           break;
@@ -1947,28 +1947,28 @@ function Step6Finalization({
           
         case 'teams':
           // Intégration Microsoft Teams (future implementation)
-          console.log('🔄 Step6 AST - Partage Teams à implémenter');
+          console.log('Step6 AST - Partage Teams à implémenter');
           showNotificationToast(language === 'fr' ? 'Intégration Teams bientôt disponible' : 'Teams integration coming soon', 'warning');
           break;
           
         case 'slack':
           // Intégration Slack (future implementation)
-          console.log('🔄 Step6 AST - Partage Slack à implémenter');
+          console.log('Step6 AST - Partage Slack à implémenter');
           showNotificationToast(language === 'fr' ? 'Intégration Slack bientôt disponible' : 'Slack integration coming soon', 'warning');
           break;
       }
       
       showNotificationToast(`${language === 'fr' ? 'Partage AST initié via' : 'JSA sharing initiated via'} ${selectedShareMethod}`, 'success');
-      console.log(`✅ Step6 AST - Partage ${selectedShareMethod} initié`);
+      console.log(`✓ Step6 AST - Partage ${selectedShareMethod} initié`);
       
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur partage:', error);
+      console.error('✕ Step6 AST - Erreur partage:', error);
       showNotificationToast(language === 'fr' ? 'Erreur lors du partage' : 'Error sharing', 'error');
     }
   }, [selectedShareMethod, extractCompleteASTData, getASTStatistics, tenant, language, showNotificationToast]);
 
   /**
-   * ✅ HANDLER COPIE LIEN AST RAPIDE
+   * ✓ HANDLER COPIE LIEN AST RAPIDE
    */
   const handleCopyLink = useCallback(async () => {
     try {
@@ -1979,19 +1979,19 @@ function Step6Finalization({
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 3000);
       showNotificationToast(t.linkCopied, 'success');
-      console.log('✅ Step6 AST - Lien copié:', shareUrl);
+      console.log('✓ Step6 AST - Lien copié:', shareUrl);
       
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur copie lien:', error);
+      console.error('✕ Step6 AST - Erreur copie lien:', error);
       showNotificationToast(language === 'fr' ? 'Erreur copie du lien' : 'Error copying link', 'error');
     }
   }, [extractCompleteASTData, tenant, t.linkCopied, showNotificationToast, language]);
 
   /**
-   * ✅ HANDLER VERROUILLAGE AST DÉFINITIF
+   * ✓ HANDLER VERROUILLAGE AST DÉFINITIF
    */
   const handleLockDocument = useCallback(() => {
-    console.log('🔒 Step6 AST - Verrouillage AST...');
+    console.log('Step6 AST - Verrouillage AST...');
     
     const updatedData = {
       ...finalizationData,
@@ -2003,11 +2003,11 @@ function Step6Finalization({
     onDataChange('finalization', updatedData);
     
     showNotificationToast(t.astLocked, 'success');
-    console.log('✅ Step6 AST - AST verrouillée');
+    console.log('✓ Step6 AST - AST verrouillée');
   }, [finalizationData, onDataChange, t.astLocked, showNotificationToast]);
 
   /**
-   * ✅ HANDLER RECHERCHE BASE DE DONNÉES AST AVEC FILTRES
+   * ✓ HANDLER RECHERCHE BASE DE DONNÉES AST AVEC FILTRES
    */
   const handleSearch = useCallback(async (query: string) => {
     if (query.trim().length < 2) {
@@ -2082,17 +2082,17 @@ function Step6Finalization({
       );
       
       setSearchResults(mockResults);
-      console.log('🔍 Step6 AST - Recherche terminée:', mockResults.length, 'résultats');
+      console.log('Step6 AST - Recherche terminée:', mockResults.length, 'résultats');
       
     } catch (error) {
-      console.error('❌ Step6 AST - Erreur recherche:', error);
+      console.error('✕ Step6 AST - Erreur recherche:', error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
   }, [tenant]);
 
-  // ✅ EFFET RECHERCHE AVEC DEBOUNCE OPTIMISÉ
+  // ✓ EFFET RECHERCHE AVEC DEBOUNCE OPTIMISÉ
   React.useEffect(() => {
     if (searchQuery.length >= 2) {
       const timeoutId = setTimeout(() => {
@@ -2106,24 +2106,24 @@ function Step6Finalization({
   // =================== EFFETS AUTOMATIQUES OPTIMISÉS ===================
   
   /**
-   * ✅ GÉNÉRATION AUTOMATIQUE QR CODE À 80% COMPLÉTION
+   * ✓ GÉNÉRATION AUTOMATIQUE QR CODE À 80% COMPLÉTION
    */
   React.useEffect(() => {
     const validation = getASTValidation;
     if (validation.percentage >= 80 && !finalizationData.qrCodeUrl && !isGeneratingQR) {
-      console.log('🚀 Step6 AST - Auto-génération QR Code à', validation.percentage, '%');
+      console.log('Step6 AST - Auto-génération QR Code à', validation.percentage, '%');
       handleGenerateQR();
     }
   }, [getASTValidation, finalizationData.qrCodeUrl, isGeneratingQR, handleGenerateQR]);
 
   /**
-   * ✅ SAUVEGARDE AUTOMATIQUE PÉRIODIQUE (5 MINUTES)
+   * ✓ SAUVEGARDE AUTOMATIQUE PÉRIODIQUE (5 MINUTES)
    */
   React.useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       const validation = getASTValidation;
       if (validation.percentage > 0 && !isSaving && !finalizationData.isLocked) {
-        console.log('💾 Step6 AST - Sauvegarde automatique...');
+        console.log('Step6 AST - Sauvegarde automatique...');
         handleSaveToSupabase();
       }
     }, 5 * 60 * 1000); // 5 minutes
@@ -2132,7 +2132,7 @@ function Step6Finalization({
   }, [getASTValidation, isSaving, finalizationData.isLocked, handleSaveToSupabase]);
 
   /**
-   * ✅ NETTOYAGE NOTIFICATIONS AUTO (4 SECONDES)
+   * ✓ NETTOYAGE NOTIFICATIONS AUTO (4 SECONDES)
    */
   React.useEffect(() => {
     if (showNotification) {
@@ -2153,7 +2153,7 @@ function Step6Finalization({
       font-family: 'Inter', 'Arial', sans-serif;
     }
     
-    /* ✅ HEADER AVEC LOGO RESPONSIVE */
+    /* ✓ HEADER AVEC LOGO RESPONSIVE */
     .ast-header { 
       text-align: center; 
       margin-bottom: ${isMobile ? '20px' : '28px'}; 
@@ -2217,7 +2217,7 @@ function Step6Finalization({
       font-weight: 500;
     }
     
-    /* ✅ NAVIGATION ONGLETS RESPONSIVE */
+    /* ✓ NAVIGATION ONGLETS RESPONSIVE */
     .tabs-container { 
       display: flex; 
       background: rgba(15, 23, 42, 0.8); 
@@ -2278,7 +2278,7 @@ function Step6Finalization({
       transform: translateY(-1px);
     }
     
-    /* ✅ SECTIONS PRINCIPALES RESPONSIVE */
+    /* ✓ SECTIONS PRINCIPALES RESPONSIVE */
     .ast-section { 
       background: rgba(15, 23, 42, 0.8); 
       border: 1px solid rgba(148, 163, 184, 0.2); 
@@ -2310,7 +2310,7 @@ function Step6Finalization({
       gap: ${isMobile ? '8px' : '12px'};
     }
     
-    /* ✅ GRILLES RESPONSIVE OPTIMISÉES */
+    /* ✓ GRILLES RESPONSIVE OPTIMISÉES */
     .stats-grid { 
       display: grid; 
       grid-template-columns: ${isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(160px, 1fr))'}; 
@@ -2406,7 +2406,7 @@ function Step6Finalization({
       word-break: break-word;
     }
     
-    /* ✅ BOUTONS RESPONSIVE ULTRA-OPTIMISÉS */
+    /* ✓ BOUTONS RESPONSIVE ULTRA-OPTIMISÉS */
     .ast-button { 
       display: flex; 
       align-items: center; 
@@ -2517,7 +2517,7 @@ function Step6Finalization({
       margin-top: ${isMobile ? '16px' : '20px'}; 
     }
     
-    /* ✅ FORMULAIRES RESPONSIVE */
+    /* ✓ FORMULAIRES RESPONSIVE */
     .form-input { 
       width: 100%; 
       padding: ${isMobile ? '14px 16px' : '16px 20px'}; 
@@ -2588,7 +2588,7 @@ function Step6Finalization({
       flex: 1;
     }
     
-    /* ✅ VALIDATION ET STATUTS AMÉLIORÉS */
+    /* ✓ VALIDATION ET STATUTS AMÉLIORÉS */
     .validation-item {
       display: flex;
       align-items: center;
@@ -2642,7 +2642,7 @@ function Step6Finalization({
       border: 1px solid rgba(239, 68, 68, 0.4);
     }
     
-    /* ✅ MODALES RESPONSIVE PARFAITES */
+    /* ✓ MODALES RESPONSIVE PARFAITES */
     .modal-overlay { 
       position: fixed; 
       top: 0; 
@@ -2672,7 +2672,7 @@ function Step6Finalization({
       backdrop-filter: blur(20px);
     }
     
-    /* ✅ ANIMATIONS AVANCÉES */
+    /* ✓ ANIMATIONS AVANCÉES */
     @keyframes float {
       0%, 100% { transform: translateY(0px) rotate(0deg); }
       50% { transform: translateY(-8px) rotate(1deg); }
@@ -2743,7 +2743,7 @@ function Step6Finalization({
       animation: float 6s ease-in-out infinite;
     }
     
-    /* ✅ BREAKPOINTS RESPONSIFS SPÉCIFIQUES */
+    /* ✓ BREAKPOINTS RESPONSIFS SPÉCIFIQUES */
     @media (max-width: 480px) {
       .ast-header { padding: 16px 12px; }
       .ast-title { font-size: 18px; }
@@ -2792,7 +2792,7 @@ function Step6Finalization({
       .stats-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
     }
     
-    /* ✅ MODES SPÉCIAUX */
+    /* ✓ MODES SPÉCIAUX */
     @media (prefers-reduced-motion: reduce) {
       *, ::before, ::after {
         animation-duration: 0.01ms !important;
@@ -2808,7 +2808,7 @@ function Step6Finalization({
       .ast-button { border: 2px solid rgba(255, 255, 255, 0.3); }
     }
     
-    /* ✅ PRINT STYLES OPTIMISÉS */
+    /* ✓ PRINT STYLES OPTIMISÉS */
     @media print {
       .step6-container { background: white !important; color: black !important; }
       .ast-header { background: white !important; border: 2px solid #000 !important; }
@@ -2826,7 +2826,7 @@ function Step6Finalization({
       .info-grid { page-break-inside: avoid; }
     }
     
-    /* ✅ DARK MODE FORCÉ */
+    /* ✓ DARK MODE FORCÉ */
     [data-theme="dark"], .dark {
       --bg-primary: rgba(15, 23, 42, 0.95);
       --bg-secondary: rgba(30, 41, 59, 0.8);
@@ -2835,7 +2835,7 @@ function Step6Finalization({
       --border-color: rgba(148, 163, 184, 0.2);
     }
     
-    /* ✅ LOADING SKELETON ANIMATIONS */
+    /* ✓ LOADING SKELETON ANIMATIONS */
     .skeleton {
       background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
       background-size: 200% 100%;
@@ -2853,7 +2853,7 @@ function Step6Finalization({
       border-radius: 8px;
     }
     
-    /* ✅ FOCUS STATES ACCESSIBILITÉ */
+    /* ✓ FOCUS STATES ACCESSIBILITÉ */
     .ast-button:focus,
     .tab-button:focus,
     .form-input:focus,
@@ -2862,7 +2862,7 @@ function Step6Finalization({
       outline-offset: 2px;
     }
     
-    /* ✅ HOVER EFFECTS AMÉLIORÉS */
+    /* ✓ HOVER EFFECTS AMÉLIORÉS */
     .ast-section:hover {
       border-color: rgba(59, 130, 246, 0.3);
       box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
@@ -2873,7 +2873,7 @@ function Step6Finalization({
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
     
-    /* ✅ SCROLLBAR CUSTOMISÉ */
+    /* ✓ SCROLLBAR CUSTOMISÉ */
     ::-webkit-scrollbar {
       width: 8px;
     }
@@ -3003,7 +3003,7 @@ function Step6Finalization({
                       border: '1px solid #4b5563'
                     }}
                     onClick={() => {
-                      console.log('🔄 Step6 AST - Chargement AST:', result.astNumber);
+                      console.log('Step6 AST - Chargement AST:', result.astNumber);
                       setCurrentView('main');
                       showNotificationToast(`AST ${result.astNumber} chargée`, 'success');
                     }}
@@ -3023,21 +3023,21 @@ function Step6Finalization({
                           fontSize: isMobile ? '14px' : '16px', 
                           fontWeight: '700' 
                         }}>
-                          🛡️ {result.astNumber}
+                          {result.astNumber}
                         </h4>
                         <p style={{ 
                           color: 'white', 
                           margin: '0 0 4px 0', 
                           fontSize: isMobile ? '12px' : '14px' 
                         }}>
-                          📋 {result.projectNumber} • 📍 {result.workLocation}
+                          {result.projectNumber} • {result.workLocation}
                         </p>
                         <p style={{ 
                           color: '#9ca3af', 
                           margin: '0 0 6px 0', 
                           fontSize: isMobile ? '11px' : '13px' 
                         }}>
-                          🏢 {result.client} • {t.industries[result.industry as keyof typeof t.industries] || result.industry}
+                          {result.client} • {t.industries[result.industry as keyof typeof t.industries] || result.industry}
                         </p>
                         <div style={{ 
                           display: 'flex', 
@@ -3046,12 +3046,12 @@ function Step6Finalization({
                           fontSize: isMobile ? '10px' : '12px', 
                           color: '#6b7280' 
                         }}>
-                          <span>⚠️ {result.hazardCount} {language === 'fr' ? 'dangers' : 'hazards'}</span>
-                          <span>🛡️ {result.equipmentCount} {language === 'fr' ? 'équipements' : 'equipment'}</span>
-                          <span>📄 {result.permitCount} {language === 'fr' ? 'permis' : 'permits'}</span>
-                          <span>👥 {result.workerCount} {language === 'fr' ? 'travailleurs' : 'workers'}</span>
+                          <span>⚠ {result.hazardCount} {language === 'fr' ? 'dangers' : 'hazards'}</span>
+                          <span>{result.equipmentCount} {language === 'fr' ? 'équipements' : 'equipment'}</span>
+                          <span>{result.permitCount} {language === 'fr' ? 'permis' : 'permits'}</span>
+                          <span>{result.workerCount} {language === 'fr' ? 'travailleurs' : 'workers'}</span>
                           <span>📷 {result.photoCount} photos</span>
-                          <span>🕒 {new Date(result.lastModified || Date.now()).toLocaleDateString()}</span>
+                          <span>{new Date(result.lastModified || Date.now()).toLocaleDateString()}</span>
                         </div>
                       </div>
                       <div style={{ 
@@ -3101,7 +3101,7 @@ function Step6Finalization({
                 padding: isMobile ? '30px' : '40px', 
                 color: '#9ca3af' 
               }}>
-                <p>💡 {language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
+                <p>{language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
               </div>
             )}
           </div>
@@ -3147,7 +3147,7 @@ function Step6Finalization({
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                C🛡️
+                C
               </div>
             </div>
             <h1 className="ast-title">{t.title}</h1>
@@ -3241,7 +3241,7 @@ function Step6Finalization({
 
               <div className="info-grid">
                 <div className="info-box">
-                  <h3>🏢 {language === 'fr' ? 'Informations Projet' : 'Project Information'}</h3>
+                  <h3>{language === 'fr' ? 'Informations Projet' : 'Project Information'}</h3>
                   <div className="info-row">
                     <span className="info-label">{language === 'fr' ? 'N° AST:' : 'JSA #:'}</span>
                     <span className="info-value">{stats.astNumber}</span>
@@ -3269,7 +3269,7 @@ function Step6Finalization({
                 </div>
                 
                 <div className="info-box">
-                  <h3>⏱️ {language === 'fr' ? 'Suivi Temporel' : 'Time Tracking'}</h3>
+                  <h3>{language === 'fr' ? 'Suivi Temporel' : 'Time Tracking'}</h3>
                   <div className="info-row">
                     <span className="info-label">{t.creationDate}:</span>
                     <span className="info-value">{new Date(stats.createdAt).toLocaleDateString()}</span>
@@ -3288,13 +3288,13 @@ function Step6Finalization({
                   <div className="info-row">
                     <span className="info-label">{language === 'fr' ? 'Statut:' : 'Status:'}</span>
                     <span className={`status-badge ${stats.isLocked ? 'status-error' : 'status-warning'}`}>
-                      {stats.isLocked ? t.locked : (language === 'fr' ? '🔓 EN COURS' : '🔓 IN PROGRESS')}
+                      {stats.isLocked ? t.locked : (language === 'fr' ? 'EN COURS' : 'IN PROGRESS')}
                     </span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">{language === 'fr' ? 'QR Code:' : 'QR Code:'}</span>
                     <span className="info-value">
-                      {stats.hasQRCode ? '✅' : '❌'} {stats.hasQRCode ? 
+                      {stats.hasQRCode ? '✓' : '✕'} {stats.hasQRCode ? 
                         (language === 'fr' ? 'Généré' : 'Generated') : 
                         (language === 'fr' ? 'Non généré' : 'Not generated')}
                     </span>
@@ -3302,7 +3302,7 @@ function Step6Finalization({
                   <div className="info-row">
                     <span className="info-label">{language === 'fr' ? 'Lien partage:' : 'Share link:'}</span>
                     <span className="info-value">
-                      {stats.hasShareableLink ? '✅' : '❌'} {stats.hasShareableLink ? 
+                      {stats.hasShareableLink ? '✓' : '✕'} {stats.hasShareableLink ? 
                         (language === 'fr' ? 'Disponible' : 'Available') : 
                         (language === 'fr' ? 'Non disponible' : 'Not available')}
                     </span>
@@ -3381,7 +3381,7 @@ function Step6Finalization({
                     margin: '0 0 8px 0', 
                     fontSize: isMobile ? '14px' : '16px' 
                   }}>
-                    ⚠️ {t.validationErrors}
+                    ⚠ {t.validationErrors}
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: '20px', color: '#fecaca' }}>
                     {validation.errors.map((error, index) => (
@@ -3411,7 +3411,7 @@ function Step6Finalization({
                     margin: '0 0 8px 0', 
                     fontSize: isMobile ? '14px' : '16px' 
                   }}>
-                    ✅ {t.allValidationsPassed}
+                    ✓ {t.allValidationsPassed}
                   </h4>
                   <p style={{ 
                     color: '#bbf7d0', 
@@ -3637,7 +3637,7 @@ function Step6Finalization({
               <div className="ast-section">
                 <h2 className="section-title">
                   <QrCode size={24} />
-                  {language === 'fr' ? '📱 Code QR - Accès Mobile AST' : '📱 QR Code - Mobile JSA Access'}
+                  {language === 'fr' ? 'Code QR - Accès Mobile AST' : 'QR Code - Mobile JSA Access'}
                 </h2>
                 
                 <div style={{ textAlign: 'center' }}>
@@ -3666,8 +3666,8 @@ function Step6Finalization({
                     lineHeight: 1.5 
                   }}>
                     {language === 'fr' ? 
-                      '📱 Scannez ce code QR pour accéder à l\'AST depuis un appareil mobile' :
-                      '📱 Scan this QR code to access the JSA from a mobile device'
+                      'Scannez ce code QR pour accéder à l\'AST depuis un appareil mobile' :
+                      'Scan this QR code to access the JSA from a mobile device'
                     }
                   </p>
                 </div>
@@ -3815,7 +3815,7 @@ function Step6Finalization({
                   fontSize: isMobile ? '12px' : '14px',
                   fontWeight: '700'
                 }}>
-                  📋 {language === 'fr' ? 'Aperçu du format sélectionné:' : 'Selected format preview:'}
+                  {language === 'fr' ? 'Aperçu du format sélectionné:' : 'Selected format preview:'}
                 </h4>
                 <div style={{
                   display: 'grid',
@@ -3824,10 +3824,10 @@ function Step6Finalization({
                   fontSize: isMobile ? '11px' : '13px',
                   color: '#d1d5db'
                 }}>
-                  <div>📄 {language === 'fr' ? 'Pages estimées:' : 'Estimated pages:'} <strong>8-12</strong></div>
-                  <div>📊 {language === 'fr' ? 'Graphiques:' : 'Charts:'} <strong>{finalizationData.documentGeneration.includeStatistics ? '✅' : '❌'}</strong></div>
-                  <div>📷 {language === 'fr' ? 'Photos:' : 'Photos:'} <strong>{finalizationData.documentGeneration.includePhotos ? `✅ ${stats.photosCount}` : '❌'}</strong></div>
-                  <div>🔗 {language === 'fr' ? 'Code QR:' : 'QR Code:'} <strong>{finalizationData.documentGeneration.includeQRCode ? '✅' : '❌'}</strong></div>
+                  <div>{language === 'fr' ? 'Pages estimées:' : 'Estimated pages:'} <strong>8-12</strong></div>
+                  <div>{language === 'fr' ? 'Graphiques:' : 'Charts:'} <strong>{finalizationData.documentGeneration.includeStatistics ? '✓' : '✕'}</strong></div>
+                  <div>📷 {language === 'fr' ? 'Photos:' : 'Photos:'} <strong>{finalizationData.documentGeneration.includePhotos ? `✓ ${stats.photosCount}` : '✕'}</strong></div>
+                  <div>{language === 'fr' ? 'Code QR:' : 'QR Code:'} <strong>{finalizationData.documentGeneration.includeQRCode ? '✓' : '✕'}</strong></div>
                 </div>
               </div>
             </div>
@@ -3836,7 +3836,7 @@ function Step6Finalization({
             <div className="ast-section">
               <h2 className="section-title">
                 <Clock size={24} />
-                {language === 'fr' ? '📋 Historique des Rapports' : '📋 Report History'}
+                {language === 'fr' ? 'Historique des Rapports' : 'Report History'}
               </h2>
               
               {finalizationData.generatedReports.length > 0 ? (
@@ -3863,13 +3863,13 @@ function Step6Finalization({
                           color: '#60a5fa',
                           marginBottom: '2px'
                         }}>
-                          📄 {report.type.charAt(0).toUpperCase() + report.type.slice(1)} Report
+                          {report.type.charAt(0).toUpperCase() + report.type.slice(1)} Report
                         </div>
                         <div style={{ 
                           fontSize: isMobile ? '10px' : '12px', 
                           color: '#9ca3af' 
                         }}>
-                          🕒 {new Date(report.generatedAt).toLocaleDateString()} {new Date(report.generatedAt).toLocaleTimeString()}
+                          {new Date(report.generatedAt).toLocaleDateString()} {new Date(report.generatedAt).toLocaleTimeString()}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px' }}>
@@ -3951,7 +3951,7 @@ function Step6Finalization({
                   fontSize: isMobile ? '16px' : '20px',
                   fontWeight: '700'
                 }}>
-                  ⚠️ {t.confirmLock}
+                  ⚠ {t.confirmLock}
                 </h3>
                 <p style={{ 
                   color: '#d1d5db', 
