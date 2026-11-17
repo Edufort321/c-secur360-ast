@@ -8,7 +8,7 @@ export const VIDEOS_DEMO: VideoDemo[] = [
   { cle: 'accueil', module: 'admin', fr: 'Accueil, alertes et navigation', en: 'Home, alerts and navigation', duree: '0:32' },
   { cle: 'ast', module: 'ast', fr: 'AST : dangers, isolation et PDF', en: 'JSA: hazards, isolation and PDF', duree: '0:31' },
   { cle: 'unifilaire-chantier', module: 'rapports', fr: 'Rapport de chantier : unifilaire interactif relié aux essais', en: 'Field report: interactive single-line linked to tests', duree: '0:41' },
-  { cle: 'dessin', module: 'rapports', fr: 'Dessin électrique : modèles, symboles, lamicoïdes et PDF', en: 'Electrical drawing: templates, symbols, nameplates and PDF', duree: '1:11' },
+  { cle: 'dessin', module: 'rapports', fr: 'Dessin électrique : transformateur 2000 kVA, plaque, unifilaire, trifilaire, 3D', en: 'Electrical drawing: 2000 kVA transformer, nameplate, single-line, three-line, 3D', duree: '1:39' },
   { cle: 'permis-chaud', module: 'permits', fr: 'Permis de travail à chaud', en: 'Hot work permit', duree: '0:38' },
   { cle: 'accidents-kpi', module: 'accidents', fr: 'Accidents, KPI et statistiques', en: 'Accidents, KPIs and statistics', duree: '0:32' },
   { cle: 'inspection-qr', module: 'inspect', fr: 'Inspection d\'équipement par QR', en: 'Equipment inspection by QR', duree: '0:33' },
