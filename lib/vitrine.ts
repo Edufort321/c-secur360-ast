@@ -26,7 +26,7 @@ export interface AppCerdia {
 }
 
 // Captures et aperçus tournés le 2026-11-16 (Playwright, format téléphone). Pas de lien pour une app sans adresse publique
-// vérifiée (Ohmni, Lingora). Rapport IPS n'y figure pas : outil interne d'un client.
+// vérifiée (Ohmni, Lingora). Rapport IPS n'y figure pas (décision d'Eric : toutes les apps sauf IPS).
 const A = (cle: string, captures: string[]) => ({ icone: `/apps/${cle}/icone.png`, video: `/apps/${cle}/apercu.mp4`, captures: captures.map(c => `/apps/${cle}/${c}`) });
 
 export const AUTRES_APPS: AppCerdia[] = [
@@ -50,6 +50,10 @@ export const AUTRES_APPS: AppCerdia[] = [
     fr: 'Ton coach de langues : traduis un mot, converse pour pratiquer et garde ce que tu apprends (français, anglais, espagnol, italien).',
     en: 'Your language coach: translate a word, chat to practice and keep what you learn (French, English, Spanish, Italian).',
     ...A('lingora', ['capture-1.jpg']) },
+  { cle: 'genia', nom: 'Génie en herbe', categorie_fr: 'Éducation', categorie_en: 'Education', url: 'https://genie-en-herbe.vercel.app',
+    fr: 'Quiz de révision et de duel pour les élèves du secondaire : révision, examen, duel, salle de classe et parties en ligne.',
+    en: 'Review and duel quizzes for high-school students: review, exam, duel, classroom and online games.',
+    ...A('genia', ['store-1.jpg', 'store-2.jpg', 'store-3.jpg', 'store-4.jpg', 'store-5.jpg', 'store-6.jpg']) },
   { cle: 'rouloo', nom: 'Rouloo', categorie_fr: 'Jeu familial', categorie_en: 'Family game', url: 'https://rouloo.vercel.app',
     fr: 'Le jeu de voyage familial pour la route : plaques, couleurs, défis, quiz et mode multijoueur en ligne, en français et en anglais.',
     en: 'The family road-trip game: license plates, colours, challenges, quizzes and online multiplayer, in French and English.',
