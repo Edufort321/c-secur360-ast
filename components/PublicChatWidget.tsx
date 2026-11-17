@@ -62,18 +62,18 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
         ref={fabRef}
         onClick={() => setOpen(o => !o)}
         aria-label="Assistant C-Secur360"
-        className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a]"
+        className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#141518] text-2xl text-[#e6e9ec] shadow-lg ring-2 ring-[#c9ced5]/60 transition hover:bg-[#16294a]"
       >
         {open ? '×' : <MessageCircle size={22} />}
       </button>
 
       {open && (
         <div ref={panelRef} className="fixed bottom-24 right-5 z-[60] flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-          <div className="flex items-center gap-2 bg-[#0D1F3C] px-4 py-3 text-white">
+          <div className="flex items-center gap-2 bg-[#111214] px-4 py-3 text-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />
             <div className="text-sm font-bold">Assistant C-Secur360</div>
-            <span className="ml-auto h-2 w-2 rounded-full bg-orange-500" aria-hidden />
+            <span className="ml-auto h-2 w-2 rounded-full bg-[#c9ced5]" aria-hidden />
           </div>
 
           <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
@@ -81,7 +81,7 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
               <div className="space-y-2">
                 <p className="text-gray-600">{tr('Bonjour ! Je peux vous présenter C-Secur360 et organiser une démo.', 'Hi! I can introduce C-Secur360 and set up a demo.')}</p>
                 {SUGGESTIONS.map(s => (
-                  <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-orange-400">
+                  <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-gray-500">
                     {s}
                   </button>
                 ))}
@@ -89,7 +89,7 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
             )}
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 ${m.role === 'user' ? 'bg-[#0D1F3C] text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
+                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 ${m.role === 'user' ? 'bg-[#111214] text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
                   {m.content}
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function PublicChatWidget({ fr = true }: { fr?: boolean }) {
 
           {/* CTA permanents */}
           <div className="flex gap-2 border-t border-gray-100 px-3 py-2">
-            <a href="/?demo=1" onClick={() => setOpen(false)} className="flex-1 rounded-lg bg-orange-500 px-2 py-1.5 text-center text-xs font-semibold text-white hover:bg-orange-600">{tr('Voir la démo', 'See the demo')}</a>
+            <a href="/?demo=1" onClick={() => setOpen(false)} className="flex-1 rounded-lg bg-[#111214] px-2 py-1.5 text-center text-xs font-semibold text-white hover:bg-black">{tr('Voir la démo', 'See the demo')}</a>
             <a href={`mailto:${CONTACT}`} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-xs font-semibold text-gray-700 hover:bg-gray-50">{tr('Nous écrire', 'Contact us')}</a>
           </div>
 

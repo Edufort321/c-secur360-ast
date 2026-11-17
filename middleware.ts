@@ -89,7 +89,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/.well-known/') ||
     pathname === '/c-secur360-logo.png' ||
     pathname === '/csecur360-logo-v2025.png' ||
-    /\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot|webmanifest)$/.test(pathname)
+    /\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot|webmanifest|mp4|webm|vtt)$/.test(pathname)   // vidéos de la vitrine publique
   ) {
     return NextResponse.next();
   }

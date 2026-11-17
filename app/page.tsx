@@ -7,6 +7,9 @@ import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ModuleIcon } from '@/components/ModuleIcon'
+import { IntroPiece } from '@/components/vitrine/IntroPiece'
+import { VideosDemo } from '@/components/vitrine/VideosDemo'
+import { AutresApps } from '@/components/vitrine/AutresApps'
 import {
   Shield, ShieldCheck, Users, HardHat, Calendar, FileCheck, AlertTriangle,
   Package, ClipboardCheck, Clock, Truck,
@@ -175,15 +178,15 @@ const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }
 };
 
 const HERO_FALLBACK_FR = [
-  { title: 'Sécurité d\'abord.', subtitle: 'Conformité CNESST assurée.', gradient: 'from-[#0B1728] via-[#0D2040] to-[#0B1728]' },
-  { title: 'ASTs, permis et inspections.', subtitle: 'Tout en un — partout sur le chantier.', gradient: 'from-[#0D1F3C] via-[#1a2744] to-[#0D1F3C]' },
-  { title: 'Zéro papier. 100 % numérique.', subtitle: 'Votre équipe connectée en temps réel.', gradient: 'from-[#0B1728] via-[#102038] to-[#0B1728]' },
+  { title: 'Sécurité d\'abord.', subtitle: 'Conformité CNESST assurée.', gradient: 'from-[#050505] via-[#16171a] to-[#050505]' },
+  { title: 'ASTs, permis et inspections.', subtitle: 'Tout en un — partout sur le chantier.', gradient: 'from-[#0b0b0c] via-[#1f2023] to-[#0b0b0c]' },
+  { title: 'Zéro papier. 100 % numérique.', subtitle: 'Votre équipe connectée en temps réel.', gradient: 'from-[#050505] via-[#1a1b1e] to-[#050505]' },
 ]
 
 const HERO_FALLBACK_EN = [
-  { title: 'Safety first.', subtitle: 'CNESST & OHS compliance guaranteed.', gradient: 'from-[#0B1728] via-[#0D2040] to-[#0B1728]' },
-  { title: 'JSAs, permits and inspections.', subtitle: 'All-in-one — everywhere on the jobsite.', gradient: 'from-[#0D1F3C] via-[#1a2744] to-[#0D1F3C]' },
-  { title: 'Zero paper. 100% digital.', subtitle: 'Your team connected in real time.', gradient: 'from-[#0B1728] via-[#102038] to-[#0B1728]' },
+  { title: 'Safety first.', subtitle: 'CNESST & OHS compliance guaranteed.', gradient: 'from-[#050505] via-[#16171a] to-[#050505]' },
+  { title: 'JSAs, permits and inspections.', subtitle: 'All-in-one — everywhere on the jobsite.', gradient: 'from-[#0b0b0c] via-[#1f2023] to-[#0b0b0c]' },
+  { title: 'Zero paper. 100% digital.', subtitle: 'Your team connected in real time.', gradient: 'from-[#050505] via-[#1a1b1e] to-[#050505]' },
 ]
 
 const STATIC_PLANS_FR: PricingPlan[] = [
@@ -309,22 +312,30 @@ export default function LandingPage() {
   const goNext = () => { setSlideIdx(i => (i + 1) % slideCount); startInterval() }
 
   return (
-    <div className="min-h-screen bg-[#0B1728] text-white font-sans">
+    <div className="min-h-screen bg-[#0a0a0b] text-white font-sans">
+      <IntroPiece />
 
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 z-50 w-full bg-[#0B1728]/95 backdrop-blur border-b border-white/8">
+      <header className="fixed top-0 z-50 w-full bg-black/85 backdrop-blur border-b border-white/8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="C-Secur360" width={32} height={32} className="h-8 w-auto" />
-            <span className="font-bold text-white text-base tracking-tight">C-Secur360</span>
+            <span className="font-bold text-base tracking-tight cs-argent-texte">C-Secur360</span>
           </div>
+
+          <nav className="hidden md:flex items-center gap-6 text-sm text-[#b9bec6]" aria-label={fr ? 'Sections' : 'Sections'}>
+            <a href="#modules" className="hover:text-white transition">{fr ? 'Modules' : 'Modules'}</a>
+            <a href="#videos" className="hover:text-white transition">{fr ? 'Démos vidéo' : 'Video demos'}</a>
+            <a href="#pricing" className="hover:text-white transition">{fr ? 'Tarifs' : 'Pricing'}</a>
+            <a href="#applications" className="hover:text-white transition">{fr ? 'Applications' : 'Apps'}</a>
+          </nav>
 
           <div className="flex items-center gap-2">
             <div className="flex bg-white/8 rounded-lg p-0.5">
               {(['fr', 'en'] as const).map(l => (
                 <button key={l} onClick={() => setLang(l)}
                   aria-pressed={lang === l} aria-label={l === 'fr' ? 'Français' : 'English'}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition ${lang === l ? 'bg-orange-500 text-white' : 'text-slate-300 hover:text-white'}`}>
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition ${lang === l ? 'cs-argent-fond text-[#111]' : 'text-slate-300 hover:text-white'}`}>
                   {l.toUpperCase()}
                 </button>
               ))}
@@ -339,7 +350,7 @@ export default function LandingPage() {
         </div>
 
         {menuOpen && (
-          <div id="public-menu" className="bg-[#111c30] border-t border-white/8">
+          <div id="public-menu" className="cs-carte border-t border-white/8">
             <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2">
               <form onSubmit={e => { e.preventDefault(); goToOrg() }}
                 className="flex gap-2">
@@ -348,10 +359,10 @@ export default function LandingPage() {
                   value={clientSubdomain}
                   onChange={e => { setClientSubdomain(e.target.value); if (orgError) setOrgError('') }}
                   placeholder={fr ? 'Nom de votre organisation' : 'Your organization name'}
-                  className="flex-1 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+                  className="flex-1 bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#c9ced5]/60"
                 />
                 <button type="submit" disabled={orgBusy} aria-label={fr ? 'Accéder au portail' : 'Access portal'}
-                  className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 rounded-lg text-sm font-bold transition flex items-center justify-center min-h-[44px] min-w-[44px]">
+                  className="cs-argent-fond disabled:opacity-50 text-[#111] px-3 rounded-lg text-sm font-bold transition flex items-center justify-center min-h-[44px] min-w-[44px]">
                   <ArrowRight size={15} />
                 </button>
               </form>
@@ -361,7 +372,7 @@ export default function LandingPage() {
                 <Lock size={14} /> {fr ? 'Accès Admin' : 'Admin Access'}
               </Link>
               <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-sm text-white font-semibold transition" />
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg cs-argent-fond text-sm text-[#111] font-semibold transition" />
             </nav>
           </div>
         )}
@@ -376,7 +387,7 @@ export default function LandingPage() {
               className={`absolute inset-0 transition-opacity duration-1000 bg-cover bg-center bg-no-repeat ${idx === slideIdx ? 'opacity-100' : 'opacity-0'}`}
               style={{ backgroundImage: `url(${s.image_url})` }}
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0B1728] via-[#0B1728]/50 to-[#0B1728]/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/55 to-[#0a0a0b]/15" />
             </div>
           ))
         ) : (
@@ -385,7 +396,7 @@ export default function LandingPage() {
               <div className={`absolute inset-0 bg-gradient-to-br ${s.gradient}`} />
               {/* Geometric pattern overlay */}
               <div className="absolute inset-0 opacity-5" style={{
-                backgroundImage: `repeating-linear-gradient(45deg, #F26522 0, #F26522 1px, transparent 0, transparent 50%)`,
+                backgroundImage: `repeating-linear-gradient(45deg, #c9ced5 0, #c9ced5 1px, transparent 0, transparent 50%)`,
                 backgroundSize: '30px 30px'
               }} />
             </div>
@@ -395,16 +406,16 @@ export default function LandingPage() {
         {/* Hero content */}
         <div className="relative z-10 h-full flex flex-col justify-end pb-20 px-6 max-w-7xl mx-auto">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-orange-500/20 border border-orange-500/40 rounded-full px-3 py-1 mb-4">
-              <Shield size={12} className="text-orange-400" />
-              <span className="text-orange-300 text-xs font-semibold uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/30 rounded-full px-3 py-1 mb-4">
+              <Shield size={12} className="text-[#c9ced5]" />
+              <span className="text-[#d7dbe0] text-xs font-semibold uppercase tracking-widest">
                 {fr ? 'Conforme CNESST · MOL · OHS' : 'CNESST · MOL · OHS Compliant'}
               </span>
             </div>
 
             {dbSlides ? (
               <>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight mb-3">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight mb-3 cs-argent-texte">
                   {(fr ? dbSlides[slideIdx]?.title_fr : dbSlides[slideIdx]?.title_en) || (fr ? 'Plateforme de gestion sécuritaire' : 'Safety management platform')}
                 </h1>
                 <p className="text-lg text-slate-300 mb-8">
@@ -413,7 +424,7 @@ export default function LandingPage() {
               </>
             ) : (
               <>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight mb-3">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight mb-3 cs-argent-texte">
                   {heroFallback[slideIdx].title}
                 </h1>
                 <p className="text-lg text-slate-300 mb-8">
@@ -424,7 +435,7 @@ export default function LandingPage() {
 
             <div className="flex flex-wrap gap-4">
               <DemoStartButton fr={fr}
-                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-orange-500/25" />
+                className="inline-flex items-center gap-2 cs-argent-fond text-[#111] px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-black/50" />
               <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                 className="inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white/8 px-7 py-3.5 rounded-xl font-semibold text-base transition">
                 <Mail size={16} /> {fr ? 'Écrire à l\'équipe' : 'Contact the team'}
@@ -449,13 +460,13 @@ export default function LandingPage() {
             <button key={i} onClick={() => { setSlideIdx(i); startInterval() }}
               aria-label={fr ? `Aller à la diapositive ${i + 1}` : `Go to slide ${i + 1}`}
               aria-current={i === slideIdx}
-              className={`rounded-full transition-all ${i === slideIdx ? 'w-6 h-2 bg-orange-500' : 'w-2 h-2 bg-white/30 hover:bg-white/50'}`} />
+              className={`rounded-full transition-all ${i === slideIdx ? 'w-6 h-2 bg-[#d7dbe0]' : 'w-2 h-2 bg-white/30 hover:bg-white/50'}`} />
           ))}
         </div>
       </section>
 
       {/* ── Stats bar ──────────────────────────────────────────────────────── */}
-      <div className="bg-[#0D1F3C] border-y border-white/8 py-6">
+      <div className="bg-[#111214] border-y border-white/8 py-6">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
             { val: '17', label: fr ? 'Modules inclus' : 'Modules included' },
@@ -464,7 +475,7 @@ export default function LandingPage() {
             { val: 'FR/EN', label: fr ? 'Bilingue' : 'Bilingual' },
           ].map((s, i) => (
             <div key={i}>
-              <p className="text-2xl sm:text-3xl font-black text-orange-400">{s.val}</p>
+              <p className="text-2xl sm:text-3xl font-black text-[#c9ced5]">{s.val}</p>
               <p className="text-xs text-slate-400 mt-1">{s.label}</p>
             </div>
           ))}
@@ -473,9 +484,9 @@ export default function LandingPage() {
 
       {/* ── Acces tenant ───────────────────────────────────────────────────── */}
       <section className="py-12 px-4">
-        <div className="max-w-md mx-auto bg-[#0D1F3C] border border-white/10 rounded-2xl p-6">
+        <div className="max-w-md mx-auto bg-[#111214] border border-white/10 rounded-2xl p-6">
           <h3 className="font-bold text-white text-base mb-1 flex items-center gap-2">
-            <Globe size={16} className="text-orange-400" />
+            <Globe size={16} className="text-[#c9ced5]" />
             {fr ? 'Accès portail client' : 'Client portal access'}
           </h3>
           <p className="text-slate-400 text-xs mb-4">
@@ -488,10 +499,10 @@ export default function LandingPage() {
               value={clientSubdomain}
               onChange={e => { setClientSubdomain(e.target.value); if (orgError) setOrgError('') }}
               placeholder={fr ? "Nom de l'organisation ou sous-domaine" : 'Organization name or subdomain'}
-              className="flex-1 min-w-0 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+              className="flex-1 min-w-0 bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#c9ced5]/60"
             />
             <button type="submit" disabled={orgBusy}
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
+              className="cs-argent-fond disabled:opacity-50 text-[#111] px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
               <ArrowRight size={15} />
               {orgBusy ? '…' : (fr ? 'Accéder' : 'Go')}
             </button>
@@ -505,9 +516,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── Modules ────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-4 max-w-7xl mx-auto">
+      <section id="modules" className="py-24 px-4 max-w-7xl mx-auto scroll-mt-16">
         <div className="text-center mb-14">
-          <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+          <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
             {fr ? 'Plateforme tout-en-un' : 'All-in-one platform'}
           </p>
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
@@ -518,10 +529,10 @@ export default function LandingPage() {
               ? 'Chaque module est conçu pour le terrain. Accès mobile, signatures électroniques et synchronisation en temps réel.'
               : 'Every module is built for the field. Mobile access, electronic signatures and real-time sync.'}
           </p>
-          <p className="mt-3 inline-block rounded-full bg-orange-500/10 border border-orange-500/30 px-4 py-1.5 text-sm font-semibold text-orange-300">
+          <p className="mt-3 inline-block rounded-full bg-white/5 border border-[#c9ced5]/25 px-4 py-1.5 text-sm font-semibold text-[#d7dbe0]">
             {fr
-              ? `1 site inclus${perSitePrice != null ? ` · chaque site additionnel +${perSitePrice}$/an` : ''}`
-              : `1 site included${perSitePrice != null ? ` · each additional site +$${perSitePrice}/year` : ''}`}
+              ? `1 site inclus${perSitePrice ?  ` · chaque site additionnel +${perSitePrice}$/an` : ''}`
+              : `1 site included${perSitePrice ?  ` · each additional site +$${perSitePrice}/year` : ''}`}
           </p>
         </div>
 
@@ -533,20 +544,20 @@ export default function LandingPage() {
             return (
               <div key={mod.key}
                 onClick={() => setSelectedModule(mod.key)}
-                className="group relative bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-pointer">
+                className="group relative cs-carte border border-white/8 rounded-xl p-5 hover:border-[#c9ced5]/50 hover:bg-[#18191c] transition-all duration-300 cursor-pointer">
                 {/* Header toujours visible */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
-                    <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={44} />
+                    <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={48} variante="argent" />
                   </div>
-                  <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-bold text-orange-400 whitespace-nowrap">
+                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-bold text-[#c9ced5] whitespace-nowrap">
                     {dbMod && dbMod.monthly_price > 0 ? `${dbMod.monthly_price}$/an` : (fr ? 'Inclus' : 'Included')}
                   </span>
                 </div>
                 <h3 className="font-bold text-white text-sm mt-3 mb-0">{mod.name}</h3>
 
                 {/* Accroche TOUJOURS visible (la pub se voit sans cliquer) */}
-                {det && <p className="text-xs text-orange-300/90 leading-snug mt-1.5">{det.tagline}</p>}
+                {det && <p className="text-xs text-[#b9bec6] leading-snug mt-1.5">{det.tagline}</p>}
 
                 {/* Détail au survol : points clés + aperçus + invite au clic */}
                 <div className="overflow-hidden max-h-0 group-hover:max-h-72 transition-all duration-500 ease-in-out">
@@ -554,7 +565,7 @@ export default function LandingPage() {
                     <ul className="mt-2 space-y-1">
                       {det.points.slice(0, 4).map((p, i) => (
                         <li key={i} className="flex gap-1.5 text-[11px] leading-snug text-slate-300">
-                          <span className="text-orange-400">•</span>{p}
+                          <span className="text-[#c9ced5]">•</span>{p}
                         </li>
                       ))}
                     </ul>
@@ -570,7 +581,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Indice de clic toujours visible */}
-                <p className="mt-2 text-[10px] font-semibold text-orange-400/80 group-hover:text-orange-400">
+                <p className="mt-2 text-[10px] font-semibold text-[#9aa0a8] group-hover:text-white">
                   {fr ? 'Cliquer pour le détail →' : 'Click for details →'}
                 </p>
               </div>
@@ -579,17 +590,17 @@ export default function LandingPage() {
 
           {/* Carte « Site additionnel » — prix par site (annuel), 1 site inclus */}
           {perSitePrice != null && perSitePrice > 0 && (
-            <div className="relative bg-[#111c30] border border-emerald-500/30 rounded-xl p-5">
+            <div className="relative cs-carte border border-[#c9ced5]/25 rounded-xl p-5">
               <div className="flex items-start justify-between gap-2">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-                  <Building2 size={20} className="text-emerald-400" />
+                <div className="w-10 h-10 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0">
+                  <Building2 size={20} className="text-[#c9ced5]" />
                 </div>
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-bold text-emerald-300 whitespace-nowrap">
+                <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-bold text-[#d7dbe0] whitespace-nowrap">
                   +{perSitePrice}$/an
                 </span>
               </div>
               <h3 className="font-bold text-white text-sm mt-3 mb-0">{fr ? 'Site additionnel' : 'Additional site'}</h3>
-              <p className="text-xs text-emerald-300/90 leading-snug mt-1.5">
+              <p className="text-xs text-[#b9bec6] leading-snug mt-1.5">
                 {fr ? '1 site inclus dans votre forfait. Chaque site supplémentaire (ex. Montréal + Sherbrooke) est facturé annuellement.' : '1 site included in your plan. Each additional site (e.g. Montreal + Sherbrooke) is billed annually.'}
               </p>
             </div>
@@ -597,11 +608,14 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Démos vidéo ── */}
+      <VideosDemo fr={fr} />
+
       {/* ── Platform features ──────────────────────────────────────────────── */}
-      <section className="bg-[#0D1F3C] py-24 px-4">
+      <section className="bg-[#111214] py-24 px-4">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+            <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
               {fr ? 'Architecture entreprise' : 'Enterprise architecture'}
             </p>
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
@@ -610,15 +624,15 @@ export default function LandingPage() {
             <div className="space-y-4">
               {[
                 { icon: Building2, title: fr ? 'Multi-sites & multi-clients' : 'Multi-site & multi-client', desc: fr
-                    ? `Chaque client a son portail privé avec URL dédiée. 1 site inclus${perSitePrice != null ? `, site additionnel +${perSitePrice}$/an` : ''}.`
-                    : `Each client has a private portal with dedicated URL. 1 site included${perSitePrice != null ? `, additional site +$${perSitePrice}/year` : ''}.` },
+                    ? `Chaque client a son portail privé avec URL dédiée. 1 site inclus${perSitePrice ?  `, site additionnel +${perSitePrice}$/an` : ''}.`
+                    : `Each client has a private portal with dedicated URL. 1 site included${perSitePrice ?  `, additional site +$${perSitePrice}/year` : ''}.` },
                 { icon: Smartphone, title: fr ? 'Application mobile PWA' : 'PWA mobile app', desc: fr ? 'Installez sur iOS et Android. Fonctionne hors-ligne sur le chantier.' : 'Install on iOS and Android. Works offline on the jobsite.' },
                 { icon: BarChart3, title: fr ? 'Tableaux de bord en temps réel' : 'Real-time dashboards', desc: fr ? 'KPIs de sécurité, tendances d\'incidents et rapports de conformité automatiques.' : 'Safety KPIs, incident trends and automatic compliance reports.' },
                 { icon: Globe, title: fr ? 'Conforme partout au Canada' : 'Compliant across Canada', desc: fr ? 'Toutes les provinces: QC, ON, BC, AB et plus. CNESST, MOL, WorkSafeBC.' : 'All provinces: QC, ON, BC, AB and more. CNESST, MOL, WorkSafeBC.' },
               ].map((f, i) => (
                 <div key={i} className="flex gap-4 items-start">
-                  <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <f.icon size={17} className="text-orange-400" />
+                  <div className="w-9 h-9 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <f.icon size={17} className="text-[#c9ced5]" />
                   </div>
                   <div>
                     <h4 className="font-bold text-white text-sm mb-0.5">{f.title}</h4>
@@ -629,7 +643,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="bg-[#0B1728] rounded-2xl border border-white/8 p-8">
+          <div className="bg-[#0a0a0b] rounded-2xl border border-white/8 p-8">
             <div className="space-y-3">
               {[
                 fr ? 'Signature électronique conforme' : 'Compliant electronic signature',
@@ -642,7 +656,7 @@ export default function LandingPage() {
                 fr ? 'Mises à jour automatiques incluses' : 'Automatic updates included',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" />
+                  <CheckCircle size={15} className="text-[#c9ced5] flex-shrink-0" />
                   <span className="text-sm text-slate-300">{item}</span>
                 </div>
               ))}
@@ -652,9 +666,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── Normes & conformité (preuve sociale réelle, pas de faux logos clients) ── */}
-      <section className="border-y border-white/8 bg-[#0B1728] py-14 px-4">
+      <section className="border-y border-white/8 bg-[#0a0a0b] py-14 px-4">
         <div className="max-w-5xl mx-auto text-center">
-          <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+          <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
             {fr ? 'Normes & conformité' : 'Standards & compliance'}
           </p>
           <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
@@ -668,12 +682,12 @@ export default function LandingPage() {
           <div className="flex flex-wrap justify-center gap-2.5">
             {['CNESST', 'CSA', 'IEEE C57.104', 'IEC 60599', 'NFPA 10', 'ISO 45001', 'Loi 25 / RGPD', 'ARC / Revenu Québec'].map((n) => (
               <span key={n} className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-slate-200">
-                <ShieldCheck size={13} className="text-emerald-400" />{n}
+                <ShieldCheck size={13} className="text-[#c9ced5]" />{n}
               </span>
             ))}
           </div>
           <p className="mt-6 inline-flex items-center gap-2 text-xs text-slate-400">
-            <Globe size={13} className="text-orange-400" />
+            <Globe size={13} className="text-[#c9ced5]" />
             {fr
               ? 'Conçu, développé et opéré au Canada · Propulsé par Commerce CERDIA inc.'
               : 'Designed, developed and operated in Canada · Powered by Commerce CERDIA inc.'}
@@ -706,7 +720,7 @@ export default function LandingPage() {
         return (
           <section id="pricing" className="py-24 px-4 max-w-7xl mx-auto scroll-mt-20">
             <div className="text-center mb-10">
-              <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+              <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
                 {fr ? 'Tarification' : 'Pricing'}
               </p>
               <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
@@ -717,19 +731,19 @@ export default function LandingPage() {
                 {!modulesLoaded
                   ? <span className="text-slate-500">{fr ? 'Chargement des tarifs en direct…' : 'Loading live pricing…'}</span>
                   : hasPrices
-                    ? <span className="text-emerald-400/80">{fr ? '● Tarifs en direct depuis l\'administration' : '● Live pricing from administration'}</span>
+                    ? <span className="text-[#b9bec6]">{fr ? '● Tarifs en direct depuis l\'administration' : '● Live pricing from administration'}</span>
                     : <span className="text-slate-500">{fr ? 'Tarifs indicatifs — contactez-nous pour un devis exact.' : 'Indicative pricing — contact us for an exact quote.'}</span>}
               </p>
 
               {/* Badge rabais + modules gratuits */}
               <div className="flex flex-wrap gap-3 justify-center">
-                <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-4 py-1.5">
-                  <span className="text-emerald-400 font-black text-sm">-5%</span>
-                  <span className="text-emerald-300 text-xs">{fr ? 'par module additionnel (max -30%)' : 'per additional module (max -30%)'}</span>
+                <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/25 rounded-full px-4 py-1.5">
+                  <span className="text-[#c9ced5] font-black text-sm">-5%</span>
+                  <span className="text-[#d7dbe0] text-xs">{fr ? 'par module additionnel (max -30%)' : 'per additional module (max -30%)'}</span>
                 </div>
                 {freeLabel && (
-                  <div className="inline-flex items-center gap-2 bg-orange-500/15 border border-orange-500/30 rounded-full px-4 py-1.5">
-                    <span className="text-orange-300 text-xs font-semibold">{fr ? `${freeLabel} inclus GRATUITEMENT` : `${freeLabel} FREE with any module`}</span>
+                  <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/25 rounded-full px-4 py-1.5">
+                    <span className="text-[#d7dbe0] text-xs font-semibold">{fr ? `${freeLabel} inclus GRATUITEMENT` : `${freeLabel} FREE with any module`}</span>
                   </div>
                 )}
               </div>
@@ -737,7 +751,7 @@ export default function LandingPage() {
 
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {/* Starter */}
-              <div className="bg-[#111c30] border border-white/8 rounded-2xl p-6 flex flex-col">
+              <div className="cs-carte border border-white/8 rounded-2xl p-6 flex flex-col">
                 <h3 className="font-black text-white text-lg mb-1">Starter</h3>
                 <p className="text-slate-400 text-xs mb-4">{fr ? '1 site · 5 modules au choix' : '1 site · 5 modules of your choice'}</p>
                 <div className="my-2 mb-5">
@@ -755,7 +769,7 @@ export default function LandingPage() {
                     fr ? 'Support courriel' : 'Email support',
                   ].map((f, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={13} className={j === 1 ? 'text-orange-400 flex-shrink-0' : 'text-emerald-400 flex-shrink-0'} />{f}
+                      <CheckCircle size={13} className={j === 1 ? 'text-[#c9ced5] flex-shrink-0' : 'text-[#c9ced5] flex-shrink-0'} />{f}
                     </div>
                   ))}
                 </div>
@@ -764,8 +778,8 @@ export default function LandingPage() {
               </div>
 
               {/* Professionnel — prix live depuis DB */}
-              <div className="relative bg-[#1a2744] border border-orange-500/50 rounded-2xl p-6 flex flex-col shadow-xl shadow-orange-500/10">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-xs font-bold px-4 py-1 rounded-full">
+              <div className="relative bg-[#18191c] border border-[#c9ced5]/50 rounded-2xl p-6 flex flex-col shadow-xl shadow-black/60">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 cs-argent-fond text-[#111] text-xs font-bold px-4 py-1 rounded-full">
                   {fr ? 'Plus populaire' : 'Most popular'}
                 </div>
                 <h3 className="font-black text-white text-lg mb-1">{fr ? 'Professionnel' : 'Professional'}</h3>
@@ -775,7 +789,7 @@ export default function LandingPage() {
                     {totalAnnual}$<span className="text-base font-normal text-slate-400">/an</span>
                   </p>
                   {discountPct > 0 && (
-                    <p className="text-emerald-400 text-xs mt-1 font-semibold">
+                    <p className="text-[#c9ced5] text-xs mt-1 font-semibold">
                       {fr ? `Rabais cascade −${discountPct}% (−5%/module, du + gros au + petit, max −30%)` : `Cascade discount −${discountPct}% (−5%/module, biggest→smallest, max −30%)`}
                     </p>
                   )}
@@ -786,7 +800,7 @@ export default function LandingPage() {
                 <div className="space-y-2 flex-1 mb-6">
                   {[
                     fr ? `${dbModules.length || 17} modules${freeLabel ? ` (${freeLabel} gratuits)` : ''}` : `${dbModules.length || 17} modules${freeLabel ? ` (${freeLabel} free)` : ''}`,
-                    perSitePrice != null
+                    perSitePrice
                       ? (fr ? `1 site inclus · +${perSitePrice}$/an par site additionnel` : `1 site included · +$${perSitePrice}/year per additional site`)
                       : (fr ? '1 site inclus · multi-sites sur demande' : '1 site included · multi-site on request'),
                     fr ? 'Application mobile PWA' : 'Mobile PWA app',
@@ -794,7 +808,7 @@ export default function LandingPage() {
                     fr ? 'Analytics avancés' : 'Advanced analytics',
                   ].map((f, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={13} className={j === 0 ? 'text-orange-400 flex-shrink-0' : 'text-emerald-400 flex-shrink-0'} />{f}
+                      <CheckCircle size={13} className={j === 0 ? 'text-[#c9ced5] flex-shrink-0' : 'text-[#c9ced5] flex-shrink-0'} />{f}
                     </div>
                   ))}
                 </div>
@@ -802,8 +816,8 @@ export default function LandingPage() {
                 {/* Détail par module · prix annuel BRUT (avant rabais), trié du plus gros au plus petit
                     — met en évidence la cascade d'escompte (−5%/module, max −30%) appliquée du + gros au + petit. */}
                 {hasPrices && (
-                  <details className="mb-4 rounded-lg border border-white/10 bg-[#0f1a30]/70 p-3">
-                    <summary className="cursor-pointer text-xs font-bold text-orange-300">
+                  <details className="mb-4 rounded-lg border border-white/10 bg-black/40 p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-[#d7dbe0]">
                       {fr ? 'Détail par module · prix annuel brut (avant rabais)' : 'Per-module detail · gross annual price (before discount)'}
                     </summary>
                     <div className="mt-2 space-y-1">
@@ -817,7 +831,7 @@ export default function LandingPage() {
                         <span>{fr ? 'Sous-total brut' : 'Gross subtotal'}</span><span className="font-mono">{subtotal}$/an</span>
                       </div>
                       {discountPct > 0 && (
-                        <div className="flex justify-between text-[11px] text-emerald-400 font-semibold">
+                        <div className="flex justify-between text-[11px] text-[#c9ced5] font-semibold">
                           <span>{fr ? 'Rabais cascade (−5%/module, max −30%)' : 'Cascade discount (−5%/module, max −30%)'}</span>
                           <span className="font-mono">−{discountPct}%</span>
                         </div>
@@ -836,11 +850,11 @@ export default function LandingPage() {
                 )}
 
                 <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
-                  className="w-full text-center py-3 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white transition" />
+                  className="w-full text-center py-3 rounded-xl font-bold text-sm cs-argent-fond text-[#111] transition" />
               </div>
 
               {/* Entreprise */}
-              <div className="bg-[#111c30] border border-white/8 rounded-2xl p-6 flex flex-col">
+              <div className="cs-carte border border-white/8 rounded-2xl p-6 flex flex-col">
                 <h3 className="font-black text-white text-lg mb-1">{fr ? 'Entreprise' : 'Enterprise'}</h3>
                 <p className="text-slate-400 text-xs mb-4">{fr ? 'Volumes · ERP · SLA dédié' : 'Volume · ERP · Dedicated SLA'}</p>
                 <div className="my-2 mb-5">
@@ -856,7 +870,7 @@ export default function LandingPage() {
                     fr ? 'Formation incluse' : 'Training included',
                   ].map((f, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={13} className="text-emerald-400 flex-shrink-0" />{f}
+                      <CheckCircle size={13} className="text-[#c9ced5] flex-shrink-0" />{f}
                     </div>
                   ))}
                 </div>
@@ -875,20 +889,20 @@ export default function LandingPage() {
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {freeModules.map(m => (
-                    <div key={m.key} className="flex items-center justify-between bg-[#0D1F3C] border border-orange-500/20 rounded-lg px-3 py-2">
+                    <div key={m.key} className="flex items-center justify-between bg-[#111214] border border-[#c9ced5]/20 rounded-lg px-3 py-2">
                       <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
-                      <span className="text-xs font-bold text-orange-400 ml-2">{fr ? 'GRATUIT' : 'FREE'}</span>
+                      <span className="text-xs font-bold text-[#c9ced5] ml-2">{fr ? 'GRATUIT' : 'FREE'}</span>
                     </div>
                   ))}
                   {paidModules.map(m => (
-                    <div key={m.key} className="flex items-center justify-between bg-[#0D1F3C] border border-white/5 rounded-lg px-3 py-2">
+                    <div key={m.key} className="flex items-center justify-between bg-[#111214] border border-white/5 rounded-lg px-3 py-2">
                       <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
-                      <span className="text-xs font-bold text-orange-400 ml-2">{m.monthly_price}$/an</span>
+                      <span className="text-xs font-bold text-[#c9ced5] ml-2">{m.monthly_price}$/an</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 bg-[#0D1F3C] border border-emerald-500/20 rounded-xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
-                  <p className="text-emerald-300 text-xs font-semibold">
+                <div className="mt-4 bg-[#111214] border border-[#c9ced5]/20 rounded-xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+                  <p className="text-[#d7dbe0] text-xs font-semibold">
                     {fr ? `Sous-total brut : ${subtotal}$/an · Rabais -${discountPct}% · Total final : ${totalAnnual}$/an` : `Subtotal: $${subtotal}/yr · -${discountPct}% discount · Final: $${totalAnnual}/yr`}
                   </p>
                   {freeLabel && (
@@ -904,7 +918,7 @@ export default function LandingPage() {
             {aiPlans.length > 0 && (
               <div className="mt-16 max-w-5xl mx-auto">
                 <div className="text-center mb-6">
-                  <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+                  <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
                     {fr ? 'Option · Assistants IA' : 'Add-on · AI assistants'}
                   </p>
                   <h3 className="text-2xl font-bold text-white">
@@ -916,10 +930,10 @@ export default function LandingPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {aiPlans.map(p => (
-                    <div key={p.id} className="group relative bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/40 transition-colors">
+                    <div key={p.id} className="group relative cs-carte border border-white/8 rounded-xl p-5 hover:border-[#c9ced5]/40 transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-bold text-white">{fr ? p.name_fr : p.name_en}</h4>
-                        <span className="whitespace-nowrap rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-bold text-orange-400">{Math.round(p.price_cents / 100)}$/an</span>
+                        <span className="whitespace-nowrap rounded-full bg-white/8 px-2 py-0.5 text-xs font-bold text-[#c9ced5]">{Math.round(p.price_cents / 100)}$/an</span>
                       </div>
                       {(fr ? p.note_fr : p.note_en) && (
                         <p className="mt-2 text-xs text-slate-400">{fr ? p.note_fr : p.note_en}</p>
@@ -935,10 +949,10 @@ export default function LandingPage() {
 
       {/* ── Testimonials (masqué tant qu'aucun vrai témoignage n'est saisi dans l'admin) ── */}
       {testimonials.length > 0 && (
-      <section className="bg-[#0D1F3C] py-24 px-4">
+      <section className="bg-[#111214] py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+            <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
               {fr ? 'Témoignages' : 'Testimonials'}
             </p>
             <h2 className="text-3xl sm:text-4xl font-black text-white">
@@ -947,10 +961,10 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-[#0B1728] rounded-2xl border border-white/8 p-6">
+              <div key={i} className="bg-[#0a0a0b] rounded-2xl border border-white/8 p-6">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} size={14} className="text-orange-400 fill-orange-400" />
+                    <Star key={j} size={14} className="text-[#c9ced5] fill-[#c9ced5]" />
                   ))}
                 </div>
                 <p className="text-slate-300 text-sm leading-relaxed mb-5">"{t.text}"</p>
@@ -968,9 +982,9 @@ export default function LandingPage() {
       {/* ── Final CTA ──────────────────────────────────────────────────────── */}
       <section className="py-24 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-orange-500/15 border border-orange-500/30 rounded-full px-4 py-1.5 mb-6">
-            <Shield size={13} className="text-orange-400" />
-            <span className="text-orange-300 text-xs font-semibold">{fr ? 'Démo gratuite de 4 h — aucune carte requise' : 'Free 4-hour demo — no card required'}</span>
+          <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/25 rounded-full px-4 py-1.5 mb-6">
+            <Shield size={13} className="text-[#c9ced5]" />
+            <span className="text-[#d7dbe0] text-xs font-semibold">{fr ? 'Démo gratuite de 4 h — aucune carte requise' : 'Free 4-hour demo — no card required'}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
             {fr ? 'Prêt à sécuriser vos chantiers ?' : 'Ready to secure your jobsites?'}
@@ -982,7 +996,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
-              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-orange-500/30" />
+              className="inline-flex items-center gap-2 cs-argent-fond text-[#111] px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-black/50" />
             <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
               className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/8 text-white px-8 py-4 rounded-xl font-bold text-lg transition">
               <Mail size={18} /> {fr ? 'Nous écrire' : 'Contact us'}
@@ -991,8 +1005,11 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Autres applications CERDIA ── */}
+      <AutresApps fr={fr} />
+
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="bg-[#060E1A] border-t border-white/8 py-10 px-4">
+      <footer className="bg-[#050505] border-t border-white/8 py-10 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="C-Secur360" width={28} height={28} className="h-7 w-auto" />
@@ -1005,20 +1022,20 @@ export default function LandingPage() {
                 : `© ${new Date().getFullYear()} Commerce CERDIA inc. — C-Secur360. Industrial safety SaaS platform. All rights reserved.`}
             </p>
             <div className="flex items-center gap-4 text-xs">
-              <Link href="/confidentialite" className="text-slate-400 hover:text-orange-400 transition">
+              <Link href="/confidentialite" className="text-slate-400 hover:text-white transition">
                 {fr ? 'Politique de confidentialité' : 'Privacy policy'}
               </Link>
               <span className="text-slate-600">·</span>
-              <Link href="/terms" className="text-slate-400 hover:text-orange-400 transition">
+              <Link href="/terms" className="text-slate-400 hover:text-white transition">
                 {fr ? "Conditions d'utilisation" : 'Terms of use'}
               </Link>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <a href="mailto:info@cerdia.ai" className="text-slate-400 hover:text-orange-400 transition">
+            <a href="mailto:info@cerdia.ai" className="text-slate-400 hover:text-white transition">
               <Mail size={16} />
             </a>
-            <Link href="/auth/admin" className="text-slate-400 hover:text-orange-400 transition">
+            <Link href="/auth/admin" className="text-slate-400 hover:text-white transition">
               <Lock size={16} />
             </Link>
           </div>
@@ -1040,22 +1057,22 @@ export default function LandingPage() {
         return (
           <div onClick={() => setSelectedModule(null)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
             <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={mod.name}
-              className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0D1F3C] p-6">
+              className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#111214] p-6">
               <button onClick={() => setSelectedModule(null)} aria-label="Fermer" className="absolute right-3 top-3 text-2xl text-slate-400 hover:text-white">×</button>
               <div className="flex items-center gap-3">
-                <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={52} />
+                <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={56} variante="argent" />
                 <div>
                   <h3 className="text-xl font-black text-white">{mod.name}</h3>
-                  {dbMod && dbMod.monthly_price > 0 && <span className="text-xs font-bold text-orange-400">{dbMod.monthly_price}$/an</span>}
+                  {dbMod && dbMod.monthly_price > 0 && <span className="text-xs font-bold text-[#c9ced5]">{dbMod.monthly_price}$/an</span>}
                 </div>
               </div>
-              {d && <p className="mt-4 font-semibold text-orange-300">{d.tagline}</p>}
+              {d && <p className="mt-4 font-semibold text-[#d7dbe0]">{d.tagline}</p>}
               <p className="mt-2 text-sm text-slate-300">{mod.desc}</p>
               {d && (
                 <ul className="mt-4 space-y-2">
                   {d.points.map((p, i) => (
                     <li key={i} className="flex gap-2 text-sm text-slate-200">
-                      <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-orange-400" />{p}
+                      <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-[#c9ced5]" />{p}
                     </li>
                   ))}
                 </ul>
@@ -1068,7 +1085,7 @@ export default function LandingPage() {
                 </div>
               )}
               <div className="mt-6 flex flex-wrap gap-2">
-                <a href="mailto:info@cerdia.ai?subject=Démo C-Secur360" className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-orange-600">
+                <a href="mailto:info@cerdia.ai?subject=Démo C-Secur360" className="flex-1 rounded-lg cs-argent-fond px-4 py-2.5 text-center text-sm font-bold text-[#111]">
                   {fr ? 'Demander une démo' : 'Request a demo'}
                 </a>
                 <button

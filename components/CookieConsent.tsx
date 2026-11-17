@@ -45,9 +45,9 @@ export function CookieConsent() {
       aria-label={fr ? 'Avis sur les témoins' : 'Cookie notice'}
       className="fixed inset-x-0 bottom-0 z-[9999] px-4 pb-4 sm:px-6 sm:pb-6 animate-[cs-cookie-in_0.35s_ease-out]"
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-white/10 bg-[#0B1524] p-5 text-slate-200 shadow-2xl ring-1 ring-black/40 sm:flex-row sm:items-center sm:gap-5">
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-white/10 bg-[#111214] p-5 text-slate-200 shadow-2xl ring-1 ring-black/40 sm:flex-row sm:items-center sm:gap-5">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-400">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-[#d7dbe0]">
             <Cookie size={18} />
           </span>
           <p className="text-sm leading-relaxed">
@@ -55,7 +55,7 @@ export function CookieConsent() {
               <>
                 Ce site utilise uniquement des <strong>témoins strictement nécessaires</strong>{' '}
                 (connexion et sécurité). Aucun traceur publicitaire ni analytique.{' '}
-                <Link href="/confidentialite" className="text-orange-400 underline hover:text-orange-300">
+                <Link href="/confidentialite" className="text-[#d7dbe0] underline hover:text-white">
                   Politique de confidentialité
                 </Link>
                 .
@@ -64,7 +64,7 @@ export function CookieConsent() {
               <>
                 This site uses only <strong>strictly necessary cookies</strong> (login and
                 security). No advertising or analytics trackers.{' '}
-                <Link href="/confidentialite" className="text-orange-400 underline hover:text-orange-300">
+                <Link href="/confidentialite" className="text-[#d7dbe0] underline hover:text-white">
                   Privacy policy
                 </Link>
                 .
@@ -75,7 +75,7 @@ export function CookieConsent() {
         <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
           <button
             onClick={acknowledge}
-            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+            className="rounded-lg cs-argent-fond px-4 py-2 text-sm font-semibold text-[#111] transition"
           >
             {fr ? "J'ai compris" : 'Got it'}
           </button>
