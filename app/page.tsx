@@ -31,22 +31,6 @@ interface Slide {
   sort_order: number
 }
 
-interface PricingPlan {
-  name_fr: string
-  name_en: string
-  monthly: number
-  annual: number
-  popular?: boolean
-}
-
-interface DbModule {
-  key: string
-  name_fr: string
-  name_en: string
-  monthly_price: number
-  sort_order: number
-}
-
 interface ModuleSlide {
   module_key: string
   image_url: string
@@ -94,12 +78,6 @@ const MODULES_EN = [
   { icon: FileText,       key: 'rapports',    name: 'Field reports',          desc: 'Technical report builder: templates, AI extraction from PDF/handwriting, annotations, photos and export.' },
   { icon: Megaphone,      key: 'marketing',   name: 'AI Marketing',           desc: 'AI marketing studio: scripts, videos (avatar or real video + slides), posts and compliant emails — based on YOUR company profile.' },
 ]
-
-// Correspondance clé d'affichage (statique) -> clé en base (table modules). Sans ça, le prix ne s'affiche pas.
-const DB_MODULE_KEY: Record<string, string> = {
-  projets: 'projects', presque: 'near_miss', inventaire: 'inventory',
-  inspect: 'inspections', temps: 'timesheets',
-};
 
 // Présentation marketing détaillée par module (carte au clic). Haut niveau, sans détail technique.
 const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }; en: { tagline: string; points: string[] } }> = {
@@ -189,12 +167,6 @@ const HERO_FALLBACK_EN = [
   { title: 'Zero paper. 100% digital.', subtitle: 'Your team connected in real time.', gradient: 'from-[#050505] via-[#1a1b1e] to-[#050505]' },
 ]
 
-const STATIC_PLANS_FR: PricingPlan[] = [
-  { name_fr: 'Starter', name_en: 'Starter', monthly: 149, annual: 1490, popular: false },
-  { name_fr: 'Professionnel', name_en: 'Professional', monthly: 249, annual: 2490, popular: true },
-  { name_fr: 'Entreprise', name_en: 'Enterprise', monthly: 0, annual: 0, popular: false },
-]
-
 // Témoignages : gérés dans l'admin (table landing_testimonials). Aucun faux avis codé en dur ici.
 
 // ─── Contact mailto ───────────────────────────────────────────────────────────
@@ -213,11 +185,7 @@ export default function LandingPage() {
   const [slideIdx, setSlideIdx] = useState(0)
   const [dbSlides, setDbSlides] = useState<Slide[] | null>(null)
   const [dbTestimonials, setDbTestimonials] = useState<any[]>([])
-  const [dbModules, setDbModules] = useState<DbModule[]>([])
-  const [modulesLoaded, setModulesLoaded] = useState(false)
   const [moduleSlides, setModuleSlides] = useState<Record<string, ModuleSlide[]>>({})
-  const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
-  const [aiPlans, setAiPlans] = useState<{ id: string; name_fr: string; name_en: string; price_cents: number; note_fr: string | null; note_en: string | null }[]>([])
   const [selectedModule, setSelectedModule] = useState<string | null>(null)
   const [orgError, setOrgError] = useState('')
   const [orgBusy, setOrgBusy] = useState(false)
@@ -279,9 +247,6 @@ export default function LandingPage() {
       .then((d) => {
         if (Array.isArray(d.slides) && d.slides.length > 0) setDbSlides(d.slides)
         if (Array.isArray(d.testimonials)) setDbTestimonials(d.testimonials)
-        if (Array.isArray(d.modules) && d.modules.length > 0) setDbModules(d.modules)
-        if (d.perSitePrice != null) setPerSitePrice(Number(d.perSitePrice))
-        if (Array.isArray(d.aiPlans) && d.aiPlans.length > 0) setAiPlans(d.aiPlans)
         const grouped: Record<string, ModuleSlide[]> = {}
         for (const row of (d.moduleSlides || [])) {
           if (!grouped[row.module_key]) grouped[row.module_key] = []
@@ -290,7 +255,6 @@ export default function LandingPage() {
         setModuleSlides(grouped)
       })
       .catch(() => { /* replis statiques */ })
-      .finally(() => setModulesLoaded(true))
   }, [])
 
   // Carousel auto-advance
@@ -326,7 +290,7 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 text-sm text-[#b9bec6]" aria-label={fr ? 'Sections' : 'Sections'}>
             <a href="#modules" className="hover:text-white transition">{fr ? 'Modules' : 'Modules'}</a>
             <a href="#videos" className="hover:text-white transition">{fr ? 'Démos vidéo' : 'Video demos'}</a>
-            <a href="#pricing" className="hover:text-white transition">{fr ? 'Tarifs' : 'Pricing'}</a>
+            <a href="#contact" className="hover:text-white transition">{fr ? 'Contact' : 'Contact'}</a>
             <a href="#applications" className="hover:text-white transition">{fr ? 'Applications' : 'Apps'}</a>
           </nav>
 
@@ -470,7 +434,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
             { val: '17', label: fr ? 'Modules inclus' : 'Modules included' },
-            { val: '4 h', label: fr ? 'Démo gratuite' : 'Free demo' },
+            { val: '24 h', label: fr ? 'Démo gratuite' : 'Free demo' },
             { val: '100%', label: fr ? 'Conforme CNESST' : 'CNESST compliant' },
             { val: 'FR/EN', label: fr ? 'Bilingue' : 'Bilingual' },
           ].map((s, i) => (
@@ -529,17 +493,11 @@ export default function LandingPage() {
               ? 'Chaque module est conçu pour le terrain. Accès mobile, signatures électroniques et synchronisation en temps réel.'
               : 'Every module is built for the field. Mobile access, electronic signatures and real-time sync.'}
           </p>
-          <p className="mt-3 inline-block rounded-full bg-white/5 border border-[#c9ced5]/25 px-4 py-1.5 text-sm font-semibold text-[#d7dbe0]">
-            {fr
-              ? `1 site inclus${perSitePrice ?  ` · chaque site additionnel +${perSitePrice}$/an` : ''}`
-              : `1 site included${perSitePrice ?  ` · each additional site +$${perSitePrice}/year` : ''}`}
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {modules.map((mod) => {
             const slides = moduleSlides[mod.key] || []
-            const dbMod = dbModules.find(d => d.key === (DB_MODULE_KEY[mod.key] || mod.key))
             const det = MODULE_DETAILS[mod.key]?.[fr ? 'fr' : 'en']
             return (
               <div key={mod.key}
@@ -550,9 +508,6 @@ export default function LandingPage() {
                   <div className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">
                     <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={48} variante="argent" />
                   </div>
-                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-bold text-[#c9ced5] whitespace-nowrap">
-                    {dbMod && dbMod.monthly_price > 0 ? `${dbMod.monthly_price}$/an` : (fr ? 'Inclus' : 'Included')}
-                  </span>
                 </div>
                 <h3 className="font-bold text-white text-sm mt-3 mb-0">{mod.name}</h3>
 
@@ -588,23 +543,6 @@ export default function LandingPage() {
             )
           })}
 
-          {/* Carte « Site additionnel » — prix par site (annuel), 1 site inclus */}
-          {perSitePrice != null && perSitePrice > 0 && (
-            <div className="relative cs-carte border border-[#c9ced5]/25 rounded-xl p-5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="w-10 h-10 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0">
-                  <Building2 size={20} className="text-[#c9ced5]" />
-                </div>
-                <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-bold text-[#d7dbe0] whitespace-nowrap">
-                  +{perSitePrice}$/an
-                </span>
-              </div>
-              <h3 className="font-bold text-white text-sm mt-3 mb-0">{fr ? 'Site additionnel' : 'Additional site'}</h3>
-              <p className="text-xs text-[#b9bec6] leading-snug mt-1.5">
-                {fr ? '1 site inclus dans votre forfait. Chaque site supplémentaire (ex. Montréal + Sherbrooke) est facturé annuellement.' : '1 site included in your plan. Each additional site (e.g. Montreal + Sherbrooke) is billed annually.'}
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
@@ -624,8 +562,8 @@ export default function LandingPage() {
             <div className="space-y-4">
               {[
                 { icon: Building2, title: fr ? 'Multi-sites & multi-clients' : 'Multi-site & multi-client', desc: fr
-                    ? `Chaque client a son portail privé avec URL dédiée. 1 site inclus${perSitePrice ?  `, site additionnel +${perSitePrice}$/an` : ''}.`
-                    : `Each client has a private portal with dedicated URL. 1 site included${perSitePrice ?  `, additional site +$${perSitePrice}/year` : ''}.` },
+                    ? 'Chaque client a son portail privé avec URL dédiée, sur autant de sites que nécessaire.'
+                    : 'Each client has a private portal with a dedicated URL, on as many sites as needed.' },
                 { icon: Smartphone, title: fr ? 'Application mobile PWA' : 'PWA mobile app', desc: fr ? 'Installez sur iOS et Android. Fonctionne hors-ligne sur le chantier.' : 'Install on iOS and Android. Works offline on the jobsite.' },
                 { icon: BarChart3, title: fr ? 'Tableaux de bord en temps réel' : 'Real-time dashboards', desc: fr ? 'KPIs de sécurité, tendances d\'incidents et rapports de conformité automatiques.' : 'Safety KPIs, incident trends and automatic compliance reports.' },
                 { icon: Globe, title: fr ? 'Conforme partout au Canada' : 'Compliant across Canada', desc: fr ? 'Toutes les provinces: QC, ON, BC, AB et plus. CNESST, MOL, WorkSafeBC.' : 'All provinces: QC, ON, BC, AB and more. CNESST, MOL, WorkSafeBC.' },
@@ -695,257 +633,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pricing ─────────────────────────────────────────────────────────── */}
-      {(() => {
-        // monthly_price dans la DB = prix ANNUEL par module (nom de colonne trompeur)
-        // Gratuit = prix 0 (configurable par l'admin) ; payant = prix > 0
-        const paidModules = dbModules.filter(m => m.monthly_price > 0)
-        const freeModules = dbModules.filter(m => (m.monthly_price || 0) === 0)
-        const freeLabel = freeModules.length > 0 ? freeModules.map(m => fr ? m.name_fr : m.name_en).join(' + ') : ''
-        const subtotal = paidModules.length > 0
-          ? paidModules.reduce((s, m) => s + m.monthly_price, 0)
-          : STATIC_PLANS_FR[1].annual
-        // Rabais: -5% par module additionnel, plafonné à -30%
-        const discountPct = paidModules.length > 0
-          ? Math.min(Math.max(paidModules.length - 1, 0) * 5, 30)
-          : 0
-        const totalAnnual = Math.round(subtotal * (1 - discountPct / 100))
-        // Starter ~ 5 modules payants, rabais ~20% (4 mod additionnels)
-        const starterSubtotal = paidModules.length > 0
-          ? paidModules.slice(0, 5).reduce((s, m) => s + m.monthly_price, 0)
-          : Math.round(STATIC_PLANS_FR[0].annual)
-        const starterAnnual = Math.round(starterSubtotal * (1 - Math.min(4 * 5, 30) / 100))
-        const hasPrices = paidModules.length > 0
-
-        return (
-          <section id="pricing" className="py-24 px-4 max-w-7xl mx-auto scroll-mt-20">
-            <div className="text-center mb-10">
-              <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
-                {fr ? 'Tarification' : 'Pricing'}
-              </p>
-              <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
-                {fr ? 'Prix transparents, sans surprise.' : 'Transparent pricing, no surprises.'}
-              </h2>
-              <p className="text-slate-400 text-sm mb-2">{fr ? 'Tarification annuelle · prix définis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
-              <p className="text-xs mb-6" aria-live="polite">
-                {!modulesLoaded
-                  ? <span className="text-slate-500">{fr ? 'Chargement des tarifs en direct…' : 'Loading live pricing…'}</span>
-                  : hasPrices
-                    ? <span className="text-[#b9bec6]">{fr ? '● Tarifs en direct depuis l\'administration' : '● Live pricing from administration'}</span>
-                    : <span className="text-slate-500">{fr ? 'Tarifs indicatifs — contactez-nous pour un devis exact.' : 'Indicative pricing — contact us for an exact quote.'}</span>}
-              </p>
-
-              {/* Badge rabais + modules gratuits */}
-              <div className="flex flex-wrap gap-3 justify-center">
-                <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/25 rounded-full px-4 py-1.5">
-                  <span className="text-[#c9ced5] font-black text-sm">-5%</span>
-                  <span className="text-[#d7dbe0] text-xs">{fr ? 'par module additionnel (max -30%)' : 'per additional module (max -30%)'}</span>
-                </div>
-                {freeLabel && (
-                  <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/25 rounded-full px-4 py-1.5">
-                    <span className="text-[#d7dbe0] text-xs font-semibold">{fr ? `${freeLabel} inclus GRATUITEMENT` : `${freeLabel} FREE with any module`}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {/* Starter */}
-              <div className="cs-carte border border-white/8 rounded-2xl p-6 flex flex-col">
-                <h3 className="font-black text-white text-lg mb-1">Starter</h3>
-                <p className="text-slate-400 text-xs mb-4">{fr ? '1 site · 5 modules au choix' : '1 site · 5 modules of your choice'}</p>
-                <div className="my-2 mb-5">
-                  <p className="text-3xl font-black text-white">
-                    {starterAnnual}$<span className="text-base font-normal text-slate-400">/an</span>
-                  </p>
-                  <p className="text-slate-400 text-xs mt-1">{fr ? '5 modules · rabais cumulé inclus' : '5 modules · cumulative discount included'}</p>
-                </div>
-                <div className="space-y-2 flex-1 mb-6">
-                  {[
-                    fr ? '5 modules au choix' : '5 modules of your choice',
-                    fr ? `${freeLabel || 'Administration + To-Do'} GRATUITS` : `${freeLabel || 'Administration + To-Do'} FREE`,
-                    fr ? '1 site' : '1 site',
-                    fr ? 'Application mobile PWA' : 'Mobile PWA app',
-                    fr ? 'Support courriel' : 'Email support',
-                  ].map((f, j) => (
-                    <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={13} className={j === 1 ? 'text-[#c9ced5] flex-shrink-0' : 'text-[#c9ced5] flex-shrink-0'} />{f}
-                    </div>
-                  ))}
-                </div>
-                <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
-                  className="w-full text-center py-3 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/8 transition" />
-              </div>
-
-              {/* Professionnel — prix live depuis DB */}
-              <div className="relative bg-[#18191c] border border-[#c9ced5]/50 rounded-2xl p-6 flex flex-col shadow-xl shadow-black/60">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 cs-argent-fond text-[#111] text-xs font-bold px-4 py-1 rounded-full">
-                  {fr ? 'Plus populaire' : 'Most popular'}
-                </div>
-                <h3 className="font-black text-white text-lg mb-1">{fr ? 'Professionnel' : 'Professional'}</h3>
-                <p className="text-slate-400 text-xs mb-4">{fr ? 'Tous les modules · multi-sites' : 'All modules · multi-site'}</p>
-                <div className="my-2 mb-5">
-                  <p className="text-3xl font-black text-white">
-                    {totalAnnual}$<span className="text-base font-normal text-slate-400">/an</span>
-                  </p>
-                  {discountPct > 0 && (
-                    <p className="text-[#c9ced5] text-xs mt-1 font-semibold">
-                      {fr ? `Rabais cascade −${discountPct}% (−5%/module, du + gros au + petit, max −30%)` : `Cascade discount −${discountPct}% (−5%/module, biggest→smallest, max −30%)`}
-                    </p>
-                  )}
-                  {hasPrices && (
-                    <p className="text-slate-500 text-xs mt-1">{fr ? 'Prix en direct depuis l\'admin' : 'Live price from admin'}</p>
-                  )}
-                </div>
-                <div className="space-y-2 flex-1 mb-6">
-                  {[
-                    fr ? `${dbModules.length || 17} modules${freeLabel ? ` (${freeLabel} gratuits)` : ''}` : `${dbModules.length || 17} modules${freeLabel ? ` (${freeLabel} free)` : ''}`,
-                    perSitePrice
-                      ? (fr ? `1 site inclus · +${perSitePrice}$/an par site additionnel` : `1 site included · +$${perSitePrice}/year per additional site`)
-                      : (fr ? '1 site inclus · multi-sites sur demande' : '1 site included · multi-site on request'),
-                    fr ? 'Application mobile PWA' : 'Mobile PWA app',
-                    fr ? 'Support courriel prioritaire' : 'Priority email support',
-                    fr ? 'Analytics avancés' : 'Advanced analytics',
-                  ].map((f, j) => (
-                    <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={13} className={j === 0 ? 'text-[#c9ced5] flex-shrink-0' : 'text-[#c9ced5] flex-shrink-0'} />{f}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Détail par module · prix annuel BRUT (avant rabais), trié du plus gros au plus petit
-                    — met en évidence la cascade d'escompte (−5%/module, max −30%) appliquée du + gros au + petit. */}
-                {hasPrices && (
-                  <details className="mb-4 rounded-lg border border-white/10 bg-black/40 p-3">
-                    <summary className="cursor-pointer text-xs font-bold text-[#d7dbe0]">
-                      {fr ? 'Détail par module · prix annuel brut (avant rabais)' : 'Per-module detail · gross annual price (before discount)'}
-                    </summary>
-                    <div className="mt-2 space-y-1">
-                      {[...paidModules].sort((a, b) => b.monthly_price - a.monthly_price).map((m, i) => (
-                        <div key={m.key} className="flex items-center justify-between text-[11px] text-slate-300">
-                          <span>{i + 1}. {fr ? m.name_fr : m.name_en}</span>
-                          <span className="font-mono">{m.monthly_price}$/an</span>
-                        </div>
-                      ))}
-                      <div className="mt-2 pt-2 border-t border-white/10 flex justify-between text-[11px] text-slate-400">
-                        <span>{fr ? 'Sous-total brut' : 'Gross subtotal'}</span><span className="font-mono">{subtotal}$/an</span>
-                      </div>
-                      {discountPct > 0 && (
-                        <div className="flex justify-between text-[11px] text-[#c9ced5] font-semibold">
-                          <span>{fr ? 'Rabais cascade (−5%/module, max −30%)' : 'Cascade discount (−5%/module, max −30%)'}</span>
-                          <span className="font-mono">−{discountPct}%</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-xs text-white font-bold">
-                        <span>{fr ? 'Total net' : 'Net total'}</span><span className="font-mono">{totalAnnual}$/an</span>
-                      </div>
-                      {perSitePrice != null && perSitePrice > 0 && (
-                        <div className="mt-1 pt-1 border-t border-white/10 flex justify-between text-[11px] text-slate-400">
-                          <span>{fr ? '1 site inclus · site additionnel' : '1 site included · additional site'}</span>
-                          <span className="font-mono">+{perSitePrice}$/an</span>
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                )}
-
-                <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
-                  className="w-full text-center py-3 rounded-xl font-bold text-sm cs-argent-fond text-[#111] transition" />
-              </div>
-
-              {/* Entreprise */}
-              <div className="cs-carte border border-white/8 rounded-2xl p-6 flex flex-col">
-                <h3 className="font-black text-white text-lg mb-1">{fr ? 'Entreprise' : 'Enterprise'}</h3>
-                <p className="text-slate-400 text-xs mb-4">{fr ? 'Volumes · ERP · SLA dédié' : 'Volume · ERP · Dedicated SLA'}</p>
-                <div className="my-2 mb-5">
-                  <p className="text-3xl font-black text-white">{fr ? 'Sur mesure' : 'Custom'}</p>
-                  <p className="text-slate-400 text-sm mt-1">{fr ? 'Contactez-nous' : 'Contact us'}</p>
-                </div>
-                <div className="space-y-2 flex-1 mb-6">
-                  {[
-                    fr ? 'Modules sur mesure' : 'Custom modules',
-                    fr ? 'Sites illimités' : 'Unlimited sites',
-                    fr ? 'Intégrations ERP' : 'ERP integrations',
-                    fr ? 'SLA garanti' : 'Guaranteed SLA',
-                    fr ? 'Formation incluse' : 'Training included',
-                  ].map((f, j) => (
-                    <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle size={13} className="text-[#c9ced5] flex-shrink-0" />{f}
-                    </div>
-                  ))}
-                </div>
-                <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
-                  className="w-full text-center py-3 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/8 transition">
-                  {fr ? 'Nous contacter' : 'Contact us'}
-                </a>
-              </div>
-            </div>
-
-            {/* Detail par module (prix annuels) */}
-            {hasPrices && (
-              <div className="mt-12 max-w-3xl mx-auto">
-                <p className="text-center text-slate-400 text-xs uppercase tracking-widest mb-4">
-                  {fr ? 'Détail par module · prix annuel brut (avant rabais)' : 'Per-module detail · annual list price (before discount)'}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {freeModules.map(m => (
-                    <div key={m.key} className="flex items-center justify-between bg-[#111214] border border-[#c9ced5]/20 rounded-lg px-3 py-2">
-                      <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
-                      <span className="text-xs font-bold text-[#c9ced5] ml-2">{fr ? 'GRATUIT' : 'FREE'}</span>
-                    </div>
-                  ))}
-                  {paidModules.map(m => (
-                    <div key={m.key} className="flex items-center justify-between bg-[#111214] border border-white/5 rounded-lg px-3 py-2">
-                      <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
-                      <span className="text-xs font-bold text-[#c9ced5] ml-2">{m.monthly_price}$/an</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 bg-[#111214] border border-[#c9ced5]/20 rounded-xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
-                  <p className="text-[#d7dbe0] text-xs font-semibold">
-                    {fr ? `Sous-total brut : ${subtotal}$/an · Rabais -${discountPct}% · Total final : ${totalAnnual}$/an` : `Subtotal: $${subtotal}/yr · -${discountPct}% discount · Final: $${totalAnnual}/yr`}
-                  </p>
-                  {freeLabel && (
-                    <p className="text-slate-500 text-xs">
-                      {fr ? `${freeLabel} GRATUITS` : `${freeLabel} FREE`}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Forfaits Assistant IA (jetons) — cartes ajustables via l'admin (table ai_plans) */}
-            {aiPlans.length > 0 && (
-              <div className="mt-16 max-w-5xl mx-auto">
-                <div className="text-center mb-6">
-                  <p className="text-[#c9ced5] text-xs font-bold uppercase tracking-widest mb-2">
-                    {fr ? 'Option · Assistants IA' : 'Add-on · AI assistants'}
-                  </p>
-                  <h3 className="text-2xl font-bold text-white">
-                    {fr ? 'Forfaits de jetons IA' : 'AI token plans'}
-                  </h3>
-                  <p className="text-slate-400 text-sm mt-1">
-                    {fr ? 'Recherche de prix, import intelligent et assistants — en sus de votre abonnement.' : 'Price research, smart import and assistants — on top of your subscription.'}
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {aiPlans.map(p => (
-                    <div key={p.id} className="group relative cs-carte border border-white/8 rounded-xl p-5 hover:border-[#c9ced5]/40 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-bold text-white">{fr ? p.name_fr : p.name_en}</h4>
-                        <span className="whitespace-nowrap rounded-full bg-white/8 px-2 py-0.5 text-xs font-bold text-[#c9ced5]">{Math.round(p.price_cents / 100)}$/an</span>
-                      </div>
-                      {(fr ? p.note_fr : p.note_en) && (
-                        <p className="mt-2 text-xs text-slate-400">{fr ? p.note_fr : p.note_en}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
-        )
-      })()}
+      {/* ── Offre sur mesure : aucun prix public (Eric 2026-11-16) — contact info@cerdia.ai ── */}
+      <section id="contact" className="py-24 px-4 scroll-mt-20">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="cs-surtitre">{fr ? 'Offre sur mesure' : 'Tailored offer'}</p>
+          <h2 className="text-3xl sm:text-4xl font-black mb-4 cs-argent-texte">
+            {fr ? 'Chaque offre est bâtie pour votre entreprise.' : 'Every offer is built for your business.'}
+          </h2>
+          <p className="text-[#9aa0a8] text-base mb-8">
+            {fr ? 'Écrivez-nous pour une soumission adaptée à vos modules, vos sites et vos équipes.' : 'Write to us for a quote tailored to your modules, sites and teams.'}
+          </p>
+          <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
+            className="inline-flex items-center gap-2 cs-argent-fond text-[#111] px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-black/50">
+            <Mail size={16} /> info@cerdia.ai
+          </a>
+        </div>
+      </section>
 
       {/* ── Testimonials (masqué tant qu'aucun vrai témoignage n'est saisi dans l'admin) ── */}
       {testimonials.length > 0 && (
@@ -984,7 +687,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-white/8 border border-[#c9ced5]/25 rounded-full px-4 py-1.5 mb-6">
             <Shield size={13} className="text-[#c9ced5]" />
-            <span className="text-[#d7dbe0] text-xs font-semibold">{fr ? 'Démo gratuite de 4 h — aucune carte requise' : 'Free 4-hour demo — no card required'}</span>
+            <span className="text-[#d7dbe0] text-xs font-semibold">{fr ? 'Démo gratuite de 24 heures — aucune carte requise' : 'Free 24-hour demo — no card required'}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
             {fr ? 'Prêt à sécuriser vos chantiers ?' : 'Ready to secure your jobsites?'}
@@ -1053,7 +756,6 @@ export default function LandingPage() {
         const d = MODULE_DETAILS[selectedModule]?.[fr ? 'fr' : 'en']
         if (!mod) return null
         const slides = moduleSlides[selectedModule] || []
-        const dbMod = dbModules.find(x => x.key === selectedModule)
         return (
           <div onClick={() => setSelectedModule(null)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
             <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={mod.name}
@@ -1063,7 +765,6 @@ export default function LandingPage() {
                 <ModuleIcon moduleKey={mod.key} icon={mod.icon} size={56} variante="argent" />
                 <div>
                   <h3 className="text-xl font-black text-white">{mod.name}</h3>
-                  {dbMod && dbMod.monthly_price > 0 && <span className="text-xs font-bold text-[#c9ced5]">{dbMod.monthly_price}$/an</span>}
                 </div>
               </div>
               {d && <p className="mt-4 font-semibold text-[#d7dbe0]">{d.tagline}</p>}

@@ -2,9 +2,9 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { createTwilioClient } from '@/lib/twilio-safe';
 
-const TOTAL_CAP_SECONDS = 4 * 60 * 60; // 4 h de chrono total pour la démo
-const SESSION_SECONDS = TOTAL_CAP_SECONDS; // chrono unique de 4 h (reprise possible tant qu'il reste du temps)
-const MAX_STARTS = 5;                  // reprises autorisées tant que le total de 4 h n'est pas atteint
+const TOTAL_CAP_SECONDS = 24 * 60 * 60; // 24 h de chrono total pour la démo (Eric 2026-11-16 : 4 h → 24 heures)
+const SESSION_SECONDS = TOTAL_CAP_SECONDS; // chrono unique de 24 h (reprise possible tant qu'il reste du temps)
+const MAX_STARTS = 5;                  // reprises autorisées tant que le total de 24 h n'est pas atteint
 
 export type DemoStartResult = {
   ok: boolean;
@@ -41,7 +41,7 @@ export async function startDemo(name: string, emailRaw: string): Promise<DemoSta
     return { ok: true, status: 'active', remainingSeconds: Math.floor((activeUntil.getTime() - now.getTime()) / 1000), message: 'Session démo déjà active.' };
   }
 
-  // Plafonds : total 4 h OU nombre de démarrages.
+  // Plafonds : total 24 h OU nombre de démarrages.
   const total = row.total_seconds || 0;
   const attempts = row.attempts || 0;
   if (total >= TOTAL_CAP_SECONDS || attempts >= MAX_STARTS) {
