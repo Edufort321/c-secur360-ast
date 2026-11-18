@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { PublicChatWidget } from '@/components/PublicChatWidget'
-import { DemoStartButton } from '@/components/DemoStartButton'
+import { EssaiDemo } from '@/components/vitrine/EssaiDemo'   // démo de 24 h : lien envoyé par courriel (Eric 2026-11-16)
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ModuleIcon } from '@/components/ModuleIcon'
 import { IntroPiece } from '@/components/vitrine/IntroPiece'
@@ -335,7 +335,7 @@ export default function LandingPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-slate-300 transition border border-white/8">
                 <Lock size={14} /> {fr ? 'Accès Admin' : 'Admin Access'}
               </Link>
-              <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
+              <EssaiDemo fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
                 className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg cs-argent-fond text-sm text-[#111] font-semibold transition" />
             </nav>
           </div>
@@ -398,7 +398,7 @@ export default function LandingPage() {
             )}
 
             <div className="flex flex-wrap gap-4">
-              <DemoStartButton fr={fr}
+              <EssaiDemo fr={fr}
                 className="inline-flex items-center gap-2 cs-argent-fond text-[#111] px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-black/50" />
               <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                 className="inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white/8 px-7 py-3.5 rounded-xl font-semibold text-base transition">
@@ -698,7 +698,7 @@ export default function LandingPage() {
               : 'Join the industrial and safety-driven companies digitalizing their safety with C-Secur360.'}
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <DemoStartButton fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
+            <EssaiDemo fr={fr} label={fr ? 'Démarrer gratuitement' : 'Start for free'}
               className="inline-flex items-center gap-2 cs-argent-fond text-[#111] px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-black/50" />
             <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
               className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/8 text-white px-8 py-4 rounded-xl font-bold text-lg transition">
