@@ -21,11 +21,7 @@ function hasAdminCookie(req: NextRequest): boolean {
 }
 
 /** Secret de synchronisation serveur-à-serveur (fail-secure : aucun fallback en dur). */
-export function checkSyncSecret(req: NextRequest): boolean {
-  const secret = process.env.CSECUR360_SYNC_SECRET;
-  if (!secret) return false;
-  return req.headers.get('authorization') === `Bearer ${secret}`;
-}
+export function checkSyncSecret(_req: NextRequest): boolean { void _req; return false; }   // ancien pont cerdia.ai RETIRÉ (Eric 2026-11-17) : toujours faux
 
 /** Utilisateur de session (cookie auth_token → auth_sessions → users), ou null. */
 export async function getSessionUser(req: NextRequest): Promise<any | null> {
@@ -41,7 +37,7 @@ export async function getSessionUser(req: NextRequest): Promise<any | null> {
 
 /** Garde admin : cookie dashboard OU session super_admin OU secret de sync. */
 export async function requireAdmin(req: NextRequest): Promise<{ ok: true } | { ok: false; res: NextResponse }> {
-  if (hasAdminCookie(req) || checkSyncSecret(req)) return { ok: true };
+  if (hasAdminCookie(req)) return { ok: true };   // ancien secret de pont cerdia.ai retiré (Eric 2026-11-17)
   const user = await getSessionUser(req);
   if (user?.role === 'super_admin') return { ok: true };
   return { ok: false, res: NextResponse.json({ error: 'Accès refusé' }, { status: user ? 403 : 401 }) };

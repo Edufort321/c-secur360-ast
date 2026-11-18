@@ -452,10 +452,10 @@ export default function TenantManagePage() {
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
                   <h2 className="mb-2 font-bold">Facturation</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Émise par <strong>Commerce CERDIA</strong> via <span className="font-mono">cerdia.ai</span>.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Émise par <strong>Commerce CERDIA</strong> via <span className="font-mono">CERDIA Gestion</span>.</p>
                   <div className="mt-2 flex justify-between text-sm"><span className="text-gray-500">Total annuel</span><span className="font-bold">{money(total)}</span></div>
-                  <a href="https://www.cerdia.ai/commerce/admin" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">Ouvrir la facturation (Commerce CERDIA) →</a>
-                  <p className="mt-1 text-xs text-gray-400">Redirection vers la plateforme de facturation Commerce CERDIA (à brancher).</p>
+                  <a href="https://gestion.cerdia.ai" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">Ouvrir la facturation (Commerce CERDIA) →</a>
+                  <p className="mt-1 text-xs text-gray-400">Centre de gestion CERDIA : le forfait de ce client y est envoyé chaque jour (abonnement vendu).</p>
                 </div>
               </div>
             </div>

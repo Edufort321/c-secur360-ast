@@ -475,10 +475,10 @@ export default function AdminDashboard() {
             </button>
           );
         })}
-        {/* Pont bidirectionnel : aller vers l'admin CERDIA (commerce) */}
+        {/* Vers CERDIA Gestion (centre de gestion ; l'ancien pont cerdia.ai est retiré) */}
         <a
           className="admTab"
-          href={`${process.env.NEXT_PUBLIC_CERDIA_URL || 'https://cerdia.ai'}/commerce/admin`}
+          href="https://gestion.cerdia.ai"
           target="_blank" rel="noreferrer"
           style={{ marginLeft: 'auto', textDecoration: 'none', color: '#7c3aed', borderColor: '#7c3aed' }}
           title="Ouvrir l'administration CERDIA"

@@ -107,29 +107,7 @@ export async function POST(req: NextRequest) {
     const disc = Math.min(Math.max(enabledKeys.length - 1, 0) * perDisc, capDisc);
     const annualRevenue = Math.round(subtotal * (1 - disc / 100) * 100) / 100;
 
-    // Sync vers CERDIA Commerce (non-bloquant — echec silencieux)
-    const cerdiaUrl = process.env.CERDIA_COMMERCE_URL;
-    const syncSecret = process.env.CSECUR360_SYNC_SECRET; // fail-secure : pas de fallback en dur
-    if (cerdiaUrl && syncSecret) {
-      fetch(`${cerdiaUrl}/api/commerce/csecur360`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${syncSecret}` },
-        body: JSON.stringify({
-          id,
-          company_name: companyName,
-          admin_email: adminEmail || null,
-          plan: 'professional',
-          // Non-facturable (démo / case décochée) => revenu 0 dans le miroir CERDIA (pas d'ARR fantôme).
-          monthly_revenue: billable !== false ? Math.round(annualRevenue / 12 * 100) / 100 : 0,
-          annual_revenue: billable !== false ? annualRevenue : 0,
-          modules_count: enabledKeys.length,
-          sites_count: 1,
-          status: 'active',
-          billable: billable !== false,
-        }),
-      }).catch(() => { /* sync non critique */ });
-    }
-
+    // Ancien pont vers cerdia.ai retiré (Eric 2026-11-17) : la comptabilité passe par CERDIA Gestion (lib/gestionPont.ts).
     return NextResponse.json({ ok: true, id });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
